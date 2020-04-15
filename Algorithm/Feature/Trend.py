@@ -6,7 +6,7 @@ from functools import partial
 from GateWay import Event,GateReq,Quandle
 from Algorithm.Feature import BaseFeature,EMA,remove_na
 from Algorithm.Mathmetics import zoom,coef2deg
-from Algorithm.Mathmetics.linear_tool import _fit_poly
+from Utils.linear_tool import _fit_poly
 
 class MedianFilter(BaseFeature):
     """

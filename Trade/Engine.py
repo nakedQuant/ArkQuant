@@ -3560,11 +3560,11 @@ class TradingAlgorithm(object):
         # symbols to sids, and can be set using set_symbol_lookup_date()
         self._symbol_lookup_date = None
 
+        self.event_manager = EventManager(create_event_context)
+
         # If string is passed in, execute and get reference to
         # functions.
         self.algoscript = script
-
-        self.event_manager = EventManager(create_event_context)
 
         self._handle_data = None
 
@@ -3652,7 +3652,6 @@ class TradingAlgorithm(object):
         self._pipeline_cache = ExpiringCache(
             cleanup=clear_dataframe_indexer_caches
         )
-
 
         self._initialize = None
         self._before_trading_start = None

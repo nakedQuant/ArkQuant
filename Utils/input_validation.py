@@ -412,6 +412,29 @@ def expect_types(__funcname=_qualified_name, **named):
 
     return preprocess(**valmap(_expect_type, named))
 
+def optional(type_):
+    """
+    Helper for use with `expect_types` when an input can be `type_` or `None`.
+
+    Returns an object such that both `None` and instances of `type_` pass
+    checks of the form `isinstance(obj, optional(type_))`.
+
+    Parameters
+    ----------
+    type_ : type
+       Type for which to produce an option.
+
+    Examples
+    --------
+    >>> isinstance({}, optional(dict))
+    True
+    >>> isinstance(None, optional(dict))
+    True
+    >>> isinstance(1, optional(dict))
+    False
+    """
+    return (type_, type(None))
+
 
 def make_check(exc_type, template, pred, actual, funcname):
     """
@@ -455,30 +478,6 @@ def make_check(exc_type, template, pred, actual, funcname):
             )
         return argvalue
     return _check
-
-
-def optional(type_):
-    """
-    Helper for use with `expect_types` when an input can be `type_` or `None`.
-
-    Returns an object such that both `None` and instances of `type_` pass
-    checks of the form `isinstance(obj, optional(type_))`.
-
-    Parameters
-    ----------
-    type_ : type
-       Type for which to produce an option.
-
-    Examples
-    --------
-    >>> isinstance({}, optional(dict))
-    True
-    >>> isinstance(None, optional(dict))
-    True
-    >>> isinstance(1, optional(dict))
-    False
-    """
-    return (type_, type(None))
 
 
 def expect_element(__funcname=_qualified_name, **named):

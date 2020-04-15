@@ -1348,3 +1348,20 @@ import csv
 #applymap --- dataframe 每一个元素
 #map --- series
 
+class A(object):
+
+    def __init__(self,a):
+        self.a = a
+
+    def trans(self):
+        b = self.a
+        if b >0 :
+            b = 2
+        else:
+            b = 3
+        print('b',b)
+        print('------',self.a)
+
+# b = A(4)
+# b.trans()
+# print(b.a)

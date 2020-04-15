@@ -8,8 +8,6 @@ Created on Tue Mar 12 15:37:47 2019
 import numpy as np
 
 from GateWay import Event,GateReq,Quandle
-from Algorithm.Feature.Tseries import Coint
-from Algorithm.Mathmetics.linear_tool import _fit_statsmodel
 
 quandle = Quandle()
 
