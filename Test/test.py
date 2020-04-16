@@ -1348,20 +1348,43 @@ import csv
 #applymap --- dataframe 每一个元素
 #map --- series
 
-class A(object):
-
-    def __init__(self,a):
-        self.a = a
-
-    def trans(self):
-        b = self.a
-        if b >0 :
-            b = 2
-        else:
-            b = 3
-        print('b',b)
-        print('------',self.a)
+# class A(object):
+#
+#     def __init__(self,a):
+#         self.a = a
+#
+#     def trans(self):
+#         b = self.a
+#         if b >0 :
+#             b = 2
+#         else:
+#             b = 3
+#         print('b',b)
+#         print('------',self.a)
 
 # b = A(4)
-# b.trans()
-# print(b.a)
+# # b.trans()
+# # print(b.a)
+
+from numpy import (
+    array,
+    full,
+    recarray,
+    vstack,
+)
+from abc import ABC
+from bisect import insort
+from collections import Mapping
+from pandas import NaT as pd_NaT
+from numpy import array,dtype as dtype_class , ndarray,searchsorted
+import datetime
+from textwrap import dedent
+
+# from functools import reduce
+#
+# inputs = {'a':[1,2,3,5],'b':[2,3,4,5,6,7],'c':[4,5,6,7,8]}
+#
+# term_input = reduce(lambda x, y: set(x) & set(y), inputs.values())
+#
+# print(term_input)
+# idx = trading_days.searchsorted(dt)

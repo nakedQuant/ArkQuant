@@ -65,12 +65,6 @@ class Generic(Domain):
     def all_assets(self,category= 'stock'):
         raise NotImplementedError
 
-    @default
-    def roll_forward(self, dt,window):
-        dt = pd.Timestamp(dt, tz='UTC')
-        trading_days = self.all_sessions()
-        idx = trading_days.searchsorted(dt)
-        return trading_days[idx - window ,idx]
 
 ALLOWED_DTYPES = [list,tuple]
 
@@ -126,13 +120,12 @@ class Term(object):
         self.domain = domain
         self.params = params
         self.dtype = dtype
+        self.inputs = domain.all_assets()
 
         namespace = dict()
         with open('Strategy/%s.py'%script_file,'r') as f:
             exec(f.read(),namespace)
-
         self._term_core = namespace[script_file]
-
         return self
 
     def _validate(self,out):
@@ -144,34 +137,26 @@ class Term(object):
             )
 
     @property
-    def inputs(self,inputs = None):
-        """
-            验证inputs的输入是否与dependencies保持一直
-        """
-        if inputs :
-            term_string = map(str,self.dependencies)
-            if list(inputs.keys()) != term_string:
-                raise ValueError('inputs must corride with term dependencies')
-            from functools import reduce
-            term_input = reduce(lambda x ,y : set(x) | set(y),inputs.values())
-        else:
-            term_input = self.domain.all_assets()
-        return term_input
+    def inputs(self):
+        return self._inputs
+
+    @inputs.setter
+    def inputs(self,val):
+        self._inputs = val
 
     @property
-    def dependencies(self,terms = []):
-
+    def dependencies(self,terms = None):
         return terms
 
-    def _compute(self,*args):
+    def _compute(self,inputs):
         """
             subclass should implement
         """
         raise NotImplemented
 
     @expect(ALLOWED_DTYPES)
-    def output(self,date):
-        term_out = self._compute(self.inputs,date)
+    def output(self):
+        term_out = self._compute(self.inputs)
         return term_out
 
 
@@ -202,9 +187,8 @@ class TermGraph(object):
 
         self._frozen = True
 
-        from collections import defaultdict
-
-        self.inputs = dict()
+        from collections import OrderedDict
+        self.inputs = OrderedDict()
 
     def _add_to_graph(self,term):
         """
@@ -221,8 +205,14 @@ class TermGraph(object):
             self._add_to_graph(dependency)
             self.graph.add_edge(dependency,term)
 
-
     def execution_order(self):
+
+        in_degree = dict(self.graph.in_degree)
+        from toolz import valfilter
+        bottom = valfilter(lambda x : x == 0 ,in_degree)
+        return bottom
+
+    def _decref_recursive(self):
         """
         Return a topologically-sorted list of the terms in ``self`` which
         need to be computed.
@@ -239,57 +229,47 @@ class TermGraph(object):
             Reference counts for terms to be computed. Terms with reference
             counts of 0 do not need to be computed.
         """
-        in_degree = dict(self.graph.in_degree)
+        bottom_nodes = self.execution_order()
+        self.batch_compute_nodes(bottom_nodes)
+        self.decref_dependence(bottom_nodes)
+        self._decref_recursive()
 
-        from toolz import valfilter,keyfiler
+    def batch_compute_nodes(self,nodes):
 
-        layer = valfilter(lambda x : x == 0 ,in_degree)
+        def run(node):
+            inputs = self.compute_inputs(node)
+            output= node.compute(inputs)
+            self.inputs[node] = output
 
-        test = layer[0]
+        from concurrent.futures import ProcessPoolExecutor
+        with ProcessPoolExecutor(len(nodes)) as executor:
+            futures = []
+            for node in nodes:
+                future = executor.submit(run,node)
+                futures.append(future)
+            for job in futures:
+                job.as_completed()
 
-        inputs = self.inputs[term]
-
-        outputs= layer[0].compute(inputs)
-
-        self.input[test] = outputs
+        from multiprocessing.pool import  Pool
+        for node in nodes:
+            Pool.apply_async(run,node)
 
     def compute_inputs(self,term):
-
-        if len(term.dependencies):
-            return []
-
-
-        #iter(nx.topological_sort(self.graph))
-
-        # return list(nx.topological_sort(
-        #     self.graph.subgraph(
-        #         {
-        #             term for term, refcount in refcounts.items()
-        #             if refcount > 0 and term not in workspace
-        #         },
-        #     ),
-        # ))
-
-    def _decref_dependencies_recursive(self, term, refcounts, garbage):
         """
-        Decrement terms recursively.
-
-        Notes
-        -----
-        This should only be used to build the initial workspace, after that we
-        should use:
-        :meth:`~zipline.pipeline.graph.TermGraph.decref_dependencies`
+            验证inputs的输入是否与dependencies一致
         """
-        # Edges are tuple of (from, to).
-        for parent, _ in self.graph.in_edges([term]):
-            refcounts[parent] -= 1
-            # No one else depends on this term. Remove it from the
-            # workspace to conserve memory.
-            if refcounts[parent] == 0:
-                garbage.add(parent)
-                self._decref_dependencies_recursive(parent, refcounts, garbage)
+        dependencies = term.dependencies
+        if dependencies:
+            if set(dependencies).issubset(self.inputs.keys()):
+                from toolz import valfilter, keyfilter
+                slice_inputs = keyfilter(lambda x : x in dependencies , self.inputs)
+                from functools import reduce
+                term_input = reduce(lambda x ,y : set(x) | set(y),slice_inputs.values())
+        else:
+            term_input = term.input
+        return term_input
 
-    def decref_dependencies(self, term, refcounts):
+    def decref_dependence(self, layer):
         """
         Decrement in-edges for ``term`` after computation.
 
@@ -305,15 +285,8 @@ class TermGraph(object):
         garbage : set[Term]
             Terms whose refcounts hit zero after decrefing.
         """
-        garbage = set()
-        # Edges are tuple of (from, to).
-        for parent, _ in self.graph.in_edges([term]):
-            refcounts[parent] -= 1
-            # No one else depends on this term. Remove it from the
-            # workspace to conserve memory.
-            if refcounts[parent] == 0:
-                garbage.add(parent)
-        return garbage
+        for node in layer.keys():
+            self.graph.remove_node(node)
 
     @property
     def screen_name(self):
@@ -321,107 +294,12 @@ class TermGraph(object):
         """
         SCREEN_NAME = 'screen_' + uuid.uuid4().hex
 
-    def iter_item(self,dt,inputs = None):
-
-        in_degree = dict(self.graph.in_degree)
-
-        layer = [key for key,val in in_degree.items() if val ==0 ]
-
-        outputs = term.compute(dt)
-
-        self.iter_item(dt,outputs)
-
-    def initial_refcounts(self, initial_terms):
-        """
-        Calculate initial refcounts for execution of this graph.
-
-        Parameters
-        ----------
-        initial_terms : iterable[Term]
-            An iterable of terms that were pre-computed before graph execution.
-
-        Each node starts with a refcount equal to its outdegree, and output
-        nodes get one extra reference to ensure that they're still in the graph
-        at the end of execution.
-        """
-        refcounts = self.graph.out_degree()
-        for t in self.outputs.values():
-            refcounts[t] += 1
-
-        for t in initial_terms:
-            self._decref_dependencies_recursive(t, refcounts, set())
-
-        return refcounts
+    @property
+    def outputs(self):
+        return self.inputs[-1]
 
     def __contains__(self, term):
         return term in self.graph
 
     def __len__(self):
         return len(self.graph)
-
-
-if __name__ == '__main__':
-
-    class Term(object):
-
-        def __init__(self, default=[]):
-            self._val = default
-
-        @property
-        def dependencies(self):
-            return self._val
-
-        @dependencies.setter
-        def dependencies(self, val):
-            self._val = val
-
-
-    term_a = Term()
-    term_b = Term()
-    term_c = Term()
-    term_d = Term()
-    term_e = Term()
-
-    term_a.dependencies = [term_b,term_c]
-
-    term_b.dependencies = [term_d,term_e]
-
-    terms = [term_a,term_b,term_c,term_d,term_e]
-
-    graph = TermGraph(terms)
-
-    print('graph_indegree',graph.graph.in_degree)
-
-    print('graph_outdegree',graph.graph.out_degree)
-
-    dgraph = nx.DiGraph()
-
-    dgraph.add_edge('e','b')
-
-    dgraph.add_edge('d','b')
-
-    dgraph.add_edge('c','b')
-
-    dgraph.add_edge('c','f')
-
-    dgraph.add_edge('g','f')
-
-    dgraph.add_edge('b','a')
-
-    dgraph.add_edge('f','a')
-
-    dgraph.add_edge('f','h')
-
-    dgraph.add_edge('a','i')
-
-    dgraph.add_edge('h','i')
-
-    print(list(nx.topological_sort(dgraph)))
-
-    print('out_degree',dgraph.out_degree)
-
-    print('in_degree',dgraph.in_degree)
-
-    print('in_edges',dgraph.in_edges)
-
-    print('out_edges',dgraph.out_edges)
