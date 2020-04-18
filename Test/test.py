@@ -1361,6 +1361,8 @@ import csv
 #             b = 3
 #         print('b',b)
 #         print('------',self.a)
+#
+# print('------',A.__name__)
 
 # b = A(4)
 # # b.trans()
@@ -1388,3 +1390,9 @@ from textwrap import dedent
 #
 # print(term_input)
 # idx = trading_days.searchsorted(dt)
+# start_ix, end_ix = sessions.slice_locs(start_date, end_date)
+# return (
+#     (r[0], r[-1]) for r in partition_all(
+#     chunksize, sessions[start_ix:end_ix]
+# )
+# )
