@@ -1,9 +1,6 @@
 
-import networkx as nx,pandas as pd
-from weakref import WeakValueDictionary
+import pandas as pd
 from interface import default, implements, Interface
-
-import glob, uuid
 
 class IDomain(Interface):
     """
@@ -41,6 +38,7 @@ class IDomain(Interface):
         raise NotImplementedError(
             "Can't compute data query cutoff times for generic domain.",
         )
+
 
 class Domain(implements(IDomain)):
     """

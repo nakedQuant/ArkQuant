@@ -137,4 +137,3 @@ class NumericalExpression(ComputableTerm):
             'x_%d'% i : input_
             for i ,input_ in enumerate(self.inputs)
         }
-
