@@ -192,7 +192,7 @@ class TradingAlgorithm(object):
     identifiers : list, optional
         Any asset identifiers that are not provided in the
         equities_metadata, but will be traded by this TradingAlgorithm.
-    get_pipeline_loader : callable[BoundColumn -> PipelineLoader], optional
+    get_pipeline_loader : callable[BoundColumn -> pipeline], optional
         The function that maps Pipeline columns to their loaders.
     create_event_context : callable[BarData -> context manager], optional
         A function used to create a context mananger that wraps the
@@ -213,7 +213,7 @@ class TradingAlgorithm(object):
                  sim_params,
                  data_portal=None,
                  asset_finder=None,
-                 # Algorithm API
+                 # algorithm API
                  namespace=None,
                  script=None,
                  algo_filename=None,
@@ -905,10 +905,10 @@ class TradingAlgorithm(object):
         func : callable
             The function to execute when the rule is triggered. ``func`` should
             have the same signature as ``handle_data``.
-        date_rule : zipline.Utils.events.EventRule, optional
+        date_rule : zipline.utils.events.EventRule, optional
             Rule for the dates on which to execute ``func``. If not
             passed, the function will run every trading day.
-        time_rule : zipline.Utils.events.EventRule, optional
+        time_rule : zipline.utils.events.EventRule, optional
             Rule for the time at which to execute ``func``. If not passed, the
             function will execute at the end of the first market minute of the
             day.
@@ -1486,7 +1486,7 @@ class TradingAlgorithm(object):
             The current simulation datetime converted to ``tz``.
         """
         dt = self.datetime
-        assert dt.tzinfo == pytz.utc, "Algorithm should have a utc datetime"
+        assert dt.tzinfo == pytz.utc, "algorithm should have a utc datetime"
         if tz is not None:
             dt = dt.astimezone(tz)
         return dt
@@ -1926,7 +1926,7 @@ class TradingAlgorithm(object):
         Returns
         -------
         open_orders : dict[list[Order]] or list[Order]
-            If no asset is passed this will return a dict mapping Assets
+            If no asset is passed this will return a dict mapping assets
             to a list containing all the open orders for the asset.
             If an asset is passed then this will return a list of the open
             orders for this asset.
