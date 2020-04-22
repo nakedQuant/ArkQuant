@@ -1,4 +1,4 @@
-lib"""
+"""
 pipeline accepting a DataFrame as input.
 """
 from functools import partial
