@@ -1,4 +1,22 @@
 
+import sqlalchemy as sa
+
+asset_db_table_names = frozenset({
+    'symbol_naive_price',
+    'dual_symbol_price'
+    'bond_price',
+    'index_price',
+    'fund_price',
+    'symbol_equity_basics',
+    'bond_basics',
+    'symbol_splits',
+    'symbol_issue',
+    'symbol_mcap',
+    'symbol_massive',
+    'market_margin',
+    'version_info',
+})
+
 class AssetFinder(object):
     """
         AssetFinder is an interface to a database of Asset metadata written by
@@ -14,8 +32,6 @@ class AssetFinder(object):
         metadata.reflect(only= asset_db_table_names)
         for table_name in asset_db_table_names:
             setattr(self,table_name,metadata.tables[table_name])
-
-        check_version_info(engine,self.version_info)
 
     def fuzzy_symbol_ownership_by_district(self,area):
         """
@@ -35,7 +51,7 @@ class AssetFinder(object):
                       execute().fetchall()
         return assets_list
 
-    def fuzzy_symbol_ownership_by_ipodate(self,date):
+    def fuzzy_symbol_ownership_by_ipo(self,date):
         """
             基于上市时间找到对应的股票代码
         """
@@ -62,16 +78,14 @@ class AssetFinder(object):
                   execute().fetchall()
         return bond_id
 
-    def retrieve_all(self,type = 'stock'):
-        """
-            获取某一类型的标的
-        """
-        tbl_type = {'stock':self.equity_bascis,'etf':self.fund_price,'index':self.index_price,'bond':self.bond_price}
-        assets = sa.select(tbl_type[type].c.code.distinct()).execute().fetchall()
+    def retrieve_symbols(self):
+        assets = sa.select(self.symbol_basics.c.sid).execute().fetchall()
         return assets
 
-    def was_unactive(self, status):
-        delist_assets = sa.select(self.equity_status.code,self.equity_status.delist_date).\
-                        where(self.equity_status.status == status).\
-                        execute().fetchall()
-        return delist_assets
+    def retieve_bonds(self):
+        bond_assets = sa.select(self.bond_basics.c.sid).execute().fetchall()
+        return bond_assets
+
+    def retrieve_funds(self):
+        fund_assets = sa.select(self.fund_price.c.code.distinct()).execute().fetchall()
+        return fund_assets

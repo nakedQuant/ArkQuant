@@ -1,22 +1,18 @@
 from sqlalchemy import select,and_,cast ,Numeric,desc,Integer
 
-class Core:
-    """
-        sqlalchemy core 操作
-    """
-    def __init__(self):
 
-        self.db = DataLayer()
-        self.tables = self.db.metadata.tables
+class Calendar(object):
+    """
+        1 交易日
+        2 节假日
+        3 lifeSpan
+    """
 
-    def _proc(self,ins):
-        rp = self.db.engine.execute(ins)
-        return rp
+    def __init__(self,conn):
+        self.conn = conn
 
     def load_calendar(self,sdate,edate):
         """获取交易日"""
-        sdate = sdate.replace('-','')
-        edate = edate.replace('-','')
         table = self.tables['ashareCalendar']
         ins = select([table.c.trade_dt]).where(table.c.trade_dt.between(sdate,edate))
         rp = self._proc(ins)
@@ -25,7 +21,6 @@ class Core:
 
     def is_calendar(self,dt):
         """判断是否为交易日"""
-        dt = dt.replace('-','')
         table = self.tables['ashareCalendar']
         ins = select([table.c.trade_dt])
         rp = self._proc(ins)
@@ -34,7 +29,6 @@ class Core:
         return flag
 
     def load_calendar_offset(self,date,sid):
-        date = date.replace('-','')
         table = self.tables['ashareCalendar']
         if sid > 0 :
             ins = select([table.c.trade_dt]).where(table.c.trade_dt > date)
@@ -47,54 +41,88 @@ class Core:
         trade_dt = [r.trade_dt for r in rp]
         return trade_dt
 
-
-class BarReader:
-
-    def __init__(self):
-        self.loader = Core()
-        self.ts = TushareClient()
-        self.extra = spider_engine.ExtraOrdinary()
-
-    def _verify_fields(self,f,asset):
-        """如果asset为空，fields必须asset"""
-        field = f.copy()
-        if not isinstance(field,list):
-            raise TypeError('fields must be list')
-        elif asset is None:
-            field.append('code')
-        return field
-
-    @staticmethod
-    def calendar_foramtted(t):
-        """将eg 20120907 --- 2012-09-07"""
-        trans = ('-').join([t[:4],t[4:6],t[6:8]])
-        return trans
-
-    def load_trading_calendar(self, sdate, edate):
+    def retrieve_symbol_lifeSpan(self,asset):
         """
-            返回交易日列表 ， 类型为array
-            session in range
+            判断是否退市或者停止交易
         """
-        calendar = self.loader.load_calendar(sdate, edate)
-        trade_dt = list(map(self.calendar_foramtted,calendar))
-        return trade_dt
+        table = self.tables['symbol_lifeSpan']
+        span = sa.select([table.c.delist_date]).\
+            where(table.c.code == asset).execute().scalar()
+        return span
 
-    def is_market_caledar(self,dt):
-        """判断是否交易日"""
-        flag = self.loader.is_calendar(dt)
-        return flag
-
-    def load_calendar_offset(self, dt, window):
+    def first_trading_day(self):
         """
-            获取交易日偏移量
+        Returns
+        -------
+        dt : pd.Timestamp
+            The first trading day (session) for which the reader can provide
+            data.
         """
-        calendar_offset = self.loader.load_calendar_offset(dt, window)
-        trade_dt = list(map(self.calendar_foramtted,calendar_offset))
-        return trade_dt[-1]
+        pass
 
-    def load_stock_status(self,code):
-        """返回股票是否退市或者暂停上市"""
-        raw = self.loader.load_stock_status(code)
-        df = pd.DataFrame(raw,columns = ['code','status'])
-        df = df if len(df) else None
-        return df
+    def last_available_dt(self):
+        """
+        Returns
+        -------
+        dt : pd.Timestamp
+            The last session for which the reader can provide data.
+        """
+        pass
+
+    def trading_calendar(self):
+        """
+        Returns the zipline.utils.calendar.trading_calendar used to read
+        the data.  Can be None (if the writer didn't specify it).
+        """
+        pass
+
+    def get_value(self, sid, dt, field):
+        """
+        Retrieve the value at the given coordinates.
+
+        Parameters
+        ----------
+        sid : int
+            The asset identifier.
+        dt : pd.Timestamp
+            The timestamp for the desired data point.
+        field : string
+            The OHLVC name for the desired data point.
+
+        Returns
+        -------
+        value : float|int
+            The value at the given coordinates, ``float`` for OHLC, ``int``
+            for 'volume'.
+
+        Raises
+        ------
+        NoDataOnDate
+            If the given dt is not a valid market minute (in minute mode) or
+            session (in daily mode) according to this reader's tradingcalendar.
+        """
+        pass
+
+    def get_last_traded_dt(self, asset, dt):
+        """
+        Get the latest minute on or before ``dt`` in which ``asset`` traded.
+
+        If there are no trades on or before ``dt``, returns ``pd.NaT``.
+
+        Parameters
+        ----------
+        asset : zipline.asset.Asset
+            The asset for which to get the last traded minute.
+        dt : pd.Timestamp
+            The minute at which to start searching for the last traded minute.
+
+        Returns
+        -------
+        last_traded : pd.Timestamp
+            The dt of the last trade for the given asset, using the input
+            dt as a vantage point.
+        """
+        pass
+
+    def _dt_window_size(self, start_dt, end_dt):
+        pass

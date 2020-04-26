@@ -7,8 +7,23 @@ Created on Sun Feb 17 16:39:46 2019
 import pandas as pd,time
 from concurrent.futures import ThreadPoolExecutor,as_completed
 
-from GateWay.Driver.Engine import BarReader
-from GateWay.Driver import DataLayer
+def load_ashare_mkv(self, sdate, edate, asset):
+    """股票流通市值、总市值、B股市值，H股市值"""
+    table = self.tables['ashareValue']
+    if asset:
+        ins = select(
+            [table.c.trade_dt, table.c.code, cast(table.c.mkt, Numeric(20, 5)), cast(table.c.cap, Numeric(20, 5)),
+             cast(table.c.strict, Numeric(20, 5)), cast(table.c.hk, Numeric(20, 5))]).where \
+            (and_(table.c.code == asset, table.c.trade_dt.between(sdate, edate)))
+    else:
+        ins = select(
+            [table.c.trade_dt, table.c.code, cast(table.c.mkt, Numeric(20, 5)), cast(table.c.cap, Numeric(20, 5)),
+             cast(table.c.strict, Numeric(20, 5)), cast(table.c.hk, Numeric(20, 5))]).where \
+            (table.c.trade_dt.between(sdate, edate))
+    rp = self._proc(ins)
+    market_value = rp.fetchall()
+    return market_value
+
 
 class MarketValue:
 

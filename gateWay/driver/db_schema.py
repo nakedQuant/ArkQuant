@@ -88,12 +88,13 @@ dual_symbol_price = sa.Table(
         nullable=False,
         primary_key=True,
     ),
-    sa.Column('trade_dt', sa.String(10)),
-    sa.Column('open', sa.Numeric(10,2)),
-    sa.Column('high', sa.Numeric(10,2)),
-    sa.Column('low', sa.Numeric(10,2)),
-    sa.Column('close', sa.Numeric(10,2)),
-    sa.Column('volume', sa.Numeric(20,0)),
+    sa.Column('trade_dt', sa.String(10),nullable=False),
+    sa.Column('open', sa.Numeric(10,2),nullable=False),
+    sa.Column('high', sa.Numeric(10,2),nullable=False),
+    sa.Column('low', sa.Numeric(10,2),nullable=False),
+    sa.Column('close', sa.Numeric(10,2),nullable=False),
+    sa.Column('volume', sa.Numeric(20,0),nullable=False),
+    sa.Columns('amount', sa.Numeric(20, 2), nullable=False),
 )
 
 bond_basics = sa.Table(
@@ -201,6 +202,7 @@ symbol_splits = sa.Table(
     ),
     sa.Column('declared_date', sa.String(10), primary_key =True),
     sa.Column('record_date',sa.String),
+    sa.Column('ex_date',sa.String),
     sa.Column('pay_date',sa.String),
     sa.Column('payment_sid_bonus',sa.Integer),
     sa.Column('payment_sid_transfer', sa.Integer),
@@ -220,6 +222,7 @@ symbol_rights = sa.Table(
     ),
     sa.Column('declared_date', sa.String(10), primary_key=True),
     sa.Column('record_date', sa.String(10)),
+    sa.Column('ex_date',sa.String),
     sa.Column('pay_date', sa.String(10)),
     sa.Column('on_date',sa.String(10)),
     sa.Column('rights_bonus', sa.Integer),
@@ -286,6 +289,22 @@ symbol_massive = sa.Table(
     sa.Column('公告日', sa.String(10)),
 )
 
+market_marign = sa.Table(
+    'market_marign',
+    metadata,
+    sa.Column(
+        'trade_dt',
+        sa.String(10),
+        unique=True,
+        nullable=False,
+        primary_key=True,
+    ),
+    sa.Column('融资余额', sa.String(20)),
+    sa.Column('融券余额', sa.String(20)),
+    sa.Column('融资融券总额', sa.String(20)),
+    sa.Column('融资融券差额', sa.String(20)),
+)
+
 symbol_delist = sa.Table(
     'symbol_delist',
     metadata,
@@ -314,38 +333,4 @@ trading_calendar = sa.Table(
     ),
 )
 
-market_marign = sa.Table(
-    'market_marign',
-    metadata,
-    sa.Column(
-        'trade_dt',
-        sa.String(10),
-        unique=True,
-        nullable=False,
-        primary_key=True,
-    ),
-    sa.Column('融资余额', sa.String(20)),
-    sa.Column('融券余额', sa.String(20)),
-    sa.Column('融资融券总额', sa.String(20)),
-    sa.Column('融资融券差额', sa.String(20)),
-)
-
-version_info = sa.Table(
-    'version_info',
-    metadata,
-    sa.Column(
-        'id',
-        sa.Integer,
-        unique=True,
-        nullable=False,
-        primary_key=True,
-    ),
-    sa.Column(
-        'version',
-        sa.Integer,
-        unique=True,
-        nullable=False,
-    ),
-    # This constraint ensures a single entry in this table
-    sa.CheckConstraint('id <= 1'),
-)
+# sa.CheckConstraint('id <= 1')

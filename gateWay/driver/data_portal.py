@@ -108,15 +108,6 @@ class DataPortal(object):
             equity_minute_reader)
         aligned_equity_session_reader = self._ensure_reader_aligned(
             equity_daily_reader)
-        aligned_future_minute_reader = self._ensure_reader_aligned(
-            future_minute_reader)
-        aligned_future_session_reader = self._ensure_reader_aligned(
-            future_daily_reader)
-
-        self._roll_finders = {
-            'calendar': CalendarRollFinder(self.trading_calendar,
-                                           self.asset_finder),
-        }
 
         aligned_minute_readers = {}
         aligned_session_readers = {}
@@ -125,27 +116,6 @@ class DataPortal(object):
             aligned_minute_readers[Equity] = aligned_equity_minute_reader
         if aligned_equity_session_reader is not None:
             aligned_session_readers[Equity] = aligned_equity_session_reader
-
-        if aligned_future_minute_reader is not None:
-            aligned_minute_readers[Future] = aligned_future_minute_reader
-            aligned_minute_readers[ContinuousFuture] = \
-                ContinuousFutureMinuteBarReader(
-                    aligned_future_minute_reader,
-                    self._roll_finders,
-                )
-
-        if aligned_future_session_reader is not None:
-            aligned_session_readers[Future] = aligned_future_session_reader
-            self._roll_finders['volume'] = VolumeRollFinder(
-                self.trading_calendar,
-                self.asset_finder,
-                aligned_future_session_reader,
-            )
-            aligned_session_readers[ContinuousFuture] = \
-                ContinuousFutureSessionBarReader(
-                    aligned_future_session_reader,
-                    self._roll_finders,
-                )
 
         _dispatch_minute_reader = AssetDispatchMinuteBarReader(
             self.trading_calendar,
@@ -1295,37 +1265,6 @@ class DataPortal(object):
 
             return ret
 
-    def get_current_future_chain(self, continuous_future, dt):
-        """
-        Retrieves the future chain for the contract at the given `dt` according
-        the `continuous_future` specification.
-
-        Returns
-        -------
-
-        future_chain : list[Future]
-            A list of active futures, where the first index is the current
-            contract specified by the continuous future definition, the second
-            is the next upcoming contract and so on.
-        """
-        rf = self._roll_finders[continuous_future.roll_style]
-        session = self.trading_calendar.minute_to_session_label(dt)
-        contract_center = rf.get_contract_center(
-            continuous_future.root_symbol, session,
-            continuous_future.offset)
-        oc = self.asset_finder.get_ordered_contracts(
-            continuous_future.root_symbol)
-        chain = oc.active_chain(contract_center, session.value)
-        return self.asset_finder.retrieve_all(chain)
-
-    def _get_current_contract(self, continuous_future, dt):
-        rf = self._roll_finders[continuous_future.roll_style]
-        contract_sid = rf.get_contract_center(continuous_future.root_symbol,
-                                              dt,
-                                              continuous_future.offset)
-        if contract_sid is None:
-            return None
-        return self.asset_finder.retrieve_asset(contract_sid)
 
     @property
     def adjustment_reader(self):
