@@ -1,13 +1,4 @@
 # Initialize pipe API data.
-self.init_engine(get_pipeline_loader)
-self._pipelines = {}
-
-# Create an already-expired cache so that we compute the first time
-# data is requested.
-self._pipeline_cache = ExpiringCache(
-    cleanup=clear_dataframe_indexer_caches
-)
-
 def init_engine(self, get_loader):
     """
     Construct and store a PipelineEngine from loader.
@@ -23,6 +14,8 @@ def init_engine(self, get_loader):
     else:
         self.engine = ExplodingPipelineEngine()
 
+# Create an already-expired cache so that we compute the first time
+# data is requested.
 def compute_eager_pipelines(self):
     """
     Compute any pipelines attached with eager=True.
@@ -34,13 +27,6 @@ def compute_eager_pipelines(self):
 ##############
 # pipe API
 ##############
-@api_method
-@require_not_initialized(AttachPipelineAfterInitialize())
-@expect_types(
-    pipeline=Pipeline,
-    name=string_types,
-    chunks=(int, Iterable, type(None)),
-)
 def attach_pipeline(self, pipeline, name, chunks=None, eager=True):
     """Register a Pipeline to be computed at the start of each day.
 

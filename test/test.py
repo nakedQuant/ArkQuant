@@ -1437,3 +1437,24 @@ from textwrap import dedent
 #                 df[col].cat.set_categories(new_categories, inplace=True)
 #
 #     return pd.concat(df_list)
+# tolerant_equals
+from abc import ABC
+from collections import deque, namedtuple
+from numbers import Integral
+from operator import itemgetter, attrgetter
+import numpy as np
+import pandas as pd
+from pandas import isnull
+from six import with_metaclass, string_types, viewkeys, iteritems
+from toolz import (
+    compose,
+    concat,
+    # vertical itertools.chain
+    concatv,
+    curry,
+    groupby,
+    merge,
+    partition_all,
+    sliding_window,
+    valmap,
+)

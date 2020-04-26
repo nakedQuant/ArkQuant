@@ -3129,7 +3129,90 @@ class _ClassicRiskMetrics(object):
 
 
 class MetricsTracker(object):
-    """The algorithm's interface to the registered risk and performance
+    """
+            分析指标:
+            策略共执行{}个交易日 策略资金利用率比例  策略买入成交比例 平均获利期望 平均亏损期望
+            策略持股天数平均值,策略持股天数中位数,策略期望收益,策略期望亏损,前后两两生效交易时间相减,
+            计算平均生效间隔时间,计算cost各种统计度量值,计算资金对应的成交比例
+
+        MONTHS_PER_YEAR = 12 ，APPROX_BDAYS_PER_MONTH = 21、WEEKS_PER_YEAR = 52、APPROX_BDAYS_PER_YEAR = 252
+
+        annual_return:
+            stats.cum_returns(algorithm_returns)
+
+        annual_volatilty
+            stats.annual_volatility(algorithm_returns)
+
+        cum_returns(returns, starting_value=0) :
+            Compute cumulative returns from simple returns np.log1p : log(1+x)
+
+        max_down
+            stats.max_drawdown(algorithm_returns.values)
+
+        cash_utilization:
+            1 - (cash_blance /capital_blance).mean()
+
+        hitrate :
+            win：1，loss：－1. keep：0
+            len(rate > 0)/len(rate)
+
+        calmar_ratio :
+            annual_return(returns,period,annualization) / abs(max_dd) 年华收益率与最大回撤之比
+
+        omega_ratio :
+            Constant risk-free return throughout the period.Minimum acceptance return of the investor.
+            Threshold over which to consider positive vs negative returns. It will be converted to a
+            value appropriate for the period of the returns.
+            #计算逻辑
+            return_threshold = (1 + required_return) ** \
+            (1. / annualization) - 1
+            returns_less_thresh = returns - risk_free - return_threshold
+            numer = sum(returns_less_thresh[returns_less_thresh > 0.0])
+            denom = -1.0 * sum(returns_less_thresh[returns_less_thresh < 0.0])
+            omega_ratio = numer / denom
+
+        downside_risk ( below threshold std ):
+            downside_diff = _adjust_returns(returns, required_return).copy()
+            mask = downside_diff > 0
+            downside_diff[mask] = 0.0
+            squares = np.square(downside_diff)
+            mean_squares = nanmean(squares, axis=0)
+            dside_risk = np.sqrt(mean_squares) * np.sqrt(ann_factor)
+
+        sortino_ratio：
+            adj_returns = _adjust_returns(returns, required_return)
+            mu = nanmean(adj_returns, axis=0)
+            sortino = mu / downside_risk
+
+        information_ratio:
+            #超额收益与波动率之比
+
+        cagr:
+            #复合年化收益率
+            Compute compound annual growth rate
+
+        beta:
+            #计算收益率的协方差矩阵
+            joint = np.vstack([_adjust_returns(returns, risk_free),factor_returns])
+            joint = joint[:, ~np.isnan(joint).any(axis=0)]
+            cov = np.cov(joint, ddof=0)
+            return cov[0, 1] / cov[1, 1]
+
+        alpha:
+            adj_returns = _adjust_returns(returns, risk_free)
+            adj_factor_returns = _adjust_returns(factor_returns, risk_free)
+            alpha_series = adj_returns - (beta * adj_factor_returns)
+            return nanmean(alpha_series) * ann_factor
+
+        stability_of_timeseries:
+           #收益率的对数（近似复合年华收益），返回线性回归的残差平方
+           cum_log_returns = np.log1p(returns).cumsum()
+           rhat = stats.linregress(np.arange(len(cum_log_returns)),cum_log_returns)[2] return rhat **2
+
+        tail_ratio :
+            Determines the ratio between the right (95%) and left tail (5%)
+
+    The algorithm's interface to the registered risk and performance
     metrics.
 
     Parameters
