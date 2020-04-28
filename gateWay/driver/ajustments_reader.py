@@ -111,3 +111,18 @@ class SQLiteAdjustmentReader(object):
 
     def close(self):
         return self.conn.close()
+
+# date_ix = np.searchsorted(dates, dividends.ex_date.values)
+# date_ix = np.searchsorted(dates, dividends.ex_date.values)
+# mask = date_ix > 0
+#
+# date_ix = date_ix[mask]
+# sids_ix = sids_ix[mask]
+# input_dates = dividends.ex_date.values[mask]
+#
+# # subtract one day to get the close on the day prior to the merger
+# previous_close = close[date_ix - 1, sids_ix]
+# input_sids = input_sids[mask]
+#
+# amount = dividends.amount.values[mask]
+# ratio = 1.0 - amount / previous_close

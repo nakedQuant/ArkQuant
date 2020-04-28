@@ -5,14 +5,19 @@ Created on Thu Nov  1 11:27:02 2018
 
 @author: hengxinliu
 """
-from sqlalchemy import select,and_,cast ,Numeric
+from sqlalchemy import create_engine,MetaData,select,and_,cast ,Numeric
 import pandas as pd
 
 class BarReader(object):
 
-    def __init__(self,conn):
-        self.conn = conn
-        self.tables = self.db.metadata.tables
+    def __init__(self,engine_path,
+                 level = 'READ UNCOMMITTED'):
+        self._init_db(engine_path,level)
+
+    def _init_db(self,engine_path,level):
+        engine = create_engine(engine_path)
+        self.tabls = MetaData(bind=engine).tables
+        self.conn = engine.connect(_execution_options = {'isolation_level':level})
 
     def _load_raw_arrays(self,start_date,end_date,asset,tbl):
         tbl = self.tables[tbl]

@@ -1458,3 +1458,61 @@ from toolz import (
     sliding_window,
     valmap,
 )
+
+# self.conn.execute(
+#     "CREATE INDEX IF NOT EXISTS stock_dividends_payouts_ex_date "
+#     "ON stock_dividend_payouts(ex_date)"
+# frame['effective_date'] = frame['effective_date'].values.astype(
+#     'datetime64[s]',
+# ).astype('int64')
+# actual_dtypes = frame.dtypes
+# for colname, expected in six.iteritems(expected_dtypes):
+#     actual = actual_dtypes[colname]
+#     if not np.issubdtype(actual, expected):
+#         raise TypeError(
+#             "Expected data of type {expected} for column"
+#             " '{colname}', but got '{actual}'.".format(
+#                 expected=expected,
+#                 colname=colname,
+#                 actual=actual,
+#             ),
+#         )
+# from sqlalchemy import join
+#
+# j = user_table.join(address_table,
+#                 user_table.c.id == address_table.c.user_id)
+# stmt = select([user_table]).select_from(j)
+# """
+# READ COMMITTED
+# READ UNCOMMITTED
+# REPEATABLE READ
+# SERIALIZABLE
+# AUTOCOMMIT
+# """
+# engine = create_engine('mysql+pymysql://root:macpython@localhost:3306/test',
+#                        isolation_level="READ UNCOMMITTED")
+# engine = create_engine('mysql+pymysql://root:macpython@localhost:3306/test',
+#                        pool_size=50, max_overflow=100, pool_timeout=-1)
+# db = 'db'
+# with engine.connect() as conn:
+#     conn.execute('create database %s'%db)
+#
+# metadata.create_all(bind = engine)
+#
+# # engine.execution_options()
+# print(metadata.clear())
+# tbls = engine.table_names()
+# print(tbls)
+# conn = engine.connect()
+# res = conn.execution_options(isolation_level="READ COMMITTED")
+# print(res.get_execution_options())
+# # engine.execution_options(isolation_level="READ COMMITTED")
+# # print(engine.get_execution_options())
+# #代理
+# from sqlalchemy import inspect
+# insp = inspect(engine)
+# print(insp.get_table_names())
+# print(insp.get_columns('asharePrice'))
+# print(insp.get_schema_names())
+# # get_pk_constraint get_primary_keys get_foreign_keys get_indexes
+# sa.CheckConstraint('id <= 1')
