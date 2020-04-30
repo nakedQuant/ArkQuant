@@ -109,9 +109,10 @@ bond_basics = sa.Table(
         index = True,
     ),
     sa.Column(
-        'stock_id',
+        'sid',
         sa.String(10),
-        nullable = False,
+        sa.ForeignKey(symbol_price.c.sid),
+        nullable=False,
     ),
     sa.Column('put_price',sa.Numeric(10,3)),
     sa.Column('convert_price', sa.Numeric(10, 2)),
@@ -210,6 +211,7 @@ symbol_splits = sa.Table(
     sa.Column('progress',sa.Text),
 )
 
+#配股
 symbol_rights = sa.Table(
     'symbol_rights',
     metadata,
@@ -264,10 +266,11 @@ symbol_mcap = sa.Table(
     sa.Column('mkv_cap', sa.Numeric(15,5),nullable=False),
     sa.Column('mkv_strict', sa.Numeric(15,5), nullable=False),
 )
-# default = 0
 
-symbol_massive = sa.Table(
-    'symbol_massive',
+
+# default = 0
+symbol_share_pct = sa.Table(
+    'symbol_share_pct',
     metadata,
     sa.Column(
         'sid',

@@ -91,27 +91,6 @@ class Astock(Ancestor):
         else:
             print('stock code :%s have no kline due to 未上市'%code)
 
-    @classmethod
-    def download_ticks(cls,code,ndays = None):
-        """获取最近几天分时图"""
-        if ndays is None:
-            #获取当日日内数据
-            html_m = 'http://push2.eastmoney.com/api/qt/stock/trends2/get?fields1=f1'\
-                     '&fields2=f51,f52,f53,f54,f55,f56,f57,f58&iscr=0&secid={}'.format(cls._get_prefix(code))
-            filename = '%s-%s.csv'%(cls.nowdays,code)
-        else:
-            #获取历史日内数据
-            html_m = 'http://push2his.eastmoney.com/api/qt/stock/trends2/get?fields1=f1'\
-                        '&fields2=f51,f52,f53,f54,f55,f56,f57,f58&ndays={}&iscr=3&secid={}'.format(int(ndays),cls._get_prefix(code))
-            filename = '%s-%d-%s.csv' % (cls.nowdays,int(ndays),code)
-        obj = cls._parse_url(html_m,bs = False)
-        d = json.loads(obj)
-        minutes = [item.split(',') for item in d['data']['trends']]
-        kline  = pd.DataFrame(minutes,columns = ['ticker','open','close','high','low','volume','turnover','avg'])
-        #dump to csv
-        filepath = os.path.join(XML.pathCsv.value,filename)
-        kline.to_csv(filepath)
-
     def _download_bascis(self,code):
         """获取股票基础信息"""
         if not self.frequency or code not in self.basics_assets:
@@ -652,96 +631,6 @@ class ExtraOrdinary(Ancestor):
                 else:
                     print('match is null')
                     break
-
-    # def download_release(self,sdate,edate):
-    #     """
-    #         获取每天A股的解禁
-    #     """
-    #     release = pd.DataFrame()
-    #     count = 1
-    #     while True:
-    #         html = 'http://dcfm.eastmoney.com/EM_MutiSvcExpandInterface/api/js/get?type=XSJJ_NJ_PC' \
-    #                '&token=70f12f2f4f091e459a279469fe49eca5&st=kjjsl&sr=-1&p=%d&ps=10&filter=(mkt=)'%count + \
-    #                '(ltsj%3E=^{}^%20and%20ltsj%3C=^{}^)'.format(sdate,edate) + '&js={"data":(x)}'
-    #         text = self._parse_url(html,encoding=None,bs = False)
-    #         text = json.loads(text)
-    #         if text['data'] and len(text['data']):
-    #             info = text['data']
-    #             raw = [[item['gpdm'],item['ltsj'],item['xsglx'],item['zb']] for item in info]
-    #             df = pd.DataFrame(raw,columns = ['代码','解禁时间','类型','解禁占流通市值比例'])
-    #             release = release.append(df)
-    #             count = count + 1
-    #         else:
-    #             break
-    #     release.index = range(len(release))
-    #     return release
-
-    # def download_mass(self,sdate,edate):
-    #     """
-    #         获取每天股票大宗交易
-    #     """
-    #     df = pd.DataFrame()
-    #     count = 1
-    #     while True:
-    #         html = 'http://dcfm.eastmoney.com/em_mutisvcexpandinterface/api/js/get?type=DZJYXQ&' \
-    #                'token=70f12f2f4f091e459a279469fe49eca5&cmd=&st=SECUCODE&sr=1&p=%d&ps=50&'%count +\
-    #                'js={"data":(x)}&filter=(Stype=%27EQA%27)'+'(TDATE%3E=^{}^%20and%20TDATE%3C=^{}^)'.format(sdate,edate)
-    #         raw = self._parse_url(html,bs = False,encoding=None)
-    #         raw = json.loads(raw)
-    #         if raw['data'] and len(raw['data']):
-    #             mass = pd.DataFrame(raw['data'])
-    #             df = df.append(mass)
-    #             count = count +1
-    #         else:
-    #             break
-    #     df.index = range(len(df))
-    #     return df
-
-    # def download_5d_minute_hk(self,code):
-    #     """
-    #         获取港股5日分钟线
-    #         列名 -- ticker price volume
-    #     """
-    #     tencent = 'http://web.ifzq.gtimg.cn/appstock/app/day/query?code=%s'%self._get_prefix(code)
-    #     raw = self._parse_url(tencent,bs = False,encoding= None)
-    #     raw = json.loads(raw)
-    #     print('raw',raw)
-    #     if len(raw['data']):
-    #         data = raw['data'][self._get_prefix(code)]['data']
-    #     else:
-    #         raise ValueError('code error or not kline')
-    #     return data
-
-    # def download_periphera_index(self,sdate,edate,index,exchange,lmt = 10000):
-    #     """
-    #     获取外围指数
-    #     :param index: 指数名称
-    #     :param exchange: 地域
-    #     :return:
-    #     """
-    #     tencent = 'http://web.ifzq.gtimg.cn/appstock/app/fqkline/get?&param=%s,day,%s,%s,%d,qfq'%(self._get_prefix(index,exchange),sdate,edate,lmt)
-    #     raw = self._parse_url(tencent,bs = False,encoding= 'utf-8')
-    #     raw = json.loads(raw)
-    #     data = raw['data'][self._get_prefix(index,exchange)]['day']
-    #     df = pd.DataFrame(data,columns = ['trade_dt','open','close','high','low','turnvoer'])
-    #     return df
-
-    # def download_gross_value(self):
-    #     page = 1
-    #     gdp = pd.DataFrame()
-    #     while True:
-    #         html = 'http://data.eastmoney.com/cjsj/grossdomesticproduct.aspx?p=%d'%page
-    #         obj = self._parse_url(html)
-    #         raw = obj.findAll('div', {'class': 'Content'})
-    #         text = [t.get_text() for t in raw[1].findAll('td')]
-    #         text = [item.strip() for item in text]
-    #         data = zip(text[::9], text[1::9])
-    #         data = pd.DataFrame(data, columns=['季度', '总值'])
-    #         gdp = gdp.append(data)
-    #         if len(gdp) != len(gdp.drop_duplicates(ignore_index=True)):
-    #             gdp.drop_duplicates(inplace = True,ignore_index= True)
-    #             return gdp
-    #         page = page +1
 
 
 if __name__ == '__main__':

@@ -51,13 +51,15 @@ class AssetFinder(object):
                       execute().fetchall()
         return assets_list
 
-    def fuzzy_symbol_ownership_by_ipo(self,date):
+    def fuzzy_symbol_ownership_by_ipo(self,dates):
         """
             基于上市时间找到对应的股票代码
         """
-        assets_list = sa.select(self.equity_baics.c.code).\
-                      where(self.equity_basics.c.initial_date == date).\
-                      execute().fetchall()
+        if isinstance(dates,(tuple,list)):
+            assets_list = sa.select(self.equity_baics.c.code).\
+                          where(sa.between(self.equity_basics.c.initial_date,
+                                           min(dates),
+                                           max(dates))).execute().fetchall()
         return assets_list
 
     def fuzzy_Hsymbol_ownership_by_code(self,code):

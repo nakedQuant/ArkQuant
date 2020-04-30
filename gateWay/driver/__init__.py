@@ -11,7 +11,7 @@
     spider作为数据下载端入口，现在问题数据入口端
 
     data_portal --- asset.roller_finder.py
-                --- bar_reader.py
+                --- reader.py
                 --- dispatcher_bar_reader.py
                 --- history_loader.py
                 --- resample.py
@@ -26,7 +26,7 @@
 
     AssertFinder
 
-    bar_reader.py --- data_frequency
+    reader.py --- data_frequency
                   --- load_raw_arrays (columns, start_date, end_date, assets)
                   --- first_trading_day
                   --- last_avaiable_dt

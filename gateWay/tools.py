@@ -1,17 +1,23 @@
 import os
-import pandas as pd
+import pandas as pd ,requests
+from bs4 import BeautifulSoup
 
 # Mapping from index symbol to appropriate bond data
-INDEX_MAPPING = {
-    'SPY':
-    (treasuries, 'treasury_curves.csv', 'www.federalreserve.gov'),
-    '^GSPTSE':
-    (treasuries_can, 'treasury_curves_can.csv', 'bankofcanada.ca'),
-    '^FTSE':  # use US treasuries until UK bonds implemented
-    (treasuries, 'treasury_curves.csv', 'www.federalreserve.gov'),
-}
 
 ONE_HOUR = pd.Timedelta(hours=1)
+
+
+def _parse_url(url, encoding='gbk', bs=True):
+    Header = {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_3) AppleWebKit/537.36(KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36'}
+    req = requests.get(url, headers=Header, timeout=1)
+    if encoding:
+        req.encoding = encoding
+    if bs:
+        raw = BeautifulSoup(req.text, features='lxml')
+    else:
+        raw = req.text
+    return raw
 
 
 def last_modified_time(path):
@@ -20,6 +26,32 @@ def last_modified_time(path):
     """
     return pd.Timestamp(os.path.getmtime(path), unit='s', tz='UTC')
 
+def load_prices_from_csv(filepath, identifier_col, tz='UTC'):
+    data = pd.read_csv(filepath, index_col=identifier_col)
+    data.index = pd.DatetimeIndex(data.index, tz=tz)
+    data.sort_index(inplace=True)
+    return data
+
+
+def load_prices_from_csv_folder(folderpath, identifier_col, tz='UTC'):
+    data = None
+    for file in os.listdir(folderpath):
+        if '.csv' not in file:
+            continue
+        raw = load_prices_from_csv(os.path.join(folderpath, file),
+                                   identifier_col, tz)
+        if data is None:
+            data = raw
+        else:
+            data = pd.concat([data, raw], axis=1)
+    return data
+
+def get_cache_filepath(name):
+    cr = cache_root()
+    if not os.path.exists(cr):
+        os.makedirs(cr)
+
+    return os.path.join(cr, name)
 
 def get_data_filepath(name, environ=None):
     """
@@ -33,18 +65,6 @@ def get_data_filepath(name, environ=None):
         os.makedirs(dr)
 
     return os.path.join(dr, name)
-
-
-def get_cache_filepath(name):
-    cr = cache_root()
-    if not os.path.exists(cr):
-        os.makedirs(cr)
-
-    return os.path.join(cr, name)
-
-
-def get_benchmark_filename(symbol):
-    return "%s_benchmark.csv" % symbol
 
 
 def has_data_for_dates(series_or_df, first_date, last_date):
@@ -94,48 +114,17 @@ def _load_cached_data(filename, first_date, last_date, now, resource_name,
             # file in the last hour.
             last_download_time = last_modified_time(path)
             if (now - last_download_time) <= ONE_HOUR:
-                logger.warn(
-                    "Refusing to download new {resource} data because a "
-                    "download succeeded at {time}.",
-                    resource=resource_name,
-                    time=last_download_time,
-                )
+                # logger.warn(
+                #     "Refusing to download new {resource} data because a "
+                #     "download succeeded at {time}.",
+                #     resource=resource_name,
+                #     time=last_download_time,
+                # )
                 return data
 
         except (OSError, IOError, ValueError) as e:
-            # These can all be raised by various versions of pandas on various
-            # classes of malformed input.  Treat them all as cache misses.
-            logger.info(
-                "Loading data for {path} failed with error [{error}].",
-                path=path,
-                error=e,
-            )
-
-    logger.info(
-        "Cache at {path} does not have data from {start} to {end}.\n",
-        start=first_date,
-        end=last_date,
-        path=path,
-    )
+            """
+                These can all be raised by various versions of pandas on various
+                classes of malformed input.  Treat them all as cache misses.
+            """
     return None
-
-
-def load_prices_from_csv(filepath, identifier_col, tz='UTC'):
-    data = pd.read_csv(filepath, index_col=identifier_col)
-    data.index = pd.DatetimeIndex(data.index, tz=tz)
-    data.sort_index(inplace=True)
-    return data
-
-
-def load_prices_from_csv_folder(folderpath, identifier_col, tz='UTC'):
-    data = None
-    for file in os.listdir(folderpath):
-        if '.csv' not in file:
-            continue
-        raw = load_prices_from_csv(os.path.join(folderpath, file),
-                                   identifier_col, tz)
-        if data is None:
-            data = raw
-        else:
-            data = pd.concat([data, raw], axis=1)
-    return data

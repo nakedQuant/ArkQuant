@@ -7,13 +7,6 @@ class DBWriter(object):
     _cache = WeakValueDictionary()
 
     def __new__(cls,engine_path):
-        """
-        engine = create_engine('mysql+pymysql://root:macpython@localhost:3306/spider',
-                                pool_size=50,
-                                max_overflow=100,
-                                pool_timeout=-1
-                                isolation_level="READ UNCOMMITTED")
-        """
         try:
             return cls._cache[engine_path]
         except KeyError:
@@ -80,3 +73,15 @@ class DBWriter(object):
 
     def __exit__(self, * exc_info):
         self.close()
+
+
+if __name__ == '__main__':
+
+    engine = create_engine('mysql+pymysql://root:macpython@localhost:3306/spider',
+                            pool_size=50,
+                            max_overflow=100,
+                            pool_timeout=-1,
+                            pool_pre_ping=True,
+                            isolation_level="READ UNCOMMITTED")
+    con = engine.connect().execution_options(isolation_level = "READ UNCOMMITTED")
+    print(con.get_execution_options())
