@@ -82,7 +82,7 @@ class DataPortal(object):
             # Infer the last session from the provided readers.
             last_sessions = [
                 reader.last_available_dt
-                for reader in [equity_daily_reader, future_daily_reader]
+                for reader in [equity_daily_reader]
                 if reader is not None
             ]
             if last_sessions:
@@ -173,6 +173,7 @@ class DataPortal(object):
             self.trading_calendar.all_sessions.get_loc(self._first_trading_day)
             if self._first_trading_day is not None else None
         )
+
 
     def _ensure_reader_aligned(self, reader):
         if reader is None:
@@ -1264,7 +1265,6 @@ class DataPortal(object):
                 ret = np.nan
 
             return ret
-
 
     @property
     def adjustment_reader(self):

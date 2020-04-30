@@ -1516,3 +1516,9 @@ from toolz import (
 # print(insp.get_schema_names())
 # # get_pk_constraint get_primary_keys get_foreign_keys get_indexes
 # sa.CheckConstraint('id <= 1')
+# ins = ins.order_by(table.c.trade_dt)
+# def canonicalize_datetime(dt):
+#     # Strip out any HHMMSS or timezone info in the user's datetime, so that
+#     # all the datetimes we return will be 00:00:00 UTC.
+#     return datetime(dt.year, dt.month, dt.day, tzinfo=pytz.utc)
+# pd.date_range(start=start.date(),end=end.date(),freq=trading_day).tz_localize('UTC')

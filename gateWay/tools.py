@@ -128,3 +128,9 @@ def _load_cached_data(filename, first_date, last_date, now, resource_name,
                 classes of malformed input.  Treat them all as cache misses.
             """
     return None
+
+
+def resample():
+    """
+
+    """

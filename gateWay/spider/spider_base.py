@@ -7,9 +7,7 @@ Created on Sun Feb 17 16:39:46 2019
 """
 
 from abc import ABC,abstractmethod
-import requests,datetime
-from bs4 import BeautifulSoup
-from gateWay.driver import DataLayer
+import datetime
 
 class Ancestor(ABC):
 
@@ -34,18 +32,6 @@ class Ancestor(ABC):
     def _get_prefix(self):
 
         raise NotImplementedError
-
-    # @staticmethod
-    # def _parse_url(url,encoding = 'gbk',bs = True):
-    #     Header = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_3) AppleWebKit/537.36(KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36'}
-    #     req = requests.get(url,headers = Header,timeout = 1)
-    #     if encoding:
-    #         req.encoding = encoding
-    #     if bs:
-    #         raw = BeautifulSoup(req.text, features='lxml')
-    #     else:
-    #         raw = req.text
-    #     return raw
 
     @abstractmethod
     def _download_assets(self):
