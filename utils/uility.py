@@ -1,51 +1,6 @@
 # -*- coding: utf-8  -*-
 
 import os,argparse,numpy as np,pandas as pd,pytz
-from io import StringIO
-
-def parse_date_str_series(format_str, tz, date_str_series):
-    tz_str = str(tz)
-    if tz_str == pytz.utc.zone:
-
-        parsed = pd.to_datetime(
-            date_str_series.values,
-            format=format_str,
-            utc=True,
-            errors='coerce',
-        )
-    else:
-        parsed = pd.to_datetime(
-            date_str_series.values,
-            format=format_str,
-            errors='coerce',
-        ).tz_localize(tz_str).tz_convert('UTC')
-    return parsed
-
-
-def scale():
-    """
-        zoom self.x.max() / self.tl.max() y_zoom = zoom_factor * self.tl --- scale
-        d = float(w.nnz) / (w.shape[0] * w.shape[1])
-    """
-    pass
-
-def resample():
-    """
-        kl_rp = pd_resample(kl, '{}D'.format(resample), how='mean')
-    """
-    pass
-
-
-def load_to_file():
-    output = StringIO()
-    output.write('First line.\n')
-    contents = output.getvalue()
-    output.close()
-    fd = StringIO()
-    fd.tell()
-    fd.seek(0)
-    fd.close()
-
 
 def nan_proc(x):
     np.nan_to_num(x, copy=True, nan=0.0, posinf=None, neginf=None)
@@ -61,8 +16,6 @@ def signature():
         sig.parameters['b'].annotation
         #<class 'int'>
     """
-    pass
-
 
 def display():
     """
@@ -75,7 +28,6 @@ def display():
         numpy精度浮点数显示4位，不使用科学计数法
         np.set_printoptions(precision=4, suppress=True)
     """
-    pass
 
 
 def encryt(obj,method = 'md5',hex = False):

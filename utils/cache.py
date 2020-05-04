@@ -14,10 +14,9 @@ from tempfile import mkdtemp, NamedTemporaryFile
 
 import pandas as pd
 
-from .compat import PY2
 from .context_tricks import nop_context
 from .paths import ensure_directory
-from .sentinel import sentinel
+from test.sentinel import sentinel
 
 
 class Expired(Exception):

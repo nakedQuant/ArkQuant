@@ -15,9 +15,17 @@
 from collections import namedtuple
 from itertools import chain
 from six.moves import map, zip_longest
+import inspect
 
-from zipline.errors import ZiplineError
-from zipline.utils.compat import getargspec
+def getargspec(f):
+    full_argspec = inspect.getfullargspec(f)
+    return inspect.ArgSpec(
+        args=full_argspec.args,
+        varargs=full_argspec.varargs,
+        keywords=full_argspec.varkw,
+        defaults=full_argspec.defaults,
+    )
+
 
 
 Argspec = namedtuple('Argspec', ['args', 'starargs', 'kwargs'])

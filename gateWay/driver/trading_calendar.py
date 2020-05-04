@@ -18,48 +18,56 @@ from datetime import datetime
 from dateutil import rrule
 from functools import partial
 
-start = pd.Timestamp('1990-01-01', tz='UTC')
-end_base = pd.Timestamp('today', tz='UTC')
-end = end_base + pd.Timedelta(days=365)
+# from trading_calendars import (
+#     clear_calendars,
+#     deregister_calendar,
+#     get_calendar,
+#     register_calendar,
+#     register_calendar_alias,
+#     register_calendar_type,
+#     TradingCalendar,
+# )
 
 # 元旦：1月1日 ; 清明节：4月4日; 劳动节：5月1日; 国庆节:10月1日
 # 春节
-spring = ['1990-1-27','1991-2-15','1992-2-4','1993-1-23','1994-2-10',
-            '1995-1-31','1996-2-19','1997-2-7','1998-1-28','1999-2-16',
-            '2000-2-5','2001-1-24','2002-2-12','2003-2-1','2004-1-22',
-            '2005-2-9','2006-1-29','2007-2-18','2008-2-7','2009-1-26',
-            '2010-2-14','2011-2-3','2012-1-23','2013-2-10','2014-1-31',
-            '2015-2-19','2016-2-8','2017-1-28','2018-2-16','2019-2-5',
-            '2020-1-25','2021-2-12','2022-2-1','2023-1-22','2024-2-10',
-            '2025-1-29','2026-2-17','2027-2-6','2028-1-26','2029-2-13',
-            '2030-2-3','2031-1-23','2032-2-11','2033-1-31','2034-2-19',
-            '2035-2-8','2036-1-28','2037-2-15','2038-2-4','2039-1-24',
-            '2040-2-12','2041-2-1','2042-1-22','2043-2-10','2044-1-30',
-            '2045-2-17','2046-2-6','2047-1-26','2048-2-14','2049-2-2',
-            '2050-1-23','2051-2-11','2052-2-1','2053-2-19','2054-2-8',
-            '2055-1-28','2056-2-15','2057-2-4','2058-1-24','2059-2-12',
-            '2060-2-2','2061-1-21','2062-2-9','2063-1-29','2064-2-17',
-            '2065-2-5','2066-1-26','2067-2-14','2068-2-3','2069-1-23']
+spring = ['19900127','19910215','19920204','19930123','19940210',
+            '19950131','19960219','19970207','19980128','19990216',
+            '20000205','20010124','20020212','20030201','20040122',
+            '20050209','20060129','20070218','20080207','20090126',
+            '20100214','20110203','20120123','20130210','20140131',
+            '20150219','20160208','20170128','20180216','20190205',
+            '20200125','20210212','20220201','20230122','20240210',
+            '20250129','20260217','20270206','20280126','20290213',
+            '20300203','20310123','20320211','20330131','20340219',
+            '20350208','20360128','20370215','20380204','20390124',
+            '20400212','20410201','20420122','20430210','20440130',
+            '20450217','20460206','20470126','20480214','20490202',
+            '20500123','20510211','20520201','20530219','20540208',
+            '20550128','20560215','20570204','20580124','20590212',
+            '20600202','20610121','20620209','20630129','20640217',
+            '20650205','20660126','20670214','20680203','20690123']
 # 中秋；
-autumn = ['1990-10-3','1991-9-22','1992-9-11','1993-9-30','1994-9-20',
-          '1995-9-9','1996-9-27','1997-9-16','1998-10-5','1999-9-24',
-          '2000-9-12','2001-10-1', '2002-9-21','2003-9-11','2004-9-28',
-          '2005-9-18','2006-10-6','2007-9-25','2008-9-14','2009-10-3',
-          '2010-9-22','2011-9-12','2012-9-30','2013-9-19', '2014-9-8',
-          '2015-9-27','2016-9-15','2017-10-4','2018-9-24','2019-9-13',
-          '2020-10-1','2021-9-21','2022-9-10', '2023-9-29','2024-9-17',
-          '2025-10-6','2026-9-25', '2027-9-15','2028-10-3','2029-9-22',
-          '2030-9-12','2031-10-1','2032-9-19', '2033-9-8','2034-9-27',
-          '2035-9-16','2036-10-4','2037-9-24','2038-9-13','2039-10-2',
-          '2040-9-20', '2041-9-10','2042-9-28','2043-9-17','2044-10-5',
-          '2045-9-25', '2046-9-15''2047-10-4','2048-9-22','2049-9-11','2050-9-30',]
+autumn = ['19901003','19910922','19920911','19930930','19940920',
+          '19950909','19960927','19970916','19981005','19990924',
+          '20000912','20011001', '20020921','20030911','20040928',
+          '20050918','20061006','20070925','20080914','20091003',
+          '20100922','20110912','20120930','20130919', '20140908',
+          '20150927','20160915','20171004','20180924','20190913',
+          '20201001','20210921','20220910', '20230929','20240917',
+          '20251006','20260925', '20270915','20281003','20290922',
+          '20300912','20311001','20320919', '20330908','20340927',
+          '20350916','20361004','20370924','20380913','20391002',
+          '20400920','20410910','20420928','20430917','20441005',
+          '20450925','20460915''20471004','20480922','20490911','20500930',]
 
+fixed_holiday_names = frozenset(('new_year','spring','tomb','labour','autumn','national'))
 
 class Calendar(object):
 
     def __init__(self,conn):
         self.conn = conn
         self._init_calendar()
+        self._fixed_holiday()
 
     def _init_calendar(self):
         """获取交易日"""
@@ -79,55 +87,65 @@ class Calendar(object):
         idx_e = np.searchsorted(self.trading_days,end_dt)
         return idx_e - idx_s
 
-    def get_non_trading_days(start, end):
-        """
-            元旦 1-1
-            春节
-            清明节 4-4
-            劳动节 5-1
-            中秋节
-            国庆节 10-1
-        """
-        non_trading_rules = []
+    @property
+    def _fixed_holiday(self,):
+        non_trading_rules = dict()
+        non_trading_rules['spring'] = spring
+        non_trading_rules['autumn'] = autumn
+        tz = pytz.timezone('Asia/Shanghai')
+        start = pd.Timestamp(min(self.trading_days), tz=tz)
+        end = pd.Timestamp(max(self.trading_days), tz=tz)
 
-        weekends = rrule.rrule(
+        new_year = rrule.rrule(
             rrule.YEARLY,
-            byweekday=(rrule.SA, rrule.SU),
+            byyearday= 1,
+            cache = True,
+            dstart = start,
+            until = end
+        )
+        non_trading_rules.update({'new_year':new_year})
+
+        april_4 = rrule.rrule(
+            rrule.YEARLY,
+            bymonth= 4,
+            bymonthday= 4,
             cache=True,
             dtstart=start,
             until=end
         )
-        non_trading_rules.append(weekends)
+        non_trading_rules.update({'tomb':april_4})
 
-        new_years = rrule.rrule(
-            rrule.MONTHLY,
-            byyearday=1,
-            cache=True,
-            dtstart=start,
-            until=end
-        )
-
-        good_friday = rrule.rrule(
-            rrule.DAILY,
-            byeaster=-2,
-            cache=True,
-            dtstart=start,
-            until=end
-        )
-        non_trading_rules.append(good_friday)
-
-        memorial_day = rrule.rrule(
-            rrule.MONTHLY,
+        may_day = rrule.rrule(
+            rrule.YEARLY,
             bymonth=5,
-            byweekday=(rrule.MO(-1)),
+            bymonthday=1,
             cache=True,
             dtstart=start,
             until=end
         )
-        non_trading_rules.append(memorial_day)
+        non_trading_rules.update({'labour':may_day})
 
+        national_day = rrule.rrule(
+            rrule.YEARLY,
+            bymonth=10,
+            bymonthday= 1,
+            cache=True,
+            dtstart=start,
+            until=end
+        )
+
+        non_trading_rules.update({'national':national_day})
+        return non_trading_rules
+
+    def get_last_trading_day_before_holiday(self,holiday_name):
+        if holiday_name not in fixed_holiday_names:
+            raise ValueError('unidentified holiday name')
+        holiday_days = self._fixed_holiday[holiday_name]
+        linear_loc = np.searchsorted(self.trading_days,holiday_days)
+        return self.trading_days[linear_loc]
 
     def get_open_and_close(day, early_closes):
+
         market_open = pd.Timestamp(
             datetime(
                 year=day.year,
@@ -166,9 +184,6 @@ class Calendar(object):
         start = max(start, datetime(1993, 1, 1, tzinfo=pytz.utc))
         end = max(end, datetime(1993, 1, 1, tzinfo=pytz.utc))
 
-        # Not included here are early closes prior to 1993
-        # or unplanned early closes
-
         early_close_rules = []
 
         day_after_thanksgiving = rrule.rrule(
@@ -182,5 +197,46 @@ class Calendar(object):
             dtstart=start,
             until=end
         )
-        early_close_rules.append(day_after_thanksgiving)
-        # return pd.DatetimeIndex(early_closes)
+
+from toolz import partition_all
+
+
+def compute_date_range_chunks(sessions, start_date, end_date, chunksize):
+    """Compute the start and end dates to run a pipeline for.
+
+    Parameters
+    ----------
+    sessions : DatetimeIndex
+        The available dates.
+    start_date : pd.Timestamp
+        The first date in the pipeline.
+    end_date : pd.Timestamp
+        The last date in the pipeline.
+    chunksize : int or None
+        The size of the chunks to run. Setting this to None returns one chunk.
+
+    Returns
+    -------
+    ranges : iterable[(np.datetime64, np.datetime64)]
+        A sequence of start and end dates to run the pipeline for.
+    """
+    if start_date not in sessions:
+        raise KeyError("Start date %s is not found in calendar." %
+                       (start_date.strftime("%Y-%m-%d"),))
+    if end_date not in sessions:
+        raise KeyError("End date %s is not found in calendar." %
+                       (end_date.strftime("%Y-%m-%d"),))
+    if end_date < start_date:
+        raise ValueError("End date %s cannot precede start date %s." %
+                         (end_date.strftime("%Y-%m-%d"),
+                          start_date.strftime("%Y-%m-%d")))
+
+    if chunksize is None:
+        return [(start_date, end_date)]
+
+    start_ix, end_ix = sessions.slice_locs(start_date, end_date)
+    return (
+        (r[0], r[-1]) for r in partition_all(
+            chunksize, sessions[start_ix:end_ix]
+        )
+    )

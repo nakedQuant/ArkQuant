@@ -23,41 +23,29 @@ import pandas as pd
 import pytz
 from toolz import curry
 
-from zipline.utils.input_validation import preprocess
-from zipline.utils.memoize import lazyval
-from zipline.utils.sentinel import sentinel
-
 from .context_tricks import nop_context
-
-
-__all__ = [
-    'EventManager',
-    'Event',
-    'EventRule',
-    'StatelessRule',
-    'ComposedRule',
-    'Always',
-    'Never',
-    'AfterOpen',
-    'BeforeClose',
-    'NotHalfDay',
-    'NthTradingDayOfWeek',
-    'NDaysBeforeLastTradingDayOfWeek',
-    'NthTradingDayOfMonth',
-    'NDaysBeforeLastTradingDayOfMonth',
-    'StatefulRule',
-    'OncePerDay',
-
-    # Factory API
-    'date_rules',
-    'time_rules',
-    'calendars',
-    'make_eventrule',
-]
 
 
 MAX_MONTH_RANGE = 23
 MAX_WEEK_RANGE = 5
+
+def parse_date_str_series(format_str, tz, date_str_series):
+    tz_str = str(tz)
+    if tz_str == pytz.utc.zone:
+
+        parsed = pd.to_datetime(
+            date_str_series.values,
+            format=format_str,
+            utc=True,
+            errors='coerce',
+        )
+    else:
+        parsed = pd.to_datetime(
+            date_str_series.values,
+            format=format_str,
+            errors='coerce',
+        ).tz_localize(tz_str).tz_convert('UTC')
+    return parsed
 
 
 def naive_to_utc(ts):
@@ -156,31 +144,6 @@ def _build_time(time, kwargs):
         return datetime.time(**kwargs)
 
 
-@curry
-def lossless_float_to_int(funcname, func, argname, arg):
-    """
-    A preprocessor that coerces integral floats to ints.
-
-    Receipt of non-integral floats raises a TypeError.
-    """
-    if not isinstance(arg, float):
-        return arg
-
-    arg_as_int = int(arg)
-    if arg == arg_as_int:
-        warnings.warn(
-            "{f} expected an int for argument {name!r}, but got float {arg}."
-            " Coercing to int.".format(
-                f=funcname,
-                name=argname,
-                arg=arg,
-            ),
-        )
-        return arg_as_int
-
-    raise TypeError(arg)
-
-
 class EventManager(object):
     """Manages a list of Event objects.
     This manages the logic for checking the rules and dispatching to the
@@ -211,8 +174,7 @@ class EventManager(object):
             self._events.append(event)
 
     def handle_data(self, context, data, dt):
-    	#__enter__ __exit__
-    		# 调用 __call__
+    	#__enter__ __exit__  调用 __call__
         with self._create_context(data):
             for event in self._events:
                 event.handle_data(
@@ -476,7 +438,6 @@ class NotHalfDay(StatelessRule):
 
 
 class TradingDayOfWeekRule(six.with_metaclass(ABCMeta, StatelessRule)):
-    @preprocess(n=lossless_float_to_int('TradingDayOfWeekRule'))
     def __init__(self, n, invert):
         if not 0 <= n < MAX_WEEK_RANGE:
             raise _out_of_range_error(MAX_WEEK_RANGE)
@@ -488,7 +449,7 @@ class TradingDayOfWeekRule(six.with_metaclass(ABCMeta, StatelessRule)):
         val = self.cal.minute_to_session_label(dt, direction="none").value
         return val in self.execution_period_values
 
-    @lazyval
+    # @lazyval
     def execution_period_values(self):
         # calculate the list of periods that match the given criteria
         sessions = self.cal.all_sessions
@@ -521,7 +482,6 @@ class NDaysBeforeLastTradingDayOfWeek(TradingDayOfWeekRule):
 
 class TradingDayOfMonthRule(six.with_metaclass(ABCMeta, StatelessRule)):
 
-    @preprocess(n=lossless_float_to_int('TradingDayOfMonthRule'))
     def __init__(self, n, invert):
         if not 0 <= n < MAX_MONTH_RANGE:
             raise _out_of_range_error(MAX_MONTH_RANGE)
@@ -535,7 +495,7 @@ class TradingDayOfMonthRule(six.with_metaclass(ABCMeta, StatelessRule)):
         value = self.cal.minute_to_session_label(dt, direction="none").value
         return value in self.execution_period_values
 
-    @lazyval
+    # @lazyval
     def execution_period_values(self):
         # calculate the list of periods that match the given criteria
         sessions = self.cal.all_sessions
@@ -565,7 +525,6 @@ class NDaysBeforeLastTradingDayOfMonth(TradingDayOfMonthRule):
 
 
 # Stateful rules
-
 class StatefulRule(EventRule):
     """
     A stateful rule has state.
@@ -772,50 +731,3 @@ class time_rules(object):
         return BeforeClose(offset=offset, hours=hours, minutes=minutes)
 
     every_minute = Always
-
-
-class calendars(object):
-    US_EQUITIES = sentinel('US_EQUITIES')
-    US_FUTURES = sentinel('US_FUTURES')
-
-#字典键值对转换
-def _invert(d):
-    return dict(zip(d.values(), d.keys()))
-
-
-_uncalled_rules = _invert(vars(date_rules))
-_uncalled_rules.update(_invert(vars(time_rules)))
-
-
-def _check_if_not_called(v):
-    try:
-        name = _uncalled_rules[v]
-    except KeyError:
-        if not issubclass(v, EventRule):
-            return
-
-        name = getattr(v, '__name__', None)
-
-    msg = 'invalid rule: %r' % (v,)
-    if name is not None:
-        msg += ' (hint: did you mean %s())' % name
-
-    raise TypeError(msg)
-
-
-def make_eventrule(date_rule, time_rule, cal, half_days=True):
-    """
-    Constructs an event rule from the factory api.
-    """
-    _check_if_not_called(date_rule)
-    _check_if_not_called(time_rule)
-
-    if half_days:
-        inner_rule = date_rule & time_rule
-    else:
-        inner_rule = date_rule & time_rule & NotHalfDay()
-
-    opd = OncePerDay(rule=inner_rule)
-    # This is where a scheduled function's rule is associated with a calendar.
-    opd.cal = cal
-    return opd

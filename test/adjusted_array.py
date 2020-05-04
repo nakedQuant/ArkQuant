@@ -15,24 +15,21 @@ from numpy import (
 )
 from six import iteritems
 from toolz import merge_with
-from zipline.errors import (
-    WindowLengthNotPositive,
-    WindowLengthTooLong,
-)
-from zipline.lib.labelarray import LabelArray
-from zipline.utils.numpy_utils import (
-    datetime64ns_dtype,
-    float64_dtype,
-    int64_dtype,
-    uint8_dtype,
-)
-from zipline.utils.memoize import lazyval
 
-# These class names are all the same because of our bootleg templating system.
-from ._float64window import AdjustedArrayWindow as Float64Window
-from ._int64window import AdjustedArrayWindow as Int64Window
-from ._labelwindow import AdjustedArrayWindow as LabelWindow
-from ._uint8window import AdjustedArrayWindow as UInt8Window
+from numpy.lib import apply_along_axis
+from pandas import qcut
+
+
+def quantiles(data, nbins_or_partition_bounds):
+    """
+    Compute rowwise array quantiles on an input.
+    """
+    return apply_along_axis(
+        qcut,
+        1,
+        data,
+        q=nbins_or_partition_bounds, labels=False,
+    )
 
 
 BOOL_DTYPES = frozenset(
@@ -72,71 +69,6 @@ def is_categorical(dtype):
     Do we represent this dtype with LabelArrays rather than ndarrays?
     """
     return dtype in OBJECT_DTYPES or dtype.kind in STRING_KINDS
-
-
-CONCRETE_WINDOW_TYPES = {
-    float64_dtype: Float64Window,
-    int64_dtype: Int64Window,
-    uint8_dtype: UInt8Window,
-}
-
-
-def _normalize_array(data, missing_value):
-    """
-    Coerce buffer data for an AdjustedArray into a standard scalar
-    representation, returning the coerced array and a dict of argument to pass
-    to np.view to use when providing a user-facing view of the underlying data.
-
-    - float* data is coerced to float64 with viewtype float64.
-    - int32, int64, and uint32 are converted to int64 with viewtype int64.
-    - datetime[*] data is coerced to int64 with a viewtype of datetime64[ns].
-    - bool_ data is coerced to uint8 with a viewtype of bool_.
-
-    Parameters
-    ----------
-    data : np.ndarray
-
-    Returns
-    -------
-    coerced, view_kwargs : (np.ndarray, np.dtype)
-        The input ``data`` array coerced to the appropriate pipeline type.
-        This may return the original array or a view over the same data.
-    """
-    if isinstance(data, LabelArray):
-        return data, {}
-
-    data_dtype = data.dtype
-    if data_dtype in BOOL_DTYPES:
-        return data.astype(uint8, copy=False), {'dtype': dtype(bool_)}
-    elif data_dtype in FLOAT_DTYPES:
-        return data.astype(float64, copy=False), {'dtype': dtype(float64)}
-    elif data_dtype in INT_DTYPES:
-        return data.astype(int64, copy=False), {'dtype': dtype(int64)}
-    elif is_categorical(data_dtype):
-        if not isinstance(missing_value, LabelArray.SUPPORTED_SCALAR_TYPES):
-            raise TypeError(
-                "Invalid missing_value for categorical array.\n"
-                "Expected None, bytes or unicode. Got %r." % missing_value,
-            )
-        return LabelArray(data, missing_value), {}
-    elif data_dtype.kind == 'M':
-        try:
-            outarray = data.astype('datetime64[ns]', copy=False).view('int64')
-            return outarray, {'dtype': datetime64ns_dtype}
-        except OverflowError:
-            raise ValueError(
-                "AdjustedArray received a datetime array "
-                "not representable as datetime64[ns].\n"
-                "Min Date: %s\n"
-                "Max Date: %s\n"
-                % (data.min(), data.max())
-            )
-    else:
-        raise TypeError(
-            "Don't know how to construct AdjustedArray "
-            "on data of type %s." % data_dtype
-        )
-
 
 def _merge_simple(adjustment_lists, front_idx, back_idx):
     """
@@ -357,73 +289,3 @@ class AdjustedArray(object):
                 adjustment.value = func(adjustment.value)
 
 
-def ensure_adjusted_array(ndarray_or_adjusted_array, missing_value):
-    if isinstance(ndarray_or_adjusted_array, AdjustedArray):
-        return ndarray_or_adjusted_array
-    elif isinstance(ndarray_or_adjusted_array, ndarray):
-        return AdjustedArray(
-            ndarray_or_adjusted_array, {}, missing_value,
-        )
-    else:
-        raise TypeError(
-            "Can't convert %s to AdjustedArray" %
-            type(ndarray_or_adjusted_array).__name__
-        )
-
-
-def ensure_ndarray(ndarray_or_adjusted_array):
-    """
-    Return the input as a numpy ndarray.
-
-    This is a no-op if the input is already an ndarray.  If the input is an
-    adjusted_array, this extracts a read-only view of its internal data buffer.
-
-    Parameters
-    ----------
-    ndarray_or_adjusted_array : numpy.ndarray | zipline.data.adjusted_array
-
-    Returns
-    -------
-    out : The input, converted to an ndarray.
-    """
-    if isinstance(ndarray_or_adjusted_array, ndarray):
-        return ndarray_or_adjusted_array
-    elif isinstance(ndarray_or_adjusted_array, AdjustedArray):
-        return ndarray_or_adjusted_array.data
-    else:
-        raise TypeError(
-            "Can't convert %s to ndarray" %
-            type(ndarray_or_adjusted_array).__name__
-        )
-
-
-def _check_window_params(data, window_length):
-    """
-    Check that a window of length `window_length` is well-defined on `data`.
-
-    Parameters
-    ----------
-    data : np.ndarray[ndim=2]
-        The array of data to check.
-    window_length : int
-        Length of the desired window.
-
-    Returns
-    -------
-    None
-
-    Raises
-    ------
-    WindowLengthNotPositive
-        If window_length < 1.
-    WindowLengthTooLong
-        If window_length is greater than the number of rows in `data`.
-    """
-    if window_length < 1:
-        raise WindowLengthNotPositive(window_length=window_length)
-
-    if window_length > data.shape[0]:
-        raise WindowLengthTooLong(
-            nrows=data.shape[0],
-            window_length=window_length,
-        )

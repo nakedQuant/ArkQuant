@@ -17,6 +17,15 @@ import math
 
 from numpy import isnan
 
+def round_if_near_integer(a, epsilon=1e-4):
+    """
+    Round a to the nearest integer if that integer is within an epsilon
+    of a.
+    """
+    if abs(a - round(a)) <= epsilon:
+        return round(a)
+    else:
+        return a
 
 def tolerant_equals(a, b, atol=10e-7, rtol=10e-7, equal_nan=False):
     """Check if a and b are equal with some tolerance.
@@ -46,39 +55,6 @@ def tolerant_equals(a, b, atol=10e-7, rtol=10e-7, equal_nan=False):
         return True
     return math.fabs(a - b) <= (atol + rtol * math.fabs(b))
 
-
-try:
-    # fast versions
-    import bottleneck as bn
-    nanmean = bn.nanmean
-    nanstd = bn.nanstd
-    nansum = bn.nansum
-    nanmax = bn.nanmax
-    nanmin = bn.nanmin
-    nanargmax = bn.nanargmax
-    nanargmin = bn.nanargmin
-except ImportError:
-    # slower numpy
-    import numpy as np
-    nanmean = np.nanmean
-    nanstd = np.nanstd
-    nansum = np.nansum
-    nanmax = np.nanmax
-    nanmin = np.nanmin
-    nanargmax = np.nanargmax
-    nanargmin = np.nanargmin
-
-
-def round_if_near_integer(a, epsilon=1e-4):
-    """
-    Round a to the nearest integer if that integer is within an epsilon
-    of a.
-    """
-    if abs(a - round(a)) <= epsilon:
-        return round(a)
-    else:
-        return a
-
 # 小数点位数
 def number_of_decimal_places(n):
     """
@@ -95,3 +71,75 @@ def number_of_decimal_places(n):
     """
     decimal = Decimal(str(n))
     return -decimal.as_tuple().exponent
+
+def _gen_unzip(it, elem_len):
+    """Helper for unzip which checks the lengths of each element in it.
+    Parameters
+    ----------
+    it : iterable[tuple]
+        An iterable of tuples. ``unzip`` should map ensure that these are
+        already tuples.
+    elem_len : int or None
+        The expected element length. If this is None it is infered from the
+        length of the first element.
+    """
+    elem = next(it)
+    first_elem_len = len(elem)
+
+    if elem_len is not None and elem_len != first_elem_len:
+        raise ValueError(
+            'element at index 0 was length %d, expected %d' % (
+                first_elem_len,
+                elem_len,
+            )
+        )
+    else:
+        elem_len = first_elem_len
+
+    yield elem
+    for n, elem in enumerate(it, 1):
+        if len(elem) != elem_len:
+            raise ValueError(
+                'element at index %d was length %d, expected %d' % (
+                    n,
+                    len(elem),
+                    elem_len,
+                ),
+            )
+        yield elem
+
+def dzip_exact(*dicts):
+    """
+    >>> result = dzip_exact({'a': 1, 'b': 2}, {'a': 3, 'b': 4})
+    >>> result == {'a': (1, 3), 'b': (2, 4)}
+    True
+    """
+    if not same(*map(viewkeys, dicts)):
+        raise ValueError(
+            "dict keys not all equal:\n\n%s" % _format_unequal_keys(dicts)
+        )
+    return {k: tuple(d[k] for d in dicts) for k in dicts[0]}
+
+def invert(d):
+    """
+    >>> invert({'a': 1, 'b': 2, 'c': 1})  # doctest: +SKIP
+    {1: {'a', 'c'}, 2: {'b'}}
+    """
+    out = {}
+    for k, v in iteritems(d):
+        try:
+            out[v].add(k)
+        except KeyError:
+            out[v] = {k}
+    return out
+
+
+def keysorted(d):
+    """Get the items from a dict, sorted by key.
+
+    Example
+    -------
+    >>> keysorted({'c': 1, 'b': 2, 'a': 3})
+    [('a', 3), ('b', 2), ('c', 1)]
+    """
+    return sorted(iteritems(d), key=itemgetter(0))

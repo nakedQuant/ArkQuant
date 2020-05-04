@@ -1522,3 +1522,225 @@ from toolz import (
 #     # all the datetimes we return will be 00:00:00 UTC.
 #     return datetime(dt.year, dt.month, dt.day, tzinfo=pytz.utc)
 # pd.date_range(start=start.date(),end=end.date(),freq=trading_day).tz_localize('UTC')
+# end = end_base + pd.Timedelta(days=365)
+# if __name__ == '__main__':
+#
+#     # start = pd.Timestamp('1990-01-01', tz='UTC')
+#     # end_base = pd.Timestamp('today', tz='UTC')
+#     tz = pytz.timezone('Asia/Shanghai')
+#     start = pd.Timestamp('19900101',tz = tz)
+#     end_base = pd.Timestamp('today',tz = tz)
+#     end = end_base + pd.Timedelta(days=365)
+#
+#     new_year = rrule.rrule(
+#         rrule.YEARLY,
+#         byyearday=1,
+#         cache=True,
+#         dtstart=start,
+#         until=end
+#     )
+#
+#     print(list(new_year))
+#
+#     qing_ming = rrule.rrule(
+#         rrule.YEARLY,
+#         bymonth=4,
+#         bymonthday=4,
+#         cache=True,
+#         dtstart=start,
+#         until=end
+#     )
+#
+#     # print(list(qing_ming))
+#
+#     labour_day = rrule.rrule(
+#         rrule.YEARLY,
+#         bymonth=5,
+#         bymonthday=1,
+#         cache=True,
+#         dtstart=start,
+#         until=end
+#     )
+#
+#     # print(list(labour_day))
+#
+#     national_day = rrule.rrule(
+#         rrule.YEARLY,
+#         bymonth=10,
+#         bymonthday=1,
+#         cache=True,
+#         dtstart=start,
+#         until=end
+#     )
+from operator import methodcaller
+import sys
+# class classproperty(object):
+#     """Class property
+#     """
+#     def __init__(self, fget):
+#         self.fget = fget
+#
+#     def __get__(self, instance, owner):
+#         return self.fget(owner)
+#
+# class DummyMapping(object):
+#     """
+#     Dummy object used to provide a mapping interface for singular values.
+#     """
+#     def __init__(self, value):
+#         self._value = value
+#
+#     def __getitem__(self, key):
+#         return self._value
+#
+# class IDBox(object):
+#     """A wrapper that hashs to the id of the underlying object and compares
+#     equality on the id of the underlying.
+#
+#     Parameters
+#     ----------
+#     ob : any
+#         The object to wrap.
+#
+#     Attributes
+#     ----------
+#     ob : any
+#         The object being wrapped.
+#
+#     Notes
+#     -----
+#     This is useful for storing non-hashable values in a set or dict.
+#     """
+#     def __init__(self, ob):
+#         self.ob = ob
+#
+#     def __hash__(self):
+#         return id(self)
+#
+#     def __eq__(self, other):
+#         if not isinstance(other, IDBox):
+#             return NotImplemented
+#
+#         return id(self.ob) == id(other.ob)
+#
+#
+# class NamedExplodingObject(object):
+#     """An object which has no attributes but produces a more informative
+#     error message when accessed.
+#
+#     Parameters
+#     ----------
+#     name : str
+#         The name of the object. This will appear in the error messages.
+#
+#     Notes
+#     -----
+#     One common use for this object is so ensure that an attribute always exists
+#     even if sometimes it should not be used.
+#     """
+#     def __init__(self, name, extra_message=None):
+#         self._name = name
+#         self._extra_message = extra_message
+#
+#     def __getattr__(self, attr):
+#         extra_message = self._extra_message
+#         raise AttributeError(
+#             'attempted to access attribute %r of ExplodingObject %r%s' % (
+#                 attr,
+#                 self._name,
+#             ),
+#             ' ' + extra_message if extra_message is not None else '',
+#         )
+#
+#     def __repr__(self):
+#         return '%s(%r%s)' % (
+#             type(self).__name__,
+#             self._name,
+#             # show that there is an extra message but truncate it to be
+#             # more readable when debugging
+#             ', extra_message=...' if self._extra_message is not None else '',
+#         )
+#
+# try:
+#     # fast versions
+#     import bottleneck as bn
+#     nanmean = bn.nanmean
+#     nanstd = bn.nanstd
+#     nansum = bn.nansum
+#     nanmax = bn.nanmax
+#     nanmin = bn.nanmin
+#     nanargmax = bn.nanargmax
+#     nanargmin = bn.nanargmin
+# except ImportError:
+#     # slower numpy
+#     import numpy as np
+#     nanmean = np.nanmean
+#     nanstd = np.nanstd
+#     nansum = np.nansum
+#     nanmax = np.nanmax
+#     nanmin = np.nanmin
+#     nanargmax = np.nanargmax
+#     nanargmin = np.nanargmin
+# # numpy.flatnonzero --- 非0的indice
+# n = self.start
+# stop = self.stop
+# step = self.step
+# cmp_ = op.lt if step > 0 else op.gt
+# while cmp_(n, stop):
+#     yield n
+#     n += step
+#
+#
+# from io import StringIO
+#
+# output = StringIO()
+# output.write('First line.\n')
+# contents = output.getvalue()
+# output.close()
+# fd = StringIO()
+# fd.tell()
+# fd.seek(0)
+# fd.close()
+# fd = StringIO()
+# if isinstance(data, str):
+#     fd.write(data)
+# else:
+#     for chunk in data:
+#         fd.write(chunk)
+# self.fetch_size = fd.tell()
+# fd.seek(0)
+
+from abc import ABCMeta, abstractmethod
+from collections import namedtuple
+import hashlib
+from textwrap import dedent
+import warnings
+
+import numpy
+import pandas as pd
+from pandas import read_csv
+import pytz
+import requests
+
+
+# def __iter__(self):
+#     warnings.warn(
+#         'Iterating over security_lists is deprecated. Use '
+#         '`for sid in <security_list>.current_securities(dt)` instead.',
+#         category=ZiplineDeprecationWarning,
+#         stacklevel=2
+#     )
+#     return iter(self.current_securities(self.current_date()))
+#
+# def __contains__(self, item):
+#     warnings.warn(
+#         'Evaluating inclusion in security_lists is deprecated. Use '
+#         '`sid in <security_list>.current_securities(dt)` instead.',
+#         category=ZiplineDeprecationWarning,
+#         stacklevel=2
+#     )
+#     return item in self.current_securities(self.current_date())
+#
+#
+# def __new__(cls):
+#     raise TypeError('cannot create %r instances' % name)

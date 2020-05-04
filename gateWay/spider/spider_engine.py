@@ -10,10 +10,79 @@ from itertools import chain
 from sqlalchemy import select
 from sqlalchemy.sql import func
 
-from gateWay.spider import Ancestor
-from env.common import XML
-
 __all__ = ['Astock','Index','ETF','Convertible']
+
+ALLOWED_REQUESTS_KWARGS = {
+    'params',
+    'headers',
+    'auth',
+    'cert'
+}
+
+from abc import ABC,abstractmethod
+import datetime
+
+class Ancestor(ABC):
+
+    frequency = None
+    nowdays = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d')
+
+    @classmethod
+    def _init_db(cls,init = False):
+        if init:
+            DataLayer.initialize()
+        cls.db = DataLayer()
+
+    def switch_mode(self):
+        """决定daily or init"""
+        if self.frequency:
+            lmt = 1
+        else:
+            lmt = 10000
+        return lmt
+
+    @abstractmethod
+    def _get_prefix(self):
+
+        raise NotImplementedError
+
+    @abstractmethod
+    def _download_assets(self):
+
+        raise NotImplementedError
+
+    @abstractmethod
+    def _download_kline(self):
+
+        raise NotImplementedError
+
+    @abstractmethod
+    def _run_session(self):
+
+        raise NotImplementedError
+
+    @abstractmethod
+    def run_bulks(self):
+
+        raise NotImplementedError
+
+    # def enroll(self,tablename,data,conn):
+    #     cls = getattr(self,tablename)
+    #     ins = cls.insert()
+    #     if len(data):
+    #         if isinstance(data,pd.DataFrame):
+    #             _to_dict = data.T.to_dict()
+    #             formatted = list(_to_dict.values())
+    #         elif isinstance(data,pd.Series):
+    #             formatted = data.to_dict()
+    #         elif isinstance(data,dict):
+    #             formatted = data
+    #         else:
+    #             raise ValueError
+    #         if not conn:
+    #             conn = self.db_init()
+    #         conn.execute(ins,formatted)
+
 
 class Astock(Ancestor):
     """

@@ -20,11 +20,239 @@ Factory functions to prepare useful data.
 import pandas as pd
 import numpy as np
 from datetime import timedelta, datetime
-from trading_calendars import get_calendar
 
-from zipline.sources import SpecificEquityTrades
-from zipline.finance.trading import SimulationParameters
-from zipline.sources.test_source import create_trade
+def create_trade(sid, price, amount, datetime, source_id="test_factory"):
+
+    trade = Event()
+
+    trade.source_id = source_id
+    trade.type = DATASOURCE_TYPE.TRADE
+    trade.sid = sid
+    trade.dt = datetime
+    trade.price = price
+    trade.close_price = price
+    trade.open_price = price
+    trade.low = price * .95
+    trade.high = price * 1.05
+    trade.volume = amount
+
+    return trade
+
+class SpecificEquityTrades(object):
+    """
+    Yields all events in event_list that match the given sid_filter.
+    If no event_list is specified, generates an internal stream of events
+    to filter.  Returns all events if filter is None.
+
+    Configuration options:
+
+    count  : integer representing number of trades
+    sids   : list of values representing simulated internal sids
+    start  : start date
+    delta  : timedelta between internal events
+    filter : filter to remove the sids
+    """
+    def __init__(self,
+                 trading_calendar,
+                 asset_finder,
+                 sids,
+                 start,
+                 end,
+                 delta,
+                 count=500):
+
+        self.trading_calendar = trading_calendar
+
+        # Unpack config dictionary with default values.
+        self.count = count
+        self.start = start
+        self.end = end
+        self.delta = delta
+        self.sids = sids
+        self.generator = self.create_fresh_generator()
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        return self.generator.next()
+
+    def __next__(self):
+        return next(self.generator)
+
+    def rewind(self):
+        self.generator = self.create_fresh_generator()
+
+    def update_source_id(self, gen):
+        for event in gen:
+            event.source_id = self.get_hash()
+            yield event
+
+    def create_fresh_generator(self):
+        date_generator = date_gen(
+            start=self.start,
+            end=self.end,
+            delta=self.delta,
+            trading_calendar=self.trading_calendar,
+        )
+        return (
+            create_trade(
+                sid=sid,
+                price=float(i % 10) + 1.0,
+                amount=(i * 50) % 900 + 100,
+                datetime=date,
+            ) for (i, date), sid in itertools.product(
+                enumerate(date_generator), self.sids
+            )
+        )
+
+class SimulationParameters(object):
+    def __init__(self,
+                 start_session,
+                 end_session,
+                 trading_calendar,
+                 capital_base=DEFAULT_CAPITAL_BASE,
+                 emission_rate='daily',
+                 data_frequency='daily',
+                 arena='backtest'):
+
+        assert type(start_session) == pd.Timestamp
+        assert type(end_session) == pd.Timestamp
+
+        assert trading_calendar is not None, \
+            "Must pass in trading calendar!"
+        assert start_session <= end_session, \
+            "Period start falls after period end."
+        assert start_session <= trading_calendar.last_trading_session, \
+            "Period start falls after the last known trading day."
+        assert end_session >= trading_calendar.first_trading_session, \
+            "Period end falls before the first known trading day."
+
+        # chop off any minutes or hours on the given start and end dates,
+        # as we only support session labels here (and we represent session
+        # labels as midnight UTC).
+        self._start_session = normalize_date(start_session)
+        self._end_session = normalize_date(end_session)
+        self._capital_base = capital_base
+
+        self._emission_rate = emission_rate
+        self._data_frequency = data_frequency
+
+        # copied to algorithm's environment for runtime access
+        self._arena = arena
+
+        self._trading_calendar = trading_calendar
+
+        if not trading_calendar.is_session(self._start_session):
+            # if the start date is not a valid session in this calendar,
+            # push it forward to the first valid session
+            self._start_session = trading_calendar.minute_to_session_label(
+                self._start_session
+            )
+
+        if not trading_calendar.is_session(self._end_session):
+            # if the end date is not a valid session in this calendar,
+            # pull it backward to the last valid session before the given
+            # end date.
+            self._end_session = trading_calendar.minute_to_session_label(
+                self._end_session, direction="previous"
+            )
+
+        self._first_open = trading_calendar.open_and_close_for_session(
+            self._start_session
+        )[0]
+        self._last_close = trading_calendar.open_and_close_for_session(
+            self._end_session
+        )[1]
+
+    @property
+    def capital_base(self):
+        return self._capital_base
+
+    @property
+    def emission_rate(self):
+        return self._emission_rate
+
+    @property
+    def data_frequency(self):
+        return self._data_frequency
+
+    @data_frequency.setter
+    def data_frequency(self, val):
+        self._data_frequency = val
+
+    @property
+    def arena(self):
+        return self._arena
+
+    @arena.setter
+    def arena(self, val):
+        self._arena = val
+
+    @property
+    def start_session(self):
+        return self._start_session
+
+    @property
+    def end_session(self):
+        return self._end_session
+
+    @property
+    def first_open(self):
+        return self._first_open
+
+    @property
+    def last_close(self):
+        return self._last_close
+
+    @property
+    def trading_calendar(self):
+        return self._trading_calendar
+
+    @property
+    @remember_last
+    def sessions(self):
+        return self._trading_calendar.sessions_in_range(
+            self.start_session,
+            self.end_session
+        )
+
+    def create_new(self, start_session, end_session, data_frequency=None):
+        if data_frequency is None:
+            data_frequency = self.data_frequency
+
+        return SimulationParameters(
+            start_session,
+            end_session,
+            self._trading_calendar,
+            capital_base=self.capital_base,
+            emission_rate=self.emission_rate,
+            data_frequency=data_frequency,
+            arena=self.arena
+        )
+
+    def __repr__(self):
+        return """
+{class_name}(
+    start_session={start_session},
+    end_session={end_session},
+    capital_base={capital_base},
+    data_frequency={data_frequency},
+    emission_rate={emission_rate},
+    first_open={first_open},
+    last_close={last_close},
+    trading_calendar={trading_calendar}
+)\
+""".format(class_name=self.__class__.__name__,
+           start_session=self.start_session,
+           end_session=self.end_session,
+           capital_base=self.capital_base,
+           data_frequency=self.data_frequency,
+           emission_rate=self.emission_rate,
+           first_open=self.first_open,
+           last_close=self.last_close,
+           trading_calendar=self._trading_calendar)
+
 
 
 def create_simulation_parameters(year=2006,

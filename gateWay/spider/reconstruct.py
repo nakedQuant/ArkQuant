@@ -11,22 +11,6 @@ from sqlalchemy import select
 from sqlalchemy.sql import func
 from abc import ABC,abstractmethod
 
-__all__ = ['Astock','Index','ETF','Convertible']
-
-class Spider(object):
-    """
-        1. kline
-        2. market_margin
-        3. ashare_holding
-        4. ts --- delist
-    """
-    def download_assets(self):
-        pass
-
-    def download_kline(self):
-        pass
-
-
 
 class Ancestor(ABC):
 
@@ -276,74 +260,6 @@ class Astock(Ancestor):
         quantity = self._download_assets()
         for q in quantity:
             self._run_session(q)
-        res = {self.__name__:self._failure}
-        return res
-
-
-class Index(Ancestor):
-    """
-        获取A股基准数据
-    """
-    __name__ = 'Index'
-
-    def __init__(self):
-
-        self._failure = []
-        self._init_db()
-        self.conn = self.db.db_init()
-        self.mode = self.switch_mode()
-
-    def _download_assets(self):
-        url = 'http://71.push2.eastmoney.com/api/qt/clist/get?pn=1&pz=12&po=1&np=2&fltt=2&invt=2&fid=&fs=b:MK0010&fields=f12,f14'
-        raw = json.loads(self._parse_url(url,encoding='utf-8',bs= False))
-        index_set = raw['data']['diff']
-        return index_set
-
-    def _get_prefix(self,k):
-        if k['f12'].startswith('0'):
-            prefix = '1.' + k['f12']
-        else:
-            prefix = '0.' + k['f12']
-        return prefix
-
-    def switch_mode(self):
-        """决定daily or init"""
-        if self.frequency:
-            s = datetime.datetime.strftime(datetime.datetime.now(), '%Y%m%d')
-        else:
-            s = '19900101'
-        return s
-
-    def _download_kline(self,k):
-        html = 'http://push2his.eastmoney.com/api/qt/stock/kline/get?secid={}&fields1=f1'\
-               '&fields2=f51%2Cf52%2Cf53%2Cf54%2Cf55%2Cf56%2Cf57%2Cf58&klt=101&fqt=0&beg={}&end=30000101'.format(self._get_prefix(k),self.mode)
-        obj = self._parse_url(html,bs = False)
-        data = json.loads(obj)
-        raw = data['data']
-        if raw and len(raw['klines']):
-            raw = [item.split(',') for item in raw['klines']]
-            benchmark = pd.DataFrame(raw,columns = ['trade_dt','open','close','high','low','volume','turnover','amplitude'])
-            if not self.frequency or (self.frequency and self.nowdays in benchmark['trade_dt'].values):
-                benchmark.loc[:,'code'] = k['f12']
-                benchmark.loc[:,'name'] = k['f14']
-                #入库
-                self.db.enroll('index',benchmark,self.conn)
-                print('enroll index :%s kline' % k)
-        else:
-            print('index :%s have not kline'%k)
-
-    def _run_session(self,name):
-        try:
-            self._download_kline(name)
-        except Exception as e:
-            print('error%s enroll index :%s kline' % (name, e))
-            self._failure.append(name)
-
-    def run_bulks(self):
-        quantity = self._download_assets()
-        # mode = self.switch_mode()
-        for k in quantity.values():
-            self._run_session(k)
         res = {self.__name__:self._failure}
         return res
 

@@ -22,7 +22,7 @@ from six import iteritems, string_types, PY3
 from toolz import valmap, complement, compose
 import toolz.curried.operator as op
 
-from zipline.utils.compat import wraps
+from functools import wraps
 from zipline.utils.functional import getattrs
 from zipline.utils.preprocess import call, preprocess
 

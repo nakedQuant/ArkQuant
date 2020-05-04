@@ -3,30 +3,12 @@ import errno
 import os
 import shutil
 import warnings
-
-from contextlib2 import ExitStack
+ import ExitStack
 import click
 import pandas as pd
-from trading_calendars import get_calendar
 from toolz import curry, complement, take
 
-from gateWay.data.adjustments import SQLiteAdjustmentReader, SQLiteAdjustmentWriter
-from gateWay.data.bcolz_daily_bars import BcolzDailyBarReader, BcolzDailyBarWriter
-from gateWay.data.minute_bars import (
-    BcolzMinuteBarReader,
-    BcolzMinuteBarWriter,
-)
-from zipline.assets import AssetDBWriter, AssetFinder, ASSET_DB_VERSION
-from zipline.assets.asset_db_migrations import downgrade
-from zipline.utils.cache import (
-    dataframe_cache,
-    working_dir,
-    working_file,
-)
-from zipline.utils.compat import mappingproxy
-from zipline.utils.input_validation import ensure_timestamp, optionally
-import zipline.utils.paths as pth
-from zipline.utils.preprocess import preprocess
+import utils.paths as pth
 
 
 def asset_db_path(bundle_name, timestr, environ=None, db_version=None):

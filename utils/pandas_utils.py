@@ -3,14 +3,11 @@ Utilities for working with pandas objects.
 """
 from contextlib import contextmanager
 from copy import deepcopy
-from itertools import product
-import operator as op
 import warnings
 
 import numpy as np
 import pandas as pd
 from distutils.version import StrictVersion
-from trading_calendars.utils.pandas_utils import days_at_time  # noqa: reexport
 
 pandas_version = StrictVersion(pd.__version__)
 new_pandas = pandas_version >= StrictVersion('0.19')
@@ -30,10 +27,6 @@ if pandas_version >= StrictVersion('0.20'):
         return dt.normalize()
 else:
     from pandas.tseries.tools import normalize_date  # noqa
-
-
-def july_5th_holiday_observance(datetime_index):
-    return datetime_index[datetime_index.year != 2013]
 
 
 def explode(df):
@@ -63,54 +56,6 @@ def _time_to_micros(time):
     return 1000000 * seconds + time.microsecond
 
 
-_opmap = dict(zip(
-    product((True, False), repeat=3),
-    product((op.le, op.lt), (op.le, op.lt), (op.and_, op.or_)),
-))
-
-
-def mask_between_time(dts, start, end, include_start=True, include_end=True):
-    """Return a mask of all of the datetimes in ``dts`` that are between
-    ``start`` and ``end``.
-    Parameters
-    ----------
-    dts : pd.DatetimeIndex
-        The index to mask.
-    start : time
-        Mask away times less than the start.
-    end : time
-        Mask away times greater than the end.
-    include_start : bool, optional
-        Inclusive on ``start``.
-    include_end : bool, optional
-        Inclusive on ``end``.
-    Returns
-    -------
-    mask : np.ndarray[bool]
-        A bool array masking ``dts``.
-    See Also
-    --------
-    :meth:`pandas.DatetimeIndex.indexer_between_time`
-    """
-    # This function is adapted from
-    # `pandas.Datetime.Index.indexer_between_time` which was originally
-    # written by Wes McKinney, Chang She, and Grant Roch.
-    time_micros = dts._get_time_micros()
-    start_micros = _time_to_micros(start)
-    end_micros = _time_to_micros(end)
-
-    left_op, right_op, join_op = _opmap[
-        bool(include_start),
-        bool(include_end),
-        start_micros <= end_micros,
-    ]
-
-    return join_op(
-        left_op(start_micros, time_micros),
-        right_op(time_micros, end_micros),
-    )
-
-
 def find_in_sorted_index(dts, dt):
     """
     Find the index of ``dt`` in ``dts``.
@@ -136,7 +81,7 @@ def find_in_sorted_index(dts, dt):
     KeyError
         If dt is not in ``dts``.
     """
-    #searchsorted(a,v,side = 'left',sorter = None) left:a[i-1] < v <= a[i] ; right a[i-1] <= v <a[i]
+    # searchsorted(a,v,side = 'left',sorter = None) left:a[i-1] < v <= a[i] ; right a[i-1] <= v <a[i]
     ix = dts.searchsorted(dt)
     if ix == len(dts) or dts[ix] != dt:
         raise LookupError("{dt} is not in {dts}".format(dt=dt, dts=dts))
@@ -220,30 +165,6 @@ def ignore_pandas_nan_categorical_warning():
         yield
 
 
-_INDEXER_NAMES = [
-    '_' + name for (name, _) in pd.core.indexing.get_indexers_list()
-]
-
-
-def clear_dataframe_indexer_caches(df):
-    """
-    Clear cached attributes from a pandas DataFrame.
-    By default pandas memoizes indexers (`iloc`, `loc`, `ix`, etc.) objects on
-    DataFrames, resulting in refcycles that can lead to unexpectedly long-lived
-    DataFrames. This function attempts to clear those cycles by deleting the
-    cached indexers from the frame.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-    """
-    for attr in _INDEXER_NAMES:
-        try:
-            delattr(df, attr)
-        except AttributeError:
-            pass
-
-
 def categorical_df_concat(df_list, inplace=False):
     """
     Prepare list of pandas DataFrames to be used as input to pd.concat.
@@ -285,41 +206,6 @@ def categorical_df_concat(df_list, inplace=False):
                 df[col].cat.set_categories(new_categories, inplace=True)
 
     return pd.concat(df_list)
-
-
-def empty_dataframe(*columns):
-    """Create an empty dataframe with columns of particular types.
-
-    Parameters
-    ----------
-    *columns
-        The (column_name, column_dtype) pairs.
-
-    Returns
-    -------
-    typed_dataframe : pd.DataFrame
-        The empty typed dataframe.
-
-    Examples
-    --------
-    >>> df = empty_dataframe(
-    ...     ('a', 'int64'),
-    ...     ('b', 'float64'),
-    ...     ('c', 'datetime64[ns]'),
-    ... )
-
-    >>> df
-    Empty DataFrame
-    Columns: [a, b, c]
-    Index: []
-
-    df.dtypes
-    a             int64
-    b           float64
-    c    datetime64[ns]
-    dtype: object
-    """
-    return pd.DataFrame(np.array([], dtype=list(columns)))
 
 
 def check_indexes_all_same(indexes, message="Indexes are not equal."):
