@@ -18,72 +18,27 @@ from operator import attrgetter
 from numpy import dtype
 import pandas as pd
 from pytz import timezone
-from six import iteritems, string_types, PY3
+from six import iteritems, string_types
 from toolz import valmap, complement, compose
+""" 
+toolz.functoolz.complement(func)[source]
+Convert a predicate function to its logical complement.
+
+In other words, return a function that, for inputs that normally yield True, yields False, and vice-versa.
+
+>>> def iseven(n): return n % 2 == 0
+>>> isodd = complement(iseven)
+>>> iseven(2)
+True
+>>> isodd(2)
+False
+"""
 import toolz.curried.operator as op
 
 from functools import wraps
-from zipline.utils.functional import getattrs
-from zipline.utils.preprocess import call, preprocess
+from .preprocess import preprocess,call
 
-
-if PY3:
-    _qualified_name = attrgetter('__qualname__')
-else:
-    def _qualified_name(obj):
-        """
-        Return the fully-qualified name (ignoring inner classes) of a type.
-        """
-        # If the obj has an explicitly-set __qualname__, use it.
-        try:
-            return getattr(obj, '__qualname__')
-        except AttributeError:
-            pass
-
-        # If not, build our own __qualname__ as best we can.
-        module = obj.__module__
-        if module in ('__builtin__', '__main__', 'builtins'):
-            return obj.__name__
-        return '.'.join([module, obj.__name__])
-
-
-def verify_indices_all_unique(obj):
-    """
-    Check that all axes of a pandas object are unique.
-
-    Parameters
-    ----------
-    obj : pd.Series / pd.DataFrame / pd.Panel
-        The object to validate.
-
-    Returns
-    -------
-    obj : pd.Series / pd.DataFrame / pd.Panel
-        The validated object, unchanged.
-
-    Raises
-    ------
-    ValueError
-        If any axis has duplicate entries.
-    """
-    axis_names = [
-        ('index',),                            # Series
-        ('index', 'columns'),                  # DataFrame
-        ('items', 'major_axis', 'minor_axis')  # Panel
-    ][obj.ndim - 1]  # ndim = 1 should go to entry 0,
-
-    for axis_name, index in zip(axis_names, obj.axes):
-        if index.is_unique:
-            continue
-
-        raise ValueError(
-            "Duplicate entries in {type}.{axis}: {dupes}.".format(
-                type=type(obj).__name__,
-                axis=axis_name,
-                dupes=sorted(index[index.duplicated()]),
-            )
-        )
-    return obj
+_qualified_name = attrgetter('__qualname__')
 
 
 def optionally(preprocessor):
@@ -143,17 +98,6 @@ def ensure_upper_case(func, argname, arg):
 def ensure_dtype(func, argname, arg):
     """
     Argument preprocessor that converts the input into a numpy dtype.
-
-    Examples
-    --------
-    >>> import numpy as np
-    >>> from zipline.utils.preprocess import preprocess
-    >>> @preprocess(dtype=ensure_dtype)
-    ... def foo(dtype):
-    ...     return dtype
-    ...
-    >>> foo(float)
-    dtype('float64')
     """
     try:
         return dtype(arg)
@@ -170,15 +114,6 @@ def ensure_dtype(func, argname, arg):
 
 def ensure_timezone(func, argname, arg):
     """Argument preprocessor that converts the input into a tzinfo object.
-
-    Examples
-    --------
-    >>> from zipline.utils.preprocess import preprocess
-    >>> @preprocess(tz=ensure_timezone)
-    ... def foo(tz):
-    ...     return tz
-    >>> foo('utc')
-    <UTC>
     """
     if isinstance(arg, tzinfo):
         return arg
@@ -198,15 +133,6 @@ def ensure_timezone(func, argname, arg):
 def ensure_timestamp(func, argname, arg):
     """Argument preprocessor that converts the input into a pandas Timestamp
     object.
-
-    Examples
-    --------
-    >>> from zipline.utils.preprocess import preprocess
-    >>> @preprocess(ts=ensure_timestamp)
-    ... def foo(ts):
-    ...     return ts
-    >>> foo('2014-01-01')
-    Timestamp('2014-01-01 00:00:00')
     """
     try:
         return pd.Timestamp(arg)
@@ -223,7 +149,51 @@ def ensure_timestamp(func, argname, arg):
             ),
         )
 
+def restrict_to_dtype(dtype, message_template):
+    """
+    A factory for decorators that restrict Term methods to only be callable on
+    Terms with a specific dtype.
 
+    This is conceptually similar to
+    zipline.utils.input_validation.expect_dtypes, but provides more flexibility
+    for providing error messages that are specifically targeting Term methods.
+
+    Parameters
+    ----------
+    dtype : numpy.dtype
+        The dtype on which the decorated method may be called.
+    message_template : str
+        A template for the error message to be raised.
+        `message_template.format` will be called with keyword arguments
+        `method_name`, `expected_dtype`, and `received_dtype`.
+
+    Examples
+    --------
+    @restrict_to_dtype(
+        dtype=float64_dtype,
+        message_template=(
+            "{method_name}() was called on a factor of dtype {received_dtype}."
+            "{method_name}() requires factors of dtype{expected_dtype}."
+
+        ),
+    )
+    def some_factor_method(self, ...):
+        self.stuff_that_requires_being_float64(...)
+    """
+    def processor(term_method, _, term_instance):
+        term_dtype = term_instance.dtype
+        if term_dtype != dtype:
+            raise TypeError(
+                message_template.format(
+                    method_name=term_method.__name__,
+                    expected_dtype=dtype.name,
+                    received_dtype=term_dtype,
+                )
+            )
+        return term_instance
+    return preprocess(self=processor)
+
+#扩展 --- 通过字典对不同的参数进行函数限制，即为每一个参数调用preprocess
 def expect_dtypes(__funcname=_qualified_name, **named):
     """
     Preprocessing decorator that verifies inputs have expected numpy dtypes.
@@ -346,7 +316,7 @@ def expect_kinds(**named):
             )
 
         def _actual_preprocessor(func, argname, argvalue):
-            if getattrs(argvalue, ('dtype', 'kind'), object()) not in kinds:
+            if getattr(argvalue, ('dtype', 'kind'), object()) not in kinds:
                 raise TypeError(error_message(func, argname, argvalue))
             return argvalue
 
@@ -825,50 +795,4 @@ def coerce_types(**kwargs):
     return preprocess(**valmap(_coerce, kwargs))
 
 
-class error_keywords(object):
-
-    def __init__(self, *args, **kwargs):
-        self.messages = kwargs
-
-    def __call__(self, func):
-        @wraps(func)
-        def assert_keywords_and_call(*args, **kwargs):
-            for field, message in iteritems(self.messages):
-                if field in kwargs:
-                    raise TypeError(message)
-            return func(*args, **kwargs)
-        return assert_keywords_and_call
-
-
 coerce_string = partial(coerce, string_types)
-
-
-def validate_keys(dict_, expected, funcname):
-    """Validate that a dictionary has an expected set of keys.
-    """
-    expected = set(expected)
-    received = set(dict_)
-
-    missing = expected - received
-    if missing:
-        raise ValueError(
-            "Missing keys in {}:\n"
-            "Expected Keys: {}\n"
-            "Received Keys: {}".format(
-                funcname,
-                sorted(expected),
-                sorted(received),
-            )
-        )
-
-    unexpected = received - expected
-    if unexpected:
-        raise ValueError(
-            "Unexpected keys in {}:\n"
-            "Expected Keys: {}\n"
-            "Received Keys: {}".format(
-                funcname,
-                sorted(expected),
-                sorted(received),
-            )
-        )

@@ -3,7 +3,7 @@ import errno
 import os
 import shutil
 import warnings
- import ExitStack
+from contextlib import ExitStack
 import click
 import pandas as pd
 from toolz import curry, complement, take
@@ -197,7 +197,7 @@ def _make_bundle_core():
     # Expose _bundles through a proxy so that users cannot mutate this
     # accidentally. Users may go through `register` to update this which will
     # warn when trampling another bundle.
-    bundles = mappingproxy(_bundles)
+    # bundles = mappingproxy(_bundles)
 
     @curry
     def register(name,

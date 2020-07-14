@@ -404,3 +404,76 @@ def deprecated(msg=None, stacklevel=2):
             return fn(*args, **kwargs)
         return wrapper
     return deprecated_dec
+
+def require_not_initialized(exception):
+    """
+    Decorator for API methods that should only be called during or before
+    TradingAlgorithm.initialize.  `exception` will be raised if the method is
+    called after initialize.
+
+    Examples
+    --------
+    @require_not_initialized(SomeException("Don't do that!"))
+    def method(self):
+        # Do stuff that should only be allowed during initialize.
+    """
+    def decorator(method):
+        @wraps(method)
+        def wrapped_method(self, *args, **kwargs):
+            if self.initialized:
+                raise exception
+            return method(self, *args, **kwargs)
+        return wrapped_method
+    return decorator
+
+
+def require_initialized(exception):
+    """
+    Decorator for API methods that should only be called after
+    TradingAlgorithm.initialize.  `exception` will be raised if the method is
+    called before initialize has completed.
+
+    Examples
+    --------
+    @require_initialized(SomeException("Don't do that!"))
+    def method(self):
+        # Do stuff that should only be allowed after initialize.
+    """
+    def decorator(method):
+        @wraps(method)
+        def wrapped_method(self, *args, **kwargs):
+            if not self.initialized:
+                raise exception
+            return method(self, *args, **kwargs)
+        return wrapped_method
+    return decorator
+
+def disallowed_in_before_trading_start(exception):
+    """
+    Decorator for API methods that cannot be called from within
+    TradingAlgorithm.before_trading_start.  `exception` will be raised if the
+    method is called inside `before_trading_start`.
+
+    Examples
+    --------
+    @disallowed_in_before_trading_start(SomeException("Don't do that!"))
+    def method(self):
+        # Do stuff that is not allowed inside before_trading_start.
+    """
+    def decorator(method):
+        @wraps(method)
+        def wrapped_method(self, *args, **kwargs):
+            if self._in_before_trading_start:
+                raise exception
+            return method(self, *args, **kwargs)
+        return wrapped_method
+    return decorator
+
+def _make_unsupported_method(name):
+    def method(*args, **kwargs):
+        raise NotImplementedError(
+            "Method %s is not supported on LabelArrays." % name
+        )
+    method.__name__ = name
+    method.__doc__ = "Unsupported LabelArray Method: %s" % name
+    return method

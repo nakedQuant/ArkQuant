@@ -18,6 +18,20 @@ from .context_tricks import nop_context
 from .paths import ensure_directory
 from test.sentinel import sentinel
 
+def singleton(cls):
+    instances = {}
+    def getinstance():
+        if cls not in instances:
+            instances[cls] = cls()
+        return instances[cls]
+    return getinstance
+
+@singleton
+class Ignore(object):
+    def __str__(self):
+        return 'Argument.ignore'
+    __repr__ = __str__
+
 
 class Expired(Exception):
     """Marks that a :class:`CachedObject` has expired.
@@ -26,6 +40,12 @@ class Expired(Exception):
 
 ExpiredCachedObject = sentinel('ExpiredCachedObject')
 AlwaysExpired = sentinel('AlwaysExpired')
+
+
+class Expired(Exception):
+    """
+        mark a cacheobject has expired
+    """
 
 
 class CachedObject(object):
@@ -314,7 +334,7 @@ class working_file(object):
     meaning it has as strong of guarantees as :func:`shutil.move`.
     """
     def __init__(self, final_path, *args, **kwargs):
-    		# NamedTemporaryFile has a visble name in file system can be retrieved from the name attribute , delete --- True means delete as file closed
+    	# NamedTemporaryFile has a visble name in file system can be retrieved from the name attribute , delete --- True means delete as file closed
         self._tmpfile = NamedTemporaryFile(delete=False, *args, **kwargs)
         self._final_path = final_path
 

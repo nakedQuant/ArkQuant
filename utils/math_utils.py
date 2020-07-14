@@ -13,9 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from decimal import Decimal
-import math
+import math ,numpy as np
 
 from numpy import isnan
+
+# nan posinf , neginf
+def nan_proc(x):
+    np.nan_to_num(x, copy=True, nan=0.0, posinf=None, neginf=None)
 
 def round_if_near_integer(a, epsilon=1e-4):
     """
@@ -26,6 +30,12 @@ def round_if_near_integer(a, epsilon=1e-4):
         return round(a)
     else:
         return a
+
+def consistent_round(val):
+    if (val % 1) >= 0.5:
+        return ceil(val)
+    else:
+        return round(val)
 
 def tolerant_equals(a, b, atol=10e-7, rtol=10e-7, equal_nan=False):
     """Check if a and b are equal with some tolerance.
@@ -143,3 +153,8 @@ def keysorted(d):
     [('a', 3), ('b', 2), ('c', 1)]
     """
     return sorted(iteritems(d), key=itemgetter(0))
+
+def vectorized_is_element(array, choices):
+    # numpy.vectorize(pyfunc, otypes=None, doc=None, excluded=None, cache=False, signature=None)
+    return vectorize(choices.__contains__, otypes=[bool])(array)
+

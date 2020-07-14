@@ -1,3 +1,4 @@
+#
 # Copyright 2016 Quantopian, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,9 +12,90 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from operator import mul
+
+from logbook import Logger
+
 import numpy as np
+from numpy import float64, int64, nan
 import pandas as pd
 from pandas import isnull
+from six import iteritems
+from six.moves import reduce
+
+from zipline.assets import (
+    Asset,
+    AssetConvertible,
+    Equity,
+    Future,
+    PricingDataAssociable,
+)
+from zipline.assets.continuous_futures import ContinuousFuture
+from zipline.data.continuous_future_reader import (
+    ContinuousFutureSessionBarReader,
+    ContinuousFutureMinuteBarReader
+)
+from zipline.assets.roll_finder import (
+    CalendarRollFinder,
+    VolumeRollFinder
+)
+from zipline.data.dispatch_bar_reader import (
+    AssetDispatchMinuteBarReader,
+    AssetDispatchSessionBarReader
+)
+from zipline.data.resample import (
+    DailyHistoryAggregator,
+    ReindexMinuteBarReader,
+    ReindexSessionBarReader,
+)
+from zipline.data.history_loader import (
+    DailyHistoryLoader,
+    MinuteHistoryLoader,
+)
+from zipline.data.bar_reader import NoDataOnDate
+from zipline.utils.math_utils import (
+    nansum,
+    nanmean,
+    nanstd
+)
+from zipline.utils.memoize import remember_last, weak_lru_cache
+from zipline.utils.pandas_utils import (
+    normalize_date,
+    timedelta_to_integral_minutes,
+)
+from zipline.errors import HistoryWindowStartsBeforeData
+
+
+log = Logger('DataPortal')
+
+BASE_FIELDS = frozenset([
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "price",
+    "contract",
+    "sid",
+    "last_traded",
+])
+
+OHLCV_FIELDS = frozenset([
+    "open", "high", "low", "close", "volume"
+])
+
+OHLCVP_FIELDS = frozenset([
+    "open", "high", "low", "close", "volume", "price"
+])
+
+HISTORY_FREQUENCIES = set(["1m", "1d"])
+
+DEFAULT_MINUTE_HISTORY_PREFETCH = 1560
+DEFAULT_DAILY_HISTORY_PREFETCH = 40
+
+_DEF_M_HIST_PREFETCH = DEFAULT_MINUTE_HISTORY_PREFETCH
+_DEF_D_HIST_PREFETCH = DEFAULT_DAILY_HISTORY_PREFETCH
+
 
 class DataPortal(object):
     """Interface to all of the data that a zipline simulation needs.
@@ -82,7 +164,7 @@ class DataPortal(object):
             # Infer the last session from the provided readers.
             last_sessions = [
                 reader.last_available_dt
-                for reader in [equity_daily_reader]
+                for reader in [equity_daily_reader, future_daily_reader]
                 if reader is not None
             ]
             if last_sessions:
@@ -173,7 +255,6 @@ class DataPortal(object):
             self.trading_calendar.all_sessions.get_loc(self._first_trading_day)
             if self._first_trading_day is not None else None
         )
-
 
     def _ensure_reader_aligned(self, reader):
         if reader is None:
@@ -330,6 +411,7 @@ class DataPortal(object):
                 return None
             elif field != "last_traded":
                 return np.NaN
+
 
         if data_frequency == "daily":
             if field == "contract":
@@ -1040,7 +1122,7 @@ class DataPortal(object):
         Parameters
         ----------
         assets : container
-            assets for which we want splits.
+            Assets for which we want splits.
         dt : pd.Timestamp
             The date for which we are checking for splits. Note: this is
             expected to be midnight UTC.
@@ -1265,6 +1347,38 @@ class DataPortal(object):
                 ret = np.nan
 
             return ret
+
+    def get_current_future_chain(self, continuous_future, dt):
+        """
+        Retrieves the future chain for the contract at the given `dt` according
+        the `continuous_future` specification.
+
+        Returns
+        -------
+
+        future_chain : list[Future]
+            A list of active futures, where the first index is the current
+            contract specified by the continuous future definition, the second
+            is the next upcoming contract and so on.
+        """
+        rf = self._roll_finders[continuous_future.roll_style]
+        session = self.trading_calendar.minute_to_session_label(dt)
+        contract_center = rf.get_contract_center(
+            continuous_future.root_symbol, session,
+            continuous_future.offset)
+        oc = self.asset_finder.get_ordered_contracts(
+            continuous_future.root_symbol)
+        chain = oc.active_chain(contract_center, session.value)
+        return self.asset_finder.retrieve_all(chain)
+
+    def _get_current_contract(self, continuous_future, dt):
+        rf = self._roll_finders[continuous_future.roll_style]
+        contract_sid = rf.get_contract_center(continuous_future.root_symbol,
+                                              dt,
+                                              continuous_future.offset)
+        if contract_sid is None:
+            return None
+        return self.asset_finder.retrieve_asset(contract_sid)
 
     @property
     def adjustment_reader(self):

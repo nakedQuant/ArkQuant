@@ -9,6 +9,8 @@ import numpy as np
 import pandas as pd
 from distutils.version import StrictVersion
 
+from warning import ignore_pandas_nan_categorical_warning
+
 pandas_version = StrictVersion(pd.__version__)
 new_pandas = pandas_version >= StrictVersion('0.19')
 skip_pipeline_new_pandas = \
@@ -26,7 +28,7 @@ if pandas_version >= StrictVersion('0.20'):
         """
         return dt.normalize()
 else:
-    from pandas.tseries.tools import normalize_date  # noqa
+    from pandas.tseries.tools import normalize_date
 
 
 def explode(df):
@@ -36,24 +38,6 @@ def explode(df):
     (df.index, df.columns, df.values)
     """
     return df.index, df.columns, df.values
-
-
-def _time_to_micros(time):
-    """Convert a time into microseconds since midnight.
-    Parameters
-    ----------
-    time : datetime.time
-        The time to convert.
-    Returns
-    -------
-    us : int
-        The number of microseconds since midnight.
-    Notes
-    -----
-    This does not account for leap seconds or daylight savings.
-    """
-    seconds = time.hour * 60 * 60 + time.minute * 60 + time.second
-    return 1000000 * seconds + time.microsecond
 
 
 def find_in_sorted_index(dts, dt):
@@ -138,33 +122,6 @@ def nearest_unequal_elements(dts, dt):
     return lower_value, upper_value
 
 
-def timedelta_to_integral_seconds(delta):
-    """
-    Convert a pd.Timedelta to a number of seconds as an int.
-    """
-    return int(delta.total_seconds())
-
-
-def timedelta_to_integral_minutes(delta):
-    """
-    Convert a pd.Timedelta to a number of minutes as an int.
-    """
-    return timedelta_to_integral_seconds(delta) // 60
-
-
-@contextmanager
-def ignore_pandas_nan_categorical_warning():
-    with warnings.catch_warnings():
-        # Pandas >= 0.18 doesn't like null-ish values in categories, but
-        # avoiding that requires a broader change to how missing values are
-        # handled in pipeline, so for now just silence the warning.
-        warnings.filterwarnings(
-            'ignore',
-            category=FutureWarning,
-        )
-        yield
-
-
 def categorical_df_concat(df_list, inplace=False):
     """
     Prepare list of pandas DataFrames to be used as input to pd.concat.
@@ -193,7 +150,7 @@ def categorical_df_concat(df_list, inplace=False):
         raise ValueError("Input DataFrames must have the same columns/dtypes.")
 
     categorical_columns = df.columns[df.dtypes == 'category']
-
+    # 基于类别获取不同DataFrame分类 --- 重新分类
     for col in categorical_columns:
         new_categories = sorted(
             set().union(
@@ -226,6 +183,7 @@ def check_indexes_all_same(indexes, message="Indexes are not equal."):
     for other in iterator:
         same = (first == other)
         if not same.all():
+            #返回非0元素的位置
             bad_loc = np.flatnonzero(~same)[0]
             raise ValueError(
                 "{}\nFirst difference is at index {}: "

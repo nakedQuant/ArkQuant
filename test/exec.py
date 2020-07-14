@@ -1,14 +1,20 @@
 namespace = dict()
-with open('/Users/python/PycharmProjects/simulation/test/test.py','r') as f:
+with open('/Users/python/Library/Mobile Documents/com~apple~CloudDocs/simulation/test/test.py','r') as f:
     exec(f.read(),namespace)
 
 print(namespace.keys())
+test = namespace['UnionEngine']
+print(test)
+# ins = test()
+# print(ins)
 # print(namespace['__builtins__'])
-print(namespace['signature'])
+# print(namespace['signature'])
 
 import glob
-res = glob.glob('*.py')
+res = glob.glob('/Users/python/Library/Mobile Documents/com~apple~CloudDocs/simulation/pipeline/strategy/*.py')
 print(list(res))
+
+print(__file__)
 
 
 # exec eval compile将字符串转化为可执行代码 , exec compile source into code or AST object ,if filename is None ,'<string>' is used

@@ -26,31 +26,6 @@ class CallbackManager(object):
     post : (...) -> any, optional
         A post-execution callback. This will be passed ``*args`` and
         ``**kwargs``.
-
-    Notes
-    -----
-    The enter value of this context manager will be the result of calling
-    ``pre(*args, **kwargs)``
-
-    Examples
-    --------
-    >>> def pre(where):
-    ...     print('entering %s block' % where)
-    >>> def post(where):
-    ...     print('exiting %s block' % where)
-    >>> manager = CallbackManager(pre, post)
-    >>> with manager('example'):
-    ...    print('inside example block')
-    entering example block
-    inside example block
-    exiting example block
-
-    These are reusable with different args:
-    >>> with manager('another'):
-    ...     print('inside another block')
-    entering another block
-    inside another block
-    exiting another block
     """
     def __init__(self, pre=None, post=None):
         self.pre = pre if pre is not None else _nop

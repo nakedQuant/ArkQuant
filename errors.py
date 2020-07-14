@@ -864,3 +864,30 @@ class NoEngineRegistered(Exception):
     Raised if a user tries to call pipeline_output in an algorithm that hasn't
     set up a pipeline engine.
     """
+
+class _RunAlgoError(click.ClickException, ValueError):
+    """Signal an error that should have a different message if invoked from
+    the cli.
+
+    Parameters
+    ----------
+    pyfunc_msg : str
+        The message that will be shown when called as a python function.
+   cmdline_msg : str, optional
+        The message that will be shown on the command line. If not provided,
+        this will be the same as ``pyfunc_msg`
+    """
+    exit_code = 1
+
+    def __init__(self, pyfunc_msg, cmdline_msg=None):
+        if cmdline_msg is None:
+            cmdline_msg = pyfunc_msg
+
+        super(_RunAlgoError, self).__init__(cmdline_msg)
+        self.pyfunc_msg = pyfunc_msg
+
+    def __str__(self):
+        return self.pyfunc_msg
+
+
+
