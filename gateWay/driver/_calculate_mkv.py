@@ -90,13 +90,3 @@ class MarketValue:
                 f.append(future)
             for job in as_completed(f):
                 job.result()
-
-
-if __name__ == '__main__':
-
-    t = time.time()
-    frequency = None
-    nowdays = time.strftime('%Y-%m-%d',time.localtime())
-    m = MarketValue(frequency,nowdays)
-    m.parallel()
-    print('alapsed',time.time() - t)

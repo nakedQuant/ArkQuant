@@ -4200,37 +4200,49 @@ def _parse_url(url, encoding='gbk', bs=True):
 # df = pd.DataFrame(delimeter,columns = columns)
 # print(df)
 
-bond_asset_url = 'https://www.jisilu.cn/data/cbnew/cb_list/?'
-text = _parse_url(bond_asset_url, bs=False, encoding=None)
-text = json.loads(text)
-sids = text['rows']
-print(sids[100])
-#
-# bond_asset_url = 'http://dcfm.eastmoney.com/em_mutisvcexpandinterface/api/js/get?type=KZZ_LB2.0' \
-#                  '&token=70f12f2f4f091e459a279469fe49eca5&cmd=&sr=-1&p=1&ps=50&js={"pages":(tp),"data":(x)}'
-# text = _parse_url(bond_asset_url, encoding= 'utf-8',bs=False)
+# bond_asset_url = 'https://www.jisilu.cn/data/cbnew/cb_list/?'
+# text = _parse_url(bond_asset_url, bs=False, encoding=None)
 # text = json.loads(text)
-# sids = text['data']
-# print(sids)
+# sids = text['rows']
+# print(sids[100])
+
+# supspend_url = 'http://datainterface.eastmoney.com/EM_DataCenter/JS.aspx?type=FD&sty=SRB&st=0&sr=-1&p=2&ps=500&' \
+#                'js={"pages":(pc),"data":[(x)]}&mkt=1&fd=%s'
+
+# supspend_url = 'http://datainterface.eastmoney.com/EM_DataCenter/JS.aspx?type=FD&sty=SRB&st=0&sr=-1&p=1&ps=50&' \
+#                'js={"pages":(pc),"data":[(x)]}&mkt=1&fd=2020-05-13'
+#
+# text = _parse_url(supspend_url, bs=False, encoding=None)
+# print(text)
+# text = json.loads(text)
+# print('supspend',text['data'])
+
+#
+bond_asset_url = 'http://dcfm.eastmoney.com/em_mutisvcexpandinterface/api/js/get?type=KZZ_LB2.0' \
+                 '&token=70f12f2f4f091e459a279469fe49eca5&cmd=&sr=-1&p=1&ps=50&js={"pages":(tp),"data":(x)}'
+text = _parse_url(bond_asset_url, encoding= 'utf-8',bs=False)
+text = json.loads(text)
+sids = text['data']
+print(sids)
 #
 # # @preprocess(engine=coerce_string_to_eng(require_exists=False))
 #
 # #公司基本情况
-# basics_url = 'https://vip.stock.finance.sina.com.cn/corp/go.php/vCI_CorpInfo/stockid/%s.phtml'
-# code = '002570'
-# url = basics_url % code
-# obj = _parse_url(url)
-# table = obj.find('table', {'id': 'comInfo1'})
-# tag = [item.findAll('td') for item in table.findAll('tr')]
-# tag_chain = list(chain(*tag))
-# raw = [item.get_text() for item in tag_chain]
-# # 去除格式
-# raw = [i.replace('：', '') for i in raw]
-# raw = [i.strip() for i in raw]
-# info = list(zip(raw[::2], raw[1::2]))
-# info_dict = {item[0]: item[1] for item in info}
-# # info_dict.update({'代码': code})
-# print(info_dict)
+basics_url = 'https://vip.stock.finance.sina.com.cn/corp/go.php/vCI_CorpInfo/stockid/%s.phtml'
+code = '002570'
+url = basics_url % code
+obj = _parse_url(url)
+table = obj.find('table', {'id': 'comInfo1'})
+tag = [item.findAll('td') for item in table.findAll('tr')]
+tag_chain = list(chain(*tag))
+raw = [item.get_text() for item in tag_chain]
+# 去除格式
+raw = [i.replace('：', '') for i in raw]
+raw = [i.strip() for i in raw]
+info = list(zip(raw[::2], raw[1::2]))
+info_dict = {item[0]: item[1] for item in info}
+# info_dict.update({'代码': code})
+print(info_dict)
 # #
 # fund
 import re
@@ -4245,17 +4257,18 @@ import re
 # print(mid)
 
 # 东方财富
-# fund_url = 'http://fund.eastmoney.com/cnjy_jzzzl.html'
-# obj = _parse_url(fund_url)
-# # print(obj.prettify())
-# from toolz import partition_all
-# raw = [data.find_all('td') for data in obj.find_all(id = 'tableDiv')]
-# text = [t.get_text() for t in raw[0]]
-# print(text)
-# df = pd.DataFrame(partition_all(14,text[18:]),columns = text[2:16])
-# df['基金简称'] = df['基金简称'].apply(lambda x: x[:-5])
-# print(df.head())
-# print(df['基金代码'].values)
+fund_url = 'http://fund.eastmoney.com/cnjy_jzzzl.html'
+obj = _parse_url(fund_url)
+# print(obj.prettify())
+from toolz import partition_all
+raw = [data.find_all('td') for data in obj.find_all(id = 'tableDiv')]
+text = [t.get_text() for t in raw[0]]
+print(text)
+df = pd.DataFrame(partition_all(14,text[18:]),columns = text[2:16])
+df['基金简称'] = df['基金简称'].apply(lambda x: x[:-5])
+print(df.head())
+print(df['基金代码'].values)
+
 # # equity_url = 'http://70.push2.eastmoney.com/api/qt/clist/get?pn=1&pz=10000&po=1&np=1&fltt=2&invt=2&' \
 #              'fid=f3&fs=m:0+t:6,m:0+t:13,m:0+t:80,m:1+t:2,m:1+t:23&fields=f12'
 # # 获取存量股票包括退市
@@ -4593,4 +4606,46 @@ def _dt_to_epoch_ns(dt_series):
 # }
 
 
+from six.moves.urllib_error import HTTPError
 
+#
+# # 获取沪港通和深港通股票数据 , is_new = 1 表示沪港通的标的， is_new = 0 表示已经被踢出的沪港通的股票,exchange : SH SZ
+# con_exchange = sa.Table(
+#     'con_exchange',
+#     metadata,
+#     sa.Column('sid',
+#               sa.String(6),
+#               sa.ForeignKey(asset_router.c.sid),
+#               nullable=False,
+#               primary_key=True,
+#               ),
+#     sa.Column(
+#         'exchange',
+#         sa.String(6),
+#         nullable=False,
+#     ),
+#     sa.Column(
+#         'in_date',
+#         sa.String(8),
+#         nullable = False,
+#     ),
+#     sa.Column(
+#         'out_date',
+#         sa.String(6),
+#         default = 'null'
+#     ),
+#     sa.Column('status', sa.Integer, nullable=False),
+# )
+
+
+# Default values for the exchanges DataFrame
+# _exchanges_defaults = {
+#     'canonical_name': lambda df, col: df.index,
+#     'country_code': lambda df, col: '??',
+# }
+
+# MarketType
+
+# The columns provided.
+# 在ar1中但不在ar2中的已排序的唯一值
+# missing_sids = np.setdiff1d(assets, self.sids)

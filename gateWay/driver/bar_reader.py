@@ -11,42 +11,56 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from abc import ABCMeta, abstractmethod, abstractproperty
-from six import with_metaclass
+from abc import ABC, abstractmethod
 
+class BarReader(ABC):
 
-class NoDataOnDate(Exception):
-    """
-    Raised when a spot price cannot be found for the sid and date.
-    """
-    pass
-
-
-class NoDataBeforeDate(NoDataOnDate):
-    pass
-
-
-class NoDataAfterDate(NoDataOnDate):
-    pass
-
-
-class NoDataForSid(Exception):
-    """
-    Raised when the requested sid is missing from the pricing data.
-    """
-    pass
-
-
-OHLCV = ('open', 'high', 'low', 'close', 'volume')
-
-
-class BarReader(with_metaclass(ABCMeta, object)):
-    @abstractproperty
+    @property
     def data_frequency(self):
-        pass
+        return 'daily'
+
+    @property
+    def trading_calendar(self):
+        """
+        Returns the zipline.utils.calendar.trading_calendar used to read
+        the data.  Can be None (if the writer didn't specify it).
+        """
+        return self._trading_calendar
+
+    def _window_size_to_dt(self,date,window):
+        shift_date = self.trading_calendar.shift_calendar(date, window)
+        return shift_date
 
     @abstractmethod
-    def load_raw_arrays(self, columns, start_date, end_date, assets):
+    def get_value(self, asset, dt, field):
+        """
+        Retrieve the value at the given coordinates.
+
+        Parameters
+        ----------
+        asset : Asset
+            The asset identifier.
+        dt : pd.Timestamp
+            The timestamp for the desired data point.
+        field : string
+            The OHLVC name for the desired data point.
+
+        Returns
+        -------
+        value : float|int
+            The value at the given coordinates, ``float`` for OHLC, ``int``
+            for 'volume'.
+
+        Raises
+        ------
+        NoDataOnDate
+            If the given dt is not a valid market minute (in minute mode) or
+            session (in daily mode) according to this reader's tradingcalendar.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def load_raw_arrays(self, date, window,columns,assets):
         """
         Parameters
         ----------
@@ -66,83 +80,83 @@ class BarReader(with_metaclass(ABCMeta, object)):
             (minutes in range, sids) with a dtype of float64, containing the
             values for the respective field over start and end dt range.
         """
-        pass
+        raise NotImplementedError()
 
-    @abstractmethod
-    def get_value(self, sid, dt, field):
-        """
-        Retrieve the value at the given coordinates.
 
-        Parameters
-        ----------
-        sid : int
-            The asset identifier.
-        dt : pd.Timestamp
-            The timestamp for the desired data point.
-        field : string
-            The OHLVC name for the desired data point.
+#reader
+class AssetSessionReader(BarReader):
+    """
+    Reader for raw pricing data from mysql.
+    return different asset types : etf bond symbol
+    """
+    AssetsTypes = frozenset(['symbol','bond','etf','dual'])
 
-        Returns
-        -------
-        value : float|int
-            The value at the given coordinates, ``float`` for OHLC, ``int``
-            for 'volume'.
+    def __init__(self,
+                 metadata,
+                 engine,
+                 trading_calendar,
+                ):
+        self.metadata = metadata
+        self.engine = engine
+        self._trading_calendar = trading_calendar
 
-        Raises
-        ------
-        NoDataOnDate
-            If the given dt is not a valid market minute (in minute mode) or
-            session (in daily mode) according to this reader's tradingcalendar.
-        """
-        pass
+    def get_value(self, asset,dt):
+        table_name = '%s_price'%asset.asset_type
+        tbl = self.metadata[table_name]
+        orm = select([cast(tbl.c.open, Numeric(10, 2)).label('open'),
+                      cast(tbl.c.close, Numeric(12, 2)).label('close'),
+                      cast(tbl.c.high, Numeric(10, 2)).label('high'),
+                      cast(tbl.c.low, Numeric(10, 3)).label('low'),
+                      cast(tbl.c.volume, Numeric(15, 0)).label('volume'),
+                      cast(tbl.c.amount, Numeric(15, 2)).label('amount')])\
+            .where(and_(tbl.c.trade_dt == dt,tbl.c.sid == asset.sid))
+        rp = self.engine.execute(orm)
+        arrays = [[r.trade_dt, r.code, r.open, r.close, r.high, r.low, r.volume] for r in
+                  rp.fetchall()]
+        kline = pd.DataFrame(arrays,
+                             columns=['open', 'close', 'high', 'low', 'volume',
+                                      'amount'])
+        return kline
 
-    @abstractproperty
-    def last_available_dt(self):
-        """
-        Returns
-        -------
-        dt : pd.Timestamp
-            The last session for which the reader can provide data.
-        """
-        pass
+    def _retrieve_asset_type(self,table,sids,fields,start_date,end_date):
+        tbl = self.metadata['%s_price' & table]
+        orm = select([tbl.c.trade_dt, tbl.c.sid,
+                      cast(tbl.c.open, Numeric(10, 2)).label('open'),
+                      cast(tbl.c.close, Numeric(12, 2)).label('close'),
+                      cast(tbl.c.high, Numeric(10, 2)).label('high'),
+                      cast(tbl.c.low, Numeric(10, 3)).label('low'),
+                      cast(tbl.c.volume, Numeric(15, 0)).label('volume'),
+                      cast(tbl.c.amount, Numeric(15, 2)).label('amount')]). \
+            where(tbl.c.trade_dt.between(start_date, end_date))
+        rp = self.engine.execute(orm)
+        arrays = [[r.trade_dt, r.code, r.open, r.close, r.high, r.low, r.volume] for r in
+                  rp.fetchall()]
+        raw = pd.DataFrame(arrays,
+                             columns=['trade_dt', 'code', 'open', 'close', 'high', 'low', 'volume',
+                                      'amount'])
+        raw.set_index('code', inplace=True)
+        # 基于code
+        _slice = raw.loc[sids]
+        # 基于fields 获取数据
+        kline = _slice.loc[:, fields]
+        unpack_kline = unpack_df_to_component_dict(kline)
+        return unpack_kline
 
-    @abstractproperty
-    def trading_calendar(self):
-        """
-        Returns the zipline.utils.calendar.trading_calendar used to read
-        the data.  Can be None (if the writer didn't specify it).
-        """
-        pass
-
-    @abstractproperty
-    def first_trading_day(self):
-        """
-        Returns
-        -------
-        dt : pd.Timestamp
-            The first trading day (session) for which the reader can provide
-            data.
-        """
-        pass
-
-    @abstractmethod
-    def get_last_traded_dt(self, asset, dt):
-        """
-        Get the latest minute on or before ``dt`` in which ``asset`` traded.
-
-        If there are no trades on or before ``dt``, returns ``pd.NaT``.
-
-        Parameters
-        ----------
-        asset : zipline.asset.Asset
-            The asset for which to get the last traded minute.
-        dt : pd.Timestamp
-            The minute at which to start searching for the last traded minute.
-
-        Returns
-        -------
-        last_traded : pd.Timestamp
-            The dt of the last trade for the given asset, using the input
-            dt as a vantage point.
-        """
-        pass
+    def load_raw_arrays(self,end_date,window,columns,assets):
+        start_date = self._window_size_to_dt(end_date,window)
+        _get_source = partial(self._retrieve_asset_type(fields= columns,
+                                                           start_date= start_date,
+                                                           end_date = end_date
+                                                           ))
+        sid_groups = {}
+        for asset in assets:
+            sid_groups[asset.asset_type].append(asset.sid)
+        #验证
+        assert set(sid_groups) in self.AssetsTypes,('extra asset types %r'%
+                                                    (set(sid_groups) - self.AssetsTypes))
+        #获取数据
+        batch_arrays = {}
+        for _name,sids in sid_groups.items():
+            raw = _get_source(table = _name,sids = sids)
+            batch_arrays.update(raw)
+        return batch_arrays
