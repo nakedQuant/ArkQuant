@@ -6,8 +6,6 @@ import time
 
 from interface import implements
 
-
-
 class ProgressHooks(implements(PipelineHooks)):
     """
     Hooks implementation for displaying progress.
