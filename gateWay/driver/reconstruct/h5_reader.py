@@ -52,7 +52,7 @@ Sample layout of the full file with multiple countries.
 
 .. code-block:: none
 
-   |- /US
+   |- /Equity
    |  |- /data
    |  |  |- /open
    |  |  |- /high
@@ -68,7 +68,7 @@ Sample layout of the full file with multiple countries.
    |     |- /start_date
    |     |- /end_date
    |
-   |- /CA
+   |- /Convertible
       |- /data
       |  |- /open
       |  |- /high
@@ -85,44 +85,29 @@ Sample layout of the full file with multiple countries.
          |- /end_date
 """
 
+from functools import partial
+from itertools import chain
 
-from functools import partial,reduce
-
-import numpy as np , pandas as pd ,h5py
-from six import iteritems, raise_from, viewkeys
-
-VERSION = 0
-DATA = 'data'
-INDEX = 'index'
-LIFETIMES = 'lifetimes'
-
-SCALING_FACTOR = 'scaling_factor'
-
-OPEN = 'open'
-HIGH = 'high'
-LOW = 'low'
-CLOSE = 'close'
-VOLUME = 'volume'
-
-
-DAY = 'day'
-SID = 'sid'
-
-START_DATE = 'start_date'
-END_DATE = 'end_date'
+import numpy as np , pandas as pd ,h5py , tables
 
 
 DEFAULT_SCALING_FACTORS = {
     # Retain 3 decimal places for prices.
-    OPEN: 1000,
-    HIGH: 1000,
-    LOW: 1000,
-    CLOSE: 1000,
+    'open': 1000,
+    'high': 1000,
+    'low': 1000,
+    'close': 1000,
     # Volume is expected to be a whole integer.
-    VOLUME: 1,
+    'volume': 1,
 }
 
-FIELDS = (OPEN, HIGH, LOW, CLOSE, VOLUME)
+FIELDS = ['open','high','low','close','volume','amount']
+
+def convert_price_with_scaling_factor(a, scaling_factor):
+    conversion_factor = (1.0 / scaling_factor)
+
+    zeroes = (a == 0)
+    return np.where(zeroes, np.nan, a.astype('float64')) * conversion_factor
 
 def coerce_to_uint32(a, scaling_factor):
     """
@@ -165,7 +150,7 @@ def days_and_sids_for_frames(frames):
 
     Parameters
     ----------
-    frames : list[pd.DataFrame]
+    frames : dict  sid : pd.DataFrame
         A list of dataframes indexed by day, with a column per sid.
 
     Returns
@@ -184,59 +169,17 @@ def days_and_sids_for_frames(frames):
     if not frames:
         days = np.array([], dtype='datetime64[ns]')
         sids = np.array([], dtype='int64')
-        return days, sids
+        return days, sids,None
 
     # Ensure the indices and columns all match.
     check_indexes_all_same(
-        [frame.index for frame in frames],
-        message='Frames have mistmatched days.',
-    )
-    check_indexes_all_same(
-        [frame.columns for frame in frames],
+        [frame.columns for frame in frames.values()],
         message='Frames have mismatched sids.',
     )
-
-    return frames[0].index.values, frames[0].columns.values
-
-def compute_asset_lifetimes(frames):
-    """
-    Parameters
-    ----------
-    frames : dict[str, pd.DataFrame]
-        A dict mapping each OHLCV field to a dataframe with a row for
-        each date and a column for each sid, as passed to write().
-
-    Returns
-    -------
-    start_date_ixs : np.array[int64]
-        The index of the first date with non-nan values, for each sid.
-    end_date_ixs : np.array[int64]
-        The index of the last date with non-nan values, for each sid.
-    """
-    # Build a 2D array (dates x sids), where an entry is True if all
-    # fields are nan for the given day and sid.
-    is_null_matrix = np.logical_and.reduce(
-        [frames[field].isnull().values for field in FIELDS],
-    )
-    if not is_null_matrix.size:
-        empty = np.array([], dtype='int64')
-        return empty, empty.copy()
-
-    # Offset of the first null from the start of the input.
-    start_date_ixs = is_null_matrix.argmin(axis=0)
-    # Offset of the last null from the **end** of the input.
-    end_offsets = is_null_matrix[::-1].argmin(axis=0)
-    # Offset of the last null from the start of the input
-    end_date_ixs = is_null_matrix.shape[0] - end_offsets - 1
-
-    return start_date_ixs, end_date_ixs
-
-
-def convert_price_with_scaling_factor(a, scaling_factor):
-    conversion_factor = (1.0 / scaling_factor)
-
-    zeroes = (a == 0)
-    return np.where(zeroes, np.nan, a.astype('float64')) * conversion_factor
+    days = set(chain(*frame.keys())
+    sids = set(frames)
+    cols = frames.values()[0].columns
+    return days,sids,cols
 
 
 class HDF5DailyBarWriter(object):
@@ -292,61 +235,34 @@ class HDF5DailyBarWriter(object):
 
         with self.h5_file(mode='a') as h5_file:
             # ensure that the file version has been written
-            h5_file.attrs['version'] = VERSION
+            # h5_file.attrs['version'] = VERSION
             #多维度
             category_group = h5_file.create_group(asset_type)
-            #
-            data_group = category_group.create_group(DATA)
-            index_group = category_group.create_group(INDEX)
-            lifetimes_group = category_group.create_group(LIFETIMES)
-
+            category_group.attrs['scaling_factor'] = scaling_factors
+            # 创建group
+            data_group = category_group.create_group('data')
+            index_group = category_group.create_group('index')
             # Note that this functions validates that all of the frames
             # share the same days and sids.
-            days, sids = days_and_sids_for_frames(list(frames.values()))
-
+            days, sids fields = days_and_sids_for_frames(frames)
             # Write sid and date indices.
-            index_group.create_dataset(SID, data=sids)
-
+            index_group.create_dataset('sid',data=sids)
             # h5py does not support datetimes, so they need to be stored
             # as integers.
-            index_group.create_dataset(DAY, data=days.astype(np.int64))
-
-            # Write start and end dates for each sid.
-            start_date_ixs, end_date_ixs = compute_asset_lifetimes(frames)
-
-            lifetimes_group.create_dataset(START_DATE, data=start_date_ixs)
-            lifetimes_group.create_dataset(END_DATE, data=end_date_ixs)
-
-            if len(sids):
-                chunks = (len(sids), min(self._date_chunk_size, len(days)))
-            else:
-                # h5py crashes if we provide chunks for empty data.
-                chunks = None
-
-            for field in FIELDS:
-                frame = frames[field]
-
-                # Sort rows by increasing sid, and columns by increasing date.
+            index_group.create_dataset('day', data=days.astype(np.int64))
+            # Write fields of data
+            index_group.create_group('field', data=fields)
+            #
+            for sid , frame in frames.items():
+                frame = frame * scaling_factors
                 frame.sort_index(inplace=True)
-                frame.sort_index(axis='columns', inplace=True)
-
-                data = coerce_to_uint32(
-                    frame.T.fillna(0).values,
-                    scaling_factors[field],
-                )
-
-                dataset = data_group.create_dataset(
-                    field,
-                    compression='lzf',
-                    shuffle=True,
-                    data=data,
-                    chunks=chunks,
-                )
-
-                dataset.attrs[SCALING_FACTOR] = scaling_factors[field]
-
-        return self.write(asset_type, frames, scaling_factors)
-
+                data_group.create_dataset(sid,
+                                          compression='lzf',
+                                          shuffle=True,
+                                          data=frame,
+                                          # chunks=chunks,
+                                          )
+                                          
 
 class HDF5DailyBarReader(object):
     """
@@ -355,8 +271,8 @@ class HDF5DailyBarReader(object):
     country_group : h5py.Group
         The group for a single country in an HDF5 daily pricing file.
     """
-    def __init__(self, categories):
-        self._category = categories
+    def __init__(self, h5_group):
+        self._category = h5_group
 
         self._postprocessors = {
             OPEN: partial(convert_price_with_scaling_factor,
@@ -371,7 +287,7 @@ class HDF5DailyBarReader(object):
         }
 
     @classmethod
-    def from_file(cls, h5_file, country_code):
+    def from_file(cls, h5_file):
         """
         Construct from an h5py.File and a country code.
 
@@ -390,10 +306,10 @@ class HDF5DailyBarReader(object):
                 ),
             )
 
-        return cls(h5_file[country_code])
+        return cls(h5_file)
 
     @classmethod
-    def from_path(cls, path, category):
+    def from_path(cls, path):
         """
         Construct from a file path and a country code.
 
@@ -401,19 +317,17 @@ class HDF5DailyBarReader(object):
         ----------
         path : str
             The path to an HDF5 daily pricing file.
-        country_code : str
-            The ISO 3166 alpha-2 country code for the country to read.
         """
-        return cls.from_file(h5py.File(path), category)
+        return cls.from_file(h5py.File(path))
 
     def _read_scaling_factor(self, field):
         return self._category[DATA][field].attrs[SCALING_FACTOR]
 
     def load_raw_arrays(self,
-                        columns,
+                        asssets,
                         start_date,
                         end_date,
-                        assets):
+                        columns = None):
         """
         Parameters
         ----------
@@ -433,49 +347,16 @@ class HDF5DailyBarReader(object):
             (minutes in range, sids) with a dtype of float64, containing the
             values for the respective field over start and end dt range.
         """
-        self._validate_timestamp(start_date)
-        self._validate_timestamp(end_date)
-
-        start = start_date.asm8
-        end = end_date.asm8
-        date_slice = self._compute_date_range_slice(start, end)
-        n_dates = date_slice.stop - date_slice.start
-
-        # Create a buffer into which we'll read data from the h5 file.
-        # Allocate an extra row of space that will always contain null values.
-        # We'll use that space to provide "data" for entries in ``assets`` that
-        # are unknown to us.
-        full_buf = np.zeros((len(self.sids) + 1, n_dates), dtype=np.uint32)
-        # We'll only read values into this portion of the read buf.
-        mutable_buf = full_buf[:-1]
-
-        # Indexer that converts an array aligned to self.sids (which is what we
-        # pull from the h5 file) into an array aligned to ``assets``.
-        #
-        # Unknown assets will have an index of -1, which means they'll always
-        # pull from the last row of the read buffer. We allocated an extra
-        # empty row above so that these lookups will cause us to fill our
-        # output buffer with "null" values.
-        sid_selector = self._make_sid_selector(assets)
-
+        cols = columns if columns else FIELDS
         out = []
-        for column in columns:
-            # Zero the buffer to prepare to receive new data.
-            mutable_buf.fill(0)
-
-            dataset = self._category[DATA][column]
-
-            # Fill the mutable portion of our buffer with data from the file.
-            dataset.read_direct(
-                mutable_buf,
-                np.s_[:, date_slice],
-            )
-
-            # Select data from the **full buffer**. Unknown assets will pull
-            # from the last row, which is always empty.
-            out.append(self._postprocessors[column](full_buf[sid_selector].T))
-
-        return out
+        for asset in assets:
+            data = self._category['data'][asset][cols]
+        
+            # dataset = self._category[DATA][column]
+            # dataset.read_direct(
+                # mutable_buf,
+                # np.s_[:, date_slice],
+            # )
 
     def _make_sid_selector(self, assets):
         """
@@ -494,45 +375,7 @@ class HDF5DailyBarReader(object):
             will contain -1. It is caller's responsibility to handle these
             values correctly.
         """
-        assets = np.array(assets)
-        sid_selector = self.sids.searchsorted(assets)
-        #查找相同的列，invert = True
-        unknown = np.in1d(assets, self.sids, invert=True)
-        sid_selector[unknown] = -1
-        return sid_selector
 
-    def _compute_date_range_slice(self, start_date, end_date):
-        # Get the index of the start of dates for ``start_date``.
-        start_ix = self.dates.searchsorted(start_date)
-
-        # Get the index of the start of the first date **after** end_date.
-        end_ix = self.dates.searchsorted(end_date, side='right')
-
-        return slice(start_ix, end_ix)
-
-    def _validate_assets(self, assets):
-        """Validate that asset identifiers are contained in the daily bars.
-
-        Parameters
-        ----------
-        assets : array-like[int]
-           The asset identifiers to validate.
-
-        Raises
-        ------
-        NoDataForSid
-            If one or more of the provided asset identifiers are not
-            contained in the daily bars.
-        """
-        # 在ar1中但不在ar2中的已排序的唯一值
-        missing_sids = np.setdiff1d(assets, self.sids)
-
-        if len(missing_sids):
-            raise NoDataForSid(
-                'Assets not contained in daily pricing file: {}'.format(
-                    missing_sids
-                )
-            )
 
     def get_value(self, sid, dt, field):
         """
@@ -559,108 +402,10 @@ class HDF5DailyBarReader(object):
             If the given dt is not a valid market minute (in minute mode) or
             session (in daily mode) according to this reader's tradingcalendar.
         """
-        self._validate_assets([sid])
-        self._validate_timestamp(dt)
-
-        sid_ix = self.sids.searchsorted(sid)
-        dt_ix = self.dates.searchsorted(dt.asm8)
-
-        value = self._postprocessors[field](
-            self._category[DATA][field][sid_ix, dt_ix]
-        )
-        if np.isnan(value):
-            if dt.asm8 < self.asset_start_dates[sid_ix]:
-                raise NoDataBeforeDate()
-
-            if dt.asm8 > self.asset_end_dates[sid_ix]:
-                raise NoDataAfterDate()
-
-        return value
 
 
-class MultiCountryDailyBarReader(object):
-    """
-    Parameters
-    ---------
-    readers : dict[str -> SessionBarReader]
-        A dict mapping country codes to SessionBarReader instances to
-        service each country.
-    """
-    def __init__(self, readers):
-        self._readers = readers
-        self._country_map = pd.concat([
-            pd.Series(index=reader.sids, data=country_code)
-            for country_code, reader in iteritems(readers)
-        ])
 
-    @classmethod
-    def from_file(cls, h5_file):
-        """
-        Construct from an h5py.File.
-
-        Parameters
-        ----------
-        h5_file : h5py.File
-            An HDF5 daily pricing file.
-        """
-        return cls({
-            category: HDF5DailyBarReader.from_file(h5_file, category)
-            for category in h5_file.keys()
-        })
-
-    @classmethod
-    def from_path(cls, path):
-        """
-        Construct from a file path.
-
-        Parameters
-        ----------
-        path : str
-            Path to an HDF5 daily pricing file.
-        """
-        return cls.from_file(h5py.File(path))
-
-    @property
-    def categories(self):
-        """A set-like object of the country codes supplied by this reader.
-        """
-        return viewkeys(self._readers)
-
-    def load_raw_arrays(self,
-                        columns,
-                        start_date,
-                        end_date,
-                        assets):
-        """
-        Parameters
-        ----------
-        columns : list of str
-           'open', 'high', 'low', 'close', or 'volume'
-        start_date: Timestamp
-           Beginning of the window range.
-        end_date: Timestamp
-           End of the window range.
-        assets : list of int
-           The asset identifiers in the window.
-
-        Returns
-        -------
-        list of np.ndarray
-            A list with an entry per field of ndarrays with shape
-            (minutes in range, sids) with a dtype of float64, containing the
-            values for the respective field over start and end dt range.
-        """
-        category = self._category_code_for_assets(assets)
-
-        return self._readers[category].load_raw_arrays(
-            columns,
-            start_date,
-            end_date,
-            assets,
-        )
-
-
-class H5MinuteBarUpdateWriter(object):
+class H5MinuteWriter(object):
     """
     Writer for files containing minute bar updates for consumption by a writer
     for a ``MinuteBarReader`` format.
@@ -674,8 +419,6 @@ class H5MinuteBarUpdateWriter(object):
     complib : str, optional
         The HDF5 complib, defaults to ``zlib``.
     """
-
-    FORMAT_VERSION = 0
 
     _COMPLEVEL = 5
     _COMPLIB = 'zlib'
@@ -698,7 +441,7 @@ class H5MinuteBarUpdateWriter(object):
             An iterable or other mapping of sid to the corresponding OHLCV
             pricing data.
         """
-        with HDFStore(self._path, 'w',
+        with pd.HDFStore(self._path, 'w',
                       complevel=self._complevel, complib=self._complib) \
                 as store:
             panel = pd.Panel.from_dict(dict(frames))
@@ -707,7 +450,7 @@ class H5MinuteBarUpdateWriter(object):
             h5file.set_node_attr('/', 'version', 0)
 
 
-class H5MinuteBarUpdateReader(object):
+class H5MinuteReader(object):
     """
     Reader for minute bar updates stored in HDF5 files.
 
