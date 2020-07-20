@@ -17,7 +17,6 @@ from abc import ABC,abstractmethod
 
 from gateWay.assets._finder import  AssetFinder
 
-
 class NotSpecific(Exception):
 
     def __str__(self):
@@ -36,6 +35,14 @@ def ignore_pandas_nan_categorical_warning():
             category=FutureWarning,
         )
         yield
+
+def contextmanager(f):
+    """
+    Wrapper for contextlib.contextmanager that tracks which methods of
+    PipelineHooks are contextmanagers in CONTEXT_MANAGER_METHODS.
+    """
+    PIPELINE_HOOKS_CONTEXT_MANAGERS.add(f.__name__)
+    return contextmanager(f)
 
 
 class Term(object):

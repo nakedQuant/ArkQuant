@@ -1,8 +1,10 @@
+# -*- coding : utf-8 -*-
+
 import pandas as pd,sqlalchemy as sa
 from sqlalchemy import inspect
 from contextlib import ExitStack
 from weakref import WeakValueDictionary
-from db_schema import engine,metadata,asset_db_table_names
+from .db_schema import engine,metadata,asset_db_table_names
 
 
 class DBWriter(object):

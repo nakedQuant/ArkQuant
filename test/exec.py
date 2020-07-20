@@ -1,5 +1,5 @@
 namespace = dict()
-with open('/Users/python/Library/Mobile Documents/com~apple~CloudDocs/simulation/test/test.py','r') as f:
+with open('/Users/python/Library/Mobile Documents/com~apple~CloudDocs/simulation/test/test_driver.py','r') as f:
     exec(f.read(),namespace)
 
 print(namespace.keys())
