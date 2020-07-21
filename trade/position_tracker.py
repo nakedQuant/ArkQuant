@@ -1,12 +1,16 @@
-# -*- coding : utf-8 -*-
+# !/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Mar 12 15:37:47 2019
+
+@author: python
+"""
+
 from collections import defaultdict,OrderedDict
 import numpy as np , pandas as pd
 from functools import partial
-
 from finance.position import Position
-from gateWay.driver.reader import BarReader
-
-bar_reader = BarReader()
+from gateWay.driver.bar_reader import AssetSessionReader
 
 
 class PositionStats(object):
@@ -63,6 +67,11 @@ class PositionTracker(object):
         self._dirty_stats = True
         self._stats = PositionStats.new()
 
+    @property
+    def reader(self):
+        reader = AssetSessionReader()
+        return reader
+
     def _update_position(self,transaction):
         asset = transaction.asset
         try:
@@ -103,10 +112,10 @@ class PositionTracker(object):
         if len(set(dts)) >1 :
             raise ValueError('sync all the position date')
         dt = dts[0]
-        get_price = partial(bar_reader.load_asset_kline,
+        get_price = partial(self.reader.load_raw_arrays,
                             date = dt,
                             window = 0,
-                            fields = 'close',
+                            columns = 'close',
                             )
         last_sync_prices = get_price(assets = assets)
         for asset,outer_position in self.positions.items():

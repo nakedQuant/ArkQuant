@@ -1,4 +1,4 @@
-from .base import AbstractStatistics
+from trade.metrics.base import AbstractStatistics
 from ..price_parser import PriceParser
 
 from matplotlib.ticker import FuncFormatter

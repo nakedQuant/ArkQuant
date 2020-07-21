@@ -14,8 +14,7 @@
 # limitations under the License.
 
 
-import pytz
-import numbers
+import pytz , numbers ,heapq
 
 from hashlib import md5
 from datetime import datetime
@@ -23,6 +22,22 @@ from zipline.protocol import DATASOURCE_TYPE
 
 from six import iteritems, b
 
+def _decorate_source(source):
+    for message in source:
+        yield ((message.dt, message.source_id), message)
+
+
+def date_sorted_sources(*sources):
+    """
+    Takes an iterable of sources, generating namestrings and
+    piping their output into date_sort.
+    """
+    # merge multi inputs into single return iterable
+    sorted_stream = heapq.merge(*(_decorate_source(s) for s in sources))
+
+    # Strip out key decoration
+    for _, message in sorted_stream:
+        yield message
 
 def hash_args(*args, **kwargs):
     """Define a unique string for any set of representable args."""

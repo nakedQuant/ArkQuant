@@ -6,7 +6,6 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 
-
 class Transaction(object):
 
     # @expect_types(asset=Asset)

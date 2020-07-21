@@ -1,23 +1,22 @@
-# -*- coding : utf-8 -*-
+# !/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Mar 12 15:37:47 2019
 
-from sqlalchemy import MetaData,select,cast,and_,Numeric,Integer
-import pandas as pd , datetime , sqlalchemy as sa
-from gateWay.driver.reconstruct import _parse_url
+@author: python
+"""
+from sqlalchemy import select,cast,and_,Numeric,Integer
+import pandas as pd , datetime , sqlalchemy as sa , json
+from gateWay.driver.tools import _parse_url
 from gateWay.driver._config import ASSET_FUNDAMENTAL_URL
 from gateWay.driver.bar_reader import BarReader
+from .db_schema import engine
 
 
 class MassiveSessionReader(BarReader):
 
-    def __init__(self,
-                 engine,
-                 trading_calenar):
+    def __init__(self):
         self.engine = engine
-        self._trading_calenar = trading_calenar
-
-    @property
-    def metadata(self):
-        return MetaData(bind = self.engine)
 
     def get_value(self, asset, dt):
         table = self.metadata['massive']
@@ -53,15 +52,8 @@ class MassiveSessionReader(BarReader):
 
 class ReleaseSessionReader(BarReader):
 
-    def __init__(self,
-                 engine,
-                 trading_calendar):
+    def __init__(self):
         self.engine = engine
-        self._trading_calendar = trading_calendar
-
-    @property
-    def metadata(self):
-        return MetaData(bind = self.engine)
 
     def get_value(self, asset,dt):
         table = self.metadata['release']
@@ -90,15 +82,8 @@ class ReleaseSessionReader(BarReader):
 
 class ShareHolderSessionReader(BarReader):
 
-    def __init__(self,
-                 engine,
-                 trading_calendar):
+    def __init__(self):
         self.engine = engine
-        self._trading_calendar = trading_calendar
-
-    @property
-    def metadata(self):
-        return MetaData(bind = self.engine)
 
     def get_value(self, asset,dt):
         """股东持仓变动"""
@@ -138,15 +123,8 @@ class ShareHolderSessionReader(BarReader):
 
 class StructureSessionReader(BarReader):
 
-    def __init__(self,
-                 engine,
-                 trading_calendar):
+    def __init__(self):
         self.engine = engine
-        self._trading_calendar = trading_calendar
-
-    @property
-    def metadata(self):
-        return MetaData(bind=self.engine)
 
     def get_value(self,asset, dt):
         """
@@ -186,17 +164,13 @@ class StructureSessionReader(BarReader):
 
 class GrossSessionReader(BarReader):
 
-    def __init__(self,
-                 trading_calendar,
-                 url = None):
-        self._trading_calendar = trading_calendar
+    def __init__(self,url = None):
         self._url = url if url else ASSET_FUNDAMENTAL_URL['gross']
 
     def get_value(self, asset, dt, field):
         NotImplementedError ('get_values is deprescated by gpd ,use load_raw_arrays method')
 
     def load_raw_arrays(self,edate,window):
-        sdate = self._window_size_to_dt(edate,window)
         """获取GDP数据"""
         page = 1
         gross_value = pd.DataFrame()
@@ -213,7 +187,8 @@ class GrossSessionReader(BarReader):
                 gross_value.drop_duplicates(inplace=True, ignore_index=True)
                 return gross_value
             page = page + 1
-        #截取
+        #截取时间戳
+        sdate = self._window_size_to_dt(edate,window)
         start_idx = gross_value.index(sdate)
         end_idx = gross_value.index(edate)
         return gross_value.iloc[start_idx:end_idx +1,:]
@@ -221,10 +196,7 @@ class GrossSessionReader(BarReader):
 
 class MarginSessionReader(BarReader):
 
-    def __init__(self,
-                 trading_calendar,
-                 _url = None):
-        self._trading_calendar = trading_calendar
+    def __init__(self,_url = None):
         self._url = _url if _url else ASSET_FUNDAMENTAL_URL['margin']
 
     def get_value(self, asset, dt, field):

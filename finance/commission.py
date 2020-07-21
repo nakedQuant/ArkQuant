@@ -25,7 +25,7 @@ class NoCommission(CommissionModel):
         return 0.0
 
 
-class AssetCommission(CommissionModel):
+class Commission(CommissionModel):
     """
         1、印花税：1‰(卖的时候才收取，此为国家税收，全国统一)。
         2、过户费：深圳交易所无此项费用，上海交易所收费标准(按成交金额的0.02‰人民币[3])。
@@ -43,7 +43,6 @@ class AssetCommission(CommissionModel):
     def min_cost(self,val):
         return val
 
-    @lru_cache(maxsize= 10)
     def _init_base_cost(self,dt):
         base_fee = 1e-4 if dt > '2015-06-09' else 1e-3
         self.commission_rate = base_fee * self.mulitplier

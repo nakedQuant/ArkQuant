@@ -5,9 +5,7 @@ Created on Sun Feb 17 16:11:34 2019
 
 @author: python
 """
-from abc import ABC,abstractmethod
-from multiprocessing import Pool
-from functools import lru_cache
+
 from collections import Mapping
 from functools import reduce , partial
 from itertools import product
@@ -2212,21 +2210,3 @@ class TradingAlgorithm(object):
         self.register_trading_control(LongOnly(on_error))
 
 
-class Schedule:
-    """
-        schedule specify the time to run the strategy to get the next action ,this is used in real trading
-        sched enter(delay,priority,func,augment or kwargs) ; enterabs(time,priority ,func,augment or kwargs)
-        queue ( accumlate the scheduled task)
-        import sched,time
-
-        def crontab():
-            pass
-
-        if __name__=='__main__':
-
-            while True:
-                s = sched.scheduler(time.time, time.sleep)
-                task = s.enter(0,1,crontab,argument = ())
-                s.queue.append(task)
-                s.run()
-    """

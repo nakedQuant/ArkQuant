@@ -1,5 +1,10 @@
-# -*- coding : utf-8 -*-
+# !/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Mar 12 15:37:47 2019
 
+@author: python
+"""
 from collections import namedtuple
 from abc import ABC , abstractmethod
 import struct,pandas as pd,bcolz,numpy as np,os,glob,datetime

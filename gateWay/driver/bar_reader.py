@@ -12,12 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from abc import ABC, abstractmethod
+import sqlalchemy as sa,pandas as pd
+from functools import partial
+from sqlalchemy import MetaData
+from .db_schema import engine
+from .tools import  unpack_df_to_component_dict
+from .trading_calendar import  TradingCalendar
+
 
 class BarReader(ABC):
 
     @property
     def data_frequency(self):
-        return 'daily'
+        raise NotImplementedError()
+
+    @property
+    def metadata(self):
+        return MetaData(bind = self.engine)
 
     @property
     def trading_calendar(self):
@@ -25,7 +36,7 @@ class BarReader(ABC):
         Returns the zipline.utils.calendar.trading_calendar used to read
         the data.  Can be None (if the writer didn't specify it).
         """
-        return self._trading_calendar
+        return TradingCalendar(engine)
 
     def _window_size_to_dt(self,date,window):
         shift_date = self.trading_calendar.shift_calendar(date, window)
@@ -83,33 +94,28 @@ class BarReader(ABC):
         raise NotImplementedError()
 
 
-#reader
 class AssetSessionReader(BarReader):
     """
     Reader for raw pricing data from mysql.
     return different asset types : etf bond symbol
     """
-    AssetsTypes = frozenset(['symbol','bond','etf','dual'])
-
-    def __init__(self,
-                 metadata,
-                 engine,
-                 trading_calendar,
-                ):
-        self.metadata = metadata
+    def __init__(self):
         self.engine = engine
-        self._trading_calendar = trading_calendar
+
+    @property
+    def data_frequency(self):
+        return 'daily'
 
     def get_value(self, asset,dt):
         table_name = '%s_price'%asset.asset_type
         tbl = self.metadata[table_name]
-        orm = select([cast(tbl.c.open, Numeric(10, 2)).label('open'),
-                      cast(tbl.c.close, Numeric(12, 2)).label('close'),
-                      cast(tbl.c.high, Numeric(10, 2)).label('high'),
-                      cast(tbl.c.low, Numeric(10, 3)).label('low'),
-                      cast(tbl.c.volume, Numeric(15, 0)).label('volume'),
-                      cast(tbl.c.amount, Numeric(15, 2)).label('amount')])\
-            .where(and_(tbl.c.trade_dt == dt,tbl.c.sid == asset.sid))
+        orm = sa.select([sa.cast(tbl.c.open, sa.Numeric(10, 2)).label('open'),
+                      sa.cast(tbl.c.close, sa.Numeric(12, 2)).label('close'),
+                      sa.cast(tbl.c.high, sa.Numeric(10, 2)).label('high'),
+                      sa.cast(tbl.c.low, sa.Numeric(10, 3)).label('low'),
+                      sa.cast(tbl.c.volume, sa.Numeric(15, 0)).label('volume'),
+                      sa.cast(tbl.c.amount, sa.Numeric(15, 2)).label('amount')])\
+            .where(sa.and_(tbl.c.trade_dt == dt,tbl.c.sid == asset.sid))
         rp = self.engine.execute(orm)
         arrays = [[r.trade_dt, r.code, r.open, r.close, r.high, r.low, r.volume] for r in
                   rp.fetchall()]
@@ -120,13 +126,13 @@ class AssetSessionReader(BarReader):
 
     def _retrieve_asset_type(self,table,sids,fields,start_date,end_date):
         tbl = self.metadata['%s_price' & table]
-        orm = select([tbl.c.trade_dt, tbl.c.sid,
-                      cast(tbl.c.open, Numeric(10, 2)).label('open'),
-                      cast(tbl.c.close, Numeric(12, 2)).label('close'),
-                      cast(tbl.c.high, Numeric(10, 2)).label('high'),
-                      cast(tbl.c.low, Numeric(10, 3)).label('low'),
-                      cast(tbl.c.volume, Numeric(15, 0)).label('volume'),
-                      cast(tbl.c.amount, Numeric(15, 2)).label('amount')]). \
+        orm = sa.select([tbl.c.trade_dt, tbl.c.sid,
+                      sa.cast(tbl.c.open,sa.Numeric(10, 2)).label('open'),
+                      sa.cast(tbl.c.close, sa.Numeric(12, 2)).label('close'),
+                      sa.cast(tbl.c.high, sa.Numeric(10, 2)).label('high'),
+                      sa.cast(tbl.c.low, sa.Numeric(10, 3)).label('low'),
+                      sa.cast(tbl.c.volume, sa.Numeric(15, 0)).label('volume'),
+                      sa.cast(tbl.c.amount, sa.Numeric(15, 2)).label('amount')]). \
             where(tbl.c.trade_dt.between(start_date, end_date))
         rp = self.engine.execute(orm)
         arrays = [[r.trade_dt, r.code, r.open, r.close, r.high, r.low, r.volume] for r in
@@ -142,18 +148,17 @@ class AssetSessionReader(BarReader):
         unpack_kline = unpack_df_to_component_dict(kline)
         return unpack_kline
 
-    def load_raw_arrays(self,end_date,window,columns,assets):
-        start_date = self._window_size_to_dt(end_date,window)
-        _get_source = partial(self._retrieve_asset_type(fields= columns,
-                                                           start_date= start_date,
-                                                           end_date = end_date
-                                                           ))
+    def load_raw_arrays(self,date,window,columns,assets):
+        start_date = self._window_size_to_dt(date,window)
+        _get_source = partial(self._retrieve_asset_type(
+                                                    fields= columns,
+                                                    start_date= start_date,
+                                                    end_date = date
+                                                        )
+                              )
         sid_groups = {}
         for asset in assets:
             sid_groups[asset.asset_type].append(asset.sid)
-        #验证
-        assert set(sid_groups) in self.AssetsTypes,('extra asset types %r'%
-                                                    (set(sid_groups) - self.AssetsTypes))
         #获取数据
         batch_arrays = {}
         for _name,sids in sid_groups.items():

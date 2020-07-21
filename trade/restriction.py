@@ -1,4 +1,10 @@
-# -*- coding:utf-8 -*-
+# !/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Mar 12 15:37:47 2019
+
+@author: python
+"""
 
 from abc import ABC,abstractmethod
 from functools import reduce
@@ -238,50 +244,3 @@ class AfterRestriction(object):
     """
     def is_restricted(self,asset,dt):
         raise NotImplementedError()
-
-#
-# def _cleanup_expired_assets(self, dt, position_assets):
-#     """
-#     Clear out any assets that have expired before starting a new sim day.
-#
-#     Performs two functions:
-#
-#     1. Finds all assets for which we have open orders and clears any
-#        orders whose assets are on or after their auto_close_date.
-#
-#     2. Finds all assets for which we have positions and generates
-#        close_position events for any assets that have reached their
-#        auto_close_date.
-#     """
-#     algo = self.algo
-#
-#     def past_auto_close_date(asset):
-#         acd = asset.auto_close_date
-#         return acd is not None and acd <= dt
-#
-#     # Remove positions in any sids that have reached their auto_close date.
-#     assets_to_clear = \
-#         [asset for asset in position_assets if past_auto_close_date(asset)]
-#     metrics_tracker = algo.metrics_tracker
-#     data_portal = self.data_portal
-#     for asset in assets_to_clear:
-#         metrics_tracker.process_close_position(asset, dt, data_portal)
-#
-#     # Remove open orders for any sids that have reached their auto close
-#     # date. These orders get processed immediately because otherwise they
-#     # would not be processed until the first bar of the next day.
-#     blotter = algo.blotter
-#     assets_to_cancel = [
-#         asset for asset in blotter.open_orders
-#         if past_auto_close_date(asset)
-#     ]
-#     for asset in assets_to_cancel:
-#         blotter.cancel_all_orders_for_asset(asset)
-#
-#     # Make a copy here so that we are not modifying the list that is being
-#     # iterated over.
-#     for order in copy(blotter.new_orders):
-#         if order.status == ORDER_STATUS.CANCELLED:
-#             metrics_tracker.process_order(order)
-#             blotter.new_orders.remove(order)
-#

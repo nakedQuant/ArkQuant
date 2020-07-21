@@ -17,7 +17,6 @@ from datetime import datetime
 from dateutil import rrule
 from toolz import partition_all
 
-__all__ = ['TradingCalendar']
 
 spring = ['19900127','19910215','19920204','19930123','19940210',
             '19950131','19960219','19970207','19980128','19990216',
@@ -57,7 +56,8 @@ class TradingCalendar (object):
     元旦：1月1日 ; 清明节：4月4日; 劳动节：5月1日; 国庆节:10月1日 春节 中秋
     """
 
-    def __init__(self):
+    def __init__(self,engine):
+        self.engine = engine
         self._fixed_holiday()
 
     def _init_calendar_cache(self):

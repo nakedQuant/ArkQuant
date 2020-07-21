@@ -1,11 +1,7 @@
 #  -*- coding : utf-8 -*-
 import numpy as np
-from collections import defaultdict
-
-from gateWay.driver.adjustments import  SQLiteAdjustmentReader
-from trade.commission import EquityCommission
-
-adjustments_reader = SQLiteAdjustmentReader()
+from gateWay.driver.adjustment_reader import SQLiteAdjustmentReader
+from .commission import Commission
 
 
 class InnerPosition:
@@ -94,8 +90,13 @@ class Position(object):
         )
         object.__setattr__(self,'inner_position',inner)
         object.__setattr__(self,'protocol_position',Position(inner))
-        self.commission = EquityCommission(multiplier)
+        self.commission = Commission(multiplier)
         self._closed = False
+
+    @property
+    def adjust_reader(self):
+        reader = SQLiteAdjustmentReader()
+        return reader
 
     def __getattr__(self, item):
         return getattr(self.inner_position,item)
@@ -115,7 +116,7 @@ class Position(object):
 
             持股超过1年：税负5%;持股1个月至1年：税负10%;持股1个月以内：税负20%新政实施后，上市公司会先按照5%的最低税率代缴红利税
         """
-        divdend = adjustments_reader.load_specific_divdends_for_sid(
+        divdend = self.adjust_reader.load_specific_divdends_for_sid(
                                                                     self.sid,
                                                                     dt
                                                                     )
