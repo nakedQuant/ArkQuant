@@ -149,8 +149,9 @@ class BackEngine(Engine):
         基于ticker --- 进行回测,在执行具体的买入标的基于ticker数据真实模拟
     """
     def __init__(self,
+                slippageModel,
                 multiplier = {'call':1.5,'put':2},
-                slippageModel = MarketImpact):
+                ):
 
         # multipiler --- 针对基于保持最低交易成的capital的倍数进行交易
         self.multiplier = multiplier

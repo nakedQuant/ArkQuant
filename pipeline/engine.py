@@ -11,6 +11,7 @@ from functools import partial
 from multiprocessing import Pool
 from itertools import chain
 from .loader.pricing_loader import  PricingLoader
+from .term import Term
 
 
 class UmpPickers(object):
@@ -32,26 +33,26 @@ class UmpPickers(object):
 
     def _validate_features(self,features):
         for feature in features:
-            assert isinstance(feature,Term),ValueError('term type')
+            assert isinstance(feature,Term),ValueError('must term type')
             if feature.dtype != bool:
                 raise Exception('bool term needed for ump')
         self._poll_pickers = features
 
-    def evaluate(self,holdings,_cache):
-        _implement = partial(self._pick_for_sid,metadata = _cache)
+    def _evaluate_for_sid(self,position, metadata):
+        votes = [term_picker._compute([position.asset],metadata)
+                                for term_picker in self._poll_pickers]
+        if np.all(votes):
+            return position
+        return False
+
+    def evaluate(self,holdings,meta_cache):
+        _implement = partial(self._evaluate_for_sid,metadata = meta_cache)
         #执行退出算法
         with Pool(processes=len(holdings))as pool:
             picker_votes = [pool.apply_async(_implement, position)
                       for position in holdings]
             selector = [vote for vote in picker_votes if vote]
         return selector
-
-    def _pick_for_sid(self,position, metadata):
-        votes = [term_picker._compute([position.asset],metadata)
-                                for term_picker in self._poll_pickers]
-        if np.all(votes):
-            return position
-        return False
 
 
 class SimplePipelineEngine(object):
