@@ -48,7 +48,7 @@ class AssetFinder(object):
         that can be parsed by SQLAlchemy as a URI.
     """
 
-    Asset_Types = {
+    AssetMappings = {
         c._name: c
         for c in [Equity, Convertible, Fund]
     }
@@ -72,9 +72,34 @@ class AssetFinder(object):
             proxy_mappings = asset_mappings[_update_assets].groupby('asset_type').groups
             for category,sids in proxy_mappings.items():
                 for sid in sids:
-                    self._asset_type_cache[sid] = Asset_Types[category](sid,self.engine)
+                    self._asset_type_cache[sid] = self.AssetMappings[category](sid,self.engine)
 
-    def retrieve_all(self,category):
+    def retrieve_asset(self,sids):
+        """
+        Retrieve asset types for a list of sids.
+
+        Parameters
+        ----------
+        sids : list[int]
+
+        Returns
+        -------
+        types : dict[sid -> str or None]
+            Asset types for the provided sids.
+        """
+        sids = [sids] if isinstance(sids,str) else sids
+        found = set()
+        missing = set()
+        if sids:
+            for sid in sids:
+                try:
+                    asset = self._asset_type_cache[sid]
+                    found.add(asset)
+                except KeyError:
+                    missing.add(sid)
+        return found ,missing
+
+    def retrieve_all(self,asset_type):
         """
         Retrieve all assets in `sids`.
 
@@ -97,33 +122,12 @@ class AssetFinder(object):
         SidsNotFound
             When a requested sid is not found and default_none=False.
         """
-        assets = valmap(lambda x : x._name == category,self._asset_type_cache)
+        if asset_type:
+            assets = valmap(lambda x : x._name == asset_type,
+                            self._asset_type_cache)
+        else:
+            assets = self._asset_type_cache
         return assets
-
-    def lookup_asset_types(self, sids):
-        """
-        Retrieve asset types for a list of sids.
-
-        Parameters
-        ----------
-        sids : list[int]
-
-        Returns
-        -------
-        types : dict[sid -> str or None]
-            Asset types for the provided sids.
-        """
-        found = set()
-        missing = set()
-        if sids:
-            for sid in sids:
-                try:
-                    asset = self._asset_type_cache[sid]
-                    found.add(asset)
-                except KeyError:
-                    missing.add(sid)
-        assert not missing ,('%r unkown sid'%missing)
-        return found
 
     def group_by_type(self, sids):
         """

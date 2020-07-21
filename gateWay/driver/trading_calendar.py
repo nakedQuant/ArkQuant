@@ -18,6 +18,39 @@ from dateutil import rrule
 from toolz import partition_all
 
 
+@staticmethod
+def _execution_open_and_close(calendar, session):
+    open_, close = calendar.open_and_close_for_session(session)
+    execution_open = calendar.execution_time_from_open(open_)
+    execution_close = calendar.execution_time_from_close(close)
+    # cal = self._trading_calendar
+    # self._market_open, self._market_close = self._execution_open_and_close(
+    #     cal,
+    #     session_label,
+    # )
+    # if self.emission_rate == 'daily':
+    #     # this method is called for both minutely and daily emissions, but
+    #     # this chunk of code here only applies for daily emissions. (since
+    #     # it's done every minute, elsewhere, for minutely emission).
+    #     self.sync_last_sale_prices(dt, data_portal)
+    # session_ix = self._session_count
+    # # increment the day counter before we move markers forward.
+    # self._session_count += 1
+    # self._total_session_count = len(sessions)
+    # self._session_count = 0
+    # self.emission_rate = emission_rate
+    # emission_rate = 'daily',
+    # import logging
+    # logging.info(
+    #     'Simulated {} trading days\n'
+    #     'first open: {}\n'
+    #     'last close: {}',
+    #     self._session_count,
+    #     self._trading_calendar.session_open(self._first_session),
+    #     self._trading_calendar.session_close(self._last_session),
+    # )
+
+
 spring = ['19900127','19910215','19920204','19930123','19940210',
             '19950131','19960219','19970207','19980128','19990216',
             '20000205','20010124','20020212','20030201','20040122',

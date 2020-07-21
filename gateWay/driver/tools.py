@@ -16,6 +16,7 @@
 import pandas as pd ,requests ,re,os
 from bs4 import BeautifulSoup
 from collections import defaultdict
+from functools import wraps
 
 # Mapping from index symbol to appropriate bond data
 
@@ -56,7 +57,6 @@ def unpack_df_to_component_dict(stacked_df):
     for index, raw in stacked_df.iterrows():
         unpack[index] = unpack[index].append(raw)
     return unpack
-
 
 # 解析头文件
 def parse_content_from_header(header):
@@ -115,3 +115,10 @@ def has_data_for_dates(series_or_df, first_date, last_date):
         raise TypeError("Expected a DatetimeIndex, but got %s." % type(dts))
     first, last = dts[[0, -1]]
     return (first <= first_date) and (last >= last_date)
+
+def reformat_sid(f):
+    @wraps(f)
+    def inner(sid,dt):
+        _sid = '1.' + sid if sid.startswith('0') else '0.'+ sid
+        return f(_sid,dt)
+    return inner

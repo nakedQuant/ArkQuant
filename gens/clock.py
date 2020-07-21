@@ -13,14 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np,pandas as pd
-NANOS_IN_MINUTE = 60000000000
+import numpy as np ,pandas as pd
 
-BAR = 0
-SESSION_START = 1
-SESSION_END = 2
-MINUTE_END = 3
-BEFORE_TRADING_START_BAR = 4
+_nanos_in_minute = 60000000000
+NANOS_IN_MINUTE = _nanos_in_minute
+
 
 class MinuteSimulationClock:
 
@@ -39,8 +36,6 @@ class MinuteSimulationClock:
 
         self.minutes_by_session = self.calc_minutes_by_session()
 
-    # @cython.boundscheck(False)
-    # @cython.wraparound(False)
     def calc_minutes_by_session(self):
         minutes_by_session = {}
         for session_idx, session_nano in enumerate(self.sessions_nanos):

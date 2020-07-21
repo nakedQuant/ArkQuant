@@ -6,8 +6,8 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 
-from toolz import keyfilter, valmap
 import pandas as pd,json
+from toolz import keyfilter, valmap
 from .tools import  _parse_url
 from .history_loader import (
     HistoryDailyLoader,
@@ -107,7 +107,7 @@ class DataPortal(object):
     def _get_pricing_reader(self, data_frequency):
         return self._pricing_readers[data_frequency]
 
-    def get_fetcher_assets(self, _typ):
+    def get_fetcher_assets(self, sids):
         """
         Returns a list of assets for the current date, as defined by the
         fetcher data.
@@ -118,8 +118,12 @@ class DataPortal(object):
         """
         # return a list of assets for the current date, as defined by the
         # fetcher source
-        assets = self.asset_finder.lookup_assets(_typ)
-        return assets
+        found,missing = self.asset_finder.retrieve_asset(sids)
+        return found,missing
+
+    def get_all_assets(self,asset_type = None):
+        all_assets = self.asset_finder.retrieve_all(asset_type)
+        return all_assets
 
     def get_dividends(self, sids, trading_days):
         """
@@ -146,8 +150,6 @@ class DataPortal(object):
             for sid in extra:
                 divdends = self.adjustment_reader.load_splits_for_sid(sid)
                 self._divdends_cache[sid] = divdends
-        #
-        from toolz import keyfilter,valmap
         cache  = keyfilter(lambda x : x in sids,self._splits_cache)
         out = valmap(lambda x : x[x['pay_date'].isin(trading_days)] if x else x ,cache)
         return out
