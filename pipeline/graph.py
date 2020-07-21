@@ -15,7 +15,7 @@ from multiprocessing import Pool
 from itertools import chain
 from abc import ABC,abstractmethod
 
-from gateWay.assets._finder import  AssetFinder
+from gateWay.assets.asset_ext import  AssetFinder
 
 class NotSpecific(Exception):
 
@@ -760,7 +760,6 @@ class StopLimitOrder(ExecutionStyle):
 
     def get_stop_price(self, _is_buy):
         return self.stop_price,
-
 
 def check_stoplimit_prices(price, label):
     """

@@ -52,7 +52,7 @@ Sample layout of the full file with multiple countries.
 
 .. code-block:: none
 
-   |- /equity
+   |- /US
    |  |- /data
    |  |  |- /open
    |  |  |- /high
@@ -68,7 +68,7 @@ Sample layout of the full file with multiple countries.
    |     |- /start_date
    |     |- /end_date
    |
-   |- /fund
+   |- /CA
       |- /data
       |  |- /open
       |  |- /high
@@ -86,7 +86,7 @@ Sample layout of the full file with multiple countries.
 """
 
 from functools import partial
-from itertools import chain
+
 import numpy as np , pandas as pd ,h5py , tables
 
 
@@ -99,6 +99,7 @@ DEFAULT_SCALING_FACTORS = {
     # Volume is expected to be a whole integer.
     'volume': 1,
 }
+
 
 def convert_price_with_scaling_factor(a, scaling_factor):
     conversion_factor = (1.0 / scaling_factor)
@@ -147,7 +148,7 @@ def days_and_sids_for_frames(frames):
 
     Parameters
     ----------
-    frames : dict {sid:pd.DataFrame}
+    frames : list[pd.DataFrame]
         A list of dataframes indexed by day, with a column per sid.
 
     Returns
@@ -168,15 +169,17 @@ def days_and_sids_for_frames(frames):
         sids = np.array([], dtype='int64')
         return days, sids
 
-    # Ensure the columns all match.
+    # Ensure the indices and columns all match.
     check_indexes_all_same(
-        [frame.columns for frame in frames.values()],
+        [frame.index for frame in frames],
+        message='Frames have mistmatched days.',
+    )
+    check_indexes_all_same(
+        [frame.columns for frame in frames],
         message='Frames have mismatched sids.',
     )
-    days = set(chain(*[frame.index for frame in frames.values()]))
-    sids = set(frames)
-    cols = frames.values()[0].columns
-    return days,sids,cols
+
+    return frames[0].index.values, frames[0].columns.values
 
 
 class HDF5DailyBarWriter(object):
@@ -204,13 +207,13 @@ class HDF5DailyBarWriter(object):
     def h5_file(self, mode):
         return h5py.File(self._filename, mode)
 
-    def write(self,asset_type,frames,scaling_factors=None):
+    def write(self, asset_type,frames, scaling_factors=None):
         """Write the OHLCV data for one country to the HDF5 file.
 
         Parameters
         ----------
-        asset_type : str
-            equity  or fund or convertible
+        country_code : str
+            The ISO 3166 alpha-2 country code for this country.
         frames : dict[str, pd.DataFrame]
             A dict mapping each OHLCV field to a dataframe with a row
             for each date and a column for each sid. The dataframes need
@@ -232,21 +235,23 @@ class HDF5DailyBarWriter(object):
 
         with self.h5_file(mode='a') as h5_file:
             # ensure that the file version has been written
-            h5_file.attrs['version'] = 'version'
-            #多维度创建group
+            h5_file.attrs['version'] = VERSION
+            #多维度
             category_group = h5_file.create_group(asset_type)
             category_group.attrs['scaling_factor'] = scaling_factors
+            # 创建group
             data_group = category_group.create_group('data')
             index_group = category_group.create_group('index')
+            scale_group = category_group.create_group('scale')
             # Note that this functions validates that all of the frames
             # share the same days and sids.
-            days, sids,fields = days_and_sids_for_frames(frames)
+            days, sids = days_and_sids_for_frames(list(frames.values()))
             # Write sid and date indices.
-            index_group.create_dataset('sid', data=sids)
+            index_group.create_dataset(SID, data=frames.keys())
+
             # h5py does not support datetimes, so they need to be stored
             # as integers.
-            index_group.create_dataset('day', data=days.astype(np.int64))
-            index_group.create_dataset('field',data = fields)
+            index_group.create_dataset(DAY, data=days.astype(np.int64))
             #
             for sid , frame in frames.items():
                 frame.sort_index(inplace=True)
@@ -254,7 +259,40 @@ class HDF5DailyBarWriter(object):
                                           compression='lzf',
                                           shuffle=True,
                                           data=frame,
+                                          # chunks=chunks,
                                           )
+
+def compute_asset_lifetimes(frames):
+    """
+    Parameters
+    ----------
+    frames : dict[str, pd.DataFrame]
+        A dict mapping each OHLCV field to a dataframe with a row for
+        each date and a column for each sid, as passed to write().
+
+    Returns
+    -------
+    start_date_ixs : np.array[int64]
+        The index of the first date with non-nan values, for each sid.
+    end_date_ixs : np.array[int64]
+        The index of the last date with non-nan values, for each sid.
+    """
+    # Build a 2D array (dates x sids), where an entry is True if all
+    # fields are nan for the given day and sid.
+    is_null_matrix = np.logical_and.reduce(
+        [frames[field].isnull().values for field in FIELDS],
+    )
+    if not is_null_matrix.size:
+        empty = np.array([], dtype='int64')
+        return empty, empty.copy()
+
+    # Offset of the first null from the start of the input.
+    start_date_ixs = is_null_matrix.argmin(axis=0)
+    # Offset of the last null from the **end** of the input.
+    end_offsets = is_null_matrix[::-1].argmin(axis=0)
+    # Offset of the last null from the start of the input
+    end_date_ixs = is_null_matrix.shape[0] - end_offsets - 1
+    return start_date_ixs, end_date_ixs
 
 
 class HDF5DailyBarReader(object):
@@ -268,15 +306,15 @@ class HDF5DailyBarReader(object):
         self._country_group = country_group
 
         self._postprocessors = {
-            'open': partial(convert_price_with_scaling_factor,
+            OPEN: partial(convert_price_with_scaling_factor,
                           scaling_factor=self._read_scaling_factor(OPEN)),
-            'high': partial(convert_price_with_scaling_factor,
+            HIGH: partial(convert_price_with_scaling_factor,
                           scaling_factor=self._read_scaling_factor(HIGH)),
-            'low': partial(convert_price_with_scaling_factor,
+            LOW: partial(convert_price_with_scaling_factor,
                          scaling_factor=self._read_scaling_factor(LOW)),
-            'close': partial(convert_price_with_scaling_factor,
+            CLOSE: partial(convert_price_with_scaling_factor,
                            scaling_factor=self._read_scaling_factor(CLOSE)),
-            'volume': lambda a: a,
+            VOLUME: lambda a: a,
         }
 
     @classmethod
@@ -317,15 +355,15 @@ class HDF5DailyBarReader(object):
         return self._category[DATA][field].attrs[SCALING_FACTOR]
 
     def load_raw_arrays(self,
-                        sids,
+                        columns,
                         start_date,
                         end_date,
                         assets):
         """
         Parameters
         ----------
-        sids : list of str
-                sids
+        columns : list of str
+           'open', 'high', 'low', 'close', or 'volume'
         start_date: Timestamp
            Beginning of the window range.
         end_date: Timestamp
