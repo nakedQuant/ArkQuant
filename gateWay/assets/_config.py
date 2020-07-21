@@ -23,11 +23,15 @@ bond_url = 'http://dcfm.eastmoney.com/em_mutisvcexpandinterface/api/js/get?type=
 
 fund_url = 'http://fund.eastmoney.com/cnjy_jzzzl.html'
 
+benchmark_url = 'http://71.push2.eastmoney.com/api/qt/clist/get?pn=1&pz=12&po=1&np=2&fltt=2&invt=2&' \
+            'fid=&fs=b:MK0010&fields=f12,f14'
+
 ASSERT_URL_MAPPING = {
                     'equity':equity_url,
                     'bond':bond_url,
                     'fund':fund_url,
-                    'dual':dual_url
+                    'dual':dual_url,
+                    'benchmark':benchmark_url,
                     }
 
 equity_supplement_url = 'https://vip.stock.finance.sina.com.cn/corp/go.php/vCI_CorpInfo/stockid/%s.phtml'

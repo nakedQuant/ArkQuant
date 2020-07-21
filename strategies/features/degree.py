@@ -3,7 +3,7 @@
 import pandas as pd, numpy as np
 
 from gateWay import Event,GateReq,Quandle
-from pipeline.features import BaseFeature,EMA,remove_na
+from strategies.features import BaseFeature,EMA,remove_na
 
 class MarketWidth(BaseFeature):
     '''

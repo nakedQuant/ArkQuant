@@ -10,7 +10,7 @@ from zipline.utils.numpy_utils import (
     float64_dtype,
 )
 
-from pipeline.features.factor import Factor
+from strategies.features.factor import Factor
 
 
 class BusinessDaysSincePreviousEvent(Factor):

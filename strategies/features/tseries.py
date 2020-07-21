@@ -3,7 +3,7 @@
 from statsmodels.tsa.stattools import adfuller,coint,pacf,acf
 import numpy as np ,pandas as pd
 
-from pipeline.features import BaseFeature
+from strategies.features import BaseFeature
 from gateWay import Event,GateReq,Quandle
 
 class ADF(BaseFeature):

@@ -1332,27 +1332,27 @@ from itertools import product
 #toolz.itertoolz.groupby(key, seq)
 from dateutil.relativedelta import relativedelta
 import datetime , pandas as pd
-
-start_session = datetime.datetime.strptime('2010-01-31','%Y-%m-%d')
-end_session = datetime.datetime.strptime('2012-01-31','%Y-%m-%d')
-
-print(start_session,end_session)
-
-# end = end_session.replace(day=1) + relativedelta(months=1)
-end = end_session
-print(end)
-
-months = pd.date_range(
-    start=start_session,
-    # Ensure we have at least one month
-    end=end,
-    freq='M',
-    tz='utc',
-    closed = 'left'
-)
-print('months',months.size)
-print(type(months),months)
-months.iloc[-1] = 'test'
+#
+# start_session = datetime.datetime.strptime('2010-01-31','%Y-%m-%d')
+# end_session = datetime.datetime.strptime('2012-01-31','%Y-%m-%d')
+#
+# print(start_session,end_session)
+#
+# # end = end_session.replace(day=1) + relativedelta(months=1)
+# end = end_session
+# print(end)
+#
+# months = pd.date_range(
+#     start=start_session,
+#     # Ensure we have at least one month
+#     end=end,
+#     freq='M',
+#     tz='utc',
+#     closed = 'left'
+# )
+# print('months',months.size)
+# print(type(months),months)
+# months.iloc[-1] = 'test'
 # period = months[0].to_period(freq='%dM' % 3)
 # print(months[::3])
 # print('period',period.end_date)
@@ -1374,114 +1374,114 @@ months.iloc[-1] = 'test'
 # 策略共执行{}个交易日 策略资金利用率比例  策略买入成交比例 平均获利期望 平均亏损期望
 # 策略持股天数平均值,策略持股天数中位数,策略期望收益,策略期望亏损,前后两两生效交易时间相减,
 # 计算平均生效间隔时间,计算cost各种统计度量值,计算资金对应的成交比例
-from sys import float_info
-
-def asymmetric_round_price(price, prefer_round_down, tick_size, diff=0.95):
-    """
-    Asymmetric rounding function for adjusting prices to the specified number
-    of places in a way that "improves" the price. For limit prices, this means
-    preferring to round down on buys and preferring to round up on sells.
-    For stop prices, it means the reverse.
-
-    If prefer_round_down == True:
-        When .05 below to .95 above a specified decimal place, use it.
-    If prefer_round_down == False:
-        When .95 below to .05 above a specified decimal place, use it.
-
-    In math-speak:
-    If prefer_round_down: [<X-1>.0095, X.0195) -> round to X.01.
-    If not prefer_round_down: (<X-1>.0005, X.0105] -> round to X.01.
-    """
-    # 返回位数
-    precision = zp_math.number_of_decimal_places(tick_size)
-    multiplier = int(tick_size * (10 ** precision))
-    diff -= 0.5  # shift the difference down
-    diff *= (10 ** -precision)  # adjust diff to precision of tick size
-    diff *= multiplier  # adjust diff to value of tick_size
-
-    # Subtracting an epsilon from diff to enforce the open-ness of the upper
-    # bound on buys and the lower bound on sells.  Using the actual system
-    # epsilon doesn't quite get there, so use a slightly less epsilon-ey value.
-    epsilon = float_info.epsilon * 10
-    diff = diff - epsilon
-
-    # relies on rounding half away from zero, unlike numpy's bankers' rounding
-    rounded = tick_size * consistent_round(
-        (price - (diff if prefer_round_down else -diff)) / tick_size
-    )
-    if zp_math.tolerant_equals(rounded, 0.0):
-        return 0.0
-    return rounded
-
-
-# 生成器yield方法 ，返回yield 生成的数据，next 执行yield 之后的方法
-def every_bar(dt_to_use, current_data=self.current_data,
-              handle_data=algo.event_manager.handle_data):
-    for capital_change in calculate_minute_capital_changes(dt_to_use):
-        yield capital_change
-
-    self.simulation_dt = dt_to_use
-    # called every tick (minute or day).
-    algo.on_dt_changed(dt_to_use)
-
-    blotter = algo.blotter
-
-    # handle any transactions and commissions coming out new orders
-    # placed in the last bar
-    new_transactions, new_commissions, closed_orders = \
-        blotter.get_transactions(current_data)
-
-    blotter.prune_orders(closed_orders)
-
-    for transaction in new_transactions:
-        metrics_tracker.process_transaction(transaction)
-
-        # since this order was modified, record it
-        order = blotter.orders[transaction.order_id]
-        metrics_tracker.process_order(order)
-
-    for commission in new_commissions:
-        metrics_tracker.process_commission(commission)
-
-    handle_data(algo, current_data, dt_to_use)
-
-    # grab any new orders from the blotter, then clear the list.
-    # this includes cancelled orders.
-    new_orders = blotter.new_orders
-    blotter.new_orders = []
-
-    # if we have any new orders, record them so that we know
-    # in what perf period they were placed.
-    for new_order in new_orders:
-        metrics_tracker.process_order(new_order)
-
-def once_a_day(midnight_dt, current_data=self.current_data,
-               data_portal=self.data_portal):
-    # process any capital changes that came overnight
-    for capital_change in algo.calculate_capital_changes(
-            midnight_dt, emission_rate=emission_rate,
-            is_interday=True):
-        yield capital_change
-
-    # set all the timestamps
-    self.simulation_dt = midnight_dt
-    algo.on_dt_changed(midnight_dt)
-
-    metrics_tracker.handle_market_open(
-        midnight_dt,
-        algo.data_portal,
-    )
-
-    # handle any splits that impact any positions or any open orders.
-    assets_we_care_about = (
-        viewkeys(metrics_tracker.positions) |
-        viewkeys(algo.blotter.open_orders)
-    )
-
-    if assets_we_care_about:
-        splits = data_portal.get_splits(assets_we_care_about,
-                                        midnight_dt)
-        if splits:
-            algo.blotter.process_splits(splits)
-            metrics_tracker.handle_splits(splits)
-
+# from sys import float_info
+#
+# def asymmetric_round_price(price, prefer_round_down, tick_size, diff=0.95):
+#     """
+#     Asymmetric rounding function for adjusting prices to the specified number
+#     of places in a way that "improves" the price. For limit prices, this means
+#     preferring to round down on buys and preferring to round up on sells.
+#     For stop prices, it means the reverse.
+#
+#     If prefer_round_down == True:
+#         When .05 below to .95 above a specified decimal place, use it.
+#     If prefer_round_down == False:
+#         When .95 below to .05 above a specified decimal place, use it.
+#
+#     In math-speak:
+#     If prefer_round_down: [<X-1>.0095, X.0195) -> round to X.01.
+#     If not prefer_round_down: (<X-1>.0005, X.0105] -> round to X.01.
+#     """
+#     # 返回位数
+#     precision = zp_math.number_of_decimal_places(tick_size)
+#     multiplier = int(tick_size * (10 ** precision))
+#     diff -= 0.5  # shift the difference down
+#     diff *= (10 ** -precision)  # adjust diff to precision of tick size
+#     diff *= multiplier  # adjust diff to value of tick_size
+#
+#     # Subtracting an epsilon from diff to enforce the open-ness of the upper
+#     # bound on buys and the lower bound on sells.  Using the actual system
+#     # epsilon doesn't quite get there, so use a slightly less epsilon-ey value.
+#     epsilon = float_info.epsilon * 10
+#     diff = diff - epsilon
+#
+#     # relies on rounding half away from zero, unlike numpy's bankers' rounding
+#     rounded = tick_size * consistent_round(
+#         (price - (diff if prefer_round_down else -diff)) / tick_size
+#     )
+#     if zp_math.tolerant_equals(rounded, 0.0):
+#         return 0.0
+#     return rounded
+#
+#
+# # 生成器yield方法 ，返回yield 生成的数据，next 执行yield 之后的方法
+# def every_bar(dt_to_use, current_data=self.current_data,
+#               handle_data=algo.event_manager.handle_data):
+#     for capital_change in calculate_minute_capital_changes(dt_to_use):
+#         yield capital_change
+#
+#     self.simulation_dt = dt_to_use
+#     # called every tick (minute or day).
+#     algo.on_dt_changed(dt_to_use)
+#
+#     blotter = algo.blotter
+#
+#     # handle any transactions and commissions coming out new orders
+#     # placed in the last bar
+#     new_transactions, new_commissions, closed_orders = \
+#         blotter.get_transactions(current_data)
+#
+#     blotter.prune_orders(closed_orders)
+#
+#     for transaction in new_transactions:
+#         metrics_tracker.process_transaction(transaction)
+#
+#         # since this order was modified, record it
+#         order = blotter.orders[transaction.order_id]
+#         metrics_tracker.process_order(order)
+#
+#     for commission in new_commissions:
+#         metrics_tracker.process_commission(commission)
+#
+#     handle_data(algo, current_data, dt_to_use)
+#
+#     # grab any new orders from the blotter, then clear the list.
+#     # this includes cancelled orders.
+#     new_orders = blotter.new_orders
+#     blotter.new_orders = []
+#
+#     # if we have any new orders, record them so that we know
+#     # in what perf period they were placed.
+#     for new_order in new_orders:
+#         metrics_tracker.process_order(new_order)
+#
+# def once_a_day(midnight_dt, current_data=self.current_data,
+#                data_portal=self.data_portal):
+#     # process any capital changes that came overnight
+#     for capital_change in algo.calculate_capital_changes(
+#             midnight_dt, emission_rate=emission_rate,
+#             is_interday=True):
+#         yield capital_change
+#
+#     # set all the timestamps
+#     self.simulation_dt = midnight_dt
+#     algo.on_dt_changed(midnight_dt)
+#
+#     metrics_tracker.handle_market_open(
+#         midnight_dt,
+#         algo.data_portal,
+#     )
+#
+#     # handle any splits that impact any positions or any open orders.
+#     assets_we_care_about = (
+#         viewkeys(metrics_tracker.positions) |
+#         viewkeys(algo.blotter.open_orders)
+#     )
+#
+#     if assets_we_care_about:
+#         splits = data_portal.get_splits(assets_we_care_about,
+#                                         midnight_dt)
+#         if splits:
+#             algo.blotter.process_splits(splits)
+#             metrics_tracker.handle_splits(splits)
+#

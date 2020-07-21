@@ -23,7 +23,8 @@ ONE_HOUR = pd.Timedelta(hours=1)
 
 def _parse_url(url, encoding='gbk', bs=True):
     Header = {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_3) AppleWebKit/537.36(KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36'}
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_3) AppleWebKit/537.36(KHTML, like Gecko)'
+                      ' Chrome/79.0.3945.130 Safari/537.36'}
     req = requests.get(url, headers=Header, timeout=1)
     # if encoding:
     req.encoding = encoding
@@ -78,9 +79,6 @@ def parse_content_from_header(header):
     contents = pd.DataFrame.from_dict(text)
     return contents
 
-# if not os.path.exists(dr):
-#     os.makedirs(dr)
-# os.path.join(dr, name)
 
 def last_modified_time(path):
     """
@@ -117,24 +115,3 @@ def has_data_for_dates(series_or_df, first_date, last_date):
         raise TypeError("Expected a DatetimeIndex, but got %s." % type(dts))
     first, last = dts[[0, -1]]
     return (first <= first_date) and (last >= last_date)
-
-# def _load_cached_data(filename, first_date, last_date, now, resource_name,
-#                       environ=None):
-#     if resource_name == 'benchmark':
-#         def from_csv(path):
-#             return pd.read_csv(
-#                 path,
-#                 parse_dates=[0],
-#                 index_col=0,
-#                 header=None,
-#                 # Pass squeeze=True so that we get a series instead of a frame.
-#                 squeeze=True,
-#             ).tz_localize('UTC')
-#     else:
-#         def from_csv(path):
-#             return pd.read_csv(
-#                 path,
-#                 parse_dates=[0],
-#                 index_col=0,
-#             ).tz_localize('UTC')
-#

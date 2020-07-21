@@ -12,13 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pandas as pd,sqlalchemy as sa
+import pandas as pd,sqlalchemy as sa,json
 from itertools import groupby,chain
 from toolz import valfilter,keyfilter,valmap
+from functools import partial
 
-from gateWay.assets.asset_db_schema import asset_db_table_names
-from gateWay.assets.assets import Equity,Convertible,Fund
-from driver.client import TsClient
+from .asset_db_schema import asset_db_table_names
+from .assets import Equity,Convertible,Fund
+from ._config import ASSERT_URL_MAPPING
+from gateWay.driver.client import TsClient
+from gateWay.driver.tools import _parse_url
 
 ts = TsClient()
 
@@ -26,7 +29,7 @@ Sector_Prefix = {
                 'CYB': '3',
                 'KCB': '688',
                 'ZXB': '0',
-                '6': 'ZB'
+                'ZB': '6'
                 }
 
 
@@ -268,6 +271,11 @@ class AssetFinder(object):
         alive_assets = [asset for asset in chain(*self._asset_type_cache.values())
                         if asset.is_alive(session_label)]
         return alive_assets
+
+    def lookup_benchmarks(self):
+        raw = json.loads(_parse_url(ASSERT_URL_MAPPING['benchmark'], encoding='utf-8', bs=False))
+        indexs = raw['data']['diff']
+        return indexs
 
     def fuzzy_equities_ownership_by_connection(self, exchange, flag=1):
         """获取沪港通、深港通股票 , exchange 交易所 --- (SH | SZ) ; flag :1 最新的， 0 为历史的已经踢出的"""

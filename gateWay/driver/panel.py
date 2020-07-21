@@ -12,12 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import datetime
+import numpy as np , pandas as pd ,datetime
 from copy import deepcopy
-
-import numpy as np
-import pandas as pd
-
 
 def _ensure_index(x):
     if not isinstance(x, pd.Index):

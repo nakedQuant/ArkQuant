@@ -28,7 +28,7 @@ from zipline.utils.math_utils import (
 )
 from zipline.utils.numpy_utils import rolling_window
 
-from pipeline.features import exponential_weights
+from strategies.features import exponential_weights
 
 
 class RSI(SingleInputMixin, CustomFactor):

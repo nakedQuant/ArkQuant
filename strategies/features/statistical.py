@@ -26,7 +26,7 @@ from zipline.utils.numpy_utils import (
 )
 
 
-from pipeline.features.basic import Returns
+from strategies.features.basic import Returns
 
 
 ALLOWED_DTYPES = (float64_dtype, int64_dtype)

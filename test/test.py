@@ -4649,51 +4649,76 @@ from six.moves.urllib_error import HTTPError
 # The columns provided.
 # 在ar1中但不在ar2中的已排序的唯一值
 # missing_sids = np.setdiff1d(assets, self.sids)
-def compute_asset_lifetimes(frames):
-    """
-    Parameters
-    ----------
-    frames : dict[str, pd.DataFrame]
-        A dict mapping each OHLCV field to a dataframe with a row for
-        each date and a column for each sid, as passed to write().
+# def compute_asset_lifetimes(frames):
+#     """
+#     Parameters
+#     ----------
+#     frames : dict[str, pd.DataFrame]
+#         A dict mapping each OHLCV field to a dataframe with a row for
+#         each date and a column for each sid, as passed to write().
+#
+#     Returns
+#     -------
+#     start_date_ixs : np.array[int64]
+#         The index of the first date with non-nan values, for each sid.
+#     end_date_ixs : np.array[int64]
+#         The index of the last date with non-nan values, for each sid.
+#     """
+#     # Build a 2D array (dates x sids), where an entry is True if all
+#     # fields are nan for the given day and sid.
+#     is_null_matrix = np.logical_and.reduce(
+#         [frames[field].isnull().values for field in FIELDS],
+#     )
+#     if not is_null_matrix.size:
+#         empty = np.array([], dtype='int64')
+#         return empty, empty.copy()
+#
+#     # Offset of the first null from the start of the input.
+#     start_date_ixs = is_null_matrix.argmin(axis=0)
+#     # Offset of the last null from the **end** of the input.
+#     end_offsets = is_null_matrix[::-1].argmin(axis=0)
+#     # Offset of the last null from the start of the input
+#     end_date_ixs = is_null_matrix.shape[0] - end_offsets - 1
+#     return start_date_ixs, end_date_ixs
+#
+# def _make_sids():
+#     assets = np.array(assets)
+#     sid_selector = self.sids.searchsorted(assets)
+#     #查找相同的列，invert = True
+#     unknown = np.in1d(assets, self.sids, invert=True)
+#     sid_selector[unknown] = -1
+#     return sid_selector
+#
+#
+# def contextmanager(f):
+#     """
+#     Wrapper for contextlib.contextmanager that tracks which methods of
+#     PipelineHooks are contextmanagers in CONTEXT_MANAGER_METHODS.
+#     """
+#     PIPELINE_HOOKS_CONTEXT_MANAGERS.add(f.__name__)
+#     return contextmanager(f)
 
-    Returns
-    -------
-    start_date_ixs : np.array[int64]
-        The index of the first date with non-nan values, for each sid.
-    end_date_ixs : np.array[int64]
-        The index of the last date with non-nan values, for each sid.
-    """
-    # Build a 2D array (dates x sids), where an entry is True if all
-    # fields are nan for the given day and sid.
-    is_null_matrix = np.logical_and.reduce(
-        [frames[field].isnull().values for field in FIELDS],
-    )
-    if not is_null_matrix.size:
-        empty = np.array([], dtype='int64')
-        return empty, empty.copy()
-
-    # Offset of the first null from the start of the input.
-    start_date_ixs = is_null_matrix.argmin(axis=0)
-    # Offset of the last null from the **end** of the input.
-    end_offsets = is_null_matrix[::-1].argmin(axis=0)
-    # Offset of the last null from the start of the input
-    end_date_ixs = is_null_matrix.shape[0] - end_offsets - 1
-    return start_date_ixs, end_date_ixs
-    
-def _make_sids():
-    assets = np.array(assets)
-    sid_selector = self.sids.searchsorted(assets)
-    #查找相同的列，invert = True
-    unknown = np.in1d(assets, self.sids, invert=True)
-    sid_selector[unknown] = -1
-    return sid_selector
-    
-    
-def contextmanager(f):
-    """
-    Wrapper for contextlib.contextmanager that tracks which methods of
-    PipelineHooks are contextmanagers in CONTEXT_MANAGER_METHODS.
-    """
-    PIPELINE_HOOKS_CONTEXT_MANAGERS.add(f.__name__)
-    return contextmanager(f)
+# def _load_cached_data(filename, first_date, last_date, now, resource_name,
+#                       environ=None):
+#     if resource_name == 'benchmark':
+#         def from_csv(path):
+#             return pd.read_csv(
+#                 path,
+#                 parse_dates=[0],
+#                 index_col=0,
+#                 header=None,
+#                 # Pass squeeze=True so that we get a series instead of a frame.
+#                 squeeze=True,
+#             ).tz_localize('UTC')
+#     else:
+#         def from_csv(path):
+#             return pd.read_csv(
+#                 path,
+#                 parse_dates=[0],
+#                 index_col=0,
+#             ).tz_localize('UTC')
+#
+#def mk(dt):
+#  if not os.path.exists(dr):
+#      os.makedirs(dr)
+#  os.path.join(dr, name)

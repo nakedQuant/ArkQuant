@@ -5,17 +5,8 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-import glob, uuid,networkx as nx,warnings,pandas as pd,numpy as np
-from collections import OrderedDict
-from toolz import valfilter, keyfilter,merge,merge_with,groupby
-from contextlib import ExitStack ,contextmanager
-from weakref import WeakValueDictionary
-from functools import partial,reduce
-from multiprocessing import Pool
-from itertools import chain
-from abc import ABC,abstractmethod
-
-from gateWay.assets._finder import  AssetFinder
+import uuid,networkx as nx
+from toolz import valfilter
 
 
 class TermGraph(object):

@@ -1,4 +1,3 @@
-# All of the loaded extensions. We don't want to load an extension twice.
 _loaded_extensions = set()
 
 

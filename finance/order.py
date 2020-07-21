@@ -1,3 +1,14 @@
+# !/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Mar 12 15:37:47 2019
+
+@author: python
+"""
+from enum import Enum
+from abc import ABC
+import uuid
+
 class StyleType(Enum):
     """
         Market Price (市价单）

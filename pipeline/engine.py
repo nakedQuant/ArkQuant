@@ -10,6 +10,7 @@ from toolz import keyfilter,merge,groupby
 from functools import partial
 from multiprocessing import Pool
 from itertools import chain
+from .loader.pricing_loader import  PricingLoader
 
 
 class UmpPickers(object):
@@ -103,7 +104,7 @@ class SimplePipelineEngine(object):
     def _init_engine(self,pipelines,_pickers):
         _inner_terms = chain(pipeline._terms_store
                              for pipeline in pipelines)
-        engine_terms = set(_picker._poll_pickers + _inner_terms)
+        engine_terms = set(_pickers._poll_pickers + _inner_terms)
         self._get_loader = PricingLoader(engine_terms)
         self.ump_pickers = _pickers
         self.pipelines = pipelines

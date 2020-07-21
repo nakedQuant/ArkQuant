@@ -13,27 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cimport numpy as np
-import numpy as np
-import pandas as pd
-cimport cython
-from cpython cimport bool
+import numpy as np,pandas as pd
+NANOS_IN_MINUTE = 60000000000
 
-cdef np.int64_t _nanos_in_minute = 60000000000
-NANOS_IN_MINUTE = _nanos_in_minute
+BAR = 0
+SESSION_START = 1
+SESSION_END = 2
+MINUTE_END = 3
+BEFORE_TRADING_START_BAR = 4
 
-cpdef enum:
-    BAR = 0
-    SESSION_START = 1
-    SESSION_END = 2
-    MINUTE_END = 3
-    BEFORE_TRADING_START_BAR = 4
-
-cdef class MinuteSimulationClock:
-    cdef bool minute_emission
-    cdef np.int64_t[:] market_opens_nanos, market_closes_nanos, bts_nanos, \
-        sessions_nanos
-    cdef dict minutes_by_session
+class MinuteSimulationClock:
 
     def __init__(self,
                  sessions,
@@ -50,14 +39,9 @@ cdef class MinuteSimulationClock:
 
         self.minutes_by_session = self.calc_minutes_by_session()
 
-    @cython.boundscheck(False)
-    @cython.wraparound(False)
-    cdef dict calc_minutes_by_session(self):
-        cdef dict minutes_by_session
-        cdef int session_idx
-        cdef np.int64_t session_nano
-        cdef np.ndarray[np.int64_t, ndim=1] minutes_nanos
-
+    # @cython.boundscheck(False)
+    # @cython.wraparound(False)
+    def calc_minutes_by_session(self):
         minutes_by_session = {}
         for session_idx, session_nano in enumerate(self.sessions_nanos):
             minutes_nanos = np.arange(

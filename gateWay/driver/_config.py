@@ -45,26 +45,12 @@ ASSET_FUNDAMENTAL_URL = {
 }
 
 #benchmark
-native_benchmark = 'http://71.push2.eastmoney.com/api/qt/clist/get?pn=1&pz=12&po=1&np=2&fltt=2&invt=2&' \
-                   'fid=&fs=b:MK0010&fields=f12,f14'
-
-periphera_benchmark = {
-                '道琼斯':'us.DJI',
-                '纳斯达克':'us.IXIC',
-                '标普500':'us.INX',
-                '香港恒生指数':'hkHSI',
-                '香港国企指数':'hkHSCEI',
-                '香港红筹指数':'hkHSCCI'
-}
-
 benchmark_kline = 'http://push2his.eastmoney.com/api/qt/stock/kline/get?secid={}&fields1=f1&' \
                   'fields2=f51%2Cf52%2Cf53%2Cf54%2Cf55%2Cf56%2Cf57%2Cf58&klt=101&fqt=0&beg=19900101&end={}'
 
 periphera_kline = 'http://web.ifzq.gtimg.cn/appstock/app/fqkline/get?&param=%s,day,1990-01-01,%s,100000,qfq'
 
 BENCHMARK_URL = {
-    'benchmark':native_benchmark,
-    'periphery':periphera_benchmark,
     'kline':benchmark_kline,
     'periphera_kline':periphera_kline
 }

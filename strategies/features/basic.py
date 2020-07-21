@@ -30,7 +30,7 @@ from zipline.utils.numpy_utils import (
     ignore_nanwarnings,
 )
 
-from pipeline.features.factor import CustomFactor
+from strategies.features.factor import CustomFactor
 from algorithm.Pipeline.mixins import SingleInputMixin
 
 

@@ -90,6 +90,7 @@ from itertools import chain
 
 import numpy as np , pandas as pd ,h5py , tables
 
+VERSION = 0
 
 DEFAULT_SCALING_FACTORS = {
     # Retain 3 decimal places for prices.
@@ -108,13 +109,6 @@ def convert_price_with_scaling_factor(a, scaling_factor):
 
     zeroes = (a == 0)
     return np.where(zeroes, np.nan, a.astype('float64')) * conversion_factor
-
-def coerce_to_uint32(a, scaling_factor):
-    """
-    Returns a copy of the array as uint32, applying a scaling factor to
-    maintain precision if supplied.
-    """
-    return (a * scaling_factor).round().astype('uint32')
 
 def check_indexes_all_same(indexes, message="Indexes are not equal."):
     """Check that a list of Index objects are all equal.
@@ -176,7 +170,7 @@ def days_and_sids_for_frames(frames):
         [frame.columns for frame in frames.values()],
         message='Frames have mismatched sids.',
     )
-    days = set(chain(*frame.keys())
+    days = set(chain(*[frame.index for frame in frames.values()]))
     sids = set(frames)
     cols = frames.values()[0].columns
     return days,sids,cols
@@ -238,13 +232,13 @@ class HDF5DailyBarWriter(object):
             # h5_file.attrs['version'] = VERSION
             #多维度
             category_group = h5_file.create_group(asset_type)
-            category_group.attrs['scaling_factor'] = scaling_factors
             # 创建group
             data_group = category_group.create_group('data')
+            data_group.attrs['scaling'] = scaling_factors
             index_group = category_group.create_group('index')
             # Note that this functions validates that all of the frames
             # share the same days and sids.
-            days, sids fields = days_and_sids_for_frames(frames)
+            days, sids,fields = days_and_sids_for_frames(frames)
             # Write sid and date indices.
             index_group.create_dataset('sid',data=sids)
             # h5py does not support datetimes, so they need to be stored
@@ -253,7 +247,7 @@ class HDF5DailyBarWriter(object):
             # Write fields of data
             index_group.create_group('field', data=fields)
             #
-            for sid , frame in frames.items():
+            for sid, frame in frames.items():
                 frame = frame * scaling_factors
                 frame.sort_index(inplace=True)
                 data_group.create_dataset(sid,
@@ -275,15 +269,15 @@ class HDF5DailyBarReader(object):
         self._category = h5_group
 
         self._postprocessors = {
-            OPEN: partial(convert_price_with_scaling_factor,
-                          scaling_factor=self._read_scaling_factor(OPEN)),
-            HIGH: partial(convert_price_with_scaling_factor,
-                          scaling_factor=self._read_scaling_factor(HIGH)),
-            LOW: partial(convert_price_with_scaling_factor,
-                         scaling_factor=self._read_scaling_factor(LOW)),
-            CLOSE: partial(convert_price_with_scaling_factor,
-                           scaling_factor=self._read_scaling_factor(CLOSE)),
-            VOLUME: lambda a: a,
+            'open': partial(convert_price_with_scaling_factor,
+                          scaling_factor=self._read_scaling_factor('open')),
+            'high': partial(convert_price_with_scaling_factor,
+                          scaling_factor=self._read_scaling_factor('high')),
+            'low': partial(convert_price_with_scaling_factor,
+                         scaling_factor=self._read_scaling_factor('low')),
+            'close': partial(convert_price_with_scaling_factor,
+                           scaling_factor=self._read_scaling_factor('close')),
+            'volume': lambda a: a,
         }
 
     @classmethod
@@ -321,12 +315,12 @@ class HDF5DailyBarReader(object):
         return cls.from_file(h5py.File(path))
 
     def _read_scaling_factor(self, field):
-        return self._category[DATA][field].attrs[SCALING_FACTOR]
+        return self._category['data'].attrs['scaling'][field]
 
     def load_raw_arrays(self,
-                        asssets,
                         start_date,
                         end_date,
+                        assets,
                         columns = None):
         """
         Parameters
@@ -350,32 +344,10 @@ class HDF5DailyBarReader(object):
         cols = columns if columns else FIELDS
         out = []
         for asset in assets:
-            data = self._category['data'][asset][cols]
-        
-            # dataset = self._category[DATA][column]
-            # dataset.read_direct(
-                # mutable_buf,
-                # np.s_[:, date_slice],
-            # )
-
-    def _make_sid_selector(self, assets):
-        """
-        Build an indexer mapping ``self.sids`` to ``assets``.
-
-        Parameters
-        ----------
-        assets : list[int]
-            List of assets requested by a caller of ``load_raw_arrays``.
-
-        Returns
-        -------
-        index : np.array[int64]
-            Index array containing the index in ``self.sids`` for each location
-            in ``assets``. Entries in ``assets`` for which we don't have a sid
-            will contain -1. It is caller's responsibility to handle these
-            values correctly.
-        """
-
+            data = self._category['data'][asset]
+            scaled_data = data * self._postprocessors
+            out.append(data.loc[start_date:scaled_data,cols])
+        return out
 
     def get_value(self, sid, dt, field):
         """
@@ -402,7 +374,7 @@ class HDF5DailyBarReader(object):
             If the given dt is not a valid market minute (in minute mode) or
             session (in daily mode) according to this reader's tradingcalendar.
         """
-
+        raise NotImplementedError('get value is deprecated,load_raw_array instead')
 
 
 class H5MinuteWriter(object):

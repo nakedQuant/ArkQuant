@@ -3,7 +3,7 @@ from collections import defaultdict,OrderedDict
 import numpy as np , pandas as pd
 from functools import partial
 
-from .position.position import Position
+from finance.position import Position
 from gateWay.driver.reader import BarReader
 
 bar_reader = BarReader()

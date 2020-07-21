@@ -4,7 +4,7 @@ import pandas as pd ,numpy as np
 from functools import partial
 
 from gateWay import Event,GateReq,Quandle
-from pipeline.features import BaseFeature,EMA,remove_na
+from strategies.features import BaseFeature,EMA,remove_na
 from algorithm.Mathmetics import zoom,coef2deg
 from utils.linear_tool import _fit_poly
 

@@ -1,5 +1,15 @@
+# !/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Mar 12 15:37:47 2019
 
-#过滤模块
+@author: python
+"""
+from abc import ABC , abstractmethod
+from gateWay.assets.assets import Asset
+from .position import  Position
+
+
 class CancelPolicy(ABC):
 
     def to_asset(self,obj):

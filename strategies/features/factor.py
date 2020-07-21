@@ -485,7 +485,7 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
         :class:`zipline.pipeline.factors.RollingPearsonOfReturns`
         :meth:`Factor.spearmanr`
         """
-        from pipeline.features import RollingPearson
+        from strategies.features import RollingPearson
         return RollingPearson(
             base_factor=self,
             target=target,
@@ -546,7 +546,7 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
         :func:`scipy.stats.spearmanr`
         :meth:`Factor.pearsonr`
         """
-        from pipeline.features import RollingSpearman
+        from strategies.features import RollingSpearman
         return RollingSpearman(
             base_factor=self,
             target=target,
@@ -604,7 +604,7 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
         --------
         :func:`scipy.stats.linregress`
         """
-        from pipeline.features import RollingLinearRegression
+        from strategies.features import RollingLinearRegression
         return RollingLinearRegression(
             dependent=self,
             independent=target,

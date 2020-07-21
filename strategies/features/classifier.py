@@ -1,6 +1,6 @@
 # -*- coding : utf-8 -*-
 
-from pipeline.features import BaseFeature
+from strategies.features import BaseFeature
 from utils.distance_tool import  SignDistance
 
 class Discretizer(BaseFeature):
