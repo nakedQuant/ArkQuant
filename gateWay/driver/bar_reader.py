@@ -15,9 +15,8 @@ from abc import ABC, abstractmethod
 import sqlalchemy as sa,pandas as pd
 from functools import partial
 from sqlalchemy import MetaData
-from .db_schema import engine
 from .tools import  unpack_df_to_component_dict
-from .trading_calendar import  TradingCalendar
+from functools import lru_cache
 
 
 class BarReader(ABC):
@@ -31,19 +30,20 @@ class BarReader(ABC):
         return MetaData(bind = self.engine)
 
     @property
-    def trading_calendar(self):
+    def calendar(self):
         """
         Returns the zipline.utils.calendar.trading_calendar used to read
         the data.  Can be None (if the writer didn't specify it).
         """
-        return TradingCalendar(engine)
+        return self._calendar
 
-    def _window_size_to_dt(self,date,window):
-        shift_date = self.trading_calendar.shift_calendar(date, window)
-        return shift_date
+    @lru_cache
+    def _window_dt(self,dt,length):
+        _forward_dt = self.calendar._roll_forward(dt,length)
+        return _forward_dt
 
     @abstractmethod
-    def get_value(self, asset, dt, field):
+    def get_spot_value(self, asset, dt,fields):
         """
         Retrieve the value at the given coordinates.
 
@@ -53,7 +53,7 @@ class BarReader(ABC):
             The asset identifier.
         dt : pd.Timestamp
             The timestamp for the desired data point.
-        field : string
+        fields : string or list
             The OHLVC name for the desired data point.
 
         Returns
@@ -71,7 +71,7 @@ class BarReader(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def load_raw_arrays(self, date, window,columns,assets):
+    def load_raw_arrays(self, date, window,assets,columns):
         """
         Parameters
         ----------
@@ -99,14 +99,28 @@ class AssetSessionReader(BarReader):
     Reader for raw pricing data from mysql.
     return different asset types : etf bond symbol
     """
-    def __init__(self):
+    def __init__(self,
+                 engine,
+                 trading_calendar):
         self.engine = engine
+        self._calendar = trading_calendar
 
     @property
     def data_frequency(self):
         return 'daily'
 
-    def get_value(self, asset,dt):
+    def get_pctchange(self, asset,dt):
+        tbl = self.metadata['equity_price']
+        orm = sa.select([sa.cast(tbl.c.pct, sa.Numeric(10, 2)).label('pct')])\
+            .where(sa.and_(tbl.c.trade_dt == dt,tbl.c.sid == asset.sid))
+        rp = self.engine.execute(orm)
+        data = rp.scalar()
+        return data[0]
+
+    def get_spot_value(self,dt,asset):
+        """
+            retrieve asset data  on dt
+        """
         table_name = '%s_price'%asset.asset_type
         tbl = self.metadata[table_name]
         orm = sa.select([sa.cast(tbl.c.open, sa.Numeric(10, 2)).label('open'),
@@ -124,7 +138,10 @@ class AssetSessionReader(BarReader):
                                       'amount'])
         return kline
 
-    def _retrieve_asset_type(self,table,sids,fields,start_date,end_date):
+    def _retrieve_assets(self,table,sids,fields,start_date,end_date):
+        """
+            retrieve specific categroy assets
+        """
         tbl = self.metadata['%s_price' & table]
         orm = sa.select([tbl.c.trade_dt, tbl.c.sid,
                       sa.cast(tbl.c.open,sa.Numeric(10, 2)).label('open'),
@@ -149,8 +166,8 @@ class AssetSessionReader(BarReader):
         return unpack_kline
 
     def load_raw_arrays(self,date,window,columns,assets):
-        start_date = self._window_size_to_dt(date,window)
-        _get_source = partial(self._retrieve_asset_type(
+        start_date = self._window_dt(date,window)
+        _get_source = partial(self._retrieve_assets(
                                                     fields= columns,
                                                     start_date= start_date,
                                                     end_date = date

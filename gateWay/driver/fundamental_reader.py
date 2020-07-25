@@ -80,14 +80,14 @@ class ReleaseSessionReader(BarReader):
         return releases
 
 
-class ShareHolderSessionReader(BarReader):
+class HolderSessionReader(BarReader):
 
     def __init__(self):
         self.engine = engine
 
     def get_value(self, asset,dt):
         """股东持仓变动"""
-        table = self.metadata['shareholder']
+        table = self.metadata['holder']
         sql = select([table.c.股东,
                       table.c.方式,
                       cast(table.c.变动股本, Numeric(10,2)),

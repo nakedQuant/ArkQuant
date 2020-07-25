@@ -1,6 +1,11 @@
+# !/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-classifier.py
+Created on Tue Mar 12 15:37:47 2019
+
+@author: python
 """
+
 import pandas as pd,numpy as np
 from functools import partial
 

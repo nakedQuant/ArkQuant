@@ -23,9 +23,9 @@ class HistoryCompatibleAdjustments(object):
 
     def _init_raw_array(self,assets,edate,window):
         if self._reader.data_frequency == 'daily':
-            bars = self._reader.load_raw_arrays(edate, window, ['close'], assets)
+            bars = self._reader.load_raw_arrays(edate, window, assets,['close'])
         elif self._reader.data_frequency == 'minute':
-            bars = self._reader.load_ticker_arrays(edate,window,assets,['close'],'15:00')
+            bars = self._reader.get_resampled(edate,window,'15:00',assets,['close'])
         return bars
 
     @staticmethod
@@ -123,10 +123,9 @@ class AdjustedDailyWindow(SlidingWindow):
     FIELDS = frozenset(['open', 'high', 'low', 'close', 'volume'])
 
     def __init__(self,
-                trading_calendar,
                 bar_reader,
                 equity_adjustment_reader):
-        self._trading_calendar = trading_calendar
+        self._trading_calendar = bar_reader.calendar
         self._adjustment = HistoryCompatibleAdjustments(
                                     equity_adjustment_reader,
                                     bar_reader)
@@ -192,9 +191,8 @@ class AdjustedMinuteWindow(SlidingWindow):
 
     def __init__(self,
                 _minute_reader,
-                equity_adjustment_reader,
-                trading_calendar):
-        self._trading_calendar = trading_calendar
+                equity_adjustment_reader):
+        self._trading_calendar = _minute_reader.calendar
         self._adjustment = HistoryCompatibleAdjustments(
                                     equity_adjustment_reader,
                                     _minute_reader)
@@ -230,7 +228,7 @@ class AdjustedMinuteWindow(SlidingWindow):
                 sid = asset.sid
                 #调整index
                 qfq = adjustments[sid]
-                qfq.index = [ pd.Timestamp(inx).timestamp() + 15 * 60 * 60  for inx in qfq.index]
+                qfq.index = [ pd.Timestamp(inx).timestamp() + 15 * 60 * 60 for inx in qfq.index]
                 raw = raw_arrays[sid]
                 try:
                     qfq = qfq.reindex(session)
@@ -243,5 +241,6 @@ class AdjustedMinuteWindow(SlidingWindow):
         else:
             adjust_arrays = raw_arrays
         return adjust_arrays
+
 
 __all__ = [AdjustedMinuteWindow,AdjustedDailyWindow,HistoryCompatibleAdjustments]

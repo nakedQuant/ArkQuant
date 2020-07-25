@@ -61,7 +61,7 @@ class Asset(object):
     def restricted_for_bid(self):
         raise NotImplementedError()
 
-    def _is_alive(self, session_label):
+    def _is_active(self, session_label):
         """
         Returns whether the asset is alive at the given dt and not suspend on the given dt
 
@@ -168,16 +168,17 @@ class Equity(Asset):
         for k ,v in raw.iloc[0,:].to_dict().items():
             self.setattr(k,v)
 
-    def restricted_for_price(self,dt):
+    def restricted(self,dt):
         mechanism = self._proxy_restrictions['price'].is_restricted(self,dt)
         return mechanism
 
-    def restricted_for_bid(self):
+    @property
+    def bid_mechansim(self):
         _mechanism = self._proxy_restrictions['bid'].is_restricted(self)
         return _mechanism
 
-    def is_alive(self,session_label):
-        active = self._is_alive(session_label)
+    def is_active(self,session_label):
+        active = self._is_active(session_label)
         #是否停盘
         data = self._reader.load_raw_arrays(session_label,0,'close',self.sid)
         active &= (True if data else False)
@@ -241,14 +242,15 @@ class Convertible(Asset):
     def intraday(self):
         return True
 
-    def restricted_for_price(self,dt):
+    def restricted(self,dt):
         return None
 
-    def restricted_for_bid(self):
+    @property
+    def bid_mechansim(self):
         return None
 
-    def is_alive(self,dt):
-        active = self._is_alive(dt)
+    def is_active(self,dt):
+        active = self._is_active(dt)
         return active
 
 
@@ -270,13 +272,14 @@ class Fund(Asset):
     def _supplementary_for_asset(self):
         pass
 
-    def restricted_for_price(self,dt):
+    def restricted(self,dt):
         return 0.1
 
-    def restricted_for_price(self):
+    @property
+    def bid_mechansim(self):
         return None
 
-    def is_alive(self,session_label):
+    def is_active(self,session_label):
         active = self._is_active(session_label)
         return active
 

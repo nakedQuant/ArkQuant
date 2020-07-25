@@ -3,20 +3,10 @@ Base class for Pipeline API data loaders.
 """
 from abc import ABC,abstractmethod
 
-from gateWay.driver.adjusted_array import AdjustedArray
-from gateWay.driver.reader import BarReader,EventLoader
-
 
 class PipelineLoader(ABC):
     """Interface for PipelineLoaders.
     """
-    EVENT_OP_NAME = frozenset(['holder', 'massive', 'release', 'gdp', 'margin'])
-
-    def __init__(self):
-
-        self.adjusted_loader = AdjustedArray()
-        self.event_loader = EventLoader()
-
     def _resolve_domains(self,domains,event_type = False):
         pipeline_domain = self._preprocess_domains(domains)
         if event_type and self._validate_event(pipeline_domain):
@@ -58,25 +48,16 @@ class PipelineLoader(ABC):
         return True
 
     @abstractmethod
-    def load_pipeline_arrays(self, dt,domains,mask= None):
+    def load_pipeline_arrays(self, dt,sids):
         """
         Load data for ``columns`` as AdjustedArrays.
 
         Parameters
         ----------
-        domains : zipline.pipeline.domain.Domain
-            The domain of the pipeline for which the requested data must be
-            loaded.
-        columns : list[zipline.pipeline.data.dataset.BoundColumn]
-            Columns for which data is being requested.
         dates : pd.DatetimeIndex
             Dates for which data is being requested.
         sids : pd.Int64Index
             Asset identifiers for which data is being requested.
-        mask : np.array[ndim=2, dtype=bool]
-            Boolean array of shape (len(dates), len(sids)) indicating dates on
-            which we believe the requested assets were alive/tradeable. This is
-            used for optimization by some loaders.
 
         Returns
         -------

@@ -9,8 +9,8 @@ from collections import namedtuple
 from abc import ABC , abstractmethod
 import struct,pandas as pd,bcolz,numpy as np,os,glob,datetime
 
-
 OHLC_RATIO = 100
+
 
 class BcolzWriter(ABC):
 
@@ -77,6 +77,13 @@ class BcolzWriter(ABC):
         table.attrs['metadata'] = self._init_metadata(path)
         return table
 
+    def set_sid_attrs(self, sid, **kwargs):
+        """Write all the supplied kwargs as attributes of the sid's file.
+        """
+        table = self._ensure_ctable(sid)
+        for k, v in kwargs.items():
+            table.attrs[k] = v
+
     def _ensure_ctable(self, sid):
         """Ensure that a ctable exists for ``sid``, then return it."""
         sidpath = self.sidpath(sid)
@@ -103,21 +110,6 @@ class BcolzWriter(ABC):
 
         raise NotImplementedError()
 
-    def write_sid(self, sid,appendix):
-        """
-        Write a stream of minute data.
-        :param sid: asset type
-        :param appendix: .01 / .5 / .day
-        :return: dataframe
-        """
-        path = os.path.join(self._source_dir,sid + appendix)
-        try:
-            data = self.retrieve_data_from_tdx(path)
-        except IOError:
-            print('tdx path is not correct')
-        #
-        self._write_internal(sid, data)
-
     @abstractmethod
     def _write_internal(self, sid,data):
         """
@@ -138,13 +130,20 @@ class BcolzWriter(ABC):
         """
         raise NotImplementedError()
 
-
-    def set_sid_attrs(self, sid, **kwargs):
-        """Write all the supplied kwargs as attributes of the sid's file.
+    def write_sid(self, sid,appendix):
         """
-        table = self._ensure_ctable(sid)
-        for k, v in kwargs.items():
-            table.attrs[k] = v
+        Write a stream of minute data.
+        :param sid: asset type
+        :param appendix: .01 / .5 / .day
+        :return: dataframe
+        """
+        path = os.path.join(self._source_dir,sid + appendix)
+        try:
+            data = self.retrieve_data_from_tdx(path)
+        except IOError:
+            print('tdx path is not correct')
+        #
+        self._write_internal(sid, data)
 
     def truncate(self,size = 0 ):
         """Truncate data when size = 0"""
@@ -254,6 +253,7 @@ class BcolzDailyBarWriter(BcolzWriter):
 
         self._rootdir = rootdir
         self._source_dir = txn_daily_dir
+        self._end_session = '1990-01-01'
 
     def __setattr__(self, key, value):
         raise NotImplementedError()
@@ -289,11 +289,14 @@ class BcolzDailyBarWriter(BcolzWriter):
 
 #reader
 
+default = frozenset(['open', 'high', 'low', 'close','amount','volume'])
+
+
 class BcolzReader(ABC):
 
     @property
     def data_frequency(self):
-        return "minute"
+        raise NotImplementedError()
 
     @property
     def calenar(self):
@@ -304,13 +307,17 @@ class BcolzReader(ABC):
         return _forward_dt
 
     @staticmethod
-    def transfer_to_timestamp(dt):
+    def _to_timestamp(dt,last = False):
         if not isinstance(dt,pd.Timestamp):
             try:
-                dt = pd.Timestamp(dt)
+                stamp = pd.Timestamp(dt)
             except Exception as e:
                 raise TypeError('cannot tranform %r to timestamp due to %s'%(dt,e))
-        return dt
+        else:
+            stamp = dt
+        final = datetime.datetime(stamp.year,stamp.month,stamp.day,hour = 15,minute = 0,second=0) if last else \
+            datetime.datetime(stamp.year,stamp.month,stamp.day,hour = 9,minute = 30,second=0)
+        return final
 
     def get_sid_attr(self, sid):
         sid_path = '{}.bcolz'.format(sid)
@@ -322,6 +329,14 @@ class BcolzReader(ABC):
         rootdir = self.get_sid_attr(sid)
         table = bcolz.open(rootdir=rootdir, mode='r')
         return table
+
+    @abstractmethod
+    def get_resampled(self,*args):
+        """
+         List of DatetimeIndex representing the minutes to exclude because
+         of early closes.
+        """
+        raise NotImplementedError()
 
     def get_value(self, sid,sdate,edate):
         """
@@ -354,14 +369,13 @@ class BcolzReader(ABC):
         table = self._read_bcolz_data(sid)
         meta = table.attrs['metadata']
         assert meta.end_session >= sdate,('%r exceed metadata end_session'%sdate)
-        #过滤
-        start = self.transfer_to_timestamp(sdate)
-        end = self.transfer_to_timestamp(edate)
         #获取数据
         if self.data_frequency == 'minute':
-            condition = '({0} <= trade_dt) & (trade_dt < {1)'.format(start.timestamp(), end.timestamp())
+            start = self.transfer_to_timestamp(sdate)
+            end = self.transfer_to_timestamp(edate, last=True)
+            condition = '({0} <= timestamp) & (timestamp <= {1)'.format(start.timestamp(), end.timestamp())
         else:
-            condition = '({0} <= timestamp) & (timestamp < {1)'.format(start.timestamp(), end.timestamp())
+            condition = '({0} <= trade_dt) & (trade_dt <= {1)'.format(sdate, edate)
         raw = table.fetchwhere(condition)
         dataframe = pd.DataFrame(raw)
         #调整系数
@@ -369,7 +383,15 @@ class BcolzReader(ABC):
         scale = dataframe.apply(lambda x : [ x[col] * inverse_ratio
                                 for col in ['open','high','low','close']],
                                 axis = 1)
+        scale.set_index('ticker',inplace= True) if 'ticker' in scale.columns else scale.set_index('trade_dt',inplace = True)
         return scale
+
+    @abstractmethod
+    def get_spot_value(self,dt,sids,fields):
+        """
+            retrieve data on dt
+        """
+        raise NotImplementedError()
 
     @abstractmethod
     def load_raw_arrays(self,*args):
@@ -397,24 +419,6 @@ class BcolzReader(ABC):
             (minutes in range, sids) with a dtype of float64, containing the
             values for the respective field over start and end dt range.
         """
-        raise NotImplementedError()
-
-    @abstractmethod
-    def get_spot_value(self,dt,sids,fields):
-        """
-            retrieve data on dt
-        """
-        raise NotImplementedError()
-
-    def reindex_minutes_ticker(self,*args):
-        """
-        select specific dts minutes ,e,g --- 9:30,10:30
-
-         Returns
-         -------
-         List of DatetimeIndex representing the minutes to exclude because
-         of early closes.
-         """
         raise NotImplementedError()
 
 
@@ -447,30 +451,35 @@ class BcolzMinuteReader(BcolzReader):
         self._calendar = trading_calendar
         self._seconds_per_day = 24 * 60 * 60
 
-    def get_spot_value(self,dt,sids,fields):
-        stamp = self.transfer_to_timestamp(dt)
-        sdate = datetime.datetime(stamp.year,stamp.month,stamp.day,hour = 9,minute = 30,second=0)
-        edate = datetime.datetime(stamp.year,stamp.month,stamp.day,hour = 15,minute = 0,second=0)
-        minutes = self.load_raw_arrays(sdate,edate,sids,fields)
+    @property
+    def data_frequency(self):
+        return "minute"
+
+    def get_resampled(self,sessions,dts,sids,field = default):
+        """
+            select specific dts minutes ,e,g --- 9:30,10:30
+        """
+        resample_tickers = {}
+        arrays = self.load_raw_arrays(sessions[0],sessions[1],sids,field)
+        for sid,raw in arrays.items():
+            ticker_seconds = dts.split(':')[0] * 60 * 60 + dts.split(':')[0] * 60
+            data = raw.fetchwhere("(timestamp - {0}) % {1} == 0".format(ticker_seconds,self._seconds_per_day))
+            resample_tickers[sid] = data
+        return resample_tickers
+
+    def get_spot_value(self,dt,sids,fields = default):
+        dts = self.transfer_to_timestamp(dt)
+        minutes = self.load_raw_arrays(dts,0,sids,fields)
         return minutes
 
-    def load_raw_arrays(self,end_dt,dt_window,fields,sids):
-        sdate = self._window_dt(end_dt,dt_window)
+    def load_raw_arrays(self,end_dt,window,sids,fields = default):
+        sdate = self._window_dt(end_dt,window)
         supplement_fields = fields + ['ticker']
         minutes = []
         for i, sid in enumerate(sids):
             out = self.get_value(sid,sdate,end_dt)
             minutes.append(out.loc[:,supplement_fields])
         return minutes
-
-    def reindex_minutes_ticker(self,sessions,sids,field,_ticker):
-        tickers = {}
-        arrays = self.load_raw_arrays(sessions[0],sessions[1],sids,field)
-        for sid,raw in arrays.items():
-            ticker_seconds = _ticker.split(':')[0] * 60 * 60 + _ticker.split(':')[0] * 60
-            data = raw.fetchwhere("(timestamp - {0}) % {1} == 0".format(ticker_seconds,self._seconds_per_day))
-            tickers[sid] = data
-        return tickers
 
 
 class BcolzDailyReader(BcolzReader):
@@ -504,18 +513,29 @@ class BcolzDailyReader(BcolzReader):
     def data_frequency(self):
         return "daily"
 
-    def load_raw_arrays(self,end_date,_window,columns,assets):
-        sdate = self._window_dt(end_date,_window)
+    def get_resampled(self,sessions,frequency,sids,field = default):
+        """
+            select specific dts minutes ,e,g --- 9:30,10:30
+        """
+        resampled = {}
+        arrays = self.load_raw_arrays(sessions[0],sessions[1],sids,field)
+        pds = [dt.strftime('%Y%m%d') for dt in pd.date_range(sessions[0],sessions[1],freq = frequency)]
+        for sid,raw in arrays.items():
+            resampled[sid] = raw.loc[pds,:]
+        return resampled
+
+    def get_spot_value(self,dt,sids,fields = default):
+        minutes = self.load_raw_arrays(dt, dt, sids, fields)
+        return minutes
+
+    def load_raw_arrays(self,end,window,assets,columns = default):
+        sdate = self._window_dt(end,window)
         supplement_fields = columns + ['trade_dt']
         daily = []
         for i, sid in enumerate(assets):
-            out = self.get_value(sid,sdate,end_date)
+            out = self.get_value(sid,sdate,end)
             daily.append(out.loc[:,supplement_fields])
         return daily
-
-    def get_spot_value(self,dt,sids,fields):
-        minutes = self.load_raw_arrays(dt, dt, sids, fields)
-        return minutes
 
 
 __all__ = [BcolzDailyBarWriter,BcolzDailyReader,BcolzMinuteBarWriter,BcolzMinuteReader]

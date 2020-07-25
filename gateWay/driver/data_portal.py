@@ -46,14 +46,14 @@ class DataPortal(object):
 
     OHLCV_FIELDS = frozenset(["open", "high", "low", "close", "volume"])
 
-    Asset_Type = frozenset(['symbol','etf','bond'])
+    Asset_Type = frozenset(['equity','etf','bond'])
 
     def __init__(self,
                 asset_finder,
                 trading_calendar,
                 first_trading_day,
-                _dispatch_session_reader,
-                _dispatch_minute_reader,
+                _session_reader,
+                _minute_reader,
                 adjustment_reader,
                  ):
         self.asset_finder = asset_finder
@@ -64,18 +64,18 @@ class DataPortal(object):
 
         self._adjustment_reader = adjustment_reader
 
-        self._pricing_readers = {
-            'minute': _dispatch_minute_reader,
-            'daily': _dispatch_session_reader,
+        self._pricing_reader = {
+            'minute': _minute_reader,
+            'daily': _session_reader,
         }
 
         _history_daily_loader = HistoryDailyLoader(
-            _dispatch_minute_reader,
+            _minute_reader,
             self._adjustment_reader,
             trading_calendar,
         )
         _history_minute_loader = HistoryMinuteLoader(
-            _dispatch_session_reader,
+            _session_reader,
             self._adjustment_reader,
             trading_calendar,
 
@@ -103,9 +103,6 @@ class DataPortal(object):
     @property
     def adjustment_reader(self):
         return self._adjustment_reader
-
-    def _get_pricing_reader(self, data_frequency):
-        return self._pricing_readers[data_frequency]
 
     def get_fetcher_assets(self, sids):
         """
@@ -182,6 +179,15 @@ class DataPortal(object):
         out = valmap(lambda x : x[x['pay_date'].isin(trading_days)] if x else x ,cache)
         return out
 
+    def get_equity_pctchange(self,dts,asset):
+        assert asset.asset_type == 'equity',ValueError('only support equity for pctchange')
+        pct = self._pricing_reader['daily'].get_pctchange(asset,dts)
+        return pct
+
+    def get_spot_value(self,dts,asset,frequency):
+        spot_value = self._pricing_reader[frequency].get_spot_value(dts,asset)
+        return spot_value
+
     def _get_history_sliding_window(self,assets,
                                     end_dt,
                                     fields,
@@ -192,7 +198,7 @@ class DataPortal(object):
         Internal method that returns a dataframe containing history bars
         of minute frequency for the given sids.
         """
-        history = self._history_daily_loader[frequency]
+        history = self._history_loader[frequency]
         history_arrays = history.history(assets,fields,end_dt,window = bar_count)
         return history_arrays
 
@@ -277,22 +283,35 @@ class DataPortal(object):
         A numpy array with requested values.  Any missing slots filled with
         nan.
         """
-        _reader = self._get_pricing_readers[frequency]
-        window_array = _reader.load_raw_arrays(dt, days_in_window, field, assets)
+        _reader = self._pricing_reader[frequency]
+        window_array = _reader.load_raw_arrays(dt, days_in_window, assets,field)
         return window_array
 
-    def _get_resized_minutes(self,dts,sids,field,_ticker):
+    def get_resize_data(self,dt,window,freq,assets,field):
         """
-            Internal method that resample
-            api : groups.keys() , get_group()
+            return resample daily kline --- Year Month Day
         """
-        _minutes_reader = self._pricing_readers['minute']
-        resamples = _minutes_reader.reindex_minutes_ticker(dts,sids,field,_ticker)
-        return resamples
+        resampled_data = self._history_loader['daily'].get_resampled(
+                                                                dt,
+                                                                window,
+                                                                freq,
+                                                                assets,
+                                                                field
+                                                                    )
+        return resampled_data
 
-    def get_resample_minutes(self,sessions,sids,field,frequency):
-        reindex_minutes = self._get_resized_minutes(sessions,sids,field,frequency)
-        return reindex_minutes
+    def get_specific_ticker_data(self,dt,window,ticker,assets,field):
+        """
+            eg --- 9:30 or 11:20
+        """
+        resampled_ticker_data = self._history_loader['minute'].get_resampled(
+                                                                dt,
+                                                                window,
+                                                                ticker,
+                                                                assets,
+                                                                field
+                                                                    )
+        return resampled_ticker_data
 
     def get_current(self,sid):
         """

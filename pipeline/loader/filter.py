@@ -1,5 +1,9 @@
+# !/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-filter.py
+Created on Tue Mar 12 15:37:47 2019
+
+@author: python
 """
 from itertools import chain
 from toolz import flip
@@ -246,6 +250,7 @@ class PercentileFilter(Filter):
             keepdims=True,
         )
         return (lower_bounds <= data) & (data <= upper_bounds)
+
 
 class ArrayPredicate(Filter):
     """

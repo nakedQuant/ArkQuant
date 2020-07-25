@@ -39,6 +39,16 @@ class Ledger(object):
         self.position_tracker.sync_last_date(dt)
         self._dirty_portfolio = True
 
+    def get_rights_positions(self,dts):
+        # 获取当天为配股登记日的仓位 --- 卖出 因为需要停盘产生机会成本
+        right_positions = []
+        for position in self.portfolio.positions:
+            asset = position.inner_position.asset
+            right = self.position_tracker.retrieve_right_from_sqlite(asset.sid,dts)
+            if len(right):
+                right_positions.append(position)
+        return right_positions
+
     def _cash_flow(self,amount):
         """
             update the cash of portfolio
@@ -183,5 +193,3 @@ class Ledger(object):
             self.process_transaction(txn)
         """
         self.position_tracker.maybe_create_close_position_transaction(txns)
-
-    # cash_utilization = 1 - (cash_blance /capital_blance).mean()

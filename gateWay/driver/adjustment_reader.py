@@ -119,7 +119,7 @@ class SQLiteAdjustmentReader(object):
                          sa.cast(self.equity_divdends.c.bonus,sa.Numeric(5,2))]).\
                         where(sa.and_(self.equity_divdends.c.sid == sid,
                                       self.equity_divdends.c.progress.like('实施'),
-                                      self.equity_divdends.c.ex_date < date))
+                                      self.equity_divdends.c.ex_date == date))
         rp = self.conn.execute(sql_dialect)
         divdends = pd.DataFrame(rp.fetchall(),
                                      columns = ['ex_date','sid_bonus','sid_transfer','bonus'])
@@ -130,7 +130,7 @@ class SQLiteAdjustmentReader(object):
                          sa.cast(self.equity_rights.c.right_bonus,sa.Numeric(5,2)),
                          sa.cast(self.equity_rights.c.right_price,sa.Numeric(5,2))]).\
                         where(sa.and_(self.equity_rights.c.sid == sid,
-                                      self.equity_rights.c.ex_date < date))
+                                      self.equity_rights.c.ex_date == date))
         rp = self.engine.execute(sql)
         rights = pd.DataFrame(rp.fetchall(),
                               columns=['ex_date','right_bonus', 'right_price'])

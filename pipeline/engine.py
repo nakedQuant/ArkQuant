@@ -5,54 +5,11 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-import numpy as np
-from toolz import keyfilter,merge,groupby
+from toolz import merge,groupby,keyfilter
 from functools import partial
 from multiprocessing import Pool
 from itertools import chain
-from .loader.pricing_loader import  PricingLoader
-from .term import Term
-
-
-class UmpPickers(object):
-    """
-        包括 --- 止损策略
-        Examples:
-            FeatureUnion(_name_estimators(transformers),weight = weight)
-        裁决模块 基于有效的特征集，针对特定的asset进行投票抉择
-        关于仲裁逻辑：
-        H0假设 --- 标的退出
-            迭代选股序列因子 --- 一旦任何因子投出反对票无法通过HO假设
-        基于一个因子判断是否退出股票有失偏颇
-    """
-    def __init__(self,pickers):
-        self._validate_features(pickers)
-
-    def __setattr__(self, key, value):
-        raise NotImplementedError
-
-    def _validate_features(self,features):
-        for feature in features:
-            assert isinstance(feature,Term),ValueError('must term type')
-            if feature.dtype != bool:
-                raise Exception('bool term needed for ump')
-        self._poll_pickers = features
-
-    def _evaluate_for_sid(self,position, metadata):
-        votes = [term_picker._compute([position.asset],metadata)
-                                for term_picker in self._poll_pickers]
-        if np.all(votes):
-            return position
-        return False
-
-    def evaluate(self,holdings,meta_cache):
-        _implement = partial(self._evaluate_for_sid,metadata = meta_cache)
-        #执行退出算法
-        with Pool(processes=len(holdings))as pool:
-            picker_votes = [pool.apply_async(_implement, position)
-                      for position in holdings]
-            selector = [vote for vote in picker_votes if vote]
-        return selector
+from .loader.loader import  PricingLoader
 
 
 class SimplePipelineEngine(object):
@@ -87,6 +44,11 @@ class SimplePipelineEngine(object):
     5. a. 不同的pipeline --- 各自执行算法，不干涉 ，就算标的重合（但是不同时间的买入），但是会在同一时间退出
        b. 每个Pipeline 存在一个alternatives(确保最大限度可以成交）,默认为最大持仓个数 --- len(self.pipelines)
           如果alternatives 太大 --- 降低标的准备行影响收益 ，如果太小 --- 到时空仓的概率变大影响收益（由于国内涨跌停制度）
+
+    Parameter:
+
+    _get_loader : PricingLoader
+    ump_picker : strategy for putting positions
     """
     __slots__ = (
         '_get_loader',
@@ -95,7 +57,6 @@ class SimplePipelineEngine(object):
     )
 
     def __init__(self,pipelines,ump_pickers):
-
         self._pipeline_cache = {}
         self._init_engine(pipelines,ump_pickers)
 
@@ -110,7 +71,7 @@ class SimplePipelineEngine(object):
         self.ump_pickers = _pickers
         self.pipelines = pipelines
 
-    def _cache_metadata(self,dts):
+    def _lru_cache(self,dts):
         """
         Register a Pipeline default for pipeline on every day.
         :param dts: initialize attach pipeline and cache metadata for engine
@@ -119,41 +80,21 @@ class SimplePipelineEngine(object):
         #init pipelines
         for pipeline in self.pipelines:
             pipeline.attach_default(dts)
+        # default --- pipeline sids
+        default = [pipeline.default for pipeline in self.pipelines]
         # _cache_metada
-        pipeline_type = [pipeline.default_type for pipeline in self.pipelines]
-        metadata = self._get_loader.load_pipeline_arrays(dts,pipeline_type)
-        return metadata
+        cache = self._get_loader.load_pipeline_arrays(dts,default)
+        return cache
 
-    def execute_engine(self, ledger):
+    def _pipeline_impl(self,pipeline,metadata,alternatives):
         """
-            计算ump和所有pipelines --- 如果ump为0，但是pipelines得到与持仓一直的标的相当于变相加仓
-            umps --- 根据资产类别话费不同退出策略 ，symbols , etf , bond
+        ----------
+        pipeline : zipline.pipeline.Pipeline
+            The pipeline to run.
         """
-        capital = ledger.porfolio.cash
-        holdings = ledger.positions
-        dts = set([holding.inner_position.last_sync_date
-                   for holding in holdings.values()])
-        assert len(dts) == 1,Exception('positions must sync at the same time')
-        # _cache_metdata
-        _metadata = self._cache_metadata(dts[0])
-        #执行算法逻辑
-        polls = self._run_ump_pickers(holdings,_metadata)
-        pipes = self._run_pipelines(_metadata)
-        # --- 如果selectors 与 outs 存在交集
-        puts,calls = self._resovle_conflicts(polls,pipes,holdings)
+        yield pipeline.to_execution_plan(metadata,alternatives)
 
-        self._pipeline_cache[dts[0]] = (puts,calls,holdings)
-        return puts,calls,holdings,capital,dts[0]
-
-    def _run_ump_pickers(self,holdings,_ump_metadata):
-        dct = groupby(lambda x : x.inner_position.asset.asset_type,holdings)
-        ump_outputs = []
-        for name , position in dct.items():
-            result = self.ump_pickers[name].evalute(position,_ump_metadata)
-            ump_outputs.extend(result)
-        return ump_outputs
-
-    def _run_pipelines(self,pipeline_metadata):
+    def run_pipelines(self,pipeline_metadata):
         """
         Compute values for  pipelines on a specific date.
         Parameters
@@ -161,7 +102,7 @@ class SimplePipelineEngine(object):
         pipeline_metadata : cache data for pipeline
         """
         workers = len(self.pipelines)
-        _implement = partial(self._run_pipeline_impl,
+        _implement = partial(self._pipeline_impl,
                              metadata = pipeline_metadata,
                              alternatives = workers)
 
@@ -171,15 +112,17 @@ class SimplePipelineEngine(object):
             outputs = merge(results)
         return outputs
 
-    def _run_pipeline_impl(self,pipeline,metadata,alternatives):
-        """
-        ----------
-        pipeline : zipline.pipeline.Pipeline
-            The pipeline to run.
-        """
-        yield pipeline.to_execution_plan(metadata,alternatives)
+    def run_pickers(self,holdings,_ump_metadata):
+        type_mappings = groupby(lambda x : x.inner_position.asset.asset_type,holdings)
+        ump_outputs = {}
+        for name , positions in type_mappings.items():
+            result = self.ump_pickers[name].evalute(positions,_ump_metadata)
+            # position.name ---- which pipeline create position
+            if result:
+                {ump_outputs.update({p.name:p}) for p in result}
+        return ump_outputs
 
-    def _resovle_conflicts(self,outs,ins,holdings):
+    def _resovle_conflicts(self, puts, calls, holdings):
         """
             防止策略冲突 当pipeline的结果与ump的结果出现重叠 --- 说明存在问题，正常情况退出策略与买入策略应该不存交集
 
@@ -204,14 +147,40 @@ class SimplePipelineEngine(object):
             如果存在买入标的的行为则直接按照全部出货原则以open价格最大比例卖出 ，一般来讲集合竞价的代表主力卖入意愿强度）
             ---- 侧面解决了卖出转为买入的断层问题 transfer1
         """
-        intersection = set([item.inner_position.asset for item in outs]) & set(chain(*ins.values()))
-        if intersection:
-            raise ValueError('ump should not have intersection with pipelines')
-        out_dict = {position.inner_position.asset.origin : position
-               for position in outs}
-        waited = set(ins) - (set(holdings) - out_dict)
-        result = keyfilter(lambda x : x in waited,ins)
-        return out_dict,result
+        holding_mappings = groupby(lambda x : x.inner_position.name,holdings)
+        extra = set(calls) - set(holding_mappings)
+        intersection = set(puts) & set(calls)
+        conflicts = [ name for name in intersection if puts[name] == calls[name]]
+        assert not conflicts,ValueError('name : %r have conflicts between ump and pipeline '%conflicts)
+        # 卖出持仓,买入标的
+        result = [(puts[name],calls[name]) for name in intersection]
+        # capital 买入标的
+        supplement = keyfilter(lambda x : x in extra,calls)
+        return result,supplement
+
+    def execute_engine(self, ledger):
+        """
+            计算ump和所有pipelines --- 如果ump为0，但是pipelines得到与持仓一直的标的相当于变相加仓
+            umps --- 根据资产类别话费不同退出策略 ，symbols , etf , bond
+        """
+        capital = ledger.porfolio.cash
+        holdings = ledger.positions
+        dts = set([holding.inner_position.last_sync_date
+                   for holding in holdings.values()])
+        assert len(dts) == 1,Exception('positions must sync at the same time')
+        # _cache_metdata
+        metadata = self._lru_cache(dts[0])
+        #剔除配股的仓位
+        right_holdings = ledger.get_rights_positions(dts[0])
+        left_holdings = set(holdings) - set(right_holdings)
+        #执行算法逻辑
+        polls = self.run_pickers(left_holdings,metadata)
+        pipes = self.run_pipelines(metadata)
+        # --- 如果selectors 与 outs 存在交集
+        negs_pos,supplement = self._resovle_conflicts(polls,pipes,left_holdings)
+        # cache
+        self._pipeline_cache[dts[0]] = (negs_pos,supplement)
+        return negs_pos,supplement,capital,dts[0]
 
 
 class NoEngineRegistered(Exception):

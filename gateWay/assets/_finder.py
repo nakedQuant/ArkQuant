@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import pandas as pd,sqlalchemy as sa,json
 from itertools import groupby,chain
 from toolz import valfilter,keyfilter,valmap
@@ -53,19 +52,20 @@ class AssetFinder(object):
         for c in [Equity, Convertible, Fund]
     }
 
-    def __init__(self,engine):
+    def __init__(self,
+                 engine):
         self.engine = engine
-        self._asset_type_cache = {}
         metadata = sa.MetaData(bind=engine)
         metadata.reflect(only=asset_db_table_names)
         for table_name in asset_db_table_names:
             setattr(self, table_name, metadata.tables[table_name])
+        self._asset_type_cache = {}
 
     def async_asset_mappings(self):
         ins = sa.select([self.asset_router.c.sid,self.asset_router.c.asset_type])
         rp = self.engine.execute(ins)
         asset_mappings = pd.DataFrame(rp.fetchall(),columns = ['sid','asset_type'])
-        asset_mappings.set_index('sid',inplace = True )
+        asset_mappings.set_index('sid',inplace = True)
         #update
         _update_assets = set(asset_mappings.index) - set(self._asset_type_cache)
         if _update_assets:
@@ -98,6 +98,11 @@ class AssetFinder(object):
                 except KeyError:
                     missing.add(sid)
         return found ,missing
+
+    def retrieve_benchmarks(self):
+        raw = json.loads(_parse_url(ASSERT_URL_MAPPING['benchmark'], encoding='utf-8', bs=False))
+        indexs = raw['data']['diff']
+        return indexs
 
     def retrieve_all(self,asset_type):
         """
@@ -234,7 +239,7 @@ class AssetFinder(object):
         return active_assets
 
     @staticmethod
-    def _is_alive(asset, sessions, include):
+    def _is_alive(asset, session_labels, include):
         """
         Whether or not `asset` was active at the time corresponding to
         `reference_date_value`.
@@ -253,9 +258,9 @@ class AssetFinder(object):
         was_active : bool
             Whether or not the `asset` existed at the specified time.
         """
-        sdate, edate = sessions
-        mask = (asset.first_traded >= sdate if include
-                else asset.first_traded > sdate)
+        sdate,edate = session_labels
+        mask = (asset.first_traded <= sdate if include
+                else asset.first_traded < sdate)
         if asset.last_traded:
             mask &= (asset.last_traded > edate)
         return mask
@@ -273,13 +278,8 @@ class AssetFinder(object):
             Whether or not the `asset` is tradeable at the specified time.
         """
         alive_assets = [asset for asset in chain(*self._asset_type_cache.values())
-                        if asset.is_alive(session_label)]
+                        if asset.is_active(session_label)]
         return alive_assets
-
-    def lookup_benchmarks(self):
-        raw = json.loads(_parse_url(ASSERT_URL_MAPPING['benchmark'], encoding='utf-8', bs=False))
-        indexs = raw['data']['diff']
-        return indexs
 
     def fuzzy_equities_ownership_by_connection(self, exchange, flag=1):
         """获取沪港通、深港通股票 , exchange 交易所 --- (SH | SZ) ; flag :1 最新的， 0 为历史的已经踢出的"""

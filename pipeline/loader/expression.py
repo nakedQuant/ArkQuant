@@ -1,5 +1,9 @@
+# !/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-NumericalExpression term.
+Created on Tue Mar 12 15:37:47 2019
+
+@author: python
 """
 import re
 from itertools import chain

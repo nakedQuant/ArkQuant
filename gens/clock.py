@@ -18,6 +18,15 @@ import numpy as np ,pandas as pd
 _nanos_in_minute = 60000000000
 NANOS_IN_MINUTE = _nanos_in_minute
 
+for dt, action in self.clock:
+    if action == BEFORE_TRADING_START_BAR:
+        # algo.before_trading_start(self.current_data)
+        metrics_tracker.handle_market_open(dt)
+    elif action == SESSION_START:
+        once_a_day(dt)
+    elif action == SESSION_END:
+        # End of the session.
+        yield daily_perf_metrics
 
 class MinuteSimulationClock:
 

@@ -140,7 +140,8 @@ equity_structure = sa.Table(
         nullable=False,
     ),
     sa.Column('declared_date', sa.String(10)),
-    sa.Column('effective_day', sa.String(10)),
+    # sa.Column('effective_day', sa.String(10)),
+    sa.Column('ex_date', sa.String(10)),
     sa.Column('general', sa.Numeric(15,5)),
     sa.Column('float', sa.Numeric(15,5)),
     sa.Column('strict', sa.Numeric(15,5)),
@@ -168,8 +169,8 @@ equity_mcap = sa.Table(
 )
 
 #股东增减持
-shareholder = sa.Table(
-    'shareholder',
+holder = sa.Table(
+    'holder',
     metadata,
     sa.Column(
         'sid',
