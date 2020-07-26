@@ -8,26 +8,9 @@ Created on Tue Mar 12 15:37:47 2019
 
 from abc import ABC,abstractmethod
 from functools import reduce
-import pandas as pd , numpy as np , operator
+import pandas as pd , numpy as np, operator
 from gateWay.assets.assets import Asset
-
-
-def vectorized_is_element(array, choices):
-    """
-    Check if each element of ``array`` is in choices.
-
-    Parameters
-    ----------
-    array : np.ndarray
-    choices : object
-        Object implementing __contains__.
-
-    Returns
-    -------
-    was_element : np.ndarray[bool]
-        Array indicating whether each element of ``array`` was in ``choices``.
-    """
-    return np.vectorize(choices.__contains__, otypes=[bool])(array)
+from utils.uility import vectorized_is_element
 
 
 class Restrictions(ABC):

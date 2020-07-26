@@ -30,3 +30,4 @@ class ComposedCancel(CancelPolicy):
     def should_trigger(self,order):
 
         return self.first.should_cancel(order) & self.second.should_cancel(order)
+

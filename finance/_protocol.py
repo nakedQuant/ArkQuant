@@ -1,9 +1,13 @@
+# !/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Mar 12 15:37:47 2019
 
-# -*- coding : uft-8 -*-
+@author: python
+"""
 
 import pandas as pd,warnings,enum
-from types import MappingProxyType as mappingproxy
-# 返回一个动态映射视图
+
 
 def _deprecated_getitem_method(name, attrs):
     """Create a deprecated ``__getitem__`` method that tells users to use
@@ -368,10 +372,10 @@ class Positions(dict):
         if isinstance(key, Asset):
             return Position(InnerPosition(key))
         elif isinstance(key, int):
-            warn("Referencing positions by integer is deprecated."
+            warnings.warn("Referencing positions by integer is deprecated."
                  " Use an asset instead.")
         else:
-            warn("Position lookup expected a value of type Asset but got {0}"
+            warnings.warn("Position lookup expected a value of type Asset but got {0}"
                  " instead.".format(type(key).__name__))
 
         return _DeprecatedSidLookupPosition(key)

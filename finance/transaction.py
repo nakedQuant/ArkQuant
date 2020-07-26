@@ -6,7 +6,7 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 import numpy as np
-from .order import  TickerOrder , PriceOrder
+from finance.order import  Order,PriceOrder
 
 
 class Transaction(object):
@@ -43,45 +43,26 @@ class Transaction(object):
         return p_dict
 
 
-def create_transaction(asset,size,price,ticker):
-
-    transaction = Transaction(
-        amount= int(size),
-        price = price,
-        asset = asset,
-        dt = ticker
-    )
-    return transaction
-
-def simulate_transaction(order,minutes,commission):
+def create_transaction(order,fee):
     """
     :param order: Ticker order or Price order
     :param minutes: minutes bar
     :param commission: commission
     :return: transaction
     """
-    if isinstance(order, TickerOrder):
-        ticker = order.ticker
-        txn_price = minutes[ticker]
-    elif isinstance(order, PriceOrder):
-        assert minutes.min() <= order.price  <= minutes.max(), ValueError('order price out of range')
-        txn_price = order.price
-        try:
-            loc = minutes.values().index(txn_price)
-        except ValueError :
-            loc = np.searchsorted(minutes.values(),txn_price)
-        # 当价格大于卖出价格才会成交，价格低于买入价格才会成交
-        ticker = minutes.index[loc] if order.direction == 'negative' else minutes.index[loc - 1]
+    asset = order.asset
+    sign = -1 if order.direction == 'negative' else 1
+    if isinstance(order, PriceOrder):
+        amount = np.floor(order.capital * (1 - fee) / (order.price * asset.tick_size))
+        assert amount  < asset.tick_size , ("Transaction magnitude must be at least 100 share")
+    elif isinstance(order,Order):
+        amount = order.amount
     else:
-        raise ValueError('unkown order type -- %r'%order)
-    amount = np.floor(order.capital * ( 1 - commission) / (txn_price * 100))
-    if amount  < 100:
-        raise Exception("Transaction magnitude must be at least 100 share")
-
+        raise TypeError('unkown order type')
     transaction = Transaction(
-        amount=int(amount),
-        price = txn_price,
-        asset = order.asset,
-        dt = ticker
+        asset = asset,
+        amount = sign * amount,
+        price = order.price,
+        _created_dt = order._created_dt
     )
     return transaction

@@ -10,12 +10,48 @@ import numpy as np , pandas as pd
 from collections import namedtuple
 from multiprocessing import Pool
 from functools import partial
-from finance.transaction import create_transaction,simulate_transaction
+from abc import ABC,abstractmethod
+from finance.transaction import create_transaction
+from finance.order import  Order,PriceOrder
+from utils.dt_utilty import  locate_pos
 
-OrderData = namedtuple('OrderData','minutes daily pct')
+OrderData = namedtuple('OrderData','min kline pre pct')
 
 
-class OrderCreated(object):
+class BaseCreated(ABC):
+
+    @abstractmethod
+    def yield_tickers_on_size(self,size):
+        """
+            根据size在交易时间段构建ticker组合
+        :return:
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def yield_size_on_capital(self,asset,dts,capital):
+        """
+            基于资金限制以及preclose计算隐藏的订单个数
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def simulate_dist(self,*args):
+        """
+            根据统计分布构建模拟的价格分布用于设立价格订单
+            e.g.:
+                基于开盘的涨跌幅决定 --- 当天的概率分布
+                simulate price distribution to place on transactions
+                :param size: number of transactions
+                :param raw:  data for compute
+                :param multiplier: slippage base on vol_pct ,e.g. slippage = np.exp(vol_pct)
+                :return: array of simualtion price
+                :return:
+        """
+        raise NotImplementedError()
+
+
+class OrderCreated(BaseCreated):
     """
         1 存在价格笼子
         2 无跌停限制但是存在竞价机制（10%基准价格），以及临时停盘制度
@@ -30,9 +66,11 @@ class OrderCreated(object):
     def __init__(self,
                  portal,
                  slippage,
+                 execution_style,
                  multiplier = 2):
         self._data_protal = portal
         self._slippage = slippage
+        self._style = execution_style
         self.multiplier = multiplier
 
     @property
@@ -57,36 +95,39 @@ class OrderCreated(object):
     def fraction(self,val):
         return val
 
-    def uncover_algo(self,asset,dts,capital):
-        orderdata = self._create_BarData(dts,asset)
+    def _create_data(self,dt,asset):
+        OrderData.bar = self._data_protal.get_spot_value(dt,asset,'minute')
+        OrderData.kline = self._data_protal.get_spot_value(dt,asset,'daily')
+        OrderData.pre = self._data_protal.get_prevalue(dt,asset,'daily')
+        OrderData.pct = self._data_protal.get_equity_pct(dt,asset)
+        return OrderData
+
+    @staticmethod
+    def yield_tickers_on_size(size):
+        interval = 4 * 60 / size
+        # 按照固定时间去执行
+        upper = pd.date_range(start='09:30', end='11:30', freq='%dmin' % interval)
+        bottom = pd.date_range(start='13:00', end='14:57', freq='%dmin' % interval)
+        # 确保首尾
+        tick_interval = list(chain(*zip(upper, bottom)))[:size - 1]
+        tick_interval.append(pd.Timestamp('2020-06-17 14:57:00', freq='%dmin' % interval))
+        return tick_interval
+
+    def yield_size_on_capital(self,asset,dts,capital):
+        orderdata = self._create_data(dts,asset)
         #满足限制
-        restricted_capital = orderdata.Preamount * self.fraction
+        restricted_capital = orderdata.pre['volume'] * self.fraction
         capital = capital if restricted_capital > capital else restricted_capital
         # 确保满足最低的一手
-        per_capital = min([asset.tick_size * orderdata.preclose * asset.tick_size * (1+asset.restricted),self.base_capital])
+        per_capital = min([asset.tick_size * orderdata.pre['close'] * asset.tick_size * (1+asset.restricted),self.base_capital])
         assert capital < per_capital , ValueError('capital must satisfy the base tick size')
         size = capital / per_capital
         self.per_capital = per_capital
-        return size
+        return size , orderdata
 
-    def _create_BarData(self,dt,asset):
-        OrderData.minutes = self._data_protal.get_spot_value(dt,asset,'minute')
-        OrderData.daily = self._data_protal.get_spot_value(dt,asset,'daily')
-        OrderData.pct = self._data_protal.get_equity_pctchange(dt,asset)
-        return OrderData
-
-    def simulate_dist(self, data, size):
-        """
-        基于开盘的涨跌幅决定 --- 当天的概率分布
-        simulate price distribution to place on transactions
-        :param size: number of transactions
-        :param raw:  data for compute
-        :param multiplier: slippage base on vol_pct ,e.g. slippage = np.exp(vol_pct)
-        :return: array of simualtion price
-        """
-        pct = data.pct
-        kline = data.daily
-        preclose = kline['close'] / (1+pct)
+    def simulate_dist(self,data, size, restricted):
+        kline = data.kline
+        preclose = kline['close'] / (1 + data.pct)
         open_pct = kline['open'] / preclose
         alpha = 1 if open_pct == 0.00 else 100 * open_pct
         if size > 0:
@@ -94,10 +135,12 @@ class OrderCreated(object):
             dist = 1 + np.copysign(alpha,np.random.beta(alpha,100,size))
         else:
             dist = [1 + alpha / 100]
-        clip_price = np.clip(dist,-0.1,0.1) * preclose
-        return clip_price
+        #避免跌停或者涨停
+        clip_pct = np.clip(dist,(1 - restricted ),(1+restricted))
+        sim_prices = clip_pct * preclose
+        return sim_prices
 
-    def _create_price_order(self,asset,size,data):
+    def _create_price_order(self,asset,size,data,restricted):
         """
             A股主板，中小板首日涨幅最大为44%而后10%波动，针对不存在价格笼子（科创板，创业板后期对照科创板改革）
             按照价格在10% 至 -10%范围内基于特定的统计分布模拟价格 --- 方向为开盘的涨跌幅 ，
@@ -106,52 +149,53 @@ class OrderCreated(object):
             而科创板前5个交易日不设立涨跌停而后20%波动但是30%，60%临时停盘10分钟，如果超过2.57(复盘)；
             科创板盘后固定价格交易 --- 以后15:00收盘价格进行交易 --- 15:00 -- 15:30(按照时间优先原则，逐步撮合成交）
         """
-        clip_price = self.simulate_dist(data,size)
-        tiny_orders = [PriceOrder(asset,price,self.per_capital) for price in clip_price]
-        return tiny_orders
+        clip_prices = self.simulate_dist(data,size,restricted)
+        tickers = [locate_pos(price,data.minutes,'positive') for price in clip_prices]
+        orders = [PriceOrder(asset,self.per_capital,price,ticker,self._style,self._slippage)
+                  for price,ticker in zip(clip_prices,tickers)]
+        trigger_orders = [order for order in orders if order.check_trigger(data.pre['close'])]
+        return trigger_orders
 
-    def _create_ticker_order(self,asset,size):
+    def _create_ticker_order(self,asset,size,data):
         """
             由于价格笼子，科创板可以参考基于时间的设置订单
         """
-        order = []
-        interval = 4 * 60 / size
-        # 按照固定时间去执行
-        upper = pd.date_range(start='09:30', end='11:30', freq='%dmin'%interval)
-        bottom = pd.date_range(start='13:00', end='14:57', freq='%dmin'%interval)
-        #确保首尾
-        tick_interval = list(chain(*zip(upper, bottom)))[:size - 1]
-        tick_interval.append(pd.Timestamp('2020-06-17 14:57:00',freq='%dmin'%interval))
-        for ticker in tick_interval:
-            # 根据设立时间去定义订单
-            ticker_order = TickerOrder(asset,ticker,self.per_capital)
-            ticker_order = TickerOrder(asset,ticker,self.per_capital)
-            order.append(ticker_order)
-        return order
+        ticker_intervals = self.yield_tickers_on_size(size)
+        ticker_prices = [data.min[ticker] for ticker in ticker_intervals]
+        orders = [PriceOrder(asset,self.per_capital,price,ticker,self._style,self._slippage)
+                  for price , ticker in zip(ticker_prices,ticker_prices)]
+        trigger_orders = [order for order in orders if order.check_trigger(data.pre['close'])]
+        return trigger_orders
 
-    def create_order(self,asset,sizes,dts):
-        """
-            基于amount 生成订单
-        """
-        if asset.bid_mechanism:
-            orders = self._create_ticker_order(asset,len(sizes))
-        else:
-            data = self._create_BarData(asset, dts)
-            orders = self._create_price_order(asset,len(sizes),data)
-        return orders
-
-    def simulate_transaction(self,asset,capital,dts,commission):
+    def simulate_order(self,asset,capital,dts):
         """
             supplement , capital
         """
-        size,orderdata = self.uncover_algo(asset,dts,capital)
+        size,orderdata = self.yield_tickers_on_size(asset,dts,capital)
         if asset.bid_mechanism :
-            orders = self._create_ticker_order(asset,size,orderdata)
+            trigger_orders = self._create_ticker_order(asset,size,orderdata)
         else:
-            orders = self._create_price_order(asset,size)
+            restricted = asset.restricted(dts)
+            trigger_orders = self._create_price_order(asset,size,orderdata,restricted)
+        return trigger_orders
 
-        txns = simulate_transaction(orders,orderdata,commission)
-        return txns
+    def simulate(self,asset,sizes,dts,direction):
+        """
+            基于amount 生成订单
+        """
+        data = self._create_data(asset, dts)
+        if asset.bid_mechanism :
+            tickers = self.yield_tickers_on_size(len(sizes))
+            ticker_prices = [data.min[ticker] for ticker in tickers]
+            iterator = zip(ticker_prices,tickers)
+        else :
+            #simulate_dist 已经包含剔除限制
+            simulate_prices = self.simulate_dist(data,len(sizes))
+            tickers = [locate_pos(price,data.minutes,direction) for price in simulate_prices]
+            iterator = zip(simulate_prices,tickers)
+        orders = [Order(asset,amount,*args,self._slippage) for amount,args in zip(sizes,iterator)]
+        trigger_orders = [order for order in orders if order.check_trigger(data.pre['close'])]
+        return trigger_orders
 
 
 class Internal(object):
@@ -159,7 +203,7 @@ class Internal(object):
     def __init__(self,
                  creator,
                  commission,
-                 multiplier = 1 ,
+                 multiplier = 1,
                  delay = 1):
         self.creator = creator
         self.commission = commission
@@ -168,10 +212,27 @@ class Internal(object):
 
     def calculate_per_size(self,q,data):
         capital = self.commission.min_base_cost * self.multiplier
-        per_size = min([int(capital / data.preclose),q])
+        per_size = min([int(capital / data.pre['close']),q])
         return per_size
 
-    def intern_tunnel(self,p,c,dts):
+    @staticmethod
+    def create_bulk_transactions(orders,fee):
+        txns = [create_transaction(order,fee) for order in orders]
+        return txns
+
+    def interactive(self,asset,capital,dts):
+        """
+            基于capital --- 买入标的
+        """
+        orders = self.creator.simulate_order(asset,capital,dts)
+        #将orders --- transactions
+        fee = self.commission.calculate_rate(asset,'positive',dts)
+        txns = self.create_bulk_transactions(orders,fee)
+        #计算效率
+        efficiency = sum([order.per_capital for order in orders]) / capital
+        return (txns,efficiency)
+
+    def interactive_tunnel(self,p,c,dts):
         """
             holding , asset ,dts
             基于触发器构建 通道 基于策略 卖出 --- 买入
@@ -193,38 +254,40 @@ class Internal(object):
             获取当天实时的ticer实点的数据，并且增加一些滑加，+ /-0.01
             卖出标的 --- 对应买入标的 ，闲于的资金
         """
-        #计算卖出持仓
+        selector = self.creator._create_data
+        #卖出持仓
         asset = p.inner_position.asset
-        #获取数据
-        p_minutes = self.creator._create_BarData(dts,asset)
-        # amount
         q = p.inner_position.amount
-        # 每次卖出size
-        p_size = self.calculate_per_size(q,p_minutes)
-        #构建卖出组合
+        #获取数据并计算每次卖出size
+        p_data = selector(dts,asset)
+        #根据size拆分order
+        p_size = self.calculate_per_size(q,p_data)
         size_array = np.tile([p_size],int(q/p_size))
-        idx = np.random(int(q/p_size))
-        size_array[idx] += q % p_size
-        # 生成卖出订单
-        p_orders = self.creator.create_order(asset, size_array)
-        # 根据 p_orders ---- 生成对应成交的ticker
-        p_transactions = [simulate_transaction(p_order,p_minutes,self.commission)
-                          for p_order in p_orders]
-        p_transaction_price = np.array([t.price for t in p_transactions])
+        size_array[ np.random(int(q/p_size))] += q % p_size
+        # 构建对应卖出订单并生成对应txn
+        p_orders = self.creator.simulate(asset, size_array,dts,'negative')
+        p_fee = self.commission.calculate_rate(asset,'negative',dts)
+        p_transactions = self.create_bulk_transactions(p_orders,p_fee)
+        #计算效率
+        p_uility = sum([order.amount for order in p_orders]) / q
+
         # 执行对应的买入算法
-        #获取买入标的的数据 c
-        c_minutes = self.creator._create_BarData(dts,c)
-        # 增加ticker shift
-        c_tickers = [pd.Timedelta(minutes='%dminutes'%self.delay) + t.ticker for t in p_transactions]
-        c_ticker_price = np.array([c_minutes[ticker] for ticker in c_tickers])
-        #计算买入数据基于价格比值
-        times = p_transaction_price / c_ticker_price
-        c_size = [np.floor(size * times) for size in size_array]
-        #构建对应买入订单
-        c_transactions = [create_transaction(c,c_size,c_price,c_ticker)
-                          for c_price, c_ticker in
-                          zip(c_ticker_price,c_tickers)]
-        return p_transactions,c_transactions
+        # c_data = self.creator._create_data(dts,c)
+        c_data = selector(dts,c)
+        # 切换之间存在时间差，默认以minutes为单位
+        c_tickers = [pd.Timedelta(minutes='%dminutes'%self.delay) + t._created_dt for t in p_transactions]
+        #根据ticker价格比值 --- 拆分订单
+        c_ticker_prices = np.array([c_data[ticker] for ticker in c_tickers])
+        p_transaction_prices = np.array([t.price for t in p_transactions])
+        times = p_transaction_prices / c_ticker_prices
+        c_sizes = [np.floor(size * times) for size in size_array]
+        #构建对应买入订单并生成对应txn
+        c_orders = self.creator.simulate(c, c_sizes,dts,'positive')
+        c_fee = self.commission_rate(c,'positive',dts)
+        c_transactions = self.create_bulk_transactions(c_orders,c_fee)
+        #计算效率
+        c_uility = sum([order.amount for order in c_orders]) / sum(c_sizes)
+        return (p_transactions,p_uility,c_transactions,c_uility)
 
 
 class TradingEngine(object):
@@ -252,39 +315,36 @@ class TradingEngine(object):
         self.internal = internal
         self.allocation = allocation
 
-    def _eval_consecutive_procesure(self,objs,dts):
+    def _eval_consecutive_procesure(self,items,dts):
         """
             针对一个pipeline算法，卖出 -- 买入
         :return:
         """
         tunnel  = self.internal.intern_tunnel
         p_func = partial(tunnel,dts = dts)
-
-        with Pool(processes=len(objs))as pool:
+        with Pool(processes=len(items))as pool:
             results = [pool.apply_async(p_func,*obj)
-                       for obj in objs]
-            txns = chain(*results)
-        return txns
+                       for obj in items]
+            #卖出订单，买入订单分开来
+            p_txns,p_uility,c_txns,c_uility = zip(*results)
+        return p_txns,p_uility,c_txns,c_uility
 
-    def _eval_simple_procesure(self,supplements,capital,dts):
+    def _eval_procesure(self,supplements,capital,dts):
         capital_mappings = self.allocation.compute(supplements.values(),capital)
-        p_func = partial(self.internal.creator.simulate_transaction(
-                                                                    dts = dts,
-                                                                    commission = self.commission))
+        p_func = partial(self.internal.interactive(dts = dts))
         with Pool(processes= len(supplements)) as pool:
             result = [pool.apply_async(p_func,asset,capital_mappings[asset])
                       for asset in supplements.values()]
-        transactions = chain(*result)
-        return transactions
+        # transaction , efficiency
+        transactions,uility = list(zip(*result))
+        return transactions , uility
 
-    def carry_out(self, engine, ledger):
+    def carry_out(self, simple_engine,ledger):
         """建立执行计划"""
-        objs, supplements, capital, dts = engine.execute_engine(ledger)
-        dual_txns = self._eval_consecutive_procesure(objs)
-        txns = self._eval_simple_procesure(supplements,capital,dts)
-        return dual_txns,txns
-
-    def evaluate_efficiency(self,capital,puts,dts):
-        """
-            根据标的追踪 --- 具体卖入订单根据volume计算成交率，买入订单根据成交额来计算资金利用率 --- 评估撮合引擎撮合的的效率
-        """
+        objs, supplements, capital, dts = simple_engine.execute_engine(ledger)
+        p_txns,p_uility,c_txns,c_uility = self._eval_consecutive_procesure(objs)
+        txns , uility = self._eval_procesure(supplements,capital,dts)
+        # 根据标的追踪 --- 具体卖入订单根据volume计算成交率，买入订单根据成交额来计算资金利用率 --- 评估撮合引擎撮合的的效率
+        uility_ratio = np.mean(p_uility + c_uility + uility)
+        transactions = p_txns + c_txns + txns
+        return transactions , uility_ratio

@@ -122,7 +122,7 @@ class DataPortal(object):
         all_assets = self.asset_finder.retrieve_all(asset_type)
         return all_assets
 
-    def get_dividends(self, sids, trading_days):
+    def get_dividends_for_sid(self, sid, trading_day):
         """
         splits --- divdends
 
@@ -134,24 +134,17 @@ class DataPortal(object):
         sid: int
             The asset whose stock dividends should be returned.
 
-        trading_days: pd.DatetimeIndex
-            The trading range.
+        trading_day: pd.DatetimeIndex
+            The trading day.
 
         Returns
         -------
-        list: A list of objects with all relevant attributes populated.
-        All timestamp fields are converted to pd.Timestamps.
+            equity divdends or cash divdends
         """
-        extra = set(sids) - set(self._divdends_cache)
-        if extra:
-            for sid in extra:
-                divdends = self.adjustment_reader.load_splits_for_sid(sid)
-                self._divdends_cache[sid] = divdends
-        cache  = keyfilter(lambda x : x in sids,self._splits_cache)
-        out = valmap(lambda x : x[x['pay_date'].isin(trading_days)] if x else x ,cache)
-        return out
+        divdends = self._adjustment_reader.load_divdend_for_sid(sid,trading_day)
+        return divdends
 
-    def get_stock_rights(self, sids, trading_days):
+    def get_rights_for_sid(self, sid, trading_day):
         """
         Returns all the stock dividends for a specific sid that occur
         in the given trading range.
@@ -161,28 +154,25 @@ class DataPortal(object):
         sid: int
             The asset whose stock dividends should be returned.
 
-        trading_days: pd.DatetimeIndex
-            The trading range.
+        trading_day: pd.DatetimeIndex
+            The trading dt.
 
         Returns
         -------
-        list: A list of objects with all relevant attributes populated.
-        All timestamp fields are converted to pd.Timestamps.
+            equity rights
         """
-        extra = set(sids) - set(self._rights_cache)
-        if extra:
-            for sid in extra:
-                rights = self.adjustment_reader.load_splits_for_sid(sid)
-                self._rights_cache[sid] = rights
-        #
-        cache  = keyfilter(lambda x : x in sids,self._rights_cache)
-        out = valmap(lambda x : x[x['pay_date'].isin(trading_days)] if x else x ,cache)
-        return out
+        rights = self._adjustment_reader.load_right_for_sid(sid,trading_day)
+        return rights
 
-    def get_equity_pctchange(self,dts,asset):
+    def get_equity_pct(self,dts,asset):
         assert asset.asset_type == 'equity',ValueError('only support equity for pctchange')
         pct = self._pricing_reader['daily'].get_pctchange(asset,dts)
         return pct
+
+    def get_prevalue(self,dts,asset,frequency):
+        pre_dts = self.trading_calendar._roll_forward(dts,1)
+        pre_value = self.get_spot_value(pre_dts,asset,frequency)
+        return pre_value
 
     def get_spot_value(self,dts,asset,frequency):
         spot_value = self._pricing_reader[frequency].get_spot_value(dts,asset)

@@ -9,9 +9,6 @@ import numpy as np ,pandas as pd,datetime
 from toolz import partition_all
 from functools import partial
 
-from gateWay.driver.trading_calendar import TradingCalendar
-from finance.ledger import  Ledger
-
 
 class MetricsTracker(object):
     """
@@ -42,16 +39,19 @@ class MetricsTracker(object):
     )
 
     def __init__(self,
+                 ledger,
                  first_session,
                  last_session,
+                 trading_calendar,
                  capital_base,
                  metrics,
                  ):
-        self._sessions = sessions = TradingCalendar().sessions_in_range(
+        self._sessions  = trading_calendar.sessions_in_range(
             first_session,
             last_session,
         )
-        self._ledger = Ledger(sessions, capital_base)
+        self._ledger = ledger
+
         self._capital_base = capital_base
 
         self._first_session = first_session

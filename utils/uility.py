@@ -1,6 +1,28 @@
-# -*- coding: utf-8  -*-
+# !/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Mar 12 15:37:47 2019
 
-import os,inspect
+@author: python
+"""
+import os,inspect , numpy as np
+
+def vectorized_is_element(array, choices):
+    """
+    Check if each element of ``array`` is in choices.
+
+    Parameters
+    ----------
+    array : np.ndarray
+    choices : object
+        Object implementing __contains__.
+
+    Returns
+    -------
+    was_element : np.ndarray[bool]
+        Array indicating whether each element of ``array`` was in ``choices``.
+    """
+    return np.vectorize(choices.__contains__, otypes=[bool])(array)
 
 def getargspec(f):
     full_argspec = inspect.getfullargspec(f)

@@ -133,28 +133,23 @@ class Position(object):
         """
         if self.asset == txn.asset:
             raise Exception('transaction asset must same with position asset')
-        txn_cost = self.commission.calculate(txn)
+        capital = txn.amount * txn.price
         total_amount = txn.amount + self.amount
         if total_amount < 0 :
             raise Exception('put action is not allowed in china')
         else:
-            total_cost = txn.amount * txn.price + self.amount * self.cost_basis
+            txn_cost = self.commission.calculate(txn)
+            # 只要产生交易 -- 成本就是增加的
+            total_cost = self.amount * self.cost_basis + txn_cost + capital
             try:
                 self.cost_basis = total_cost / total_amount
                 self.amount = total_amount
-                self._adjust_cost_basis_for_commission(txn_cost)
-                txn_cash = txn.amount * txn.price
             except ZeroDivisionError :
                 """ 仓位结清 , 当持仓为0此时cost_basis为交易成本需要剔除 , _closed为True"""
                 self.cost_basis = txn.price - self.cost_basis - txn / txn.amount
                 self._closed = True
-                txn_cash = txn.amount * txn.price + txn_cost
+            txn_cash = capital - txn_cost
         return txn_cash
-
-    def _adjust_cost_basis_for_commission(self,txn_cost):
-        prev_cost = self.amount * self.cost_basis
-        new_cost = prev_cost + txn_cost
-        self.cost_basis = new_cost / self.amount
 
     def __repr__(self):
         template = "asset :{asset} , amount:{amount},cost_basis:{cost_basis}"

@@ -23,6 +23,7 @@ SESSION_END = 2
 MINUTE_END = 3
 BEFORE_TRADING_START_BAR = 4
 
+
 class AlgorithmSimulator(object):
 
     EMISSION_TO_PERF_KEY_MAP = {
@@ -37,7 +38,7 @@ class AlgorithmSimulator(object):
                  restriction,
                  benchmark):
         # ==============
-        # Algo Setup
+        # Setup Algo
         # ==============
         self.algo = algo
         # ==============
@@ -116,10 +117,11 @@ class AlgorithmSimulator(object):
         algo = self.algo
         ledger = algo.ledger
         metrics_tracker = algo.metrics_tracker
+        broker = self.algo.broker
 
-        def once_a_day(dt):
+        def once_a_day():
             #生成交易订单
-            txns = MatchUp.carry_out(algo.engine,ledger)
+            txns = broker.carry_out(algo.engine,ledger)
             #处理交易订单
             ledger.process_transaction(txns)
 
@@ -138,6 +140,7 @@ class AlgorithmSimulator(object):
             callback（回调，* args，** kwds ）接受任意的回调函数和参数，并将其添加到回调堆栈中。
             """
             stack.callback(on_exit)
+
             stack.enter_context(ZiplineAPI(self.algo))
 
             metrics_tracker.handle_start_of_simulation(self.benchmark)
@@ -149,7 +152,7 @@ class AlgorithmSimulator(object):
                     # algo.before_trading_start(self.current_data)
                     metrics_tracker.handle_market_open(dt)
                 elif action == SESSION_START:
-                    once_a_day(dt)
+                    once_a_day()
                 elif action == SESSION_END:
                     # End of the session.
                     yield daily_perf_metrics

@@ -1,8 +1,25 @@
-import six , datetime ,pandas as pd ,pytz
+# !/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Mar 12 15:37:47 2019
+
+@author: python
+"""
+import numpy as np, datetime ,pandas as pd ,pytz
 
 MAX_MONTH_RANGE = 23
 MAX_WEEK_RANGE = 5
 
+
+def locate_pos(price, minutes, direction):
+    if minutes.min() <= price <= minutes.max():
+        try:
+            loc = minutes.values().index(price)
+        except ValueError:
+            idx = np.searchsorted(minutes.values(), price)
+            # 当价格大于卖出价格才会成交，价格低于买入价格才会成交
+            loc = idx if direction == 'positive' else idx - 1
+        return price, minutes.index[loc]
 
 def parse_date_str_series(format_str, tz, date_str_series):
     tz_str = str(tz)

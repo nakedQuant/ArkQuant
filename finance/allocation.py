@@ -5,52 +5,66 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-from abc import ABC,abstractmethod
-from gateWay.driver.bar_reader import AssetSessionReader
+from abc import ABC , abstractmethod
+from multiprocessing import Pool
+from toolz import valmap
 
 
 class CapitalManagement(ABC):
     """
         distribution base class
     """
-    @property
-    def bundles(self):
-        return AssetSessionReader()
-
-    def handle_data(self,sids,dt):
-        adjust_arrays = self.bundles.load_raw_arrays(
-                                                        dt,
-                                                        self.window,
-                                                        ['open','high','low','close','volume'],
-                                                        sids
-                                                    )
-        return adjust_arrays
-
     @abstractmethod
     def compute(self,assets,cash):
         raise NotImplementedError
 
 
-class Average(CapitalManagement):
+class Equal(CapitalManagement):
 
-    @staticmethod
-    def compute(assets,cash):
-        per_cash = cash / len(assets)
-        return {event.sid : per_cash for event in assets}
+    def compute(self,assets,cash):
+        mappings = {asset:cash / len(assets) for asset in assets}
+        return mappings
 
 
-class Turtle(CapitalManagement):
+class Delta(CapitalManagement):
     """
-        基于波动率测算持仓比例 --- 基于策略形成的净值的波动性分配比例
-        --- 收益率的sharp_ratio
+        基于波动率测算持仓比例 --- 基于策略形成的净值的波动性分配比例 --- 类似于海龟算法
     """
-    def __init__(self,window):
+    def __init__(self,
+                 delta_func,
+                 data_portal,
+                 window,
+                 frequency = 'daily'):
+        # delta_func --- (asset,res)
+        self._func = delta_func
+        self.data_portal = data_portal
         self._window = window
+        self.frequency = frequency
 
     @property
     def window(self):
         return self._window
 
-    def compute(self,dt,assets,cash):
+    def handle_data(self,assets,dt):
+        his = self.data_portal.get_history_window(
+                               assets,
+                               dt,
+                               self.window,
+                               ['open', 'high', 'low', 'close', 'volume'],
+                               self.frequency
+                                                            )
+        return his
+
+    def compute(self,assets,cash,dts):
         """基于数据的波动性以及均值"""
-        raise NotImplementedError
+        datas = self.handle_data(assets,dts)
+        with Pool(processes = len(assets)) as pool:
+            res = [pool.apply_async(self._func(datas[asset])) for asset in assets]
+            assets,values = list(zip(*res))
+
+
+class Kelly(CapitalManagement):
+
+    def compute(self,assets,cash):
+
+        raise NotImplementedError('kelly 基于策略的胜率进行分配')
