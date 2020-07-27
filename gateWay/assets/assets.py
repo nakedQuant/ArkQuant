@@ -1,9 +1,17 @@
-# -*- coding:utf-8 -*-
+# !/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Mar 12 15:37:47 2019
 
-import pandas as pd, sqlalchemy as sa,json
+@author: python
+"""
+
+import pandas as pd, numpy as np ,sqlalchemy as sa,json
 from sqlalchemy import MetaData,select
+from gateWay.driver.db_schema import  engine
 from gateWay.driver.bar_reader import AssetSessionReader
 from gateWay.driver.tools import  _parse_url
+from gateWay.driver.calendar.trading_calendar import calendar
 
 
 class Asset(object):
@@ -18,12 +26,12 @@ class Asset(object):
         sqlalchemy engine
     """
     def __init__(self,
-                 sid,
-                 engine):
+                 sid):
         self.sid = sid
         self.engine = engine
         self._retrieve_asset_mappings()
         self._supplementary_for_asset()
+        self.trading_calendar = calendar
 
     def _retrieve_asset_mappings(self):
         table = self.metadata.tables['asset_router']
@@ -80,6 +88,13 @@ class Asset(object):
             active = self.first_trade <= session_label
         return active
 
+    def tag(self,name):
+        """
+        :param name: pipeline name which simulate asset
+        :return: property
+        """
+        self._tag = name
+
     def __repr__(self):
         if self.symbol:
             return '%s(%d [%s])' % (type(self).__name__, self.sid, self.symbol)
@@ -133,12 +148,9 @@ class Equity(Asset):
     _name = 'equity'
 
     def __init__(self,
-                 sid,
-                 engine):
+                 sid):
         super(Equity,self).__init__(sid,engine)
         self._reader = AssetSessionReader()
-        self._proxy_restrictions = { r._name : r
-                                     for r in [RestrictedBid,RestrictedPrice]}
         self._retrieve_asset_mappings()
         self._supplementary_for_asset()
 
@@ -169,13 +181,27 @@ class Equity(Asset):
             self.setattr(k,v)
 
     def restricted(self,dt):
-        mechanism = self._proxy_restrictions['price'].is_restricted(self,dt)
+
+        """
+            科创板股票上市后的前5个交易日不设涨跌幅限制，从第六个交易日开始设置20%涨跌幅限制
+        """
+        end_dt = self.trading_calendar._roll_forward(dt,self._restricted_window)
+
+        if self.first_traded == dt :
+            _limit = np.inf if self.sid.startwith('688') else 0.44
+        elif self.first_traded <= end_dt:
+            _limit = np.inf if self.sid.startwith('688') else 0.1
+        else:
+            _limit = 0.2 if self.sid.startwith('688') else 0.1
+        return _limit
         return mechanism
 
     @property
     def bid_mechansim(self):
-        _mechanism = self._proxy_restrictions['bid'].is_restricted(self)
-        return _mechanism
+        """在临时停牌阶段，投资者可以继续申报也可以撤销申报，并且申报价格不受2%的报价限制。
+            复牌时，对已经接受的申报实行集合竞价撮合交易，申报价格最小变动单位为0.01"""
+        bid_mechanism = 0.02 if self.sid.startwith('688') else None
+        return bid_mechanism
 
     def is_active(self,session_label):
         active = self._is_active(session_label)
@@ -194,6 +220,10 @@ class Equity(Asset):
         text = json.loads(text)
         return text['data']
 
+    def __setattr__(self, key, value):
+
+        raise NotImplementedError()
+
 
 class Convertible(Asset):
     """
@@ -210,8 +240,7 @@ class Convertible(Asset):
     _name = 'convertible'
 
     def __init__(self,
-                 bond_id,
-                 engine):
+                 bond_id):
         super(Convertible,self)._init__(bond_id,engine)
         self._retrieve_asset_mappings()
         self._supplementary_for_asset()
@@ -253,6 +282,9 @@ class Convertible(Asset):
         active = self._is_active(dt)
         return active
 
+    def __setattr__(self, key, value):
+        raise NotImplementedError()
+
 
 class Fund(Asset):
     """
@@ -263,8 +295,7 @@ class Fund(Asset):
     _name = 'fund'
 
     def __init__(self,
-                 fund_id,
-                 engine):
+                 fund_id):
         super(Fund,self).__init__(fund_id,engine)
         self._retrieve_asset_mappings()
         self._supplementary_for_asset()
@@ -282,6 +313,9 @@ class Fund(Asset):
     def is_active(self,session_label):
         active = self._is_active(session_label)
         return active
+
+    def __setattr__(self, key, value):
+        raise NotImplementedError()
 
 
 __all__ = [Equity,Convertible,Fund]

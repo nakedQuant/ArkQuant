@@ -9,7 +9,7 @@ import numpy as np,pandas as pd,sqlalchemy as sa
 from sqlalchemy import and_
 from gateWay.driver.db_schema import  metadata
 from gateWay.driver.tools import  unpack_df_to_component_dict
-from gateWay.driver.trading_calendar import  TradingCalendar
+from gateWay.driver.calendar.trading_calendar import  TradingCalendar
 
 ADJUSTMENT_COLUMNS_DTYPE = {
                 'sid_bonus':int,

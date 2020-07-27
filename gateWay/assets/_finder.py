@@ -104,7 +104,7 @@ class AssetFinder(object):
         indexs = raw['data']['diff']
         return indexs
 
-    def retrieve_all(self,asset_type):
+    def retrieve_all(self):
         """
         Retrieve all assets in `sids`.
 
@@ -127,11 +127,11 @@ class AssetFinder(object):
         SidsNotFound
             When a requested sid is not found and default_none=False.
         """
-        if asset_type:
-            assets = valmap(lambda x : x._name == asset_type,
-                            self._asset_type_cache)
-        else:
-            assets = self._asset_type_cache
+        return self._asset_type_cache
+
+    def retrieve_type_assets(self,category):
+        assets = valmap(lambda x: x._name == category,
+                        self._asset_type_cache)
         return assets
 
     def group_by_type(self, sids):

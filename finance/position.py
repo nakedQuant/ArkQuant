@@ -84,8 +84,7 @@ class Position(object):
                  cost_basis = 0.0,
                  last_sync_price = 0.0,
                  last_sync_date = None,
-                 multiplier = 3,
-                 reason = None):
+                 multiplier = 3):
 
         inner = InnerPosition(
                 asset = asset,
@@ -97,12 +96,11 @@ class Position(object):
         object.__setattr__(self,'inner_position',inner)
         object.__setattr__(self,'protocol_position',Position(inner))
         self.commission = Commission(multiplier)
-        self._created_name = reason
         self._closed = False
 
     @property
-    def name(self):
-        return self._created_name
+    def tag(self):
+        return self.asset._tag
 
     def __getattr__(self, item):
         return getattr(self.inner_position,item)

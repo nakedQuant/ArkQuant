@@ -13,180 +13,93 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import division
-
-import math
-import pandas as pd,numpy as np
-from math import pow
-from scipy import stats, optimize
-from six import iteritems
-from sys import float_info
-
-from .utils import nanmean, nanstd, nanmin, up, down, roll, rolling_window
-from .periods import ANNUALIZATION_FACTORS, APPROX_BDAYS_PER_YEAR
-from .periods import DAILY, WEEKLY, MONTHLY, QUARTERLY, YEARLY
+import math , pandas as pd , numpy as np
+from scipy import stats
+from itertools import groupby
+from scipy.stats import linregress
+from collections import OrderedDict
 
 
-def _create_unary_vectorized_roll_function(function):
-    def unary_vectorized_roll(arr, window, out=None, **kwargs):
-        """
-        Computes the {human_readable} measure over a rolling window.
 
-        Parameters
-        ----------
-        arr : array-like
-            The array to compute the rolling {human_readable} over.
-        window : int
-            Size of the rolling window in terms of the periodicity of the data.
-        out : array-like, optional
-            Array to use as output buffer.
-            If not passed, a new array will be created.
-        **kwargs
-            Forwarded to :func:`~empyrical.{name}`.
 
-        Returns
-        -------
-        rolling_{name} : array-like
-            The rolling {human_readable}.
-        """
-        allocated_output = out is None
+def cagr(equity, periods=252):
+    """
+    Calculates the Compound Annual Growth Rate (CAGR)
+    for the portfolio, by determining the number of years
+    and then creating a compound annualised rate based
+    on the total return.
 
-        if len(arr):
-            out = function(
-                rolling_window(_flatten(arr), min(len(arr), window)).T,
-                out=out,
-                **kwargs
-            )
-        else:
-            out = np.empty(0, dtype='float64')
+    Parameters:
+    equity - A pandas Series representing the equity curve.
+    periods - Daily (252), Hourly (252*6.5), Minutely(252*6.5*60) etc.
+    """
+    years = len(equity) / float(periods)
+    return (equity[-1] ** (1.0 / years)) - 1.0
 
-        if allocated_output and isinstance(arr, pd.Series):
-            out = pd.Series(out, index=arr.index[-len(out):])
 
-        return out
+def sharpe_ratio(returns, periods=252):
+    """
+    Create the Sharpe ratio for the strategy, based on a
+    benchmark of zero (i.e. no risk-free rate information).
 
-    unary_vectorized_roll.__doc__ = unary_vectorized_roll.__doc__.format(
-        name=function.__name__,
-        human_readable=function.__name__.replace('_', ' '),
+    Parameters:
+    returns - A pandas Series representing period percentage returns.
+    periods - Daily (252), Hourly (252*6.5), Minutely(252*6.5*60) etc.
+    """
+    return np.sqrt(periods) * (np.mean(returns)) / np.std(returns)
+
+
+def sortino_ratio(returns, periods=252):
+    """
+    Create the Sortino ratio for the strategy, based on a
+    benchmark of zero (i.e. no risk-free rate information).
+
+    Parameters:
+    returns - A pandas Series representing period percentage returns.
+    periods - Daily (252), Hourly (252*6.5), Minutely(252*6.5*60) etc.
+    """
+    return np.sqrt(periods) * (np.mean(returns)) / np.std(returns[returns < 0])
+
+
+def maxdown(returns):
+    """
+    Calculate the largest peak-to-trough drawdown of the equity curve
+    as well as the duration of the drawdown. Requires that the
+    pnl_returns is a pandas Series.
+
+    Parameters:
+    equity - A pandas Series representing period percentage returns.
+
+    Returns:
+    drawdown, drawdown_max, duration
+    """
+    # Calculate the cumulative returns curve
+    # and set up the High Water Mark
+    idx = returns.index
+    hwm = np.zeros(len(idx))
+
+    # Create the high water mark
+    for t in range(1, len(idx)):
+        hwm[t] = max(hwm[t - 1], returns.ix[t])
+
+    # Calculate the drawdown and duration statistics
+    perf = pd.DataFrame(index=idx)
+    perf["Drawdown"] = (hwm - returns) / hwm
+    perf["Drawdown"].ix[0] = 0.0
+    perf["DurationCheck"] = np.where(perf["Drawdown"] == 0, 0, 1)
+    duration = max(
+        sum(1 for i in g if i == 1)
+        for k, g in groupby(perf["DurationCheck"])
     )
-
-    return unary_vectorized_roll
-
-
-def _create_binary_vectorized_roll_function(function):
-    def binary_vectorized_roll(lhs, rhs, window, out=None, **kwargs):
-        """
-        Computes the {human_readable} measure over a rolling window.
-
-        Parameters
-        ----------
-        lhs : array-like
-            The first array to pass to the rolling {human_readable}.
-        rhs : array-like
-            The second array to pass to the rolling {human_readable}.
-        window : int
-            Size of the rolling window in terms of the periodicity of the data.
-        out : array-like, optional
-            Array to use as output buffer.
-            If not passed, a new array will be created.
-        **kwargs
-            Forwarded to :func:`~empyrical.{name}`.
-
-        Returns
-        -------
-        rolling_{name} : array-like
-            The rolling {human_readable}.
-        """
-        allocated_output = out is None
-
-        if window >= 1 and len(lhs) and len(rhs):
-            out = function(
-                rolling_window(_flatten(lhs), min(len(lhs), window)).T,
-                rolling_window(_flatten(rhs), min(len(rhs), window)).T,
-                out=out,
-                **kwargs
-            )
-        elif allocated_output:
-            out = np.empty(0, dtype='float64')
-        else:
-            out[()] = np.nan
-
-        if allocated_output:
-            if out.ndim == 1 and isinstance(lhs, pd.Series):
-                out = pd.Series(out, index=lhs.index[-len(out):])
-            elif out.ndim == 2 and isinstance(lhs, pd.Series):
-                out = pd.DataFrame(out, index=lhs.index[-len(out):])
-        return out
-
-    binary_vectorized_roll.__doc__ = binary_vectorized_roll.__doc__.format(
-        name=function.__name__,
-        human_readable=function.__name__.replace('_', ' '),
-    )
-
-    return binary_vectorized_roll
+    return perf["Drawdown"], np.max(perf["Drawdown"]), duration
 
 
-def _flatten(arr):
-    return arr if not isinstance(arr, pd.Series) else arr.values
-
-
-def _adjust_returns(returns, adjustment_factor):
+def rsquared(x, y):
     """
-    Returns the returns series adjusted by adjustment_factor. Optimizes for the
-    case of adjustment_factor being 0 by returning returns itself, not a copy!
-
-    Parameters
-    ----------
-    returns : pd.Series or np.ndarray
-    adjustment_factor : pd.Series or np.ndarray or float or int
-
-    Returns
-    -------
-    adjusted_returns : array-like
+    Return R^2 where x and y are array-like.
     """
-    if isinstance(adjustment_factor, (float, int)) and adjustment_factor == 0:
-        return returns
-    return returns - adjustment_factor
-
-
-def annualization_factor(period, annualization):
-    """
-    Return annualization factor from period entered or if a custom
-    value is passed in.
-
-    Parameters
-    ----------
-    period : str, optional
-        Defines the periodicity of the 'returns' data for purposes of
-        annualizing. Value ignored if `annualization` parameter is specified.
-        Defaults are::
-
-            'monthly':12
-            'weekly': 52
-            'daily': 252
-
-    annualization : int, optional
-        Used to suppress default values available in `period` to convert
-        returns into annual returns. Value should be the annual frequency of
-        `returns`.
-
-    Returns
-    -------
-    annualization_factor : float
-    """
-    if annualization is None:
-        try:
-            factor = ANNUALIZATION_FACTORS[period]
-        except KeyError:
-            raise ValueError(
-                "Period cannot be '{}'. "
-                "Can be '{}'.".format(
-                    period, "', '".join(ANNUALIZATION_FACTORS.keys())
-                )
-            )
-    else:
-        factor = annualization
-    return factor
+    slope, intercept, r_value, p_value, std_err = linregress(x, y)
+    return r_value**2
 
 
 def simple_returns(prices):
@@ -208,7 +121,7 @@ def simple_returns(prices):
     if isinstance(prices, (pd.DataFrame, pd.Series)):
         out = prices.pct_change().iloc[1:]
     else:
-        # Assume np.ndarray
+        # Assume np.ndarray np.diff ( back -before)
         out = np.diff(prices, axis=0)
         np.divide(out, prices[:-1], out=out)
 
@@ -245,6 +158,10 @@ def cum_returns(returns, starting_value=0, out=None):
     cumulative_returns : array-like
         Series of cumulative returns.
     """
+
+    # Cummulative Returns
+    # cum_returns_s = np.exp(np.log(1 + returns_s).cumsum())
+
     if len(returns) < 1:
         return returns.copy()
 
@@ -369,6 +286,10 @@ def max_drawdown(returns, out=None):
     -----
     See https://en.wikipedia.org/wiki/Drawdown_(economics) for more details.
     """
+
+    # Drawdown, max drawdown, max drawdown duration
+    # dd_s, max_dd, dd_dur = perf.create_drawdowns(cum_returns_s)
+
     allocated_output = out is None
     if allocated_output:
         out = np.empty(returns.shape[1:])
@@ -401,7 +322,7 @@ def max_drawdown(returns, out=None):
     return out
 
 
-roll_max_drawdown = _create_unary_vectorized_roll_function(max_drawdown)
+# roll_max_drawdown = _create_unary_vectorized_roll_function(max_drawdown)
 
 
 def annual_return(returns, period=DAILY, annualization=None):
@@ -887,7 +808,7 @@ def downside_risk(returns,
     return out
 
 
-roll_downsize_risk = _create_unary_vectorized_roll_function(downside_risk)
+# roll_downsize_risk = _create_unary_vectorized_roll_function(downside_risk)
 
 
 def excess_sharpe(returns, factor_returns, out=None):
@@ -939,66 +860,7 @@ def excess_sharpe(returns, factor_returns, out=None):
     return out
 
 
-roll_excess_sharpe = _create_binary_vectorized_roll_function(excess_sharpe)
-
-
-def _to_pandas(ob):
-    """Convert an array-like to a pandas object.
-
-    Parameters
-    ----------
-    ob : array-like
-        The object to convert.
-
-    Returns
-    -------
-    pandas_structure : pd.Series or pd.DataFrame
-        The correct structure based on the dimensionality of the data.
-    """
-    if isinstance(ob, (pd.Series, pd.DataFrame)):
-        return ob
-
-    if ob.ndim == 1:
-        return pd.Series(ob)
-    elif ob.ndim == 2:
-        return pd.DataFrame(ob)
-    else:
-        raise ValueError(
-            'cannot convert array of dim > 2 to a pandas structure',
-        )
-
-
-def _aligned_series(*many_series):
-    """
-    Return a new list of series containing the data in the input series, but
-    with their indices aligned. NaNs will be filled in for missing values.
-
-    Parameters
-    ----------
-    *many_series
-        The series to align.
-
-    Returns
-    -------
-    aligned_series : iterable[array-like]
-        A new list of series containing the data in the input series, but
-        with their indices aligned. NaNs will be filled in for missing values.
-
-    """
-    head = many_series[0]
-    tail = many_series[1:]
-    n = len(head)
-    if (isinstance(head, np.ndarray) and
-            all(len(s) == n and isinstance(s, np.ndarray) for s in tail)):
-        # optimization: ndarrays of the same length are already aligned
-        return many_series
-
-    # dataframe has no ``itervalues``
-    return (
-        v
-        for _, v in iteritems(pd.concat(map(_to_pandas, many_series), axis=1))
-    )
-
+# roll_excess_sharpe = _create_binary_vectorized_roll_function(excess_sharpe)
 
 def alpha_beta(returns,
                factor_returns,
@@ -1671,210 +1533,101 @@ Tail Risks: Application to Stress Testing`
     return heuristic
 
 
-def gpd_risk_estimates(returns, var_p=0.01):
-    """Estimate VaR and ES using the Generalized Pareto Distribution (GPD)
+
+
+def roll(*args, **kwargs):
+    """
+    Calculates a given statistic across a rolling time period.
 
     Parameters
     ----------
     returns : pd.Series or np.ndarray
         Daily returns of the strategy, noncumulative.
         - See full explanation in :func:`~empyrical.stats.cum_returns`.
-    var_p : float
-        The percentile to use for estimating the VaR and ES
+    factor_returns (optional): float / series
+        Benchmark return to compare returns against.
+    function:
+        the function to run for each rolling window.
+    window (keyword): int
+        the number of periods included in each calculation.
+    (other keywords): other keywords that are required to be passed to the
+        function in the 'function' argument may also be passed in.
 
     Returns
     -------
-    [threshold, scale_param, shape_param, var_estimate, es_estimate]
-        : list[float]
-        threshold - the threshold use to cut off exception tail losses
-        scale_param - a parameter (often denoted by sigma, capturing the
-            scale, related to variance)
-        shape_param - a parameter (often denoted by xi, capturing the shape or
-            type of the distribution)
-        var_estimate - an estimate for the VaR for the given percentile
-        es_estimate - an estimate for the ES for the given percentile
+    np.ndarray, pd.Series
+        depends on input type
+        ndarray(s) ==> ndarray
+        Series(s) ==> pd.Series
 
-    Note
-    ----
-    seealso::
-    `An Application of Extreme Value Theory for
-Measuring Risk <https://link.springer.com/article/10.1007/s10614-006-9025-7>`
-        A paper describing how to use the Generalized Pareto
-        Distribution to estimate VaR and ES.
+        A Series or ndarray of the results of the stat across the rolling
+        window.
+
     """
-    if len(returns) < 3:
-        result = np.zeros(5)
-        if isinstance(returns, pd.Series):
-            result = pd.Series(result)
-        return result
-    return gpd_risk_estimates_aligned(*_aligned_series(returns, var_p))
+    func = kwargs.pop('function')
+    window = kwargs.pop('window')
+    if len(args) > 2:
+        raise ValueError("Cannot pass more than 2 return sets")
+
+    if len(args) == 2:
+        if not isinstance(args[0], type(args[1])):
+            raise ValueError("The two returns arguments are not the same.")
+
+    if isinstance(args[0], np.ndarray):
+        return _roll_ndarray(func, window, *args, **kwargs)
+    return _roll_pandas(func, window, *args, **kwargs)
 
 
-def gpd_risk_estimates_aligned(returns, var_p=0.01):
-    """Estimate VaR and ES using the Generalized Pareto Distribution (GPD)
+def up(returns, factor_returns, **kwargs):
+    """
+    Calculates a given statistic filtering only positive factor return periods.
 
     Parameters
     ----------
     returns : pd.Series or np.ndarray
         Daily returns of the strategy, noncumulative.
         - See full explanation in :func:`~empyrical.stats.cum_returns`.
-    var_p : float
-        The percentile to use for estimating the VaR and ES
+    factor_returns (optional): float / series
+        Benchmark return to compare returns against.
+    function:
+        the function to run for each rolling window.
+    (other keywords): other keywords that are required to be passed to the
+        function in the 'function' argument may also be passed in.
 
     Returns
     -------
-    [threshold, scale_param, shape_param, var_estimate, es_estimate]
-        : list[float]
-        threshold - the threshold use to cut off exception tail losses
-        scale_param - a parameter (often denoted by sigma, capturing the
-            scale, related to variance)
-        shape_param - a parameter (often denoted by xi, capturing the shape or
-            type of the distribution)
-        var_estimate - an estimate for the VaR for the given percentile
-        es_estimate - an estimate for the ES for the given percentile
-
-    Note
-    ----
-    seealso::
-    `An Application of Extreme Value Theory for
-Measuring Risk <https://link.springer.com/article/10.1007/s10614-006-9025-7>`
-        A paper describing how to use the Generalized Pareto
-        Distribution to estimate VaR and ES.
+    Same as the return of the function
     """
-    result = np.zeros(5)
-    if not len(returns) < 3:
-
-        DEFAULT_THRESHOLD = 0.2
-        MINIMUM_THRESHOLD = 0.000000001
-        returns_array = pd.Series(returns).as_matrix()
-        flipped_returns = -1 * returns_array
-        losses = flipped_returns[flipped_returns > 0]
-        threshold = DEFAULT_THRESHOLD
-        finished = False
-        scale_param = 0
-        shape_param = 0
-        while not finished and threshold > MINIMUM_THRESHOLD:
-            losses_beyond_threshold = \
-                losses[losses >= threshold]
-            param_result = \
-                gpd_loglikelihood_minimizer_aligned(losses_beyond_threshold)
-            if (param_result[0] is not False and
-                    param_result[1] is not False):
-                scale_param = param_result[0]
-                shape_param = param_result[1]
-                var_estimate = gpd_var_calculator(threshold, scale_param,
-                                                  shape_param, var_p,
-                                                  len(losses),
-                                                  len(losses_beyond_threshold))
-                # non-negative shape parameter is required for fat tails
-                # non-negative VaR estimate is required for loss of some kind
-                if (shape_param > 0 and var_estimate > 0):
-                    finished = True
-            if (not finished):
-                threshold = threshold / 2
-        if (finished):
-            es_estimate = gpd_es_calculator(var_estimate, threshold,
-                                            scale_param, shape_param)
-            result = np.array([threshold, scale_param, shape_param,
-                               var_estimate, es_estimate])
-    if isinstance(returns, pd.Series):
-        result = pd.Series(result)
-    return result
+    func = kwargs.pop('function')
+    returns = returns[factor_returns > 0]
+    factor_returns = factor_returns[factor_returns > 0]
+    return func(returns, factor_returns, **kwargs)
 
 
-def gpd_es_calculator(var_estimate, threshold, scale_param,
-                      shape_param):
-    result = 0
-    if ((1 - shape_param) != 0):
-        # this formula is from Gilli and Kellezi pg. 8
-        var_ratio = (var_estimate/(1 - shape_param))
-        param_ratio = ((scale_param - (shape_param * threshold)) /
-                       (1 - shape_param))
-        result = var_ratio + param_ratio
-    return result
+def down(returns, factor_returns, **kwargs):
+    """
+    Calculates a given statistic filtering only negative factor return periods.
 
+    Parameters
+    ----------
+    returns : pd.Series or np.ndarray
+        Daily returns of the strategy, noncumulative.
+        - See full explanation in :func:`~empyrical.stats.cum_returns`.
+    factor_returns (optional): float / series
+        Benchmark return to compare returns against.
+    function:
+        the function to run for each rolling window.
+    (other keywords): other keywords that are required to be passed to the
+        function in the 'function' argument may also be passed in.
 
-def gpd_var_calculator(threshold, scale_param, shape_param,
-                       probability, total_n, exceedance_n):
-    result = 0
-    if (exceedance_n > 0 and shape_param > 0):
-        # this formula is from Gilli and Kellezi pg. 12
-        param_ratio = scale_param / shape_param
-        prob_ratio = (total_n/exceedance_n) * probability
-        result = threshold + (param_ratio *
-                              (pow(prob_ratio, -shape_param) - 1))
-    return result
-
-
-def gpd_loglikelihood_minimizer_aligned(price_data):
-    result = [False, False]
-    DEFAULT_SCALE_PARAM = 1
-    DEFAULT_SHAPE_PARAM = 1
-    if (len(price_data) > 0):
-        gpd_loglikelihood_lambda = \
-            gpd_loglikelihood_factory(price_data)
-        optimization_results = \
-            optimize.minimize(gpd_loglikelihood_lambda,
-                              [DEFAULT_SCALE_PARAM,
-                               DEFAULT_SHAPE_PARAM],
-                              method='Nelder-Mead')
-        if optimization_results.success:
-            resulting_params = optimization_results.x
-            if len(resulting_params) == 2:
-                result[0] = resulting_params[0]
-                result[1] = resulting_params[1]
-    return result
-
-
-def gpd_loglikelihood_factory(price_data):
-    return lambda params: gpd_loglikelihood(params, price_data)
-
-
-def gpd_loglikelihood(params, price_data):
-    if (params[1] != 0):
-        return -gpd_loglikelihood_scale_and_shape(params[0],
-                                                  params[1],
-                                                  price_data)
-    else:
-        return -gpd_loglikelihood_scale_only(params[0], price_data)
-
-
-def gpd_loglikelihood_scale_and_shape_factory(price_data):
-    # minimize a function of two variables requires a list of params
-    # we are expecting the lambda below to be called as follows:
-    # parameters = [scale, shape]
-    # the final outer negative is added because scipy only minimizes
-    return lambda params: \
-        -gpd_loglikelihood_scale_and_shape(params[0],
-                                           params[1],
-                                           price_data)
-
-
-def gpd_loglikelihood_scale_and_shape(scale, shape, price_data):
-    n = len(price_data)
-    result = -1 * float_info.max
-    if (scale != 0):
-        param_factor = shape / scale
-        if (shape != 0 and param_factor >= 0 and scale >= 0):
-            result = ((-n * np.log(scale)) -
-                      (((1 / shape) + 1) *
-                       (np.log((shape / scale * price_data) + 1)).sum()))
-    return result
-
-
-def gpd_loglikelihood_scale_only_factory(price_data):
-    # the negative is added because scipy only minimizes
-    return lambda scale: \
-        -gpd_loglikelihood_scale_only(scale, price_data)
-
-
-def gpd_loglikelihood_scale_only(scale, price_data):
-    n = len(price_data)
-    data_sum = price_data.sum()
-    result = -1 * float_info.max
-    if (scale >= 0):
-        result = ((-n*np.log(scale)) - (data_sum/scale))
-    return result
+    Returns
+    -------
+    Same as the return of the 'function'
+    """
+    func = kwargs.pop('function')
+    returns = returns[factor_returns < 0]
+    factor_returns = factor_returns[factor_returns < 0]
+    return func(returns, factor_returns, **kwargs)
 
 
 def up_capture(returns, factor_returns, **kwargs):
@@ -2163,9 +1916,6 @@ FACTOR_STAT_FUNCS = [
     down_capture
 ]
 
-from collections import OrderedDict
-import pandas as pd
-
 
 def perf_attrib(returns,
                 positions,
@@ -2324,579 +2074,3 @@ def compute_exposures(positions, factor_loadings):
     """
     risk_exposures = factor_loadings.multiply(positions, axis='rows')
     return risk_exposures.groupby(level='dt').sum()
-
-#
-# Copyright 2018 Quantopian, Inc.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-from datetime import datetime
-from functools import wraps
-from os import makedirs, environ
-from os.path import expanduser, join, getmtime, isdir
-import errno
-import warnings
-
-import numpy as np
-from numpy.lib.stride_tricks import as_strided
-import pandas as pd
-from pandas.tseries.offsets import BDay
-try:
-    from pandas_datareader import data as web
-except ImportError:
-    msg = ("Unable to import pandas_datareader. Suppressing import error and "
-           "continuing. All data reading functionality will raise errors; but "
-           "has been deprecated and will be removed in a later version.")
-    warnings.warn(msg)
-from .deprecate import deprecated
-
-DATAREADER_DEPRECATION_WARNING = \
-        ("Yahoo and Google Finance have suffered large API breaks with no "
-         "stable replacement. As a result, any data reading functionality "
-         "in empyrical has been deprecated and will be removed in a future "
-         "version. See README.md for more details: "
-         "\n\n"
-         "\thttps://github.com/quantopian/pyfolio/blob/master/README.md")
-try:
-    # fast versions
-    import bottleneck as bn
-
-    def _wrap_function(f):
-        @wraps(f)
-        def wrapped(*args, **kwargs):
-            out = kwargs.pop('out', None)
-            data = f(*args, **kwargs)
-            if out is None:
-                out = data
-            else:
-                out[()] = data
-
-            return out
-
-        return wrapped
-
-    nanmean = _wrap_function(bn.nanmean)
-    nanstd = _wrap_function(bn.nanstd)
-    nansum = _wrap_function(bn.nansum)
-    nanmax = _wrap_function(bn.nanmax)
-    nanmin = _wrap_function(bn.nanmin)
-    nanargmax = _wrap_function(bn.nanargmax)
-    nanargmin = _wrap_function(bn.nanargmin)
-except ImportError:
-    # slower numpy
-    nanmean = np.nanmean
-    nanstd = np.nanstd
-    nansum = np.nansum
-    nanmax = np.nanmax
-    nanmin = np.nanmin
-    nanargmax = np.nanargmax
-    nanargmin = np.nanargmin
-
-
-def roll(*args, **kwargs):
-    """
-    Calculates a given statistic across a rolling time period.
-
-    Parameters
-    ----------
-    returns : pd.Series or np.ndarray
-        Daily returns of the strategy, noncumulative.
-        - See full explanation in :func:`~empyrical.stats.cum_returns`.
-    factor_returns (optional): float / series
-        Benchmark return to compare returns against.
-    function:
-        the function to run for each rolling window.
-    window (keyword): int
-        the number of periods included in each calculation.
-    (other keywords): other keywords that are required to be passed to the
-        function in the 'function' argument may also be passed in.
-
-    Returns
-    -------
-    np.ndarray, pd.Series
-        depends on input type
-        ndarray(s) ==> ndarray
-        Series(s) ==> pd.Series
-
-        A Series or ndarray of the results of the stat across the rolling
-        window.
-
-    """
-    func = kwargs.pop('function')
-    window = kwargs.pop('window')
-    if len(args) > 2:
-        raise ValueError("Cannot pass more than 2 return sets")
-
-    if len(args) == 2:
-        if not isinstance(args[0], type(args[1])):
-            raise ValueError("The two returns arguments are not the same.")
-
-    if isinstance(args[0], np.ndarray):
-        return _roll_ndarray(func, window, *args, **kwargs)
-    return _roll_pandas(func, window, *args, **kwargs)
-
-
-def up(returns, factor_returns, **kwargs):
-    """
-    Calculates a given statistic filtering only positive factor return periods.
-
-    Parameters
-    ----------
-    returns : pd.Series or np.ndarray
-        Daily returns of the strategy, noncumulative.
-        - See full explanation in :func:`~empyrical.stats.cum_returns`.
-    factor_returns (optional): float / series
-        Benchmark return to compare returns against.
-    function:
-        the function to run for each rolling window.
-    (other keywords): other keywords that are required to be passed to the
-        function in the 'function' argument may also be passed in.
-
-    Returns
-    -------
-    Same as the return of the function
-    """
-    func = kwargs.pop('function')
-    returns = returns[factor_returns > 0]
-    factor_returns = factor_returns[factor_returns > 0]
-    return func(returns, factor_returns, **kwargs)
-
-
-def down(returns, factor_returns, **kwargs):
-    """
-    Calculates a given statistic filtering only negative factor return periods.
-
-    Parameters
-    ----------
-    returns : pd.Series or np.ndarray
-        Daily returns of the strategy, noncumulative.
-        - See full explanation in :func:`~empyrical.stats.cum_returns`.
-    factor_returns (optional): float / series
-        Benchmark return to compare returns against.
-    function:
-        the function to run for each rolling window.
-    (other keywords): other keywords that are required to be passed to the
-        function in the 'function' argument may also be passed in.
-
-    Returns
-    -------
-    Same as the return of the 'function'
-    """
-    func = kwargs.pop('function')
-    returns = returns[factor_returns < 0]
-    factor_returns = factor_returns[factor_returns < 0]
-    return func(returns, factor_returns, **kwargs)
-
-
-def _roll_ndarray(func, window, *args, **kwargs):
-    data = []
-    for i in range(window, len(args[0]) + 1):
-        rets = [s[i-window:i] for s in args]
-        data.append(func(*rets, **kwargs))
-    return np.array(data)
-
-
-def _roll_pandas(func, window, *args, **kwargs):
-    data = {}
-    index_values = []
-    for i in range(window, len(args[0]) + 1):
-        rets = [s.iloc[i-window:i] for s in args]
-        index_value = args[0].index[i - 1]
-        index_values.append(index_value)
-        data[index_value] = func(*rets, **kwargs)
-    return pd.Series(data, index=type(args[0].index)(index_values))
-
-
-@deprecated(msg=DATAREADER_DEPRECATION_WARNING)
-def cache_dir(environ=environ):
-    try:
-        return environ['EMPYRICAL_CACHE_DIR']
-    except KeyError:
-        return join(
-
-            environ.get(
-                'XDG_CACHE_HOME',
-                expanduser('~/.cache/'),
-            ),
-            'empyrical',
-        )
-
-
-@deprecated(msg=DATAREADER_DEPRECATION_WARNING)
-def data_path(name):
-    return join(cache_dir(), name)
-
-
-@deprecated(msg=DATAREADER_DEPRECATION_WARNING)
-def ensure_directory(path):
-    """
-    Ensure that a directory named "path" exists.
-    """
-
-    try:
-        makedirs(path)
-    except OSError as exc:
-        if exc.errno != errno.EEXIST or not isdir(path):
-            raise
-
-
-def get_utc_timestamp(dt):
-    """
-    Returns the Timestamp/DatetimeIndex
-    with either localized or converted to UTC.
-
-    Parameters
-    ----------
-    dt : Timestamp/DatetimeIndex
-        the date(s) to be converted
-
-    Returns
-    -------
-    same type as input
-        date(s) converted to UTC
-    """
-
-    dt = pd.to_datetime(dt)
-    try:
-        dt = dt.tz_localize('UTC')
-    except TypeError:
-        dt = dt.tz_convert('UTC')
-    return dt
-
-
-_1_bday = BDay()
-
-
-def _1_bday_ago():
-    return pd.Timestamp.now().normalize() - _1_bday
-
-
-@deprecated(msg=DATAREADER_DEPRECATION_WARNING)
-def get_fama_french():
-    """
-    Retrieve Fama-French factors via pandas-datareader
-    Returns
-    -------
-    pandas.DataFrame
-        Percent change of Fama-French factors
-    """
-
-    start = '1/1/1970'
-    research_factors = web.DataReader('F-F_Research_Data_Factors_daily',
-                                      'famafrench', start=start)[0]
-    momentum_factor = web.DataReader('F-F_Momentum_Factor_daily',
-                                     'famafrench', start=start)[0]
-    five_factors = research_factors.join(momentum_factor).dropna()
-    five_factors /= 100.
-    five_factors.index = five_factors.index.tz_localize('utc')
-
-    five_factors.columns = five_factors.columns.str.strip()
-
-    return five_factors
-
-
-@deprecated(msg=DATAREADER_DEPRECATION_WARNING)
-def get_returns_cached(filepath, update_func, latest_dt, **kwargs):
-    """
-    Get returns from a cached file if the cache is recent enough,
-    otherwise, try to retrieve via a provided update function and
-    update the cache file.
-    Parameters
-    ----------
-    filepath : str
-        Path to cached csv file
-    update_func : function
-        Function to call in case cache is not up-to-date.
-    latest_dt : pd.Timestamp (tz=UTC)
-        Latest datetime required in csv file.
-    **kwargs : Keyword arguments
-        Optional keyword arguments will be passed to update_func()
-    Returns
-    -------
-    pandas.DataFrame
-        DataFrame containing returns
-    """
-
-    update_cache = False
-
-    try:
-        mtime = getmtime(filepath)
-    except OSError as e:
-        if e.errno != errno.ENOENT:
-            raise
-        update_cache = True
-    else:
-
-        file_dt = pd.Timestamp(mtime, unit='s')
-
-        if latest_dt.tzinfo:
-            file_dt = file_dt.tz_localize('utc')
-
-        if file_dt < latest_dt:
-            update_cache = True
-        else:
-            returns = pd.read_csv(filepath, index_col=0, parse_dates=True)
-            returns.index = returns.index.tz_localize("UTC")
-
-    if update_cache:
-        returns = update_func(**kwargs)
-        try:
-            ensure_directory(cache_dir())
-        except OSError as e:
-            warnings.warn(
-                'could not update cache: {}. {}: {}'.format(
-                    filepath, type(e).__name__, e,
-                ),
-                UserWarning,
-            )
-
-        try:
-            returns.to_csv(filepath)
-        except OSError as e:
-            warnings.warn(
-                'could not update cache {}. {}: {}'.format(
-                    filepath, type(e).__name__, e,
-                ),
-                UserWarning,
-            )
-
-    return returns
-
-
-@deprecated(msg=DATAREADER_DEPRECATION_WARNING)
-def load_portfolio_risk_factors(filepath_prefix=None, start=None, end=None):
-    """
-    Load risk factors Mkt-Rf, SMB, HML, Rf, and UMD.
-    Data is stored in HDF5 file. If the data is more than 2
-    days old, redownload from Dartmouth.
-    Returns
-    -------
-    five_factors : pd.DataFrame
-        Risk factors timeseries.
-    """
-
-    if start is None:
-        start = '1/1/1970'
-    if end is None:
-        end = _1_bday_ago()
-
-    start = get_utc_timestamp(start)
-    end = get_utc_timestamp(end)
-
-    if filepath_prefix is None:
-        filepath = data_path('factors.csv')
-    else:
-        filepath = filepath_prefix
-
-    five_factors = get_returns_cached(filepath, get_fama_french, end)
-
-    return five_factors.loc[start:end]
-
-
-@deprecated(msg=DATAREADER_DEPRECATION_WARNING)
-def get_treasury_yield(start=None, end=None, period='3MO'):
-    """
-    Load treasury yields from FRED.
-
-    Parameters
-    ----------
-    start : date, optional
-        Earliest date to fetch data for.
-        Defaults to earliest date available.
-    end : date, optional
-        Latest date to fetch data for.
-        Defaults to latest date available.
-    period : {'1MO', '3MO', '6MO', 1', '5', '10'}, optional
-        Which maturity to use.
-    Returns
-    -------
-    pd.Series
-        Annual treasury yield for every day.
-    """
-
-    if start is None:
-        start = '1/1/1970'
-    if end is None:
-        end = _1_bday_ago()
-
-    treasury = web.DataReader("DGS3{}".format(period), "fred",
-                              start, end)
-
-    treasury = treasury.ffill()
-
-    return treasury
-
-
-@deprecated(msg=DATAREADER_DEPRECATION_WARNING)
-def get_symbol_returns_from_yahoo(symbol, start=None, end=None):
-    """
-    Wrapper for pandas.io.data.get_data_yahoo().
-    Retrieves prices for symbol from yahoo and computes returns
-    based on adjusted closing prices.
-
-    Parameters
-    ----------
-    symbol : str
-        Symbol name to load, e.g. 'SPY'
-    start : pandas.Timestamp compatible, optional
-        Start date of time period to retrieve
-    end : pandas.Timestamp compatible, optional
-        End date of time period to retrieve
-
-    Returns
-    -------
-    pandas.DataFrame
-        Returns of symbol in requested period.
-    """
-
-    try:
-        px = web.get_data_yahoo(symbol, start=start, end=end)
-        px['date'] = pd.to_datetime(px['date'])
-        px.set_index('date', drop=False, inplace=True)
-        rets = px[['adjclose']].pct_change().dropna()
-    except Exception as e:
-        warnings.warn(
-            'Yahoo Finance read failed: {}, falling back to Google'.format(e),
-            UserWarning)
-        px = web.get_data_google(symbol, start=start, end=end)
-        rets = px[['Close']].pct_change().dropna()
-
-    rets.index = rets.index.tz_localize("UTC")
-    rets.columns = [symbol]
-    return rets
-
-
-@deprecated(msg=DATAREADER_DEPRECATION_WARNING)
-def default_returns_func(symbol, start=None, end=None):
-    """
-    Gets returns for a symbol.
-    Queries Yahoo Finance. Attempts to cache SPY.
-
-    Parameters
-    ----------
-    symbol : str
-        Ticker symbol, e.g. APPL.
-    start : date, optional
-        Earliest date to fetch data for.
-        Defaults to earliest date available.
-    end : date, optional
-        Latest date to fetch data for.
-        Defaults to latest date available.
-
-    Returns
-    -------
-    pd.Series
-        Daily returns for the symbol.
-         - See full explanation in tears.create_full_tear_sheet (returns).
-    """
-
-    if start is None:
-        start = '1/1/1970'
-    if end is None:
-        end = _1_bday_ago()
-
-    start = get_utc_timestamp(start)
-    end = get_utc_timestamp(end)
-
-    if symbol == 'SPY':
-        filepath = data_path('spy.csv')
-        rets = get_returns_cached(filepath,
-                                  get_symbol_returns_from_yahoo,
-                                  end,
-                                  symbol='SPY',
-                                  start='1/1/1970',
-                                  end=datetime.now())
-        rets = rets[start:end]
-    else:
-        rets = get_symbol_returns_from_yahoo(symbol, start=start, end=end)
-
-    return rets[symbol]
-
-
-def rolling_window(array, length, mutable=False):
-    """
-    Restride an array of shape
-
-        (X_0, ... X_N)
-
-    into an array of shape
-
-        (length, X_0 - length + 1, ... X_N)
-
-    where each slice at index i along the first axis is equivalent to
-
-        result[i] = array[length * i:length * (i + 1)]
-
-    Parameters
-    ----------
-    array : np.ndarray
-        The base array.
-    length : int
-        Length of the synthetic first axis to generate.
-    mutable : bool, optional
-        Return a mutable array? The returned array shares the same memory as
-        the input array. This means that writes into the returned array affect
-        ``array``. The returned array also uses strides to map the same values
-        to multiple indices. Writes to a single index may appear to change many
-        values in the returned array.
-
-    Returns
-    -------
-    out : np.ndarray
-
-    Example
-    -------
-    >>> from numpy import arange
-    >>> a = arange(25).reshape(5, 5)
-    >>> a
-    array([[ 0,  1,  2,  3,  4],
-           [ 5,  6,  7,  8,  9],
-           [10, 11, 12, 13, 14],
-           [15, 16, 17, 18, 19],
-           [20, 21, 22, 23, 24]])
-
-    >>> rolling_window(a, 2)
-    array([[[ 0,  1,  2,  3,  4],
-            [ 5,  6,  7,  8,  9]],
-    <BLANKLINE>
-           [[ 5,  6,  7,  8,  9],
-            [10, 11, 12, 13, 14]],
-    <BLANKLINE>
-           [[10, 11, 12, 13, 14],
-            [15, 16, 17, 18, 19]],
-    <BLANKLINE>
-           [[15, 16, 17, 18, 19],
-            [20, 21, 22, 23, 24]]])
-    """
-    if not length:
-        raise ValueError("Can't have 0-length window")
-
-    orig_shape = array.shape
-    if not orig_shape:
-        raise IndexError("Can't restride a scalar.")
-    elif orig_shape[0] < length:
-        raise IndexError(
-            "Can't restride array of shape {shape} with"
-            " a window length of {len}".format(
-                shape=orig_shape,
-                len=length,
-            )
-        )
-
-    num_windows = (orig_shape[0] - length + 1)
-    new_shape = (num_windows, length) + orig_shape[1:]
-
-    new_strides = (array.strides[0],) + array.strides
-
-    out = as_strided(array, new_shape, new_strides)
-    out.setflags(write=mutable)
-    return out

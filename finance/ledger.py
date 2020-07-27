@@ -32,6 +32,15 @@ class Ledger(object):
         self._previous_total_returns = 0
         self.daily_returns_series = pd.Series(np.nan,index = trading_sessions)
 
+    def _is_synchronize(self):
+        dts = set([holding.inner_position.last_sync_date
+                   for holding in self.positions.values()])
+        assert len(dts) == 1,Exception('positions must sync at the same time')
+        return dts
+
+    def sync(self):
+        return self._is_synchronize()
+
     #账户每天起始
     def start_of_session(self,dt):
         self._prevoius_total_returns = self.portfolio.returns
@@ -193,3 +202,4 @@ class Ledger(object):
             self.process_transaction(txn)
         """
         self.position_tracker.maybe_create_close_position_transaction(txns)
+

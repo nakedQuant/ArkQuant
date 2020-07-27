@@ -195,8 +195,6 @@ class BenchmarkReturnsAndVolatility(object):
     def start_of_simulation(self,
                             ledger,
                             benchmark):
-        # BenchmarkSource() --- benchmark_source
-        self.benchmark_source = BenchmarkSource()
         self.benchmark = benchmark
         self._previous_cash_flow = 0.0
 
@@ -206,7 +204,7 @@ class BenchmarkReturnsAndVolatility(object):
                           sessions,
                           session_ix):
         #计算基准收益率
-        returns_series = self.benchmark_source.get_benchmark_returns(
+        returns_series = get_benchmark_returns(
             session_ix,
             self.benchmark
         )
@@ -232,7 +230,7 @@ class AlphaBeta(object):
                    sessions,
                    benchmark):
         risk = packet['cumulative_risk_metrics']
-        returns_series = BenchmarkSource().get_benchmark_returns(
+        returns_series = get_benchmark_returns(
             sessions[-1],
             benchmark
         )

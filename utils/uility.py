@@ -7,6 +7,7 @@ Created on Tue Mar 12 15:37:47 2019
 """
 import os,inspect , numpy as np
 
+
 def vectorized_is_element(array, choices):
     """
     Check if each element of ``array`` is in choices.
@@ -140,3 +141,60 @@ def validate_keys(dict_, expected, funcname):
                 sorted(received),
             )
         )
+
+
+# @deprecated(msg=DATAREADER_DEPRECATION_WARNING)
+def cache_dir(environ=environ):
+    try:
+        return environ['EMPYRICAL_CACHE_DIR']
+    except KeyError:
+        return join(
+
+            environ.get(
+                'XDG_CACHE_HOME',
+                expanduser('~/.cache/'),
+            ),
+            'empyrical',
+        )
+
+
+# @deprecated(msg=DATAREADER_DEPRECATION_WARNING)
+def data_path(name):
+    return join(cache_dir(), name)
+
+
+# @deprecated(msg=DATAREADER_DEPRECATION_WARNING)
+def ensure_directory(path):
+    """
+    Ensure that a directory named "path" exists.
+    """
+
+    try:
+        makedirs(path)
+    except OSError as exc:
+        if exc.errno != errno.EEXIST or not isdir(path):
+            raise
+
+
+def get_utc_timestamp(dt):
+    """
+    Returns the Timestamp/DatetimeIndex
+    with either localized or converted to UTC.
+
+    Parameters
+    ----------
+    dt : Timestamp/DatetimeIndex
+        the date(s) to be converted
+
+    Returns
+    -------
+    same type as input
+        date(s) converted to UTC
+    """
+
+    dt = pd.to_datetime(dt)
+    try:
+        dt = dt.tz_localize('UTC')
+    except TypeError:
+        dt = dt.tz_convert('UTC')
+    return dt

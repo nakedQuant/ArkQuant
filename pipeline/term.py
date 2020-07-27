@@ -166,7 +166,7 @@ class Term(object):
                 raise TypeError('dependencies must be Term')
         return terms
 
-    def _compute(self,inputs,data):
+    def compute(self,inputs,data):
         """
             1. subclass should implement when _verify_asset_finder is True
             2. self.postprocess()

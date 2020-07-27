@@ -1,19 +1,123 @@
-from trade.metrics.base import AbstractStatistics
-from ..price_parser import PriceParser
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Feb 17 16:11:34 2019
 
+@author: python
+"""
 from matplotlib.ticker import FuncFormatter
 from matplotlib import cm
 from datetime import datetime
+import matplotlib.gridspec as gridspec
+import matplotlib.dates as mdates
 
-import qstrader.statistics.performance as perf
-
+import pickle
+import datetime
+import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
-import matplotlib.dates as mdates
 import seaborn as sns
-import os
+from abc import ABC, abstractmethod
+
+
+class AbstractStatistics(ABC):
+    """
+    Statistics is an abstract class providing an interface for
+    all inherited statistic classes (live, historic, custom, etc).
+
+    The goal of a Statistics object is to keep a record of useful
+    information about one or many trading strategies as the strategy
+    is running. This is done by hooking into the main event loop and
+    essentially updating the object according to portfolio performance
+    over time.
+
+    Ideally, Statistics should be subclassed according to the strategies
+    and timeframes-traded by the user. Different trading strategies
+    may require different metrics or frequencies-of-metrics to be updated,
+    however the example given is suitable for longer timeframes.
+    """
+
+    @abstractmethod
+    def update(self):
+        """
+        Update all the statistics according to values of the portfolio
+        and open positions. This should be called from within the
+        event loop.
+        """
+        raise NotImplementedError("Should implement update()")
+
+    @abstractmethod
+    def get_results(self):
+        """
+        Return a dict containing all statistics.
+        """
+        raise NotImplementedError("Should implement get_results()")
+
+    @abstractmethod
+    def plot_results(self):
+        """
+        Plot all statistics collected up until 'now'
+        """
+        raise NotImplementedError("Should implement plot_results()")
+
+    def get_filename(self, filename=""):
+        if filename == "":
+            now = datetime.datetime.utcnow()
+            filename = "statistics_" + now.strftime("%Y-%m-%d_%H%M%S") + ".pkl"
+            filename = os.path.expanduser(os.path.join(self.config.OUTPUT_DIR, filename))
+        return filename
+
+    def save(self, filename = ""):
+        """
+        Save statistics results to filename
+        """
+        filename = self.get_filename(filename)
+        print("Save results to '%s'" % filename)
+        with open(filename, 'wb') as fd:
+            pickle.dump(self, fd)
+
+    @classmethod
+    def load(cls, filename):
+        with open(filename, 'rb') as fd:
+            stats = pickle.load(fd)
+        return stats
+
+
+def plot_results(self):
+    """
+    A simple script to plot the balance of the portfolio, or
+    "equity curve", as a function of time.
+    """
+    sns.set_palette("deep", desat=.6)
+    sns.set_context(rc={"figure.figsize": (8, 4)})
+
+    # Plot two charts: Equity curve, period returns
+    fig = plt.figure()
+    fig.patch.set_facecolor('white')
+
+    df = pd.DataFrame()
+    df["equity"] = pd.Series(self.equity, index=self.timeseries)
+    df["equity_returns"] = pd.Series(self.equity_returns, index=self.timeseries)
+    df["drawdowns"] = pd.Series(self.drawdowns, index=self.timeseries)
+
+    # Plot the equity curve
+    ax1 = fig.add_subplot(311, ylabel='Equity Value')
+    df["equity"].plot(ax=ax1, color=sns.color_palette()[0])
+
+    # Plot the returns
+    ax2 = fig.add_subplot(312, ylabel='Equity Returns')
+    df['equity_returns'].plot(ax=ax2, color=sns.color_palette()[1])
+
+    # drawdown, max_dd, dd_duration = self.create_drawdowns(df["Equity"])
+    ax3 = fig.add_subplot(313, ylabel='Drawdowns')
+    df['drawdowns'].plot(ax=ax3, color=sns.color_palette()[2])
+
+    # Rotate dates
+    fig.autofmt_xdate()
+
+    # Plot the figure
+    plt.show()
 
 
 class TearsheetStatistics(AbstractStatistics):
@@ -64,99 +168,6 @@ class TearsheetStatistics(AbstractStatistics):
         """
         Return a dict with all important results & stats.
         """
-        # Equity
-        equity_s = pd.Series(self.equity).sort_index()
-
-        # Returns
-        returns_s = equity_s.pct_change().fillna(0.0)
-
-        # Rolling Annualised Sharpe
-        rolling = returns_s.rolling(window=self.periods)
-        rolling_sharpe_s = np.sqrt(self.periods) * (
-            rolling.mean() / rolling.std()
-        )
-
-        # Cummulative Returns
-        cum_returns_s = np.exp(np.log(1 + returns_s).cumsum())
-
-        # Drawdown, max drawdown, max drawdown duration
-        dd_s, max_dd, dd_dur = perf.create_drawdowns(cum_returns_s)
-
-        statistics = {}
-
-        # Equity statistics
-        statistics["sharpe"] = perf.create_sharpe_ratio(
-            returns_s, self.periods
-        )
-        statistics["drawdowns"] = dd_s
-        # TODO: need to have max_drawdown so it can be printed at end of test
-        statistics["max_drawdown"] = max_dd
-        statistics["max_drawdown_pct"] = max_dd
-        statistics["max_drawdown_duration"] = dd_dur
-        statistics["equity"] = equity_s
-        statistics["returns"] = returns_s
-        statistics["rolling_sharpe"] = rolling_sharpe_s
-        statistics["cum_returns"] = cum_returns_s
-
-        positions = self._get_positions()
-        if positions is not None:
-            statistics["positions"] = positions
-
-        # Benchmark statistics if benchmark ticker specified
-        if self.benchmark is not None:
-            equity_b = pd.Series(self.equity_benchmark).sort_index()
-            returns_b = equity_b.pct_change().fillna(0.0)
-            rolling_b = returns_b.rolling(window=self.periods)
-            rolling_sharpe_b = np.sqrt(self.periods) * (
-                rolling_b.mean() / rolling_b.std()
-            )
-            cum_returns_b = np.exp(np.log(1 + returns_b).cumsum())
-            dd_b, max_dd_b, dd_dur_b = perf.create_drawdowns(cum_returns_b)
-            statistics["sharpe_b"] = perf.create_sharpe_ratio(returns_b)
-            statistics["drawdowns_b"] = dd_b
-            statistics["max_drawdown_pct_b"] = max_dd_b
-            statistics["max_drawdown_duration_b"] = dd_dur_b
-            statistics["equity_b"] = equity_b
-            statistics["returns_b"] = returns_b
-            statistics["rolling_sharpe_b"] = rolling_sharpe_b
-            statistics["cum_returns_b"] = cum_returns_b
-
-        return statistics
-
-    def _get_positions(self):
-        """
-        Retrieve the list of closed Positions objects from the portfolio
-        and reformat into a pandas dataframe to be returned
-        """
-        def x(p):
-            return PriceParser.display(p)
-
-        pos = self.portfolio_handler.portfolio.closed_positions
-        a = []
-        for p in pos:
-            a.append(p.__dict__)
-        if len(a) == 0:
-            # There are no closed positions
-            return None
-        else:
-            df = pd.DataFrame(a)
-            df['avg_bot'] = df['avg_bot'].apply(x)
-            df['avg_price'] = df['avg_price'].apply(x)
-            df['avg_sld'] = df['avg_sld'].apply(x)
-            df['cost_basis'] = df['cost_basis'].apply(x)
-            df['init_commission'] = df['init_commission'].apply(x)
-            df['init_price'] = df['init_price'].apply(x)
-            df['market_value'] = df['market_value'].apply(x)
-            df['net'] = df['net'].apply(x)
-            df['net_incl_comm'] = df['net_incl_comm'].apply(x)
-            df['net_total'] = df['net_total'].apply(x)
-            df['realised_pnl'] = df['realised_pnl'].apply(x)
-            df['total_bot'] = df['total_bot'].apply(x)
-            df['total_commission'] = df['total_commission'].apply(x)
-            df['total_sld'] = df['total_sld'].apply(x)
-            df['unrealised_pnl'] = df['unrealised_pnl'].apply(x)
-            df['trade_pct'] = (df['avg_sld'] / df['avg_bot'] - 1.0)
-            return df
 
     def _plot_equity(self, stats, ax=None, **kwargs):
         """

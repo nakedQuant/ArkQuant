@@ -6490,3 +6490,286 @@ from six.moves.urllib_error import HTTPError
 #         return factor
 # from types import MappingProxyType as mappingproxy
 # 返回一个动态映射视图
+
+# @deprecated(msg=DATAREADER_DEPRECATION_WARNING)
+# def load_portfolio_risk_factors(filepath_prefix=None, start=None, end=None):
+#     """
+#     Load risk factors Mkt-Rf, SMB, HML, Rf, and UMD.
+#     Data is stored in HDF5 file. If the data is more than 2
+#     days old, redownload from Dartmouth.
+#     Returns
+#     -------
+#     five_factors : pd.DataFrame
+#         Risk factors timeseries.
+#     """
+#
+#     if start is None:
+#         start = '1/1/1970'
+#     if end is None:
+#         end = _1_bday_ago()
+#
+#     start = get_utc_timestamp(start)
+#     end = get_utc_timestamp(end)
+#
+#     if filepath_prefix is None:
+#         filepath = data_path('factors.csv')
+#     else:
+#         filepath = filepath_prefix
+#
+#     five_factors = get_returns_cached(filepath, get_fama_french, end)
+#
+#     return five_factors.loc[start:end]
+#
+#
+# @deprecated(msg=DATAREADER_DEPRECATION_WARNING)
+# def get_treasury_yield(start=None, end=None, period='3MO'):
+#     """
+#     Load treasury yields from FRED.
+#
+#     Parameters
+#     ----------
+#     start : date, optional
+#         Earliest date to fetch data for.
+#         Defaults to earliest date available.
+#     end : date, optional
+#         Latest date to fetch data for.
+#         Defaults to latest date available.
+#     period : {'1MO', '3MO', '6MO', 1', '5', '10'}, optional
+#         Which maturity to use.
+#     Returns
+#     -------
+#     pd.Series
+#         Annual treasury yield for every day.
+#     """
+#
+#     if start is None:
+#         start = '1/1/1970'
+#     if end is None:
+#         end = _1_bday_ago()
+#
+#     treasury = web.DataReader("DGS3{}".format(period), "fred",
+#                               start, end)
+#
+#     treasury = treasury.ffill()
+#
+#     return treasury
+#
+#
+# @deprecated(msg=DATAREADER_DEPRECATION_WARNING)
+# def get_symbol_returns_from_yahoo(symbol, start=None, end=None):
+#     """
+#     Wrapper for pandas.io.data.get_data_yahoo().
+#     Retrieves prices for symbol from yahoo and computes returns
+#     based on adjusted closing prices.
+#
+#     Parameters
+#     ----------
+#     symbol : str
+#         Symbol name to load, e.g. 'SPY'
+#     start : pandas.Timestamp compatible, optional
+#         Start date of time period to retrieve
+#     end : pandas.Timestamp compatible, optional
+#         End date of time period to retrieve
+#
+#     Returns
+#     -------
+#     pandas.DataFrame
+#         Returns of symbol in requested period.
+#     """
+#
+#     try:
+#         px = web.get_data_yahoo(symbol, start=start, end=end)
+#         px['date'] = pd.to_datetime(px['date'])
+#         px.set_index('date', drop=False, inplace=True)
+#         rets = px[['adjclose']].pct_change().dropna()
+#     except Exception as e:
+#         warnings.warn(
+#             'Yahoo Finance read failed: {}, falling back to Google'.format(e),
+#             UserWarning)
+#         px = web.get_data_google(symbol, start=start, end=end)
+#         rets = px[['Close']].pct_change().dropna()
+#
+#     rets.index = rets.index.tz_localize("UTC")
+#     rets.columns = [symbol]
+#     return rets
+#
+#
+# @deprecated(msg=DATAREADER_DEPRECATION_WARNING)
+# def default_returns_func(symbol, start=None, end=None):
+#     """
+#     Gets returns for a symbol.
+#     Queries Yahoo Finance. Attempts to cache SPY.
+#
+#     Parameters
+#     ----------
+#     symbol : str
+#         Ticker symbol, e.g. APPL.
+#     start : date, optional
+#         Earliest date to fetch data for.
+#         Defaults to earliest date available.
+#     end : date, optional
+#         Latest date to fetch data for.
+#         Defaults to latest date available.
+#
+#     Returns
+#     -------
+#     pd.Series
+#         Daily returns for the symbol.
+#          - See full explanation in tears.create_full_tear_sheet (returns).
+#     """
+#
+#     if start is None:
+#         start = '1/1/1970'
+#     if end is None:
+#         end = _1_bday_ago()
+#
+#     start = get_utc_timestamp(start)
+#     end = get_utc_timestamp(end)
+#
+#     if symbol == 'SPY':
+#         filepath = data_path('spy.csv')
+#         rets = get_returns_cached(filepath,
+#                                   get_symbol_returns_from_yahoo,
+#                                   end,
+#                                   symbol='SPY',
+#                                   start='1/1/1970',
+#                                   end=datetime.now())
+#         rets = rets[start:end]
+#     else:
+#         rets = get_symbol_returns_from_yahoo(symbol, start=start, end=end)
+#
+#     return rets[symbol]
+# @deprecated(msg=DATAREADER_DEPRECATION_WARNING)
+# def get_fama_french():
+#     """
+#     Retrieve Fama-French factors via pandas-datareader
+#     Returns
+#     -------
+#     pandas.DataFrame
+#         Percent change of Fama-French factors
+#     """
+#
+#     start = '1/1/1970'
+#     research_factors = web.DataReader('F-F_Research_Data_Factors_daily',
+#                                       'famafrench', start=start)[0]
+#     momentum_factor = web.DataReader('F-F_Momentum_Factor_daily',
+#                                      'famafrench', start=start)[0]
+#     five_factors = research_factors.join(momentum_factor).dropna()
+#     five_factors /= 100.
+#     five_factors.index = five_factors.index.tz_localize('utc')
+#
+#     five_factors.columns = five_factors.columns.str.strip()
+#
+#     return five_factors
+# try:
+#     # fast versions
+#     import bottleneck as bn
+#
+#     def _wrap_function(f):
+#         @wraps(f)
+#         def wrapped(*args, **kwargs):
+#             out = kwargs.pop('out', None)
+#             data = f(*args, **kwargs)
+#             if out is None:
+#                 out = data
+#             else:
+#                 out[()] = data
+#
+#             return out
+#
+#         return wrapped
+#
+#     nanmean = _wrap_function(bn.nanmean)
+#     nanstd = _wrap_function(bn.nanstd)
+#     nansum = _wrap_function(bn.nansum)
+#     nanmax = _wrap_function(bn.nanmax)
+#     nanmin = _wrap_function(bn.nanmin)
+#     nanargmax = _wrap_function(bn.nanargmax)
+#     nanargmin = _wrap_function(bn.nanargmin)
+# except ImportError:
+#     # slower numpy
+#     nanmean = np.nanmean
+#     nanstd = np.nanstd
+#     nansum = np.nansum
+#     nanmax = np.nanmax
+#     nanmin = np.nanmin
+#     nanargmax = np.nanargmax
+#     nanargmin = np.nanargmin
+#
+#
+# try:
+#     from pandas_datareader import data as web
+# except ImportError:
+#     msg = ("Unable to import pandas_datareader. Suppressing import error and "
+#            "continuing. All data reading functionality will raise errors; but "
+#            "has been deprecated and will be removed in a later version.")
+#     warnings.warn(msg)
+# from .deprecate import deprecated
+#
+# DATAREADER_DEPRECATION_WARNING = \
+#         ("Yahoo and Google Finance have suffered large API breaks with no "
+#          "stable replacement. As a result, any data reading functionality "
+#          "in empyrical has been deprecated and will be removed in a future "
+#          "version. See README.md for more details: "
+#          "\n\n"
+#          "\thttps://github.com/quantopian/pyfolio/blob/master/README.md")
+
+# from __future__ import division
+# from multipledispatch import dispatch
+# from .compat import PY2
+# import numpy as np
+#
+# if PY2:
+#     int_t = (int, long, np.int64)
+# else:
+#     int_t = (int, np.int64)
+# from __future__ import division
+
+# @property
+# def default(self):
+#     return self._default()
+#
+# def _default(self,dt):
+#     """
+#         a. 剔除停盘
+#         b. 剔除上市不足一个月的 --- 次新股波动性太大
+#         c. 剔除进入退市整理期的30个交易日
+#     """
+#     active_assets = self.asset_finder.was_active(dt)
+#     sdate = self.trading_calendar._roll_forward(dt,StableEPeriod)
+#     edate = self.trading_calendar._roll_forward(dt, -EnsurePeriod)
+#     stable_alive = self.asset_finder.lifetime([sdate,edate])
+#     default_assets = set(active_assets) & set(stable_alive)
+#     return default_assets
+
+# @staticmethod
+# def _execution_open_and_close(calendar, session):
+#     open_, close = calendar.open_and_close_for_session(session)
+#     execution_open = calendar.execution_time_from_open(open_)
+#     execution_close = calendar.execution_time_from_close(close)
+    # cal = self._trading_calendar
+    # self._market_open, self._market_close = self._execution_open_and_close(
+    #     cal,
+    #     session_label,
+    # )
+    # if self.emission_rate == 'daily':
+    #     # this method is called for both minutely and daily emissions, but
+    #     # this chunk of code here only applies for daily emissions. (since
+    #     # it's done every minute, elsewhere, for minutely emission).
+    #     self.sync_last_sale_prices(dt, data_portal)
+    # session_ix = self._session_count
+    # # increment the day counter before we move markers forward.
+    # self._session_count += 1
+    # self._total_session_count = len(sessions)
+    # self._session_count = 0
+    # self.emission_rate = emission_rate
+    # emission_rate = 'daily',
+    # import logging
+    # logging.info(
+    #     'Simulated {} trading days\n'
+    #     'first open: {}\n'
+    #     'last close: {}',
+    #     self._session_count,
+    #     self._trading_calendar.session_open(self._first_session),
+    #     self._trading_calendar.session_close(self._last_session),
+    # )

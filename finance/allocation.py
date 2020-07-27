@@ -7,7 +7,7 @@ Created on Tue Mar 12 15:37:47 2019
 """
 from abc import ABC , abstractmethod
 from multiprocessing import Pool
-from toolz import valmap
+import numpy as np
 
 
 class CapitalManagement(ABC):
@@ -35,7 +35,7 @@ class Delta(CapitalManagement):
                  data_portal,
                  window,
                  frequency = 'daily'):
-        # delta_func --- (asset,res)
+        # delta_func --- (asset,result)
         self._func = delta_func
         self.data_portal = data_portal
         self._window = window
@@ -56,11 +56,18 @@ class Delta(CapitalManagement):
         return his
 
     def compute(self,assets,cash,dts):
-        """基于数据的波动性以及均值"""
+        """
+            基于数据的波动性以及均值
+            e.g. [5,4,8,3,6]  --- [6,5,3,4]
+        """
         datas = self.handle_data(assets,dts)
         with Pool(processes = len(assets)) as pool:
-            res = [pool.apply_async(self._func(datas[asset])) for asset in assets]
-            assets,values = list(zip(*res))
+            result = [pool.apply_async(self._func(datas[asset])) for asset in assets]
+            assets,values = list(zip(result))
+            reverse_idx = len(values) - np.argsort(values) - 1
+            reverse_values = values[reverse_idx]
+            capital = list(zip(assets,reverse_values))
+            return capital
 
 
 class Kelly(CapitalManagement):

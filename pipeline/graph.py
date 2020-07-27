@@ -76,7 +76,7 @@ class TermGraph(object):
     def ordered(self):
         return iter(nx.topological_sort(self.graph))
 
-    def _decref_dependencies(self):
+    def decref_dependencies(self):
         """
         Decrement in-edges for ``term`` after computation.
 
@@ -92,7 +92,7 @@ class TermGraph(object):
         terms which need to decref
         """
         refcounts = dict(self.graph.in_degree())
-        nodes = valfilter(lambda x : x == 0 ,refcounts)
+        nodes = valfilter(lambda x: x == 0,refcounts)
         for node in nodes:
             self.graph.remove_node(node)
         return nodes

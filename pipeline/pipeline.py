@@ -9,32 +9,34 @@ import uuid
 from collections import OrderedDict
 from toolz import keyfilter
 from functools import reduce
-from .term import Term
+from .term import Term , NotSpecific
 from .graph import  TermGraph
-
-StableEPeriod = 6 * 30
-EnsurePeriod = 30
 
 
 class Pipeline(object):
     """
         拓扑执行逻辑
     """
-    __slots__ = ['_term_store','asset_finder','_calendar']
+    __slots__ = ['_term_store']
 
     def __init__(self,
                  terms,
-                 asset_finder,
-                 trading_calendar):
+                 ):
         self._terms_store = terms
-        self.asset_finder = asset_finder
-        self._calendar = trading_calendar
+        self._name = uuid.uuid4().hex()
         self._init_graph()
 
-    def _init_graph(self):
-        self.pipeline_graph = self._to_simple_graph()
+    @property
+    def name(self):
+        return self._name
 
-    def _to_simple_graph(self):
+    def set_default(self,default):
+        self.default = default
+
+    def _initialize_workspace(self):
+        self._workspace = OrderedDict()
+
+    def _init_graph(self):
         """
         Compile into a simple TermGraph with no extra row metadata.
 
@@ -48,33 +50,7 @@ class Pipeline(object):
         graph : zipline.pipeline.graph.TermGraph
             Graph encoding term dependencies.
         """
-        graph = TermGraph(self._terms_store).graph
-        return graph
-
-    @property
-    def name(self):
-        return uuid.uuid4().hex()
-
-    @property
-    def trading_calendar(self):
-        return self._calendar
-
-    @property
-    def default(self):
-        return self._default()
-
-    def _default(self,dt):
-        """
-            a. 剔除停盘
-            b. 剔除上市不足一个月的 --- 次新股波动性太大
-            c. 剔除进入退市整理期的30个交易日
-        """
-        active_assets = self.asset_finder.was_active(dt)
-        sdate = self.trading_calendar._roll_forward(dt,StableEPeriod)
-        edate = self.trading_calendar._roll_forward(dt, -EnsurePeriod)
-        stable_alive = self.asset_finder.lifetime([sdate,edate])
-        default_assets = set(active_assets) & set(stable_alive)
-        return default_assets
+        self._graph = TermGraph(self._terms_store).graph
 
     def __add__(self,term):
         if not isinstance(term, Term):
@@ -82,7 +58,7 @@ class Pipeline(object):
                 "{term} is not a valid pipeline column. Did you mean to "
                 "append '.latest'?".format(term=term)
             )
-        if term in self.pipeline_graph.nodes:
+        if term in self._graph.nodes:
             raise Exception('term object already exists in pipeline')
         self._terms_store.append(term)
         return self
@@ -95,13 +71,13 @@ class Pipeline(object):
         return self
 
     def __setattr__(self, key, value):
-
         raise NotImplementedError
 
-    def _inputs_for_term(self, term):
+    def _load_term(self, term):
         if term.dependencies != NotSpecific :
-            slice_inputs = keyfilter(lambda x: x in term.dependencies,
-                                     self.initial_workspace_cache)
+            # 将节点的依赖 --- 交集 作为下一个input
+            slice_inputs = keyfilter(lambda x : x in term.dependencies,
+                                     self._workspace)
             input_of_term = reduce(lambda x, y: set(x) & set(y),
                                    slice_inputs.values())
         else:
@@ -109,6 +85,17 @@ class Pipeline(object):
         return input_of_term
 
     def _decref_recursive(self,metadata):
+        """
+            internal method for decref_recursive
+        """
+        decref_nodes = self._graph.decref_dependencies()
+        for node in decref_nodes:
+            _input = self._load_term(node)
+            output = node.compute(_input,metadata)
+            self._workspace[node] = output
+            self._decref_recursive(metadata)
+
+    def decref_recursive(self,metadata):
         """
         Return a topologically-sorted list of the terms in ``self`` which
         need to be computed.
@@ -125,29 +112,23 @@ class Pipeline(object):
             Reference counts for terms to be computed. Terms with reference
             counts of 0 do not need to be computed.
         """
-        decref_nodes = self.pipeline_graph._decref_dependencies()
+        self._decref_recursive(metadata)
 
-        for node in decref_nodes:
-            _input = self._inputs_for_term(node)
-            output = node._compute(_input,metadata)
-            self.initial_workspace_cache[node] = output
-            self._decref_recursive(metadata)
-
-    def tag(self,outs):
+    def fit_out(self,alternative):
         """将pipeline.name --- outs"""
-        for asset in outs:
-            asset.origin = self.name
+        outputs = self._workspace.popitem(last=True).values()
+        #打上标记 pipeline_name : asset
+        outputs = [asset.tag(self.name) for asset in outputs[:alternative]]
+        return outputs
 
-    def to_execution_plan(self,pipeline_metadata,alternative = 1):
+    def to_execution_plan(self,metadata,alternative):
         """
             source: accumulated data from all terms
         """
-        assert self.initialzied , ValueError('attach_default first')
-        self.initial_workspace_cache = OrderedDict()
-        self._decref_recursive(pipeline_metadata)
-        outputs = self.initial_workspace_cache.popitem(last=True)
-        self.initialzed = False
-        #tag
-        pipes = self.tag(outputs)
-        #保留一定个数的标的
-        return {self.name : pipes[:alternative + 1]}
+        # assert self.initialized, ValueError('attach_default first')
+        #initialize
+        self._initialize_workspace()
+        # main engine
+        self.decref_recursive(metadata)
+        pipeline_output = self.fit_out(alternative)
+        return pipeline_output

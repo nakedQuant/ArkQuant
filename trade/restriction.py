@@ -140,90 +140,49 @@ class StaticRestrictions(Restrictions):
         return pd.Series(
             index=pd.Index(assets),
             # list 内置的__contains__ 方法
-            data=vectorized_is_element(assets, self._restricted_set)
+            # data=vectorized_is_element(assets, self._restricted_set)
+            data = np.vectorize(self._restricted_set.__contains__,otypes = [bool])(assets)
         )
 
 
-class SecurityListRestrictions(Restrictions):
+class SecuritySessionRestrictions(Restrictions):
     """
-    Restrictions based on a security list.
-
-    Parameters
-    ----------
-    restrictions : zipline.utils.security_list.SecurityList
-        The restrictions defined by a SecurityList
-    """
-
-    def __init__(self, security_list_by_dt):
-        self.current_securities = security_list_by_dt.current_securities
-
-    def is_restricted(self, assets, dt):
-        securities_in_list = self.current_securities(dt)
-        if isinstance(assets, Asset):
-            return assets in securities_in_list
-        return pd.Series(
-            index=pd.Index(assets),
-            data=vectorized_is_element(assets, securities_in_list)
-        )
-
-
-class RestrictedBid(Restrictions):
-    """
-    biding Restrictions based on a security
-    """
-    def __init__(self):
-        self._name = 'bid'
-
-    def is_restricted(self, asset):
-        """在临时停牌阶段，投资者可以继续申报也可以撤销申报，并且申报价格不受2%的报价限制。
-            复牌时，对已经接受的申报实行集合竞价撮合交易，申报价格最小变动单位为0.01"""
-        sid = asset.sid
-        bid_limit = 0.02 if sid.startwith('688') else None
-        return bid_limit
-
-
-class RestrictedPrice(Restrictions):
-    """
-    Pct Restrictions.
+        a. 剔除停盘
+        b. 剔除上市不足一个月的 --- 次新股波动性太大
+        c. 剔除进入退市整理期的30个交易日
     """
     def __init__(self,
-                 trading_calendar,
-                 length = 5):
-        self._calendar = trading_calendar
-        self._restricted_window = length
-        self._name = 'price'
+                 assert_finder,
+                 trading_calendar):
+        self.assert_finder = assert_finder
+        self.trading_calendar = trading_calendar
 
-    def is_restricted(self, asset, dt):
-        """
-            科创板股票上市后的前5个交易日不设涨跌幅限制，从第六个交易日开始设置20%涨跌幅限制
-        """
-        sid = asset.sid
-        end_dt = self._calendar._roll_forward(dt,self._restricted_window)
-        first_traded = asset.first_traded
-        if first_traded == dt :
-            _limit = np.inf if sid.startwith('688') else 0.44
-        elif first_traded <= end_dt:
-            _limit = np.inf if self.sid.startwith('688') else 0.1
-        else:
-            _limit = 0.2 if self.sid.startwith('688') else 0.1
-        return _limit
+    def is_restricted(self,windows,dt):
+        assert len(windows) == 2 ,('only dual args needed')
+        before,after = windows
+        alive_assets = self.asset_finder.was_active(dt)
+        sdate = self.trading_calendar._roll_forward(dt,before)
+        edate = self.trading_calendar._roll_forward(dt, after)
+        active_assets = self.asset_finder.lifetime([sdate,edate])
+        select_assets = set(alive_assets) & set(active_assets)
+        return select_assets
 
 
-class TemporaryRestriction(object):
+class TemporaryRestrictions(object):
     """
         前5个交易日,科创板科创板还设置了临时停牌制度，当盘中股价较开盘价上涨或下跌幅度首次达到30%、60%时，都分别进行一次临时停牌
         单次盘中临时停牌的持续时间为10分钟。每个交易日单涨跌方向只能触发两次临时停牌，最多可以触发四次共计40分钟临时停牌。
         如果跨越14:57则复盘
     """
-    def is_restricted(self,asset,dt):
+    def is_restricted(self,assets,dt):
         raise NotImplementedError()
 
 
-class AfterRestriction(object):
+class AfterRestrictions(object):
     """
         科创板盘后固定价格交易 15:00 --- 15:30
         若收盘价高于买入申报指令，则申报无效；若收盘价低于卖出申报指令同样无效
         原则 --- 以收盘价为成交价，按照时间优先的原则进行逐笔连续撮合
     """
-    def is_restricted(self,asset,dt):
+    def is_restricted(self,assets,dt):
         raise NotImplementedError()

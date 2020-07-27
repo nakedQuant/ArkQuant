@@ -415,3 +415,70 @@ class working_dir(object):
         if exc_info[0] is None:
             self._commit()
         rmtree(self.path)
+
+# @deprecated(msg=DATAREADER_DEPRECATION_WARNING)
+def get_returns_cached(filepath, update_func, latest_dt, **kwargs):
+    """
+    Get returns from a cached file if the cache is recent enough,
+    otherwise, try to retrieve via a provided update function and
+    update the cache file.
+    Parameters
+    ----------
+    filepath : str
+        Path to cached csv file
+    update_func : function
+        Function to call in case cache is not up-to-date.
+    latest_dt : pd.Timestamp (tz=UTC)
+        Latest datetime required in csv file.
+    **kwargs : Keyword arguments
+        Optional keyword arguments will be passed to update_func()
+    Returns
+    -------
+    pandas.DataFrame
+        DataFrame containing returns
+    """
+
+    update_cache = False
+
+    try:
+        mtime = getmtime(filepath)
+    except OSError as e:
+        if e.errno != errno.ENOENT:
+            raise
+        update_cache = True
+    else:
+
+        file_dt = pd.Timestamp(mtime, unit='s')
+
+        if latest_dt.tzinfo:
+            file_dt = file_dt.tz_localize('utc')
+
+        if file_dt < latest_dt:
+            update_cache = True
+        else:
+            returns = pd.read_csv(filepath, index_col=0, parse_dates=True)
+            returns.index = returns.index.tz_localize("UTC")
+
+    if update_cache:
+        returns = update_func(**kwargs)
+        try:
+            ensure_directory(cache_dir())
+        except OSError as e:
+            warnings.warn(
+                'could not update cache: {}. {}: {}'.format(
+                    filepath, type(e).__name__, e,
+                ),
+                UserWarning,
+            )
+
+        try:
+            returns.to_csv(filepath)
+        except OSError as e:
+            warnings.warn(
+                'could not update cache {}. {}: {}'.format(
+                    filepath, type(e).__name__, e,
+                ),
+                UserWarning,
+            )
+
+    return returns

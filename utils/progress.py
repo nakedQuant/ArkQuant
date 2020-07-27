@@ -1,18 +1,16 @@
-"""Pipeline hooks for tracking and displaying progress.
+# !/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-import cgi
+Created on Tue Mar 12 15:37:47 2019
+
+@author: python
+"""
+
+import cgi,time
 from collections import namedtuple
-import time
-
-from interface import implements
-
-from zipline.utils.compat import contextmanager
-from zipline.utils.string_formatting import bulleted_list
-
-from .iface import PipelineHooks
 
 
-class ProgressHooks(implements(PipelineHooks)):
+class ProgressHooks(object):
     """
     Hooks implementation for displaying progress.
 
