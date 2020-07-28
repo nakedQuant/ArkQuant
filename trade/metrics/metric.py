@@ -157,37 +157,6 @@ class Positions(object):
         packet['daily_perf']['positions'] = ledger.positions()
 
 
-class ReturnsStatistic(object):
-    """A metrics that reports an end of simulation scalar or time series
-    computed from the algorithm returns.
-
-    Parameters
-    ----------
-    function : callable
-        The function to call on the daily returns.
-    field_name : str, optional
-        The name of the field. If not provided, it will be
-        ``function.__name__``.
-    """
-    def __init__(self, function, field_name=None):
-        if field_name is None:
-            field_name = function.__name__
-
-        self._function = function
-        self._field_name = field_name
-
-    def end_of_session(self,
-                   packet,
-                   ledger,
-                   sessions,
-                   session_ix):
-        # res = self._function(ledger.daily_returns_array[:session_ix + 1])
-        res = self._function(ledger.daily_returns_array)
-        if not np.isfinite(res):
-            res = None
-        packet['cumulative_risk_metrics'][self._field_name] = res
-
-
 class BenchmarkReturnsAndVolatility(object):
     """Tracks daily and cumulative returns for the benchmark as well as the
     volatility of the benchmark returns.
@@ -308,3 +277,79 @@ class NumTradingDays(object):
         packet['cumulative_risk_metrics']['trading_days'] = \
             self._num_trading_days
 
+
+class SQN(object):
+    """
+    SQN or SystemQualityNumber. Defined by Van K. Tharp to categorize trading
+    systems.
+
+      - 1.6 - 1.9 Below average
+      - 2.0 - 2.4 Average
+      - 2.5 - 2.9 Good
+      - 3.0 - 5.0 Excellent
+      - 5.1 - 6.9 Superb
+      - 7.0 -     Holy Grail?
+
+    The formula:
+
+      - SquareRoot(NumberTrades) * Average(TradesProfit) / StdDev(TradesProfit)
+
+    The sqn value should be deemed reliable when the number of trades >= 30
+
+    Methods:
+
+      - get_analysis
+
+        Returns a dictionary with keys "sqn" and "trades" (number of
+        considered trades)
+    """
+
+
+class ReturnsStatistic(object):
+    """A metrics that reports an end of simulation scalar or time series
+    computed from the algorithm returns.
+
+    Parameters
+    ----------
+    function : callable
+        The function to call on the daily returns.
+    field_name : str, optional
+        The name of the field. If not provided, it will be
+        ``function.__name__``.
+    e.g.:
+        SIMPLE_STAT_FUNCS = [
+        cum_returns_final,
+        annual_return,
+        annual_volatility,
+        sharpe_ratio,
+        excess_sharpe,
+        calmar_ratio,
+        stability_of_timeseries,
+        max_drawdown,
+        omega_ratio,
+        sortino_ratio,
+        stats.skew,
+        stats.kurtosis,
+        tail_ratio,
+        cagr,
+        value_at_risk,
+        conditional_value_at_risk,
+        ]
+    """
+    def __init__(self, function, field_name=None):
+        if field_name is None:
+            field_name = function.__name__
+
+        self._function = function
+        self._field_name = field_name
+
+    def end_of_session(self,
+                   packet,
+                   ledger,
+                   sessions,
+                   session_ix):
+        # res = self._function(ledger.daily_returns_array[:session_ix + 1])
+        res = self._function(ledger.daily_returns_array)
+        if not np.isfinite(res):
+            res = None
+        packet['cumulative_risk_metrics'][self._field_name] = res

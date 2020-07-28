@@ -1,134 +1,16 @@
-#
-# Copyright 2016 Quantopian, Inc.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Feb 17 16:11:34 2019
 
+@author: python
+"""
 import math , pandas as pd , numpy as np
 from scipy import stats
-from itertools import groupby
-from scipy.stats import linregress
-from collections import OrderedDict
 
+# APPROX_BDAYS_PER_YEAR
 
-
-
-def cagr(equity, periods=252):
-    """
-    Calculates the Compound Annual Growth Rate (CAGR)
-    for the portfolio, by determining the number of years
-    and then creating a compound annualised rate based
-    on the total return.
-
-    Parameters:
-    equity - A pandas Series representing the equity curve.
-    periods - Daily (252), Hourly (252*6.5), Minutely(252*6.5*60) etc.
-    """
-    years = len(equity) / float(periods)
-    return (equity[-1] ** (1.0 / years)) - 1.0
-
-
-def sharpe_ratio(returns, periods=252):
-    """
-    Create the Sharpe ratio for the strategy, based on a
-    benchmark of zero (i.e. no risk-free rate information).
-
-    Parameters:
-    returns - A pandas Series representing period percentage returns.
-    periods - Daily (252), Hourly (252*6.5), Minutely(252*6.5*60) etc.
-    """
-    return np.sqrt(periods) * (np.mean(returns)) / np.std(returns)
-
-
-def sortino_ratio(returns, periods=252):
-    """
-    Create the Sortino ratio for the strategy, based on a
-    benchmark of zero (i.e. no risk-free rate information).
-
-    Parameters:
-    returns - A pandas Series representing period percentage returns.
-    periods - Daily (252), Hourly (252*6.5), Minutely(252*6.5*60) etc.
-    """
-    return np.sqrt(periods) * (np.mean(returns)) / np.std(returns[returns < 0])
-
-
-def maxdown(returns):
-    """
-    Calculate the largest peak-to-trough drawdown of the equity curve
-    as well as the duration of the drawdown. Requires that the
-    pnl_returns is a pandas Series.
-
-    Parameters:
-    equity - A pandas Series representing period percentage returns.
-
-    Returns:
-    drawdown, drawdown_max, duration
-    """
-    # Calculate the cumulative returns curve
-    # and set up the High Water Mark
-    idx = returns.index
-    hwm = np.zeros(len(idx))
-
-    # Create the high water mark
-    for t in range(1, len(idx)):
-        hwm[t] = max(hwm[t - 1], returns.ix[t])
-
-    # Calculate the drawdown and duration statistics
-    perf = pd.DataFrame(index=idx)
-    perf["Drawdown"] = (hwm - returns) / hwm
-    perf["Drawdown"].ix[0] = 0.0
-    perf["DurationCheck"] = np.where(perf["Drawdown"] == 0, 0, 1)
-    duration = max(
-        sum(1 for i in g if i == 1)
-        for k, g in groupby(perf["DurationCheck"])
-    )
-    return perf["Drawdown"], np.max(perf["Drawdown"]), duration
-
-
-def rsquared(x, y):
-    """
-    Return R^2 where x and y are array-like.
-    """
-    slope, intercept, r_value, p_value, std_err = linregress(x, y)
-    return r_value**2
-
-
-def simple_returns(prices):
-    """
-    Compute simple returns from a timeseries of prices.
-
-    Parameters
-    ----------
-    prices : pd.Series, pd.DataFrame or np.ndarray
-        Prices of assets in wide-format, with assets as columns,
-        and indexed by datetimes.
-
-    Returns
-    -------
-    returns : array-like
-        Returns of assets in wide-format, with assets as columns,
-        and index coerced to be tz-aware.
-    """
-    if isinstance(prices, (pd.DataFrame, pd.Series)):
-        out = prices.pct_change().iloc[1:]
-    else:
-        # Assume np.ndarray np.diff ( back -before)
-        out = np.diff(prices, axis=0)
-        np.divide(out, prices[:-1], out=out)
-
-    return out
-
-
-def cum_returns(returns, starting_value=0, out=None):
+def cum_returns(returns):
     """
     Compute cumulative returns from simple returns.
 
@@ -137,63 +19,39 @@ def cum_returns(returns, starting_value=0, out=None):
     returns : pd.Series, np.ndarray, or pd.DataFrame
         Returns of the strategy as a percentage, noncumulative.
          - Time series with decimal returns.
-         - Example::
-
-            2015-07-16   -0.012143
-            2015-07-17    0.045350
-            2015-07-20    0.030957
-            2015-07-21    0.004902
-
-         - Also accepts two dimensional data. In this case, each column is
-           cumulated.
-
-    starting_value : float, optional
-       The starting returns.
-    out : array-like, optional
-        Array to use as output buffer.
-        If not passed, a new array will be created.
-
     Returns
     -------
     cumulative_returns : array-like
         Series of cumulative returns.
     """
 
-    # Cummulative Returns
-    # cum_returns_s = np.exp(np.log(1 + returns_s).cumsum())
-
     if len(returns) < 1:
         return returns.copy()
+
+    out = np.empty_like(returns)
 
     nanmask = np.isnan(returns)
     if np.any(nanmask):
         returns = returns.copy()
         returns[nanmask] = 0
 
-    allocated_output = out is None
-    if allocated_output:
-        out = np.empty_like(returns)
-
     np.add(returns, 1, out=out)
     out.cumprod(axis=0, out=out)
+    # cum_returns_s = np.exp(np.log(1 + returns_s).cumsum())
 
-    if starting_value == 0:
-        np.subtract(out, 1, out=out)
-    else:
-        np.multiply(out, starting_value, out=out)
+    np.subtract(out, 1, out=out)
+    # np.multiply(out, starting_value, out=out)
 
-    if allocated_output:
-        if returns.ndim == 1 and isinstance(returns, pd.Series):
-            out = pd.Series(out, index=returns.index)
-        elif isinstance(returns, pd.DataFrame):
-            out = pd.DataFrame(
-                out, index=returns.index, columns=returns.columns,
+    if returns.ndim == 1 and isinstance(returns, pd.Series):
+        out = pd.Series(out, index=returns.index)
+    elif isinstance(returns, pd.DataFrame):
+        out = pd.DataFrame(
+            out, index=returns.index, columns=returns.columns,
             )
-
     return out
 
 
-def cum_returns_final(returns, starting_value=0):
+def cum_returns_final(returns):
     """
     Compute total returns from simple returns.
 
@@ -215,57 +73,13 @@ def cum_returns_final(returns, starting_value=0):
     """
     if len(returns) == 0:
         return np.nan
-
     if isinstance(returns, pd.DataFrame):
         result = (returns + 1).prod()
     else:
         result = np.nanprod(returns + 1, axis=0)
-
-    if starting_value == 0:
-        result -= 1
-    else:
-        result *= starting_value
-
     return result
 
-
-def aggregate_returns(returns, convert_to):
-    """
-    Aggregates returns by week, month, or year.
-
-    Parameters
-    ----------
-    returns : pd.Series
-       Daily returns of the strategy, noncumulative.
-        - See full explanation in :func:`~empyrical.stats.cum_returns`.
-    convert_to : str
-        Can be 'weekly', 'monthly', or 'yearly'.
-
-    Returns
-    -------
-    aggregated_returns : pd.Series
-    """
-
-    def cumulate_returns(x):
-        return cum_returns(x).iloc[-1]
-
-    if convert_to == WEEKLY:
-        grouping = [lambda x: x.year, lambda x: x.isocalendar()[1]]
-    elif convert_to == MONTHLY:
-        grouping = [lambda x: x.year, lambda x: x.month]
-    elif convert_to == QUARTERLY:
-        grouping = [lambda x: x.year, lambda x: int(math.ceil(x.month/3.))]
-    elif convert_to == YEARLY:
-        grouping = [lambda x: x.year]
-    else:
-        raise ValueError(
-            'convert_to must be {}, {} or {}'.format(WEEKLY, MONTHLY, YEARLY)
-        )
-
-    return returns.groupby(grouping).apply(cumulate_returns)
-
-
-def max_drawdown(returns, out=None):
+def max_drawdown(returns):
     """
     Determines the maximum drawdown of a strategy.
 
@@ -274,58 +88,37 @@ def max_drawdown(returns, out=None):
     returns : pd.Series or np.ndarray
         Daily returns of the strategy, noncumulative.
         - See full explanation in :func:`~empyrical.stats.cum_returns`.
-    out : array-like, optional
-        Array to use as output buffer.
-        If not passed, a new array will be created.
 
     Returns
     -------
-    max_drawdown : float
-
+    drawdown, drawdown_max, duration
     Note
     -----
     See https://en.wikipedia.org/wiki/Drawdown_(economics) for more details.
     """
-
-    # Drawdown, max drawdown, max drawdown duration
-    # dd_s, max_dd, dd_dur = perf.create_drawdowns(cum_returns_s)
-
-    allocated_output = out is None
-    if allocated_output:
-        out = np.empty(returns.shape[1:])
-
-    returns_1d = returns.ndim == 1
-
     if len(returns) < 1:
-        out[()] = np.nan
-        if returns_1d:
-            out = out.item()
-        return out
-
+        return np.nan
+    out = np.empty(returns.shape[1:])
     returns_array = np.asanyarray(returns)
-
-    cumulative = np.empty(
-        (returns.shape[0] + 1,) + returns.shape[1:],
-        dtype='float64',
-    )
-    cumulative[0] = start = 100
-    cum_returns(returns_array, starting_value=start, out=cumulative[1:])
-
+    cumulative = cum_returns(returns_array)
     max_return = np.fmax.accumulate(cumulative, axis=0)
+    np.nanmin((cumulative - max_return) / max_return, axis=0, out=out)
+    # 久期 duration --- 1.整个下跌的时间 ， 2.连续性
+    #计算阴跌的最长期限
+    mask = pd.Series(np.where(out == 0 , 0, 1))
+    duration = np.sum(mask)
+    # 返回1对应的idx
+    mask_diff = list(np.diff(mask[mask == 1].index))
+    # 追加0  --- length
+    mask_diff.insert(0,0)
+    mask_diff.append(len(mask_diff))
+    # 替换 非1
+    sub_mask = pd.Series(np.where(mask_diff != 1,0,1))
+    sub_mask_loc = list(sub_mask[sub_mask == 0].index)
+    succession = max(np.diff(sub_mask_loc))
+    return out ,duration , succession
 
-    nanmin((cumulative - max_return) / max_return, axis=0, out=out)
-    if returns_1d:
-        out = out.item()
-    elif allocated_output and isinstance(returns, pd.DataFrame):
-        out = pd.Series(out)
-
-    return out
-
-
-# roll_max_drawdown = _create_unary_vectorized_roll_function(max_drawdown)
-
-
-def annual_return(returns, period=DAILY, annualization=None):
+def annual_return(returns):
     """
     Determines the mean annual growth rate of returns. This is equivilent
     to the compound annual growth rate.
@@ -355,19 +148,15 @@ def annual_return(returns, period=DAILY, annualization=None):
         Annual Return as CAGR (Compounded Annual Growth Rate).
 
     """
-
     if len(returns) < 1:
         return np.nan
 
-    ann_factor = annualization_factor(period, annualization)
-    num_years = len(returns) / ann_factor
+    num_years = len(returns) / 252
     # Pass array to ensure index -1 looks up successfully.
-    ending_value = cum_returns_final(returns, starting_value=1)
-
+    ending_value = cum_returns_final(returns)
     return ending_value ** (1 / num_years) - 1
 
-
-def cagr(returns, period=DAILY, annualization=None):
+def cagr(returns):
     """
     Compute compound annual growth rate. Alias function for
     :func:`~empyrical.stats.annual_return`
@@ -398,17 +187,9 @@ def cagr(returns, period=DAILY, annualization=None):
         The CAGR value.
 
     """
-    return annual_return(returns, period, annualization)
+    return annual_return(returns)
 
-
-roll_cagr = _create_unary_vectorized_roll_function(cagr)
-
-
-def annual_volatility(returns,
-                      period=DAILY,
-                      alpha=2.0,
-                      annualization=None,
-                      out=None):
+def annual_volatility(returns):
     """
     Determines the annual volatility of a strategy.
 
@@ -417,55 +198,23 @@ def annual_volatility(returns,
     returns : pd.Series or np.ndarray
         Periodic returns of the strategy, noncumulative.
         - See full explanation in :func:`~empyrical.stats.cum_returns`.
-    period : str, optional
-        Defines the periodicity of the 'returns' data for purposes of
-        annualizing. Value ignored if `annualization` parameter is specified.
-        Defaults are::
 
-            'monthly':12
-            'weekly': 52
-            'daily': 252
-
-    alpha : float, optional
-        Scaling relation (Levy stability exponent).
-    annualization : int, optional
-        Used to suppress default values available in `period` to convert
-        returns into annual returns. Value should be the annual frequency of
-        `returns`.
-    out : array-like, optional
-        Array to use as output buffer.
-        If not passed, a new array will be created.
+    'monthly':12
+    'weekly': 52
+    'daily': 252
 
     Returns
     -------
     annual_volatility : float
     """
-    allocated_output = out is None
-    if allocated_output:
-        out = np.empty(returns.shape[1:])
-
-    returns_1d = returns.ndim == 1
-
     if len(returns) < 2:
-        out[()] = np.nan
-        if returns_1d:
-            out = out.item()
-        return out
-
-    ann_factor = annualization_factor(period, annualization)
-    nanstd(returns, ddof=1, axis=0, out=out)
-    out = np.multiply(out, ann_factor ** (1.0 / alpha), out=out)
-    if returns_1d:
-        out = out.item()
+        return  np.nan
+    out = np.empty(returns.shape[1:])
+    np.nanstd(returns, ddof=1, axis=0, out=out)
+    out = np.multiply(out, 252 ** (1.0 / 2), out=out)
     return out
 
-
-roll_annual_volatility = _create_unary_vectorized_roll_function(
-    annual_volatility,
-)
-
-
-def calmar_ratio(returns, period=DAILY, annualization=None):
+def calmar_ratio(returns):
     """
     Determines the Calmar ratio, or drawdown ratio, of a strategy.
 
@@ -500,13 +249,9 @@ def calmar_ratio(returns, period=DAILY, annualization=None):
     See https://en.wikipedia.org/wiki/Calmar_ratio for more details.
     """
 
-    max_dd = max_drawdown(returns=returns)
+    max_dd , duration , succession = max_drawdown(returns=returns)
     if max_dd < 0:
-        temp = annual_return(
-            returns=returns,
-            period=period,
-            annualization=annualization
-        ) / abs(max_dd)
+        temp = annual_return(returns=returns) / abs(max_dd)
     else:
         return np.nan
 
@@ -516,8 +261,7 @@ def calmar_ratio(returns, period=DAILY, annualization=None):
     return temp
 
 
-def omega_ratio(returns, risk_free=0.0, required_return=0.0,
-                annualization=APPROX_BDAYS_PER_YEAR):
+def omega_ratio(returns, risk_free=0.0, required_return=0.0):
     """Determines the Omega ratio of a strategy.
 
     Parameters
@@ -569,11 +313,7 @@ def omega_ratio(returns, risk_free=0.0, required_return=0.0,
         return np.nan
 
 
-def sharpe_ratio(returns,
-                 risk_free=0,
-                 period=DAILY,
-                 annualization=None,
-                 out=None):
+def sharpe_ratio(returns,risk_free=0):
     """
     Determines the Sharpe ratio of a strategy.
 
@@ -611,37 +351,24 @@ def sharpe_ratio(returns,
     See https://en.wikipedia.org/wiki/Sharpe_ratio for more details.
 
     """
-    allocated_output = out is None
-    if allocated_output:
-        out = np.empty(returns.shape[1:])
-
-    return_1d = returns.ndim == 1
-
     if len(returns) < 2:
-        out[()] = np.nan
-        if return_1d:
-            out = out.item()
-        return out
+        return np.nan
 
+    # return np.sqrt(periods) * (np.mean(returns)) / np.std(returns)
+    out = np.empty(returns.shape[1:])
     returns_risk_adj = np.asanyarray(_adjust_returns(returns, risk_free))
     ann_factor = annualization_factor(period, annualization)
 
     np.multiply(
         np.divide(
-            nanmean(returns_risk_adj, axis=0),
-            nanstd(returns_risk_adj, ddof=1, axis=0),
+            np.nanmean(returns_risk_adj, axis=0),
+            np.nanstd(returns_risk_adj, ddof=1, axis=0),
             out=out,
         ),
         np.sqrt(ann_factor),
         out=out,
     )
-    if return_1d:
-        out = out.item()
-
     return out
-
-
-roll_sharpe_ratio = _create_unary_vectorized_roll_function(sharpe_ratio)
 
 
 def sortino_ratio(returns,
@@ -694,6 +421,7 @@ def sortino_ratio(returns,
     Mag_Sortino_0213.pdf>`__ for more details.
 
     """
+    # return np.sqrt(periods) * (np.mean(returns)) / np.std(returns[returns < 0])
     allocated_output = out is None
     if allocated_output:
         out = np.empty(returns.shape[1:])
@@ -723,10 +451,6 @@ def sortino_ratio(returns,
         out = pd.Series(out)
 
     return out
-
-
-roll_sortino_ratio = _create_unary_vectorized_roll_function(sortino_ratio)
-
 
 def downside_risk(returns,
                   required_return=0,
@@ -808,10 +532,7 @@ def downside_risk(returns,
     return out
 
 
-# roll_downsize_risk = _create_unary_vectorized_roll_function(downside_risk)
-
-
-def excess_sharpe(returns, factor_returns, out=None):
+def excess_sharpe(returns, factor_returns):
     """
     Determines the Excess Sharpe of a strategy.
 
@@ -835,499 +556,18 @@ def excess_sharpe(returns, factor_returns, out=None):
     The excess Sharpe is a simplified Information Ratio that uses
     tracking error rather than "active risk" as the denominator.
     """
-    allocated_output = out is None
-    if allocated_output:
-        out = np.empty(returns.shape[1:])
-
-    returns_1d = returns.ndim == 1
-
     if len(returns) < 2:
-        out[()] = np.nan
-        if returns_1d:
-            out = out.item()
-        return out
-
+        return np.nan
+    out = np.empty(returns.shape[1:])
     active_return = _adjust_returns(returns, factor_returns)
-    tracking_error = np.nan_to_num(nanstd(active_return, ddof=1, axis=0))
+    tracking_error = np.nan_to_num(np.nanstd(active_return, ddof=1, axis=0))
 
     out = np.divide(
-        nanmean(active_return, axis=0, out=out),
+        np.nanmean(active_return, axis=0, out=out),
         tracking_error,
         out=out,
     )
-    if returns_1d:
-        out = out.item()
     return out
-
-
-# roll_excess_sharpe = _create_binary_vectorized_roll_function(excess_sharpe)
-
-def alpha_beta(returns,
-               factor_returns,
-               risk_free=0.0,
-               period=DAILY,
-               annualization=None,
-               out=None):
-    """Calculates annualized alpha and beta.
-
-    Parameters
-    ----------
-    returns : pd.Series
-        Daily returns of the strategy, noncumulative.
-        - See full explanation in :func:`~empyrical.stats.cum_returns`.
-    factor_returns : pd.Series
-         Daily noncumulative returns of the factor to which beta is
-         computed. Usually a benchmark such as the market.
-         - This is in the same style as returns.
-    risk_free : int, float, optional
-        Constant risk-free return throughout the period. For example, the
-        interest rate on a three month us treasury bill.
-    period : str, optional
-        Defines the periodicity of the 'returns' data for purposes of
-        annualizing. Value ignored if `annualization` parameter is specified.
-        Defaults are::
-
-            'monthly':12
-            'weekly': 52
-            'daily': 252
-
-    annualization : int, optional
-        Used to suppress default values available in `period` to convert
-        returns into annual returns. Value should be the annual frequency of
-        `returns`.
-    out : array-like, optional
-        Array to use as output buffer.
-        If not passed, a new array will be created.
-
-    Returns
-    -------
-    alpha : float
-    beta : float
-    """
-    returns, factor_returns = _aligned_series(returns, factor_returns)
-
-    return alpha_beta_aligned(
-        returns,
-        factor_returns,
-        risk_free=risk_free,
-        period=period,
-        annualization=annualization,
-        out=out,
-    )
-
-
-def roll_alpha_beta(returns, factor_returns, window=10, **kwargs):
-    """
-    Computes alpha and beta over a rolling window.
-
-    Parameters
-    ----------
-    lhs : array-like
-        The first array to pass to the rolling alpha-beta.
-    rhs : array-like
-        The second array to pass to the rolling alpha-beta.
-    window : int
-        Size of the rolling window in terms of the periodicity of the data.
-    out : array-like, optional
-        Array to use as output buffer.
-        If not passed, a new array will be created.
-    **kwargs
-        Forwarded to :func:`~empyrical.alpha_beta`.
-    """
-    returns, factor_returns = _aligned_series(returns, factor_returns)
-
-    return roll_alpha_beta_aligned(
-        returns,
-        factor_returns,
-        window=window,
-        **kwargs
-    )
-
-
-def alpha_beta_aligned(returns,
-                       factor_returns,
-                       risk_free=0.0,
-                       period=DAILY,
-                       annualization=None,
-                       out=None):
-    """Calculates annualized alpha and beta.
-
-    If they are pd.Series, expects returns and factor_returns have already
-    been aligned on their labels.  If np.ndarray, these arguments should have
-    the same shape.
-
-    Parameters
-    ----------
-    returns : pd.Series or np.ndarray
-        Daily returns of the strategy, noncumulative.
-        - See full explanation in :func:`~empyrical.stats.cum_returns`.
-    factor_returns : pd.Series or np.ndarray
-         Daily noncumulative returns of the factor to which beta is
-         computed. Usually a benchmark such as the market.
-         - This is in the same style as returns.
-    risk_free : int, float, optional
-        Constant risk-free return throughout the period. For example, the
-        interest rate on a three month us treasury bill.
-    period : str, optional
-        Defines the periodicity of the 'returns' data for purposes of
-        annualizing. Value ignored if `annualization` parameter is specified.
-        Defaults are::
-
-            'monthly':12
-            'weekly': 52
-            'daily': 252
-
-    annualization : int, optional
-        Used to suppress default values available in `period` to convert
-        returns into annual returns. Value should be the annual frequency of
-        `returns`.
-    out : array-like, optional
-        Array to use as output buffer.
-        If not passed, a new array will be created.
-
-    Returns
-    -------
-    alpha : float
-    beta : float
-    """
-    if out is None:
-        out = np.empty(returns.shape[1:] + (2,), dtype='float64')
-
-    b = beta_aligned(returns, factor_returns, risk_free, out=out[..., 1])
-    alpha_aligned(
-        returns,
-        factor_returns,
-        risk_free,
-        period,
-        annualization,
-        out=out[..., 0],
-        _beta=b,
-    )
-
-    return out
-
-
-roll_alpha_beta_aligned = _create_binary_vectorized_roll_function(
-    alpha_beta_aligned,
-)
-
-
-def alpha(returns,
-          factor_returns,
-          risk_free=0.0,
-          period=DAILY,
-          annualization=None,
-          out=None,
-          _beta=None):
-    """Calculates annualized alpha.
-
-    Parameters
-    ----------
-    returns : pd.Series
-        Daily returns of the strategy, noncumulative.
-        - See full explanation in :func:`~empyrical.stats.cum_returns`.
-    factor_returns : pd.Series
-        Daily noncumulative returns of the factor to which beta is
-        computed. Usually a benchmark such as the market.
-        - This is in the same style as returns.
-    risk_free : int, float, optional
-        Constant risk-free return throughout the period. For example, the
-        interest rate on a three month us treasury bill.
-    period : str, optional
-        Defines the periodicity of the 'returns' data for purposes of
-        annualizing. Value ignored if `annualization` parameter is specified.
-        Defaults are::
-
-            'monthly':12
-            'weekly': 52
-            'daily': 252
-
-    annualization : int, optional
-        Used to suppress default values available in `period` to convert
-        returns into annual returns. Value should be the annual frequency of
-        `returns`.
-        - See full explanation in :func:`~empyrical.stats.annual_return`.
-    _beta : float, optional
-        The beta for the given inputs, if already known. Will be calculated
-        internally if not provided.
-    out : array-like, optional
-        Array to use as output buffer.
-        If not passed, a new array will be created.
-
-    Returns
-    -------
-    float
-        Alpha.
-    """
-    if not (isinstance(returns, np.ndarray) and
-            isinstance(factor_returns, np.ndarray)):
-        returns, factor_returns = _aligned_series(returns, factor_returns)
-
-    return alpha_aligned(
-        returns,
-        factor_returns,
-        risk_free=risk_free,
-        period=period,
-        annualization=annualization,
-        out=out,
-        _beta=_beta
-    )
-
-
-roll_alpha = _create_binary_vectorized_roll_function(alpha)
-
-
-def alpha_aligned(returns,
-                  factor_returns,
-                  risk_free=0.0,
-                  period=DAILY,
-                  annualization=None,
-                  out=None,
-                  _beta=None):
-    """Calculates annualized alpha.
-
-    If they are pd.Series, expects returns and factor_returns have already
-    been aligned on their labels.  If np.ndarray, these arguments should have
-    the same shape.
-
-    Parameters
-    ----------
-    returns : pd.Series or np.ndarray
-        Daily returns of the strategy, noncumulative.
-        - See full explanation in :func:`~empyrical.stats.cum_returns`.
-    factor_returns : pd.Series or np.ndarray
-        Daily noncumulative returns of the factor to which beta is
-        computed. Usually a benchmark such as the market.
-        - This is in the same style as returns.
-    risk_free : int, float, optional
-        Constant risk-free return throughout the period. For example, the
-        interest rate on a three month us treasury bill.
-    period : str, optional
-        Defines the periodicity of the 'returns' data for purposes of
-        annualizing. Value ignored if `annualization` parameter is specified.
-        Defaults are::
-
-            'monthly':12
-            'weekly': 52
-            'daily': 252
-
-    annualization : int, optional
-        Used to suppress default values available in `period` to convert
-        returns into annual returns. Value should be the annual frequency of
-        `returns`.
-        - See full explanation in :func:`~empyrical.stats.annual_return`.
-    _beta : float, optional
-        The beta for the given inputs, if already known. Will be calculated
-        internally if not provided.
-    out : array-like, optional
-        Array to use as output buffer.
-        If not passed, a new array will be created.
-
-    Returns
-    -------
-    alpha : float
-    """
-    allocated_output = out is None
-    if allocated_output:
-        out = np.empty(returns.shape[1:], dtype='float64')
-
-    if len(returns) < 2:
-        out[()] = np.nan
-        if returns.ndim == 1:
-            out = out.item()
-        return out
-
-    ann_factor = annualization_factor(period, annualization)
-
-    if _beta is None:
-        _beta = beta_aligned(returns, factor_returns, risk_free)
-
-    adj_returns = _adjust_returns(returns, risk_free)
-    adj_factor_returns = _adjust_returns(factor_returns, risk_free)
-    alpha_series = adj_returns - (_beta * adj_factor_returns)
-
-    out = np.subtract(
-        np.power(
-            np.add(
-                nanmean(alpha_series, axis=0, out=out),
-                1,
-                out=out
-            ),
-            ann_factor,
-            out=out
-        ),
-        1,
-        out=out
-    )
-
-    if allocated_output and isinstance(returns, pd.DataFrame):
-        out = pd.Series(out)
-
-    if returns.ndim == 1:
-        out = out.item()
-
-    return out
-
-
-roll_alpha_aligned = _create_binary_vectorized_roll_function(alpha_aligned)
-
-
-def beta(returns, factor_returns, risk_free=0.0, out=None):
-    """Calculates beta.
-
-    Parameters
-    ----------
-    returns : pd.Series
-        Daily returns of the strategy, noncumulative.
-        - See full explanation in :func:`~empyrical.stats.cum_returns`.
-    factor_returns : pd.Series
-         Daily noncumulative returns of the factor to which beta is
-         computed. Usually a benchmark such as the market.
-         - This is in the same style as returns.
-    risk_free : int, float, optional
-        Constant risk-free return throughout the period. For example, the
-        interest rate on a three month us treasury bill.
-    out : array-like, optional
-        Array to use as output buffer.
-        If not passed, a new array will be created.
-
-    Returns
-    -------
-    beta : float
-    """
-    if not (isinstance(returns, np.ndarray) and
-            isinstance(factor_returns, np.ndarray)):
-        returns, factor_returns = _aligned_series(returns, factor_returns)
-
-    return beta_aligned(
-        returns,
-        factor_returns,
-        risk_free=risk_free,
-        out=out,
-    )
-
-
-roll_beta = _create_binary_vectorized_roll_function(beta)
-
-
-def beta_aligned(returns, factor_returns, risk_free=0.0, out=None):
-    """Calculates beta.
-
-    If they are pd.Series, expects returns and factor_returns have already
-    been aligned on their labels.  If np.ndarray, these arguments should have
-    the same shape.
-
-    Parameters
-    ----------
-    returns : pd.Series or np.ndarray
-        Daily returns of the strategy, noncumulative.
-        - See full explanation in :func:`~empyrical.stats.cum_returns`.
-    factor_returns : pd.Series or np.ndarray
-         Daily noncumulative returns of the factor to which beta is
-         computed. Usually a benchmark such as the market.
-         - This is in the same style as returns.
-    risk_free : int, float, optional
-        Constant risk-free return throughout the period. For example, the
-        interest rate on a three month us treasury bill.
-    out : array-like, optional
-        Array to use as output buffer.
-        If not passed, a new array will be created.
-
-    Returns
-    -------
-    beta : float
-        Beta.
-    """
-    # Cache these as locals since we're going to call them multiple times.
-    nan = np.nan
-    isnan = np.isnan
-
-    returns_1d = returns.ndim == 1
-    if returns_1d:
-        returns = returns[:, np.newaxis]
-
-    if factor_returns.ndim == 1:
-        factor_returns = factor_returns[:, np.newaxis]
-
-    N, M = returns.shape
-
-    if out is None:
-        out = np.full(M, nan)
-    elif out.ndim == 0:
-        out = out[np.newaxis]
-
-    if len(returns) < 1 or len(factor_returns) < 2:
-        out[()] = nan
-        if returns_1d:
-            out = out.item()
-        return out
-
-    # Copy N times as a column vector and fill with nans to have the same
-    # missing value pattern as the dependent variable.
-    #
-    # PERF_TODO: We could probably avoid the space blowup by doing this in
-    # Cython.
-
-    # shape: (N, M)
-    independent = np.where(
-        isnan(returns),
-        nan,
-        factor_returns,
-    )
-
-    # Calculate beta as Cov(X, Y) / Cov(X, X).
-    # https://en.wikipedia.org/wiki/Simple_linear_regression#Fitting_the_regression_line  # noqa
-    #
-    # NOTE: The usual formula for covariance is::
-    #
-    #    mean((X - mean(X)) * (Y - mean(Y)))
-    #
-    # However, we don't actually need to take the mean of both sides of the
-    # product, because of the folllowing equivalence::
-    #
-    # Let X_res = (X - mean(X)).
-    # We have:
-    #
-    #     mean(X_res * (Y - mean(Y))) = mean(X_res * (Y - mean(Y)))
-    #                             (1) = mean((X_res * Y) - (X_res * mean(Y)))
-    #                             (2) = mean(X_res * Y) - mean(X_res * mean(Y))
-    #                             (3) = mean(X_res * Y) - mean(X_res) * mean(Y)
-    #                             (4) = mean(X_res * Y) - 0 * mean(Y)
-    #                             (5) = mean(X_res * Y)
-    #
-    #
-    # The tricky step in the above derivation is step (4). We know that
-    # mean(X_res) is zero because, for any X:
-    #
-    #     mean(X - mean(X)) = mean(X) - mean(X) = 0.
-    #
-    # The upshot of this is that we only have to center one of `independent`
-    # and `dependent` when calculating covariances. Since we need the centered
-    # `independent` to calculate its variance in the next step, we choose to
-    # center `independent`.
-
-    ind_residual = independent - nanmean(independent, axis=0)
-
-    covariances = nanmean(ind_residual * returns, axis=0)
-
-    # We end up with different variances in each column here because each
-    # column may have a different subset of the data dropped due to missing
-    # data in the corresponding dependent column.
-    # shape: (M,)
-    np.square(ind_residual, out=ind_residual)
-    independent_variances = nanmean(ind_residual, axis=0)
-    independent_variances[independent_variances < 1.0e-30] = np.nan
-
-    np.divide(covariances, independent_variances, out=out)
-
-    if returns_1d:
-        out = out.item()
-
-    return out
-
-
-roll_beta_aligned = _create_binary_vectorized_roll_function(beta_aligned)
-
 
 def stability_of_timeseries(returns):
     """Determines R-squared of a linear fit to the cumulative
@@ -1389,455 +629,6 @@ def tail_ratio(returns):
         np.abs(np.percentile(returns, 5))
 
 
-def capture(returns, factor_returns, period=DAILY):
-    """Compute capture ratio.
-
-    Parameters
-    ----------
-    returns : pd.Series or np.ndarray
-        Returns of the strategy, noncumulative.
-        - See full explanation in :func:`~empyrical.stats.cum_returns`.
-    factor_returns : pd.Series or np.ndarray
-        Noncumulative returns of the factor to which beta is
-        computed. Usually a benchmark such as the market.
-        - This is in the same style as returns.
-    period : str, optional
-        Defines the periodicity of the 'returns' data for purposes of
-        annualizing. Value ignored if `annualization` parameter is specified.
-        Defaults are::
-
-            'monthly':12
-            'weekly': 52
-            'daily': 252
-
-    Returns
-    -------
-    capture_ratio : float
-
-    Note
-    ----
-    See http://www.investopedia.com/terms/u/up-market-capture-ratio.asp for
-    details.
-    """
-    return (annual_return(returns, period=period) /
-            annual_return(factor_returns, period=period))
-
-
-def beta_fragility_heuristic(returns, factor_returns):
-    """Estimate fragility to drops in beta.
-
-    Parameters
-    ----------
-    returns : pd.Series or np.ndarray
-        Daily returns of the strategy, noncumulative.
-        - See full explanation in :func:`~empyrical.stats.cum_returns`.
-    factor_returns : pd.Series or np.ndarray
-         Daily noncumulative returns of the factor to which beta is
-         computed. Usually a benchmark such as the market.
-         - This is in the same style as returns.
-
-    Returns
-    -------
-    float, np.nan
-        The beta fragility of the strategy.
-
-    Note
-    ----
-    A negative return value indicates potential losses
-    could follow volatility in beta.
-    The magnitude of the negative value indicates the size of
-    the potential loss.
-    seealso::
-    `A New Heuristic Measure of Fragility and
-Tail Risks: Application to Stress Testing`
-        https://www.imf.org/external/pubs/ft/wp/2012/wp12216.pdf
-        An IMF Working Paper describing the heuristic
-    """
-    if len(returns) < 3 or len(factor_returns) < 3:
-        return np.nan
-
-    return beta_fragility_heuristic_aligned(
-        *_aligned_series(returns, factor_returns))
-
-
-def beta_fragility_heuristic_aligned(returns, factor_returns):
-    """Estimate fragility to drops in beta
-
-    Parameters
-    ----------
-    returns : pd.Series or np.ndarray
-        Daily returns of the strategy, noncumulative.
-        - See full explanation in :func:`~empyrical.stats.cum_returns`.
-    factor_returns : pd.Series or np.ndarray
-         Daily noncumulative returns of the factor to which beta is
-         computed. Usually a benchmark such as the market.
-         - This is in the same style as returns.
-
-    Returns
-    -------
-    float, np.nan
-        The beta fragility of the strategy.
-
-    Note
-    ----
-    If they are pd.Series, expects returns and factor_returns have already
-    been aligned on their labels.  If np.ndarray, these arguments should have
-    the same shape.
-    seealso::
-    `A New Heuristic Measure of Fragility and
-Tail Risks: Application to Stress Testing`
-        https://www.imf.org/external/pubs/ft/wp/2012/wp12216.pdf
-        An IMF Working Paper describing the heuristic
-    """
-    if len(returns) < 3 or len(factor_returns) < 3:
-        return np.nan
-
-    # combine returns and factor returns into pairs
-    returns_series = pd.Series(returns)
-    factor_returns_series = pd.Series(factor_returns)
-    pairs = pd.concat([returns_series, factor_returns_series], axis=1)
-    pairs.columns = ['returns', 'factor_returns']
-
-    # exclude any rows where returns are nan
-    pairs = pairs.dropna()
-    # sort by beta
-    pairs = pairs.sort_values(by='factor_returns')
-
-    # find the three vectors, using median of 3
-    start_index = 0
-    mid_index = int(np.around(len(pairs) / 2, 0))
-    end_index = len(pairs) - 1
-
-    (start_returns, start_factor_returns) = pairs.iloc[start_index]
-    (mid_returns, mid_factor_returns) = pairs.iloc[mid_index]
-    (end_returns, end_factor_returns) = pairs.iloc[end_index]
-
-    factor_returns_range = (end_factor_returns - start_factor_returns)
-    start_returns_weight = 0.5
-    end_returns_weight = 0.5
-
-    # find weights for the start and end returns
-    # using a convex combination
-    if not factor_returns_range == 0:
-        start_returns_weight = \
-            (mid_factor_returns - start_factor_returns) / \
-            factor_returns_range
-        end_returns_weight = \
-            (end_factor_returns - mid_factor_returns) / \
-            factor_returns_range
-
-    # calculate fragility heuristic
-    heuristic = (start_returns_weight*start_returns) + \
-        (end_returns_weight*end_returns) - mid_returns
-
-    return heuristic
-
-
-
-
-def roll(*args, **kwargs):
-    """
-    Calculates a given statistic across a rolling time period.
-
-    Parameters
-    ----------
-    returns : pd.Series or np.ndarray
-        Daily returns of the strategy, noncumulative.
-        - See full explanation in :func:`~empyrical.stats.cum_returns`.
-    factor_returns (optional): float / series
-        Benchmark return to compare returns against.
-    function:
-        the function to run for each rolling window.
-    window (keyword): int
-        the number of periods included in each calculation.
-    (other keywords): other keywords that are required to be passed to the
-        function in the 'function' argument may also be passed in.
-
-    Returns
-    -------
-    np.ndarray, pd.Series
-        depends on input type
-        ndarray(s) ==> ndarray
-        Series(s) ==> pd.Series
-
-        A Series or ndarray of the results of the stat across the rolling
-        window.
-
-    """
-    func = kwargs.pop('function')
-    window = kwargs.pop('window')
-    if len(args) > 2:
-        raise ValueError("Cannot pass more than 2 return sets")
-
-    if len(args) == 2:
-        if not isinstance(args[0], type(args[1])):
-            raise ValueError("The two returns arguments are not the same.")
-
-    if isinstance(args[0], np.ndarray):
-        return _roll_ndarray(func, window, *args, **kwargs)
-    return _roll_pandas(func, window, *args, **kwargs)
-
-
-def up(returns, factor_returns, **kwargs):
-    """
-    Calculates a given statistic filtering only positive factor return periods.
-
-    Parameters
-    ----------
-    returns : pd.Series or np.ndarray
-        Daily returns of the strategy, noncumulative.
-        - See full explanation in :func:`~empyrical.stats.cum_returns`.
-    factor_returns (optional): float / series
-        Benchmark return to compare returns against.
-    function:
-        the function to run for each rolling window.
-    (other keywords): other keywords that are required to be passed to the
-        function in the 'function' argument may also be passed in.
-
-    Returns
-    -------
-    Same as the return of the function
-    """
-    func = kwargs.pop('function')
-    returns = returns[factor_returns > 0]
-    factor_returns = factor_returns[factor_returns > 0]
-    return func(returns, factor_returns, **kwargs)
-
-
-def down(returns, factor_returns, **kwargs):
-    """
-    Calculates a given statistic filtering only negative factor return periods.
-
-    Parameters
-    ----------
-    returns : pd.Series or np.ndarray
-        Daily returns of the strategy, noncumulative.
-        - See full explanation in :func:`~empyrical.stats.cum_returns`.
-    factor_returns (optional): float / series
-        Benchmark return to compare returns against.
-    function:
-        the function to run for each rolling window.
-    (other keywords): other keywords that are required to be passed to the
-        function in the 'function' argument may also be passed in.
-
-    Returns
-    -------
-    Same as the return of the 'function'
-    """
-    func = kwargs.pop('function')
-    returns = returns[factor_returns < 0]
-    factor_returns = factor_returns[factor_returns < 0]
-    return func(returns, factor_returns, **kwargs)
-
-
-def up_capture(returns, factor_returns, **kwargs):
-    """
-    Compute the capture ratio for periods when the benchmark return is positive
-
-    Parameters
-    ----------
-    returns : pd.Series or np.ndarray
-        Returns of the strategy, noncumulative.
-        - See full explanation in :func:`~empyrical.stats.cum_returns`.
-    factor_returns : pd.Series or np.ndarray
-        Noncumulative returns of the factor to which beta is
-        computed. Usually a benchmark such as the market.
-        - This is in the same style as returns.
-    period : str, optional
-        Defines the periodicity of the 'returns' data for purposes of
-        annualizing. Value ignored if `annualization` parameter is specified.
-        Defaults are::
-
-            'monthly':12
-            'weekly': 52
-            'daily': 252
-
-    Returns
-    -------
-    up_capture : float
-
-    Note
-    ----
-    See http://www.investopedia.com/terms/u/up-market-capture-ratio.asp for
-    more information.
-    """
-    return up(returns, factor_returns, function=capture, **kwargs)
-
-
-def down_capture(returns, factor_returns, **kwargs):
-    """
-    Compute the capture ratio for periods when the benchmark return is negative
-
-    Parameters
-    ----------
-    returns : pd.Series or np.ndarray
-        Returns of the strategy, noncumulative.
-        - See full explanation in :func:`~empyrical.stats.cum_returns`.
-    factor_returns : pd.Series or np.ndarray
-        Noncumulative returns of the factor to which beta is
-        computed. Usually a benchmark such as the market.
-        - This is in the same style as returns.
-    period : str, optional
-        Defines the periodicity of the 'returns' data for purposes of
-        annualizing. Value ignored if `annualization` parameter is specified.
-        Defaults are::
-
-            'monthly':12
-            'weekly': 52
-            'daily': 252
-
-    Returns
-    -------
-    down_capture : float
-
-    Note
-    ----
-    See http://www.investopedia.com/terms/d/down-market-capture-ratio.asp for
-    more information.
-    """
-    return down(returns, factor_returns, function=capture, **kwargs)
-
-
-def up_down_capture(returns, factor_returns, **kwargs):
-    """
-    Computes the ratio of up_capture to down_capture.
-
-    Parameters
-    ----------
-    returns : pd.Series or np.ndarray
-        Returns of the strategy, noncumulative.
-        - See full explanation in :func:`~empyrical.stats.cum_returns`.
-    factor_returns : pd.Series or np.ndarray
-        Noncumulative returns of the factor to which beta is
-        computed. Usually a benchmark such as the market.
-        - This is in the same style as returns.
-    period : str, optional
-        Defines the periodicity of the 'returns' data for purposes of
-        annualizing. Value ignored if `annualization` parameter is specified.
-        Defaults are::
-
-            'monthly':12
-            'weekly': 52
-            'daily': 252
-
-    Returns
-    -------
-    up_down_capture : float
-        the updown capture ratio
-    """
-    return (up_capture(returns, factor_returns, **kwargs) /
-            down_capture(returns, factor_returns, **kwargs))
-
-
-def up_alpha_beta(returns, factor_returns, **kwargs):
-    """
-    Computes alpha and beta for periods when the benchmark return is positive.
-
-    Parameters
-    ----------
-    see documentation for `alpha_beta`.
-
-    Returns
-    -------
-    float
-        Alpha.
-    float
-        Beta.
-    """
-    return up(returns, factor_returns, function=alpha_beta_aligned, **kwargs)
-
-
-def down_alpha_beta(returns, factor_returns, **kwargs):
-    """
-    Computes alpha and beta for periods when the benchmark return is negative.
-
-    Parameters
-    ----------
-    see documentation for `alpha_beta`.
-
-    Returns
-    -------
-    alpha : float
-    beta : float
-    """
-    return down(returns, factor_returns, function=alpha_beta_aligned, **kwargs)
-
-
-def roll_up_capture(returns, factor_returns, window=10, **kwargs):
-    """
-    Computes the up capture measure over a rolling window.
-    see documentation for :func:`~empyrical.stats.up_capture`.
-    (pass all args, kwargs required)
-
-    Parameters
-    ----------
-    returns : pd.Series or np.ndarray
-        Daily returns of the strategy, noncumulative.
-        - See full explanation in :func:`~empyrical.stats.cum_returns`.
-
-    factor_returns : pd.Series or np.ndarray
-        Noncumulative returns of the factor to which beta is
-        computed. Usually a benchmark such as the market.
-        - This is in the same style as returns.
-
-    window : int, required
-        Size of the rolling window in terms of the periodicity of the data.
-        - eg window = 60, periodicity=DAILY, represents a rolling 60 day window
-    """
-    return roll(returns, factor_returns, window=window, function=up_capture,
-                **kwargs)
-
-
-def roll_down_capture(returns, factor_returns, window=10, **kwargs):
-    """
-    Computes the down capture measure over a rolling window.
-    see documentation for :func:`~empyrical.stats.down_capture`.
-    (pass all args, kwargs required)
-
-    Parameters
-    ----------
-    returns : pd.Series or np.ndarray
-        Daily returns of the strategy, noncumulative.
-        - See full explanation in :func:`~empyrical.stats.cum_returns`.
-
-    factor_returns : pd.Series or np.ndarray
-        Noncumulative returns of the factor to which beta is
-        computed. Usually a benchmark such as the market.
-        - This is in the same style as returns.
-
-    window : int, required
-        Size of the rolling window in terms of the periodicity of the data.
-        - eg window = 60, periodicity=DAILY, represents a rolling 60 day window
-    """
-    return roll(returns, factor_returns, window=window, function=down_capture,
-                **kwargs)
-
-
-def roll_up_down_capture(returns, factor_returns, window=10, **kwargs):
-    """
-    Computes the up/down capture measure over a rolling window.
-    see documentation for :func:`~empyrical.stats.up_down_capture`.
-    (pass all args, kwargs required)
-
-    Parameters
-    ----------
-    returns : pd.Series or np.ndarray
-        Daily returns of the strategy, noncumulative.
-        - See full explanation in :func:`~empyrical.stats.cum_returns`.
-
-    factor_returns : pd.Series or np.ndarray
-        Noncumulative returns of the factor to which beta is
-        computed. Usually a benchmark such as the market.
-        - This is in the same style as returns.
-
-    window : int, required
-        Size of the rolling window in terms of the periodicity of the data.
-        - eg window = 60, periodicity=DAILY, represents a rolling 60 day window
-    """
-    return roll(returns, factor_returns, window=window,
-                function=up_down_capture, **kwargs)
-
-
 def value_at_risk(returns, cutoff=0.05):
     """
     Value at risk (VaR) of a returns stream.
@@ -1884,6 +675,11 @@ def conditional_value_at_risk(returns, cutoff=0.05):
     # index manually and partition out the lowest returns values. The value at
     # the cutoff index should be included in the partition.
     cutoff_index = int((len(returns) - 1) * cutoff)
+    # 将小于cutoff_index 值均值
+    # partition --- Creates a copy of the array with its elements rearranged in such a way that the value of the element
+    # in k-th position is in the position it would be in a sorted array. All elements smaller than the k-th element are
+    # moved before this element and all equal or greater are moved behind it. The ordering of the elements in the two
+    # partitions is undefined.
     return np.mean(np.partition(returns, cutoff_index)[:cutoff_index + 1])
 
 
@@ -1892,6 +688,7 @@ SIMPLE_STAT_FUNCS = [
     annual_return,
     annual_volatility,
     sharpe_ratio,
+    excess_sharpe,
     calmar_ratio,
     stability_of_timeseries,
     max_drawdown,
@@ -1904,173 +701,3 @@ SIMPLE_STAT_FUNCS = [
     value_at_risk,
     conditional_value_at_risk,
 ]
-
-FACTOR_STAT_FUNCS = [
-    excess_sharpe,
-    alpha,
-    beta,
-    beta_fragility_heuristic,
-    gpd_risk_estimates,
-    capture,
-    up_capture,
-    down_capture
-]
-
-
-def perf_attrib(returns,
-                positions,
-                factor_returns,
-                factor_loadings):
-    """
-    Attributes the performance of a returns stream to a set of risk factors.
-
-    Performance attribution determines how much each risk factor, e.g.,
-    momentum, the technology sector, etc., contributed to total returns, as
-    well as the daily exposure to each of the risk factors. The returns that
-    can be attributed to one of the given risk factors are the
-    `common_returns`, and the returns that _cannot_ be attributed to a risk
-    factor are the `specific_returns`. The `common_returns` and
-    `specific_returns` summed together will always equal the total returns.
-
-    Parameters
-    ----------
-    returns : pd.Series
-        Returns for each day in the date range.
-        - Example:
-            2017-01-01   -0.017098
-            2017-01-02    0.002683
-            2017-01-03   -0.008669
-
-    positions: pd.Series
-        Daily holdings in percentages, indexed by date.
-        - Examples:
-            dt          ticker
-            2017-01-01  AAPL      0.417582
-                        TLT       0.010989
-                        XOM       0.571429
-            2017-01-02  AAPL      0.202381
-                        TLT       0.535714
-                        XOM       0.261905
-
-    factor_returns : pd.DataFrame
-        Returns by factor, with date as index and factors as columns
-        - Example:
-                        momentum  reversal
-            2017-01-01  0.002779 -0.005453
-            2017-01-02  0.001096  0.010290
-
-    factor_loadings : pd.DataFrame
-        Factor loadings for all days in the date range, with date and ticker as
-        index, and factors as columns.
-        - Example:
-                               momentum  reversal
-            dt         ticker
-            2017-01-01 AAPL   -1.592914  0.852830
-                       TLT     0.184864  0.895534
-                       XOM     0.993160  1.149353
-            2017-01-02 AAPL   -0.140009 -0.524952
-                       TLT    -1.066978  0.185435
-                       XOM    -1.798401  0.761549
-
-    Returns
-    -------
-    tuple of (risk_exposures_portfolio, perf_attribution)
-
-    risk_exposures_portfolio : pd.DataFrame
-        df indexed by datetime, with factors as columns
-        - Example:
-                        momentum  reversal
-            dt
-            2017-01-01 -0.238655  0.077123
-            2017-01-02  0.821872  1.520515
-
-    perf_attribution : pd.DataFrame
-        df with factors, common returns, and specific returns as columns,
-        and datetimes as index
-        - Example:
-                        momentum  reversal  common_returns  specific_returns
-            dt
-            2017-01-01  0.249087  0.935925        1.185012          1.185012
-            2017-01-02 -0.003194 -0.400786       -0.403980         -0.403980
-
-    Note
-    ----
-    See https://en.wikipedia.org/wiki/Performance_attribution for more details.
-    """
-
-    # Make risk data match time range of returns
-    start = returns.index[0]
-    end = returns.index[-1]
-    factor_returns = factor_returns.loc[start:end]
-    factor_loadings = factor_loadings.loc[start:end]
-
-    factor_loadings.index = factor_loadings.index.set_names(['dt', 'ticker'])
-
-    positions = positions.copy()
-    positions.index = positions.index.set_names(['dt', 'ticker'])
-
-    risk_exposures_portfolio = compute_exposures(positions,
-                                                 factor_loadings)
-
-    perf_attrib_by_factor = risk_exposures_portfolio.multiply(factor_returns)
-    common_returns = perf_attrib_by_factor.sum(axis='columns')
-
-    tilt_exposure = risk_exposures_portfolio.mean()
-    tilt_returns = factor_returns.multiply(tilt_exposure).sum(axis='columns')
-    timing_returns = common_returns - tilt_returns
-    specific_returns = returns - common_returns
-
-    returns_df = pd.DataFrame(OrderedDict([
-        ('total_returns', returns),
-        ('common_returns', common_returns),
-        ('specific_returns', specific_returns),
-        ('tilt_returns', tilt_returns),
-        ('timing_returns', timing_returns)
-        ]))
-
-    return (risk_exposures_portfolio,
-            pd.concat([perf_attrib_by_factor, returns_df], axis='columns'))
-
-
-def compute_exposures(positions, factor_loadings):
-    """
-    Compute daily risk factor exposures.
-
-    Parameters
-    ----------
-    positions: pd.Series
-        A series of holdings as percentages indexed by date and ticker.
-        - Examples:
-            dt          ticker
-            2017-01-01  AAPL      0.417582
-                        TLT       0.010989
-                        XOM       0.571429
-            2017-01-02  AAPL      0.202381
-                        TLT       0.535714
-                        XOM       0.261905
-
-    factor_loadings : pd.DataFrame
-        Factor loadings for all days in the date range, with date and ticker as
-        index, and factors as columns.
-        - Example:
-                               momentum  reversal
-            dt         ticker
-            2017-01-01 AAPL   -1.592914  0.852830
-                       TLT     0.184864  0.895534
-                       XOM     0.993160  1.149353
-            2017-01-02 AAPL   -0.140009 -0.524952
-                       TLT    -1.066978  0.185435
-                       XOM    -1.798401  0.761549
-
-    Returns
-    -------
-    risk_exposures_portfolio : pd.DataFrame
-        df indexed by datetime, with factors as columns
-        - Example:
-                        momentum  reversal
-            dt
-            2017-01-01 -0.238655  0.077123
-            2017-01-02  0.821872  1.520515
-    """
-    risk_exposures = factor_loadings.multiply(positions, axis='rows')
-    return risk_exposures.groupby(level='dt').sum()

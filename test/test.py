@@ -6773,3 +6773,27 @@ from six.moves.urllib_error import HTTPError
     #     self._trading_calendar.session_open(self._first_session),
     #     self._trading_calendar.session_close(self._last_session),
     # )
+
+# def simple_returns(prices):
+#     """
+#     Compute simple returns from a timeseries of prices.
+#
+#     Parameters
+#     ----------
+#     prices : pd.Series, pd.DataFrame or np.ndarray
+#         Prices of assets in wide-format, with assets as columns,
+#         and indexed by datetimes.
+#
+#     Returns
+#     -------
+#     returns : array-like
+#         Returns of assets in wide-format, with assets as columns,
+#         and index coerced to be tz-aware.
+#     """
+#     if isinstance(prices, (pd.DataFrame, pd.Series)):
+#         out = prices.pct_change().iloc[1:]
+#     else:
+#         # Assume np.ndarray np.diff ( back -before)
+#         out = np.diff(prices, axis=0)
+#         np.divide(out, prices[:-1], out=out)
+#     return out

@@ -171,3 +171,40 @@ def split_normalized_quarters(normalized_quarters):
     years = normalized_quarters // 4
     quarters = normalized_quarters % 4
     return years, quarters + 1
+
+
+def aggregate_returns(returns, convert_to):
+    """
+    Aggregates returns by week, month, or year.
+
+    Parameters
+    ----------
+    returns : pd.Series
+       Daily returns of the strategy, noncumulative.
+        - See full explanation in :func:`~empyrical.stats.cum_returns`.
+    convert_to : str
+        Can be 'weekly', 'monthly', or 'yearly'.
+
+    Returns
+    -------
+    aggregated_returns : pd.Series
+    """
+
+    def cumulate_returns(x):
+        # return cum_returns(x).iloc[-1]
+        raise NotImplementedError()
+
+    if convert_to == 'weekly':
+        grouping = [lambda x: x.year, lambda x: x.isocalendar()[1]]
+    elif convert_to == 'monthly':
+        grouping = [lambda x: x.year, lambda x: x.month]
+    elif convert_to == 'quarterly':
+        grouping = [lambda x: x.year, lambda x: int(math.ceil(x.month/3.))]
+    elif convert_to == 'yearly':
+        grouping = [lambda x: x.year]
+    else:
+        raise ValueError(
+            'convert_to must be {}, {} or {}'.format('weekly', 'monthly', 'yearly')
+        )
+
+    return returns.groupby(grouping).apply(cumulate_returns)

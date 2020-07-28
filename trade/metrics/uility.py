@@ -196,6 +196,9 @@ def rolling_window(array, length, mutable=False):
     return out
 
 
+# roll_max_drawdown = _create_unary_vectorized_roll_function(max_drawdown)
+
+
 def _create_unary_vectorized_roll_function(function):
     def unary_vectorized_roll(arr, window, out=None, **kwargs):
         """
@@ -383,38 +386,6 @@ def _to_pandas(ob):
             'cannot convert array of dim > 2 to a pandas structure',
         )
 
-
-def _aligned_series(*many_series):
-    """
-    Return a new list of series containing the data in the input series, but
-    with their indices aligned. NaNs will be filled in for missing values.
-
-    Parameters
-    ----------
-    *many_series
-        The series to align.
-
-    Returns
-    -------
-    aligned_series : iterable[array-like]
-        A new list of series containing the data in the input series, but
-        with their indices aligned. NaNs will be filled in for missing values.
-
-    """
-    head = many_series[0]
-    tail = many_series[1:]
-    n = len(head)
-    if (isinstance(head, np.ndarray) and
-            all(len(s) == n and isinstance(s, np.ndarray) for s in tail)):
-        # optimization: ndarrays of the same length are already aligned
-        return many_series
-
-    # dataframe has no ``itervalues``
-    return (
-        v
-        for _, v in iteritems(pd.concat(map(_to_pandas, many_series), axis=1))
-    )
-
 def _roll_ndarray(func, window, *args, **kwargs):
     data = []
     for i in range(window, len(args[0]) + 1):
@@ -432,3 +403,45 @@ def _roll_pandas(func, window, *args, **kwargs):
         index_values.append(index_value)
         data[index_value] = func(*rets, **kwargs)
     return pd.Series(data, index=type(args[0].index)(index_values))
+
+def roll(*args, **kwargs):
+    """
+    Calculates a given statistic across a rolling time period.
+
+    Parameters
+    ----------
+    returns : pd.Series or np.ndarray
+        Daily returns of the strategy, noncumulative.
+        - See full explanation in :func:`~empyrical.stats.cum_returns`.
+    factor_returns (optional): float / series
+        Benchmark return to compare returns against.
+    function:
+        the function to run for each rolling window.
+    window (keyword): int
+        the number of periods included in each calculation.
+    (other keywords): other keywords that are required to be passed to the
+        function in the 'function' argument may also be passed in.
+
+    Returns
+    -------
+    np.ndarray, pd.Series
+        depends on input type
+        ndarray(s) ==> ndarray
+        Series(s) ==> pd.Series
+
+        A Series or ndarray of the results of the stat across the rolling
+        window.
+
+    """
+    func = kwargs.pop('function')
+    window = kwargs.pop('window')
+    if len(args) > 2:
+        raise ValueError("Cannot pass more than 2 return sets")
+
+    if len(args) == 2:
+        if not isinstance(args[0], type(args[1])):
+            raise ValueError("The two returns arguments are not the same.")
+
+    if isinstance(args[0], np.ndarray):
+        return _roll_ndarray(func, window, *args, **kwargs)
+    return _roll_pandas(func, window, *args, **kwargs)
