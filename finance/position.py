@@ -7,71 +7,7 @@ Created on Tue Mar 12 15:37:47 2019
 """
 import numpy as np
 from .commission import Commission
-
-
-class InnerPosition:
-    """The real values of a position.
-
-    This exists to be owned by both a
-    :class:`zipline.finance.position.Position` and a
-    :class:`zipline.protocol.Position` at the same time without a cycle.
-    """
-    def __init__(self,
-                 asset,
-                 amount=0,
-                 cost_basis=0.0,
-                 last_sale_price=0.0,
-                 last_sale_date=None):
-        self.asset = asset
-        self.amount = amount
-        self.cost_basis = cost_basis  # per share
-        self.last_sync_price = last_sale_price
-        self.last_sync_date = last_sale_date
-
-    def __repr__(self):
-        return (
-            '%s(asset=%r, amount=%r, cost_basis=%r,'
-            ' last_sale_price=%r, last_sale_date=%r)' % (
-                type(self).__name__,
-                self.asset,
-                self.amount,
-                self.cost_basis,
-                self.last_sync_price,
-                self.last_sync_date,
-            )
-        )
-
-# 仓位 protocol
-class Position(object):
-    """
-        a position held by algorithm
-    """
-    __slots__ = ('_underlying_position')
-
-    def __init__(self,underlying_position):
-        object.__setattr__(self,'_underlying_position', underlying_position)
-
-    def __getattr__(self, attr):
-        return getattr(self._underlying_position,attr)
-
-    def __setattr__(self, key, value):
-        raise AttributeError('cannot mutate position objects')
-
-    @property
-    def sid(self):
-        return self.asset.sid
-
-    def __repr__(self):
-        return 'position(%r)'%{
-            k:getattr(self,k)
-            for k in (
-                'asset',
-                'amount',
-                'cost_basis',
-                'last_sale_price',
-                'laost_sale_date'
-            )
-        }
+from._protocol import InnerPosition ,Position as ProtocolPosition
 
 
 class Position(object):
@@ -94,13 +30,19 @@ class Position(object):
                 last_sync_date = last_sync_date,
         )
         object.__setattr__(self,'inner_position',inner)
-        object.__setattr__(self,'protocol_position',Position(inner))
+        object.__setattr__(self,'protocol_position',ProtocolPosition(inner))
         self.commission = Commission(multiplier)
         self._closed = False
 
     @property
     def tag(self):
         return self.asset._tag
+
+    @property
+    def sid(self):
+        # For backwards compatibility because we pass this object to
+        # custom slippage models.
+        return self.asset.sid
 
     def __getattr__(self, item):
         return getattr(self.inner_position,item)

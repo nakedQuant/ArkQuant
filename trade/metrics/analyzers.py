@@ -5,7 +5,7 @@ Created on Sun Feb 17 16:11:34 2019
 
 @author: python
 """
-import math , pandas as pd , numpy as np
+import pandas as pd , numpy as np
 from scipy import stats
 
 # APPROX_BDAYS_PER_YEAR
@@ -290,17 +290,14 @@ def omega_ratio(returns, risk_free=0.0, required_return=0.0):
     See https://en.wikipedia.org/wiki/Omega_ratio for more details.
 
     """
-
     if len(returns) < 2:
         return np.nan
-
-    if annualization == 1:
-        return_threshold = required_return
-    elif required_return <= -1:
+    if required_return <= -1:
         return np.nan
     else:
+        # return_threshold = required_return
         return_threshold = (1 + required_return) ** \
-            (1. / annualization) - 1
+            (1. / 252) - 1
 
     returns_less_thresh = returns - risk_free - return_threshold
 
@@ -357,26 +354,21 @@ def sharpe_ratio(returns,risk_free=0):
     # return np.sqrt(periods) * (np.mean(returns)) / np.std(returns)
     out = np.empty(returns.shape[1:])
     returns_risk_adj = np.asanyarray(_adjust_returns(returns, risk_free))
-    ann_factor = annualization_factor(period, annualization)
-
     np.multiply(
         np.divide(
             np.nanmean(returns_risk_adj, axis=0),
             np.nanstd(returns_risk_adj, ddof=1, axis=0),
             out=out,
         ),
-        np.sqrt(ann_factor),
+        # period --- daily
+        np.sqrt(252),
         out=out,
     )
     return out
 
 
 def sortino_ratio(returns,
-                  required_return=0,
-                  period=DAILY,
-                  annualization=None,
-                  out=None,
-                  _downside_risk=None):
+                  required_return=0):
     """
     Determines the Sortino ratio of a strategy.
 
@@ -422,41 +414,24 @@ def sortino_ratio(returns,
 
     """
     # return np.sqrt(periods) * (np.mean(returns)) / np.std(returns[returns < 0])
-    allocated_output = out is None
-    if allocated_output:
-        out = np.empty(returns.shape[1:])
-
-    return_1d = returns.ndim == 1
-
     if len(returns) < 2:
-        out[()] = np.nan
-        if return_1d:
-            out = out.item()
-        return out
+        return np.nan
+
+    out = np.empty(returns.shape[1:])
 
     adj_returns = np.asanyarray(_adjust_returns(returns, required_return))
+    # period=DAILY
+    average_annual_return = np.nanmean(adj_returns, axis=0) * 252
+    annualized_downside_risk = downside_risk(returns, required_return)
 
-    ann_factor = annualization_factor(period, annualization)
-
-    average_annual_return = nanmean(adj_returns, axis=0) * ann_factor
-    annualized_downside_risk = (
-        _downside_risk
-        if _downside_risk is not None else
-        downside_risk(returns, required_return, period, annualization)
-    )
     np.divide(average_annual_return, annualized_downside_risk, out=out)
-    if return_1d:
-        out = out.item()
-    elif isinstance(returns, pd.DataFrame):
+    if isinstance(returns, pd.DataFrame):
         out = pd.Series(out)
 
     return out
 
 def downside_risk(returns,
-                  required_return=0,
-                  period=DAILY,
-                  annualization=None,
-                  out=None):
+                  required_return=0):
     """
     Determines the downside deviation below a threshold
 
@@ -497,19 +472,10 @@ def downside_risk(returns,
     Mag_Sortino_0213.pdf>`__ for more details, specifically why using the
     standard deviation of the negative returns is not correct.
     """
-    allocated_output = out is None
-    if allocated_output:
-        out = np.empty(returns.shape[1:])
-
-    returns_1d = returns.ndim == 1
-
     if len(returns) < 1:
-        out[()] = np.nan
-        if returns_1d:
-            out = out.item()
-        return out
+        return np.nan
 
-    ann_factor = annualization_factor(period, annualization)
+    out = np.empty(returns.shape[1:])
 
     downside_diff = np.clip(
         _adjust_returns(
@@ -519,15 +485,12 @@ def downside_risk(returns,
         np.NINF,
         0,
     )
-
     np.square(downside_diff, out=downside_diff)
-    nanmean(downside_diff, axis=0, out=out)
+    np.nanmean(downside_diff, axis=0, out=out)
     np.sqrt(out, out=out)
-    np.multiply(out, np.sqrt(ann_factor), out=out)
-
-    if returns_1d:
-        out = out.item()
-    elif isinstance(returns, pd.DataFrame):
+    # period = 'daily'
+    np.multiply(out, np.sqrt(252), out=out)
+    if isinstance(returns, pd.DataFrame):
         out = pd.Series(out, index=returns.columns)
     return out
 

@@ -9,8 +9,9 @@ import operator as op,numpy as np
 from toolz import groupby
 
 
+# portfolio (portfolio_value , positions_exposure, positions_value , cash , gross_leverage , net_leverage), positions , daily_return
+
 class DailyFieldLedger(object):
-    """基于字典 --- 无需返回值 ，局部变量里存在字典就OK了"""
 
     def __init__(self,ledger_field,packet_field = None):
         self._get_ledger_field = op.attrgetter(ledger_field)
@@ -48,8 +49,7 @@ class StartOfPeriodLedgerField(object):
             self._packet_field = packet_field
 
     def start_of_simulation(self,
-                            ledger,
-                            benchmark_source):
+                            ledger):
         self._start_of_simulation = self._get_ledger_field(ledger)
 
     def start_of_session(self, ledger):
@@ -57,6 +57,7 @@ class StartOfPeriodLedgerField(object):
 
     def _end_of_period(self, sub_field, packet,ledger):
         packet_field = self._packet_field
+        # start_of_simulation 不变的
         packet['cumulative_perf'][packet_field] = self._start_of_simulation
         packet[sub_field][packet_field] = self._previous_day
 
@@ -73,8 +74,7 @@ class PNL(object):
     """Tracks daily and cumulative PNL.
     """
     def start_of_simulation(self,
-                            ledger,
-                            benchmark_source):
+                            ledger):
         self._previous_pnl = 0.0
 
     def start_of_session(self, ledger):
@@ -103,8 +103,22 @@ class Returns(object):
                        sessions,
                        session_ix,
                        benchmark_source):
-        packet['daily_perf']['returns'] = ledger.todays_returns
+        packet['daily_perf']['returns'] = ledger.daily_returns
         packet['cumulative_perf']['returns'] = ledger.portfolio.returns
+
+def __init__(self, start_date=None, capital_base=0.0):
+    self_ = MutableView(self)
+    self_.cash_flow = 0.0
+    self_.starting_cash = capital_base
+    self_.portfolio_value = capital_base
+    self_.pnl = 0.0
+    self_.returns = 0.0
+    self_.cash = capital_base
+    self_.positions = Positions()
+    self_.start_date = start_date
+    self_.positions_value = 0.0
+    self_.positions_exposure = 0.0
+
 
 
 class CashFlow(object):
@@ -115,8 +129,7 @@ class CashFlow(object):
     For historical reasons, this field is named 'capital_used' in the packets.
     """
     def start_of_simulation(self,
-                            ledger,
-                            benchmark_source):
+                            ledger):
         self._previous_cash_flow = 0.0
 
     def start_of_session(self,ledger):
@@ -277,6 +290,49 @@ class NumTradingDays(object):
         packet['cumulative_risk_metrics']['trading_days'] = \
             self._num_trading_days
 
+    # def end_of_bar(self,
+    #                packet,
+    #                ledger,
+    #                dt,
+    #                session_ix,
+    #                data_portal):
+    #     packet['cumulative_risk_metrics']['trading_days'] = (
+    #         self._num_trading_days
+    #     )
+    #
+    # end_of_session = end_of_bar
+
+
+class _ConstantCumulativeRiskMetric(object):
+    """A metrics which does not change, ever.
+
+    Notes
+    -----
+    This exists to maintain the existing structure of the perf packets. We
+    should kill this as soon as possible.
+    """
+    def __init__(self, field, value):
+        self._field = field
+        self._value = value
+
+    def end_of_bar(self, packet, *args):
+        packet['cumulative_risk_metrics'][self._field] = self._value
+
+    def end_of_session(self, packet, *args):
+        packet['cumulative_risk_metrics'][self._field] = self._value
+
+
+class PeriodLabel(object):
+    """Backwards compat, please kill me.
+    """
+    def start_of_session(self, ledger, session, data_portal):
+        self._label = session.strftime('%Y-%m')
+
+    def end_of_bar(self, packet, *args):
+        packet['cumulative_risk_metrics']['period_label'] = self._label
+
+    end_of_session = end_of_bar
+
 
 class SQN(object):
     """
@@ -353,3 +409,145 @@ class ReturnsStatistic(object):
         if not np.isfinite(res):
             res = None
         packet['cumulative_risk_metrics'][self._field_name] = res
+
+
+
+class MetricsTracker(object):
+    """
+    The algorithm's interface to the registered risk and performance
+    metrics.
+
+    Parameters
+    ----------
+    trading_calendar : TrandingCalendar
+        The trading calendar used in the simulation.
+    first_session : pd.Timestamp
+        The label of the first trading session in the simulation.
+    last_session : pd.Timestamp
+        The label of the last trading session in the simulation.
+    capital_base : float
+        The starting capital for the simulation.
+    metrics : list[Metric]
+        The metrics to track.
+    emission_rate : {'daily', 'minute'}
+        How frequently should a performance packet be generated?
+    """
+    _hooks = (
+        'start_of_simulation',
+        'end_of_simulation',
+
+        'start_of_session',
+        'end_of_session',
+    )
+
+    def __init__(self,
+                 ledger,
+                 first_session,
+                 last_session,
+                 trading_calendar,
+                 capital_base,
+                 metrics,
+                 ):
+        self._sessions  = trading_calendar.sessions_in_range(
+            first_session,
+            last_session,
+        )
+        self._ledger = ledger
+
+        self._capital_base = capital_base
+
+        self._first_session = first_session
+        self._last_session = last_session
+
+        # bind all of the hooks from the passed metrics objects.
+        for hook in self._hooks:
+            registered = []
+            for metric in metrics:
+                try:
+                    registered.append(getattr(metric, hook))
+                except AttributeError:
+                    pass
+
+            def closing_over_loop_variables_is_hard(registered):
+                def hook_implementation(*args, **kwargs):
+                    for impl in registered:
+                        impl(*args, **kwargs)
+
+                return hook_implementation
+            #属性 --- 方法
+            hook_implementation = closing_over_loop_variables_is_hard()
+            hook_implementation.__name__ = hook
+            # 属性 --- 方法
+            setattr(self, hook, hook_implementation)
+
+    def handle_start_of_simulation(self, benchmark):
+        self._benchmark = benchmark
+
+        self.start_of_simulation(
+            self._ledger,
+            benchmark,
+        )
+
+    def handle_market_open(self, session_label):
+        """Handles the start of each session.
+
+        Parameters
+        ----------
+        session_label : Timestamp
+            The label of the session that is about to begin.
+        """
+        ledger = self._ledger
+        # 账户初始化
+        ledger.start_of_session(session_label)
+        #执行metrics --- start_of_session
+        self.start_of_session(ledger, session_label)
+        self._current_session = session_label
+
+    def handle_market_close(self):
+        """Handles the close of the given day.
+
+        Parameters
+        ----------
+        dt : Timestamp
+            The most recently completed simulation datetime.
+        data_portal : DataPortal
+            The current data portal.
+
+        Returns
+        -------
+        A daily perf packet.
+        """
+        completed_session = self._current_session
+
+        packet = {
+            'period_start': self._first_session,
+            'period_end': self._last_session,
+            'capital_base': self._capital_base,
+            'daily_perf': {},
+            'cumulative_perf': {},
+            'cumulative_risk_metrics': {},
+        }
+        ledger = self._ledger
+        ledger.end_of_session(completed_session)
+        self.end_of_session(
+            packet,
+            ledger,
+            self._sessions,
+            completed_session,
+            self._benchmark_source
+        )
+        return packet
+
+    def handle_simulation_end(self):
+        """
+        When the simulation is complete, run the full period risk report
+        and send it out on the results socket.
+        """
+        packet = {}
+        self.end_of_simulation(
+            packet,
+            self._ledger,
+            self._sessions,
+            self._benchmark,
+        )
+        return packet

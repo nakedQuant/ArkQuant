@@ -25,6 +25,13 @@ class OrderType(Enum):
 
 class BaseOrder(object):
 
+    def __init__(self,asset,price,ticker,style,slippage_model):
+        self.asset = asset
+        self._price = price
+        self._created_dt = ticker
+        self.style = style
+        self.slippage_model = slippage_model
+
     def make_id(self):
         return  uuid.uuid4().hex()
 
@@ -33,21 +40,6 @@ class BaseOrder(object):
         # For backwards compatibility because we pass this object to
         # custom slippage models.
         return self.asset.sid
-
-    def to_dict(self):
-        dct = {name : getattr(self.name)
-               for name in self.__slots__}
-        return dct
-
-    def __repr__(self):
-        """
-        String representation for this object.
-        """
-        return "Order(%s)" % self.to_dict().__repr__()
-
-    def __getstate__(self):
-        """ pickle -- __getstate__ , __setstate__"""
-        return self.__dict__()
 
     def fit_slippage(self):
         point = 1 + self.slippage_model.calculate_slippage_factor()
@@ -75,6 +67,32 @@ class BaseOrder(object):
             return True
         return False
 
+    def __eq__(self, other):
+        if isinstance(other , Order) and self.__dict__ == other.__dict__ :
+            return True
+        return False
+
+    def __contains__(self, name):
+        return name in self.__dict__
+
+    def __repr__(self):
+        return "Event({0})".format(self.__dict__)
+
+    def to_dict(self):
+        dct = {name : getattr(self.name)
+               for name in self.__slots__}
+        return dct
+
+    def __repr__(self):
+        """
+        String representation for this object.
+        """
+        return "Order(%s)" % self.to_dict().__repr__()
+
+    def __getstate__(self):
+        """ pickle -- __getstate__ , __setstate__"""
+        return self.__dict__()
+
 
 class Order(BaseOrder):
     # using __slots__ to save on memory usage --- __dict__.  Simulations can create many
@@ -98,12 +116,9 @@ class Order(BaseOrder):
     __slot__ = ['asset','amount','price','_created_dt','style','slippage_model']
 
     def __init__(self, asset,amount,price,ticker,style,slippage_model):
-        self.asset = asset
         self.amount = amount
-        self._price = price
-        self._created_dt = ticker
-        self.style = style
-        self.slippage_model = slippage_model
+        # --- 找到baseOrder 父类 -- self
+        super(BaseOrder,self).__init__(self, asset, price, ticker, style, slippage_model)
         self.broker_order_id = self.make_id()
 
 
@@ -130,12 +145,8 @@ class PriceOrder(BaseOrder):
     __slot__ = ['asset','capital','price','_created_dt','style','slippage_model']
 
     def __init__(self,asset,capital,price,ticker,style,slippage_model):
-        self.asset = asset
         self.capital = capital
-        self._price = price
-        self._created_dt = ticker
-        self.style = style
-        self.slippage_model = slippage_model
+        super(BaseOrder,self).__init__(self, asset, price, ticker, style, slippage_model)
         self.broker_order_id = self.make_id()
 
 

@@ -6,6 +6,7 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 from collections import defaultdict,OrderedDict
+from toolz import groupby , valmap
 import numpy as np , pandas as pd
 from functools import partial
 from finance.position import Position
@@ -13,16 +14,9 @@ from finance.position import Position
 
 class PositionStats(object):
 
-    gross_exposure = None
-    gross_value = None
-    long_exposure = None
-    net_exposure = None
-    net_value = None
-    short_exposure = None
-    longs_count = None
-    shorts_count = None
-    position_exposure_array = np.array()
-    position_exposure_series = pd.series()
+    num_count = None
+    gross_exposure = dict()
+    gross_exposure_values = dict()
 
     def __new__(cls):
         self = cls()
@@ -37,18 +31,15 @@ def calculate_position_tracker_stats(positions,stats):
         stats ---- PositionStats
         return portfolio value and num of position
     """
-    count = 0
-    net_exposure = 0
-
-    for outer_position in positions.values():
-        position = outer_position.inner_position
-        #daily更新价格
-        exposure = position.amount * position.last_sale_price
-        count += 1
-        net_exposure += exposure
-
-    stats.net_exposure = net_exposure
-    stats.count = count
+    # 基于持仓资产类别暴露度
+    mappings = groupby(lambda x : x.asset.asset_type,positions)
+    position_exposure_mappings = valmap(lambda x : sum([p.amount for p in x]), mappings)
+    # 基于持仓资产类别金额
+    position_exposure_values = valmap(lambda x : sum([p.amount * p.last_sale_price for p in x]),mappings)
+    # 汇总
+    stats.gross_exposure = position_exposure_mappings
+    stats.gross_exposure_values = position_exposure_values
+    stats.position_count = len(positions)
 
 
 class PositionTracker(object):
@@ -166,5 +157,4 @@ class PositionTracker(object):
 
     def maybe_create_close_position_transaction(self,txn):
         """强制平仓机制 --- 设立仓位 ，改变脚本运行逻辑"""
-
-        raise NotImplementedError('all action determined by alogrithm')
+        raise NotImplementedError('automatic operation')

@@ -5,7 +5,7 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-from gateWay.driver.calendar.trading_calendar import TradingCalendar
+from gateWay.driver.calendar.trading_calendar import trading_calendar
 
 
 class Domain(object):
@@ -15,8 +15,6 @@ class Domain(object):
     2. fields which determines the fields of term
     --- 如果创建太多的实例会导致内存过度占用 ，在pipeline执行算法结束后，清楚所有缓存对象 --- 设立定时任务chu
     """
-    trading_calendar = TradingCalendar()
-
     def __init__(self,fields,window = 1):
         self._fields = fields
         self._window = window

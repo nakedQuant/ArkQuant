@@ -71,7 +71,7 @@ class Engine(ABC):
         """
             基于标的类别来设置卖出规则  --- 应当具有通用型最大程度避免冲突
         """
-        hold_mappings = groupby(lambda x: x.inner_position.asset.asset_type,holdings)
+        hold_mappings = groupby(lambda x: x.asset.asset_type,holdings)
         outputs = []
         for asset_type , positions in hold_mappings.items():
             result = self.ump_pickers[asset_type].evalute(positions,picker_metadata)
@@ -86,7 +86,7 @@ class Engine(ABC):
             umps --- 根据资产类别话费不同退出策略 ，symbols , etf , bond
         """
         # 判断所有仓位的更新时间 -- 保持一致
-        dts = ledger.sync()
+        dts = ledger.is_synchronize()
         capital = ledger.porfolio.cash
         # default
         engine_metadata = self.register_default(dts)
@@ -194,7 +194,7 @@ class SimplePipelineEngine(object):
         conflicts = [ name for name in intersection if puts[name] == calls[name]]
         assert not conflicts,ValueError('name : %r have conflicts between ump and pipeline '%conflicts)
         # pipeline_name : holding
-        holding_mappings = groupby(lambda x : x.inner_position.tag,holdings)
+        holding_mappings = groupby(lambda x : x.tag,holdings)
         #直接卖出持仓，无买入标的
         direct_negatives = set(puts) - set(intersection)
         # 卖出持仓买入对应标的

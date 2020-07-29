@@ -67,9 +67,9 @@ class EventLoader(PipelineLoader):
         window = self.pipeline_domain.window
         assert op_name in EVENT , ValueError('unidentified event')
         raw = self._reader_dct[op_name].load_raw_arrays(self,
-                                                                dts,
-                                                                window,
-                                                                sids
-                                                                )
+                                                            dts,
+                                                            window,
+                                                            sids
+                                                            )
         kline = raw.loc[:,fields]
         return kline
