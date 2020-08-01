@@ -43,6 +43,76 @@ def _deprecated_getitem_method(name, attrs):
     return __getitem__
 
 
+class Portfolio(object):
+    """Object providing read-only access to current portfolio state.
+
+    Parameters
+    ----------
+    capital_base : float
+        The starting value for the portfolio. This will be used as the starting
+        cash, current cash, and portfolio value.
+
+    positions : zipline.protocol.Positions
+        Dict-like object containing information about currently-held positions.
+
+    """
+    def __init__(self,capital_base=0.0):
+        self.capital_base = capital_base
+        self.start_cash = capital_base - self.cash_flow
+        self.portfolio_value = capital_base
+        self._cash_flow = 0.0
+        self.pnl = 0.0
+        self.returns = 0.0
+        self.uility = 0.0
+        # 获取postiions protocol
+        self.positions = None
+
+    @property
+    def cash_flow(self):
+        return self._cash_flow
+
+    def __getattr__(self, item):
+        return self.__dict__[item]
+
+    def __repr__(self):
+        return "Portfolio({0})".format(self.__dict__)
+
+    # If you are adding new attributes, don't update this set. This method
+    # is deprecated to normal attribute access so we don't want to encourage
+    # new usages.
+    __getitem__ = _deprecated_getitem_method(
+        'portfolio', {
+            'capital_base',
+            'portfolio_value',
+            'pnl',
+            'returns',
+            'cash',
+            'positions',
+            'uility'
+        },
+    )
+
+    @property
+    def current_portfolio_weights(self):
+        """
+        Compute each asset's weight in the portfolio by calculating its held
+        value divided by the total value of all positions.
+
+        Each equity's value is its price times the number of shares held. Each
+        futures contract's value is its unit price times number of shares held
+        times the multiplier.
+        """
+        if self.positions:
+            position_values = pd.Series({
+                p.sid: (
+                        p.last_sale_price *
+                        p.amount
+                )
+                for p in self.positions
+            })
+            return position_values / self.portfolio_value
+
+
 class InnerPosition:
     """The real values of a position.
 
@@ -55,13 +125,13 @@ class InnerPosition:
                  asset,
                  amount=0,
                  cost_basis=0.0,
-                 last_sale_price=0.0,
-                 last_sale_date=None):
+                 last_sync_price=0.0,
+                 last_sync_date=None):
         self.asset = asset
         self.amount = amount
         self.cost_basis = cost_basis  # per share
-        self.last_sync_price = last_sale_price
-        self.last_sync_date = last_sale_date
+        self.last_sync_price = last_sync_price
+        self.last_sync_date = last_sync_date
 
     def __repr__(self):
         return (
@@ -77,31 +147,44 @@ class InnerPosition:
         )
 
 
+
+class MutableView(object):
+    """A mutable view over an "immutable" object.
+
+    Parameters
+    ----------
+    ob : any
+        The object to take a view over.
+    """
+    # add slots so we don't accidentally add attributes to the view instead of
+    # ``ob``
+    __slots__ = ('_mutable_view_obj')
+
+    def __init__(self,ob):
+        object.__setattr__(self,'_mutable_view_ob',ob)
+
+    def __getattr__(self, item):
+        return getattr(self._mutable_view_ob,item)
+
+    def __setattr__(self,attr,value):
+        #vars() 函数返回对象object的属性和属性值的字典对象 --- 扩展属性类型 ,不改变原来的对象属性
+        vars(self._mutable_view_ob)[attr] = value
+
+    def __repr__(self):
+        return '%s(%r)'%(type(self).__name__,self._mutable_view_ob)
+
+
 class Position(object):
     """
-    A protocol position
-
-    Attributes
-    ----------
-    asset : zipline.assets.Asset
-        The held asset.
-    amount : int
-        Number of shares held. Short positions are represented with negative
-        values.
-    cost_basis : float
-        Average price at which currently-held shares were acquired.
-    last_sale_price : float
-        Most recent price for the position.
-    last_sale_date : pd.Timestamp
-        Datetime at which ``last_sale_price`` was last updated.
+    A protocol position which is not mutated ,but inner can be changed
     """
-    __slots__ = ('_underlying_position',)
+    __slots__ = ('_underlying_position')
 
-    def __init__(self, underlying_position):
-        object.__setattr__(self, '_underlying_position', underlying_position)
+    def __init__(self,inner):
+        self._underlying_position = MutableView(inner)
 
     def __getattr__(self, attr):
-        return getattr(self._underlying_position, attr)
+        return self.__dict__[attr]
 
     def __setattr__(self, attr, value):
         raise AttributeError('cannot mutate Position objects')
@@ -144,77 +227,26 @@ class Positions(dict):
                             " instead.".format(type(key).__name__))
 
 
-class MutableView(object):
-    """A mutable view over an "immutable" object.
-
-    Parameters
-    ----------
-    ob : any
-        The object to take a view over.
+class Account(object):
     """
-    # add slots so we don't accidentally add attributes to the view instead of
-    # ``ob``
-    __slots__ = ('_mutable_view_obj')
-
-    def __init__(self,ob):
-        object.__setattr__(self,'_mutable_view_ob',ob)
-
-    def __getattr__(self, item):
-        return getattr(self._mutable_view_ob,item)
-
-    def __setattr__(self,attr,value):
-        #vars() 函数返回对象object的属性和属性值的字典对象 --- 扩展属性类型 ,不改变原来的对象属性
-        vars(self._mutable_view_ob)[attr] = value
+    The account object tracks information about the trading account. The
+    values are updated as the algorithm runs and its keys remain unchanged.
+    If connected to a broker, one can update these values with the trading
+    account values as reported by the broker.
+    """
+    def __init__(self,portfolio):
+        self_ = MutableView(self)
+        self_.settled_cash = portfolio.cash
+        self_.total_value = portfolio.portfolio_value
+        self_.cushion = portfolio.cushion
+        self_.positions = portfolio.positions
+        # leverage = np.inf
 
     def __repr__(self):
-        return '%s(%r)'%(type(self).__name__,self._mutable_view_ob)
-
-
-class Portfolio(object):
-    """Object providing read-only access to current portfolio state.
-
-    Parameters
-    ----------
-    start_date : pd.Timestamp
-        The start date for the period being recorded.
-    capital_base : float
-        The starting value for the portfolio. This will be used as the starting
-        cash, current cash, and portfolio value.
-
-    Attributes
-    ----------
-    positions : zipline.protocol.Positions
-        Dict-like object containing information about currently-held positions.
-    cash : float
-        Amount of cash currently held in portfolio.
-    portfolio_value : float
-        Current liquidation value of the portfolio's holdings.
-        This is equal to ``cash + sum(shares * price)``
-    starting_cash : float
-        Amount of cash in the portfolio at the start of the backtest.
-    """
-
-    def __init__(self, capital_base=0.0):
-        self_ = MutableView(self)
-        self_.cash_flow = 0.0
-        self_.starting_cash = capital_base
-        self_.portfolio_value = capital_base
-        self_.pnl = 0.0
-        self_.returns = 0.0
-        self_.cash = capital_base
-        self_.positions = Positions()
-        self_.positions_value = 0.0
-        self_.positions_exposure = 0.0
-
-    @property
-    def capital_used(self):
-        return self.cash_flow
+        return "Account({0})".format(self.__dict__)
 
     def __setattr__(self, attr, value):
         raise AttributeError('cannot mutate Portfolio objects')
-
-    def __repr__(self):
-        return "Portfolio({0})".format(self.__dict__)
 
     def __getattr__(self, item):
         return self.__dict__[item]
@@ -223,81 +255,10 @@ class Portfolio(object):
     # is deprecated to normal attribute access so we don't want to encourage
     # new usages.
     __getitem__ = _deprecated_getitem_method(
-        'portfolio', {
-            'capital_used',
-            'starting_cash',
-            'portfolio_value',
-            'pnl',
-            'returns',
-            'cash',
-            'positions',
-            'positions_value',
-        },
-    )
-
-    @property
-    def current_portfolio_weights(self):
-        """
-        Compute each asset's weight in the portfolio by calculating its held
-        value divided by the total value of all positions.
-
-        Each equity's value is its price times the number of shares held. Each
-        futures contract's value is its unit price times number of shares held
-        times the multiplier.
-        """
-        position_values = pd.Series({
-            asset: (
-                    position.last_sale_price *
-                    position.amount *
-                    asset.price_multiplier
-            )
-            for asset, position in self.positions.items()
-        })
-        return position_values / self.portfolio_value
-
-
-class Account(object):
-    """
-    The account object tracks information about the trading account. The
-    values are updated as the algorithm runs and its keys remain unchanged.
-    If connected to a broker, one can update these values with the trading
-    account values as reported by the broker.
-    """
-
-    def __init__(self):
-        self_ = MutableView(self)
-        self_.settled_cash = 0.0
-        # 持仓
-        self_.fund_positions_exposure = 0
-        self_.equity_positions_exposure = 0
-        self_.convertible_positions_exposure = 0
-        self_.total_positions_exposure = 0
-        # 持仓金额
-        self_.equity_positions_value = 0.0
-        self_.bond_positions_value = 0.0
-        self_.fund_positions_value = 0.0
-        self_.total_positions_value = 0.0
-        self_.cushion = 0.0
-        self_.net_leverage = 0.0
-
-    def __repr__(self):
-        return "Account({0})".format(self.__dict__)
-
-    # If you are adding new attributes, don't update this set. This method
-    # is deprecated to normal attribute access so we don't want to encourage
-    # new usages.
-    __getitem__ = _deprecated_getitem_method(
         'account', {
             'settled_cash',
-            'fund_positions_exposure',
-            'equity_positions_exposure',
-            'convertible_positions_exposure',
-            'total_positions_exposure',
-            'fund_positions_value',
-            'equity_positions_value',
-            'convertible_positions_value',
-            'total_positions_value',
+            'total_value',
             'cushion',
-            'net_leverage',
+            'positions',
         },
     )

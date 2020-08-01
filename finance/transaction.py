@@ -6,7 +6,8 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 import numpy as np
-from finance.order import  Order,PriceOrder
+from finance.oms.order import  Order,PriceOrder
+from ._protocol import MutableView
 
 
 class Transaction(object):
@@ -14,10 +15,11 @@ class Transaction(object):
     __slots__ = ['asset','amount','price','_created_dt']
 
     def __init__(self, asset,amount,price,dt):
-        self.asset = asset
-        self.amount = amount
-        self.price = price
-        self._created_dt = dt
+        self_ = MutableView(self)
+        self_.asset = asset
+        self_.amount = amount
+        self_.price = price
+        self_.created_dt = dt
 
     def __repr__(self):
         template = (
@@ -34,6 +36,9 @@ class Transaction(object):
 
     def __getitem__(self, name):
         return self.__dict__[name]
+
+    def __setattr__(self, key, value):
+        raise NotImplementedError('immuatable object')
 
     def __getstate__(self):
         """
@@ -63,6 +68,6 @@ def create_transaction(order,fee):
         asset = asset,
         amount = sign * amount,
         price = order.price,
-        _created_dt = order._created_dt
+        created_dt = order._created_dt
     )
     return transaction

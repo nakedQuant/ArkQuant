@@ -726,11 +726,11 @@ def run_algorithm(start,
     environ : mapping[str -> str], optional
         The os environment to use. Many extensions use this to get parameters.
         This defaults to ``os.environ``.
-    blotter : str or zipline.finance.blotter.Blotter, optional
+    blotter : str or zipline.finance.oms.Blotter, optional
         Blotter to use with this algorithm. If passed as a string, we look for
-        a blotter construction function registered with
+        a oms construction function registered with
         ``zipline.extensions.register`` and call it with no parameters.
-        Default is a :class:`zipline.finance.blotter.SimulationBlotter` that
+        Default is a :class:`zipline.finance.oms.SimulationBlotter` that
         never cancels orders.
 
     Returns

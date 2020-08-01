@@ -2669,10 +2669,10 @@
 #         组合不同算法---策略
 #         返回 --- Order对象
 #     """
-#     def __init__(self,algo_mappings,data_portal,blotter,assign_policy):
+#     def __init__(self,algo_mappings,data_portal,oms,assign_policy):
 #         self.data_portal = data_portal
 #         self.postion_allocation = assign_policy
-#         self.blotter = blotter
+#         self.oms = oms
 #         self.loaders = [self.get_loader_class(key,args) for key,args in algo_mappings.items()]
 #
 #     @staticmethod
@@ -2733,19 +2733,19 @@
 #         assets_of_exit = self.compute_withdraw(dt)
 #         positions = metrics_tracker.positions
 #         if assets_of_exit:
-#             [self.blotter.order(asset,
+#             [self.oms.order(asset,
 #                                 positions[asset].amount)
 #                                 for asset in assets_of_exit]
-#             cleanup_transactions,additional_commissions = self.blotter.get_transaction(self.data_portal)
+#             cleanup_transactions,additional_commissions = self.oms.get_transaction(self.data_portal)
 #             return cleanup_transactions,additional_commissions
 #
 #     def get_layout(self,dt,metrics_tracker):
 #         assets = self.compute_algorithm(dt,metrics_tracker)
 #         avaiable_cash = metrics_tracker.portfolio.cash
-#         [self.blotter.order(asset,
+#         [self.oms.order(asset,
 #                             self._calculate_order_amount(asset,dt,avaiable_cash))
 #                             for asset in assets]
-#         transactions,new_commissions = self.blotter.get_transaction(self.data_portal)
+#         transactions,new_commissions = self.oms.get_transaction(self.data_portal)
 #         return transactions,new_commissions
 #
 #
@@ -5734,20 +5734,20 @@ from six.moves.urllib_error import HTTPError
 #     # Remove open orders for any sids that have reached their auto close
 #     # date. These orders get processed immediately because otherwise they
 #     # would not be processed until the first bar of the next day.
-#     blotter = algo.blotter
+#     oms = algo.oms
 #     assets_to_cancel = [
-#         asset for asset in blotter.open_orders
+#         asset for asset in oms.open_orders
 #         if past_auto_close_date(asset)
 #     ]
 #     for asset in assets_to_cancel:
-#         blotter.cancel_all_orders_for_asset(asset)
+#         oms.cancel_all_orders_for_asset(asset)
 #
 #     # Make a copy here so that we are not modifying the list that is being
 #     # iterated over.
-#     for order in copy(blotter.new_orders):
+#     for order in copy(oms.new_orders):
 #         if order.status == ORDER_STATUS.CANCELLED:
 #             metrics_tracker.process_order(order)
-#             blotter.new_orders.remove(order)
+#             oms.new_orders.remove(order)
 
 # cash_utilization = 1 - (cash_blance /capital_blance).mean()
 
@@ -6842,4 +6842,58 @@ from six.moves.urllib_error import HTTPError
 #
 #         return _DeprecatedSidLookupPosition(key)
 
+class DailyFieldLedger(object):
 
+    def __init__(self,ledger_field,packet_field = None):
+        self._get_ledger_field = op.attrgetter(ledger_field)
+        if packet_field is None:
+            self._packet_field = ledger_field.rsplit('.',1)[-1]
+        else:
+            self._packet_field = packet_field
+
+    def end_of_session(self,
+                       packet,
+                       ledger,
+                       session_ix):
+        field = self._packet_field
+        packet['daily_perf'][field] = \
+            self._get_ledger_field(ledger)
+
+class StartOfPeriodLedgerField(object):
+    """Keep track of the value of a ledger field at the start of the period.
+
+    Parameters
+    ----------
+    ledger_field : str
+        The ledger field to read.
+    packet_field : str, optional
+        The name of the field to populate in the packet. If not provided,
+        ``ledger_field`` will be used.
+    """
+    def __init__(self, ledger_field, packet_field=None):
+        self._get_ledger_field = op.attrgetter(ledger_field)
+        if packet_field is None:
+            self._packet_field = ledger_field.rsplit('.', 1)[-1]
+        else:
+            self._packet_field = packet_field
+
+    def start_of_simulation(self,
+                            ledger,
+                            benchmark,
+                            sessions):
+        self._start_of_simulation = self._get_ledger_field(ledger)
+
+    def start_of_session(self, ledger):
+        self._previous_day = self._get_ledger_field(ledger)
+
+    def _end_of_period(self, sub_field, packet,ledger):
+        packet_field = self._packet_field
+        # start_of_simulation 不变的
+        packet['cumulative_perf'][packet_field] = self._start_of_simulation
+        packet[sub_field][packet_field] = self._previous_day
+
+    def end_of_session(self,
+                       packet,
+                       ledger,
+                       session_ix):
+        self._end_of_period('daily_perf', packet,ledger)

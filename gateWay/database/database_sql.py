@@ -1,4 +1,10 @@
-""""""
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Feb 17 16:11:34 2019
+
+@author: python
+"""
 from datetime import datetime
 from typing import List, Dict, Optional, Sequence, Type
 
@@ -15,10 +21,10 @@ from peewee import (
     chunked,
 )
 
-from vnpy.trader.constant import Exchange, Interval
-from vnpy.trader.object import BarData, TickData
-from vnpy.trader.utility import get_file_path
-from .database import BaseDatabaseManager, Driver
+# from vnpy.trader.constant import Exchange, Interval
+# from vnpy.trader.object import BarData, TickData
+# from vnpy.trader.utility import get_file_path
+# from .database import BaseDatabaseManager, Driver
 
 
 def init(driver: Driver, settings: dict):

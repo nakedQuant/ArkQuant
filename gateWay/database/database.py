@@ -1,11 +1,15 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Feb 17 16:11:34 2019
+
+@author: python
+"""
+
 from abc import ABC, abstractmethod
 from datetime import datetime
 from enum import Enum
 from typing import Optional, Sequence, List, Dict, TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from vnpy.trader.constant import Interval, Exchange  # noqa
-    from vnpy.trader.object import BarData, TickData  # noqa
 
 
 class Driver(Enum):

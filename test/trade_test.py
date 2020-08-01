@@ -757,10 +757,10 @@ from itertools import product
 #         1.判断已经持仓是否卖出
 #         2.基于持仓限制确定是否执行买入操作
 #     """
-#     def __init__(self,algo_mappings,data_portal,blotter,assign_policy):
+#     def __init__(self,algo_mappings,data_portal,oms,assign_policy):
 #         self.data_portal = data_portal
 #         self.postion_allocation = assign_policy
-#         self.blotter = blotter
+#         self.oms = oms
 #         self.loaders = [self.get_loader_class(key,args) for key,args in algo_mappings.items()]
 #
 #     @staticmethod
@@ -821,19 +821,19 @@ from itertools import product
 #         assets_of_exit = self.compute_withdraw(dt)
 #         positions = metrics_tracker.positions
 #         if assets_of_exit:
-#             [self.blotter.order(asset,
+#             [self.oms.order(asset,
 #                                 positions[asset].amount)
 #                                 for asset in assets_of_exit]
-#             cleanup_transactions,additional_commissions = self.blotter.get_transaction(self.data_portal)
+#             cleanup_transactions,additional_commissions = self.oms.get_transaction(self.data_portal)
 #             return cleanup_transactions,additional_commissions
 #
 #     def get_layout(self,dt,metrics_tracker):
 #         assets = self.compute_algorithm(dt,metrics_tracker)
 #         avaiable_cash = metrics_tracker.portfolio.cash
-#         [self.blotter.order(asset,
+#         [self.oms.order(asset,
 #                             self._calculate_order_amount(asset,dt,avaiable_cash))
 #                             for asset in assets]
-#         transactions,new_commissions = self.blotter.get_transaction(self.data_portal)
+#         transactions,new_commissions = self.oms.get_transaction(self.data_portal)
 #         return transactions,new_commissions
 #
 #     def _pop_params(cls, kwargs):
@@ -1069,20 +1069,20 @@ from itertools import product
 #             # called every tick (minute or day).
 #             algo.on_dt_changed(dt_to_use)
 #
-#             blotter = algo.blotter
+#             oms = algo.oms
 #
 #             # handle any transactions and commissions coming out new orders
 #             # placed in the last bar
 #             new_transactions, new_commissions, closed_orders = \
-#                 blotter.get_transactions(current_data)
+#                 oms.get_transactions(current_data)
 #
-#             blotter.prune_orders(closed_orders)
+#             oms.prune_orders(closed_orders)
 #
 #             for transaction in new_transactions:
 #                 metrics_tracker.process_transaction(transaction)
 #
 #                 # since this order was modified, record it
-#                 order = blotter.orders[transaction.order_id]
+#                 order = oms.orders[transaction.order_id]
 #                 metrics_tracker.process_order(order)
 #
 #             for commission in new_commissions:
@@ -1090,10 +1090,10 @@ from itertools import product
 #
 #             handle_data(algo, current_data, dt_to_use)
 #
-#             # grab any new orders from the blotter, then clear the list.
+#             # grab any new orders from the oms, then clear the list.
 #             # this includes cancelled orders.
-#             new_orders = blotter.new_orders
-#             blotter.new_orders = []
+#             new_orders = oms.new_orders
+#             oms.new_orders = []
 #
 #             # if we have any new orders, record them so that we know
 #             # in what perf period they were placed.
@@ -1120,14 +1120,14 @@ from itertools import product
 #             # handle any splits that impact any positions or any open orders.
 #             assets_we_care_about = (
 #                 viewkeys(metrics_tracker.positions) |
-#                 viewkeys(algo.blotter.open_orders)
+#                 viewkeys(algo.oms.open_orders)
 #             )
 #
 #             if assets_we_care_about:
 #                 splits = data_portal.get_splits(assets_we_care_about,
 #                                                 midnight_dt)
 #                 if splits:
-#                     algo.blotter.process_splits(splits)
+#                     algo.oms.process_splits(splits)
 #                     metrics_tracker.handle_splits(splits)
 #
 #         def on_exit():
@@ -1150,7 +1150,7 @@ from itertools import product
 #
 #             if algo.data_frequency == 'minute':
 #                 def execute_order_cancellation_policy():
-#                     algo.blotter.execute_cancel_policy(SESSION_END)
+#                     algo.oms.execute_cancel_policy(SESSION_END)
 #
 #                 def calculate_minute_capital_changes(dt):
 #                     # process any capital changes that came between the last
@@ -1229,20 +1229,20 @@ from itertools import product
 #         # Remove open orders for any sids that have reached their auto close
 #         # date. These orders get processed immediately because otherwise they
 #         # would not be processed until the first bar of the next day.
-#         blotter = algo.blotter
+#         oms = algo.oms
 #         assets_to_cancel = [
-#             asset for asset in blotter.open_orders
+#             asset for asset in oms.open_orders
 #             if past_auto_close_date(asset)
 #         ]
 #         for asset in assets_to_cancel:
-#             blotter.cancel_all_orders_for_asset(asset)
+#             oms.cancel_all_orders_for_asset(asset)
 #
 #         # Make a copy here so that we are not modifying the list that is being
 #         # iterated over.
-#         for order in copy(blotter.new_orders):
+#         for order in copy(oms.new_orders):
 #             if order.status == ORDER_STATUS.CANCELLED:
 #                 metrics_tracker.process_order(order)
-#                 blotter.new_orders.remove(order)
+#                 oms.new_orders.remove(order)
 #
 #     def _get_daily_message(self, dt, algo, metrics_tracker):
 #         """
@@ -1424,20 +1424,20 @@ import datetime , pandas as pd
 #     # called every tick (minute or day).
 #     algo.on_dt_changed(dt_to_use)
 #
-#     blotter = algo.blotter
+#     oms = algo.oms
 #
 #     # handle any transactions and commissions coming out new orders
 #     # placed in the last bar
 #     new_transactions, new_commissions, closed_orders = \
-#         blotter.get_transactions(current_data)
+#         oms.get_transactions(current_data)
 #
-#     blotter.prune_orders(closed_orders)
+#     oms.prune_orders(closed_orders)
 #
 #     for transaction in new_transactions:
 #         metrics_tracker.process_transaction(transaction)
 #
 #         # since this order was modified, record it
-#         order = blotter.orders[transaction.order_id]
+#         order = oms.orders[transaction.order_id]
 #         metrics_tracker.process_order(order)
 #
 #     for commission in new_commissions:
@@ -1445,10 +1445,10 @@ import datetime , pandas as pd
 #
 #     handle_data(algo, current_data, dt_to_use)
 #
-#     # grab any new orders from the blotter, then clear the list.
+#     # grab any new orders from the oms, then clear the list.
 #     # this includes cancelled orders.
-#     new_orders = blotter.new_orders
-#     blotter.new_orders = []
+#     new_orders = oms.new_orders
+#     oms.new_orders = []
 #
 #     # if we have any new orders, record them so that we know
 #     # in what perf period they were placed.
@@ -1475,13 +1475,13 @@ import datetime , pandas as pd
 #     # handle any splits that impact any positions or any open orders.
 #     assets_we_care_about = (
 #         viewkeys(metrics_tracker.positions) |
-#         viewkeys(algo.blotter.open_orders)
+#         viewkeys(algo.oms.open_orders)
 #     )
 #
 #     if assets_we_care_about:
 #         splits = data_portal.get_splits(assets_we_care_about,
 #                                         midnight_dt)
 #         if splits:
-#             algo.blotter.process_splits(splits)
+#             algo.oms.process_splits(splits)
 #             metrics_tracker.handle_splits(splits)
 #

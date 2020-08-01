@@ -532,6 +532,34 @@ def excess_sharpe(returns, factor_returns):
     )
     return out
 
+
+class SQN(object):
+    """
+    SQN or SystemQualityNumber. Defined by Van K. Tharp to categorize trading
+    systems.
+
+      - 1.6 - 1.9 Below average
+      - 2.0 - 2.4 Average
+      - 2.5 - 2.9 Good
+      - 3.0 - 5.0 Excellent
+      - 5.1 - 6.9 Superb
+      - 7.0 -     Holy Grail?
+
+    The formula:
+
+      - SquareRoot(NumberTrades) * Average(TradesProfit) / StdDev(TradesProfit)
+
+    The sqn value should be deemed reliable when the number of trades >= 30
+
+    Methods:
+
+      - get_analysis
+
+        Returns a dictionary with keys "sqn" and "trades" (number of
+        considered trades)
+    """
+
+
 def stability_of_timeseries(returns):
     """Determines R-squared of a linear fit to the cumulative
     log returns. Computes an ordinary least squares linear fit,

@@ -19,12 +19,13 @@ lookup_benchmark = {
                 '香港红筹指数':'hkHSCCI'
 }
 
-def request_alternative_kline(c_name,dt):
+
+def alternative_request_kline(chi_name,date):
     """
         dt --- 1990-01-01
     """
-    index = lookup_benchmark[c_name]
-    url = BENCHMARK_URL['periphera_kline'] % (index, dt)
+    index = lookup_benchmark[chi_name]
+    url = BENCHMARK_URL['periphera_kline'] % (index, date)
     text = _parse_url(url, bs=False, encoding='utf-8')
     raw = json.loads(text)
     kline = pd.DataFrame(raw['data'][index]['day'],
@@ -33,6 +34,7 @@ def request_alternative_kline(c_name,dt):
     kline.set_index('trade_dt',inplace = True)
     kline.sort_index(inplace=True)
     return kline
+
 
 @reformat_sid
 def request_kline(sid,date):
@@ -51,12 +53,13 @@ def request_kline(sid,date):
     return kline
 
 
-def get_benchmark_returns(sid,dts):
+def get_benchmark_returns(benchmark_sid,dts):
     try:
-        kline = request_kline(sid,dts)
+        kline = request_kline(benchmark_sid,dts)
     except Exception as e:
-        kline = request_alternative_kline(sid,dts)
+        kline = alternative_request_kline(benchmark_sid,dts)
     returns = kline['close'] / kline['close'].shift(1) - 1
     return returns
+
 
 __all__ = [ get_benchmark_returns ]

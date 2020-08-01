@@ -10,7 +10,6 @@ import numpy as np, datetime ,pandas as pd ,pytz
 MAX_MONTH_RANGE = 23
 MAX_WEEK_RANGE = 5
 
-
 def locate_pos(price, minutes, direction):
     if minutes.min() <= price <= minutes.max():
         try:

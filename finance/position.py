@@ -6,21 +6,19 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 import numpy as np
-from .commission import Commission
 from._protocol import InnerPosition ,Position as ProtocolPosition
 
 
 class Position(object):
 
-    __slots__ = ['inner_position','protocol_position']
+    __slots__ = ['inner_position','protocol']
 
     def __init__(self,
                  asset,
                  amount = 0,
                  cost_basis = 0.0,
                  last_sync_price = 0.0,
-                 last_sync_date = None,
-                 multiplier = 3):
+                 last_sync_date = None):
 
         inner = InnerPosition(
                 asset = asset,
@@ -29,9 +27,8 @@ class Position(object):
                 last_sync_price = last_sync_price,
                 last_sync_date = last_sync_date,
         )
-        object.__setattr__(self,'inner_position',inner)
-        object.__setattr__(self,'protocol_position',ProtocolPosition(inner))
-        self.commission = Commission(multiplier)
+        self.inner_position = inner
+        self.protocol = ProtocolPosition(inner)
         self._closed = False
 
     @property
@@ -43,6 +40,9 @@ class Position(object):
         # For backwards compatibility because we pass this object to
         # custom slippage models.
         return self.asset.sid
+    @property
+    def closed(self):
+        return self._closed
 
     def __getattr__(self, item):
         return getattr(self.inner_position,item)
@@ -60,36 +60,35 @@ class Position(object):
         adjust_cost_basics = round(self.cost_basis / amount_ratio,2)
         scatter_cash = (adjust_share_count - np.floor(adjust_share_count)) * adjust_cost_basics
         left_cash = self.amount * cash_ratio + scatter_cash
-        self.cost_basis = adjust_share_count
         self.amount = np.floor(adjust_share_count)
+        self.cost_basis = adjust_cost_basics
         return left_cash
 
-    def update(self,txn):
-        """
-            原始 --- 300股 价格100
-            交易正 --- 100股 价格120 成本 （300 * 100 + 100 *120 ） / （300+100）
-            交易负 --- 100股 价格90  成本
-            交易负 --- 300股 价格120 成本 300 * 120 * fee
-        """
+    def update(self,txn,commission):
         if self.asset == txn.asset:
             raise Exception('transaction asset must same with position asset')
-        capital = txn.amount * txn.price
+        # 持仓基本净值
+        base_value = self.amount * self.cost_basis
+        # 交易净值 以及成本
+        txn_value = txn.amount * txn.price
+        txn_cost = commission.calculate(txn)
+        # 根据交易对持仓进行更新
         total_amount = txn.amount + self.amount
         if total_amount < 0 :
-            raise Exception('put action is not allowed in china')
+            raise Exception('put action is not allowed')
         else:
-            txn_cost = self.commission.calculate(txn)
-            # 只要产生交易 -- 成本就是增加的
-            total_cost = self.amount * self.cost_basis + txn_cost + capital
+            total_cost = base_value + txn_value + txn_cost
             try:
                 self.cost_basis = total_cost / total_amount
                 self.amount = total_amount
             except ZeroDivisionError :
-                """ 仓位结清 , 当持仓为0此时cost_basis为交易成本需要剔除 , _closed为True"""
-                self.cost_basis = txn.price - self.cost_basis - txn / txn.amount
+                """ 仓位结清 , 当持仓为0 --- 计算成本用于判断持仓最终是否盈利, _closed为True"""
+                self.cost_basis = self.cost_basis + txn_cost / txn.amount
+                self.last_sync_price = txn.price
+                self.last_sync_date = txn.created_dt
                 self._closed = True
-            txn_cash = capital - txn_cost
-        return txn_cash
+            txn_capital = txn_value - txn_cost
+        return txn_capital
 
     def __repr__(self):
         template = "asset :{asset} , amount:{amount},cost_basis:{cost_basis}"

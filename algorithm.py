@@ -472,7 +472,7 @@ class TradingAlgorithm(object):
     initialized={initialized},
     slippage_models={slippage_models},
     commission_models={commission_models},
-    blotter={blotter},
+    oms={oms},
     recorded_vars={recorded_vars})
 """.strip().format(class_name=self.__class__.__name__,
                    capital_base=self.sim_params.capital_base,

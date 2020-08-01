@@ -10,7 +10,7 @@ from functools import partial
 from multiprocessing import Pool
 from itertools import chain
 from abc import ABC , abstractmethod
-from .loader.loader import  PricingLoader
+from .loader.loader import PricingLoader
 
 # 剔除上市不足3个月的 , 剔除进入退市整理期的30个交易日
 RestrictedSession = frozenset([3*20 , 30])
@@ -86,7 +86,7 @@ class Engine(ABC):
             umps --- 根据资产类别话费不同退出策略 ，symbols , etf , bond
         """
         # 判断所有仓位的更新时间 -- 保持一致
-        dts = ledger.is_synchronize()
+        dts = ledger.synchronized_clock
         capital = ledger.porfolio.cash
         # default
         engine_metadata = self.register_default(dts)

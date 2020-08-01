@@ -83,7 +83,7 @@ class _ClassicRiskMetrics(object):
             benchmark_returns.values,
         )
 
-        sharpe = ep.sharpe_ratio(algorithm_returns)
+        sharpe = sharpe_ratio(algorithm_returns)
 
         # The consumer currently expects a 0.0 value for sharpe in period,
         # this differs from cumulative which was np.nan.
@@ -95,7 +95,7 @@ class _ClassicRiskMetrics(object):
         if pd.isnull(sharpe):
             sharpe = 0.0
 
-        sortino = ep.sortino_ratio(
+        sortino = sortino_ratio(
             algorithm_returns.values,
             # 回撤
             _downside_risk=ep.downside_risk(algorithm_returns.values),

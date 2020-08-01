@@ -6,40 +6,8 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 from collections import defaultdict,OrderedDict
-from toolz import groupby , valmap
-import numpy as np , pandas as pd
 from functools import partial
 from finance.position import Position
-
-
-class PositionStats(object):
-
-    num_count = None
-    gross_exposure = dict()
-    gross_exposure_values = dict()
-
-    def __new__(cls):
-        self = cls()
-        es = pd.Series(np.array([],dtype = 'float64'),index = np.array([],dtpe = 'int64'))
-        self._underlying_value_array = es.values
-        self._underlying_index_array = es.index.values
-        return self
-
-
-def calculate_position_tracker_stats(positions,stats):
-    """
-        stats ---- PositionStats
-        return portfolio value and num of position
-    """
-    # 基于持仓资产类别暴露度
-    mappings = groupby(lambda x : x.asset.asset_type,positions)
-    position_exposure_mappings = valmap(lambda x : sum([p.amount for p in x]), mappings)
-    # 基于持仓资产类别金额
-    position_exposure_values = valmap(lambda x : sum([p.amount * p.last_sale_price for p in x]),mappings)
-    # 汇总
-    stats.gross_exposure = position_exposure_mappings
-    stats.gross_exposure_values = position_exposure_values
-    stats.position_count = len(positions)
 
 
 class PositionTracker(object):
@@ -47,14 +15,19 @@ class PositionTracker(object):
         持仓变动
         the current state of position held
     """
-    def __init__(self,data_portal):
+    def __init__(self,
+                 data_portal,
+                 commission):
         self.data_portal = data_portal
+        self.commission = commission
         self.positions = OrderedDict()
         #根据时间记录关闭的交易
         self.record_closed_position = defaultdict(list)
-        #cache the stats until
-        self._dirty_stats = True
-        self._stats = PositionStats.new()
+        self.update_sync_date = None
+
+    @property
+    def is_synchorized(self):
+        return False
 
     def _calculate_adjust_ratio(self,asset,dt):
         """
@@ -78,32 +51,25 @@ class PositionTracker(object):
             cash_ratio = 0.0
         return amount_ratio,cash_ratio
 
-    def _retrieve_right_from_sqlite(self,asset,dt):
-        """
-            配股机制有点复杂 ， freeze capital
-            如果不缴纳款，自动放弃到期除权相当于亏损,在股权登记日卖出，一般的配股缴款起止日为5个交易日
-        """
-        rights = self.data_portal.load_rights_for_sid(asset.sid,dt)
-        return rights
-
-    def handle_splits(self,dt):
+    def handle_splits(self):
+        assert self.is_synchorized , ValueError('must sync first')
         total_left_cash = 0
         for asset,position in self.positions.items():
-            amount_ratio,cash_ratio = self._calculate_adjust_ratio(asset,dt)
+            amount_ratio,cash_ratio = self._calculate_adjust_ratio(asset,self.update_sync_date)
             left_cash = position.handle_split(amount_ratio,cash_ratio)
             total_left_cash += left_cash
         return total_left_cash
 
-    def _update_position(self,transaction):
+    def _handle_transaction(self,transaction):
         asset = transaction.asset
         try:
             position = self.positions[asset]
         except KeyError:
             position = self.positions[asset] = Position(asset)
-        finally:
-            cash_flow = position.update(transaction)
-        if position._closed:
-            self.record_closed_position[transaction.dt].append(position)
+        cash_flow = position.update(transaction,self.commission)
+        if position.closed:
+            dts = transaction.created_dt.strftime('%Y-%m-%d')
+            self.record_closed_position[dts].append(position)
             del self.positions[asset]
         return cash_flow
 
@@ -111,50 +77,45 @@ class PositionTracker(object):
         """执行完交易cash变动"""
         aggregate_cash_flow = 0.0
         for txn in transactions:
-            aggregate_cash_flow += self._update_position(txn)
+            aggregate_cash_flow += self._handle_transaction(txn)
         self._dirty_stats = False
         return aggregate_cash_flow
 
     def sync_last_date(self,dt):
-        for outer_position in self.positions.values():
-            inner_position = outer_position.inner_position
-            inner_position.last_sync_date = dt
+        self.update_sync_date = dt
+        for position in self.positions.values():
+            position.last_sync_date = dt
 
-    def sync_last_price(self):
+    def sync_last_prices(self):
         """update last_sale_price of position"""
-        assets =[position.inner_position.asset for position in self.positions]
-        dts = [position.inner_position.last_sync_date for position in self.positions]
-        if len(set(dts)) >1 :
-            raise ValueError('sync all the position date')
-        dt = dts[0]
         get_price = partial(self.data_portal.get_window_data,
-                            dt = dt,
+                            dt = self.update_sync_date,
                             field = 'close',
                             days_in_window = 0,
                             frequency = 'daily'
                             )
-        last_sync_prices = get_price(assets = assets)
-        for asset,outer_position in self.positions.items():
-            inner_position = outer_position.inner_position
-            asset = inner_position.asset
+        last_sync_prices = get_price(assets = set(self.positions))
+        for asset,inner_position in self.positions.items():
+            assert asset == inner_position.asset , ValueError('unmatched position')
             inner_position.last_sync_price = last_sync_prices[asset]
-
-    @property
-    def stats(self):
-        """基于sync_last_sale_price  --- 计算每天的暴露度也就是porfolio"""
-        calculate_position_tracker_stats(self.positions,self._stats)
-        return self._stats
 
     def get_positions(self):
         # protocol
-        positions = {}
-        for asset, position in self.positions.items():
+        protocols = []
+        for position in self.positions.values():
             # Adds the new position if we didn't have one before, or overwrite
             # one we have currently
-            positions[asset] = position.protocol_position
+            protocols.append(position.protocol)
+        return protocols
 
-        return positions
+    def get_equity_rights(self,asset,dt):
+        """
+            配股机制有点复杂 ， freeze capital
+            如果不缴纳款，自动放弃到期除权相当于亏损,在股权登记日卖出，一般的配股缴款起止日为5个交易日
+        """
+        rights = self.data_portal.load_rights_for_sid(asset.sid,dt)
+        return rights
 
-    def maybe_create_close_position_transaction(self,txn):
-        """强制平仓机制 --- 设立仓位 ，改变脚本运行逻辑"""
+    def maybe_create_close_position_transaction(self,asset):
+        """强制平仓机制 --- 持仓特定标的的仓位"""
         raise NotImplementedError('automatic operation')

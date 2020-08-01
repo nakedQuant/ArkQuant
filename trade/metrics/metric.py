@@ -5,76 +5,37 @@ Created on Sun Feb 17 16:11:34 2019
 
 @author: python
 """
-import operator as op,numpy as np
+import numpy as np
 from toolz import groupby
+from gateWay.driver.benchmark import get_benchmark_returns
 
 
-# portfolio (portfolio_value , positions_exposure, positions_value , cash , gross_leverage , net_leverage), positions , daily_return
+class _ConstantCumulativeRiskMetric(object):
+    """A metrics which does not change, ever.
 
-class DailyFieldLedger(object):
-
-    def __init__(self,ledger_field,packet_field = None):
-        self._get_ledger_field = op.attrgetter(ledger_field)
-        if packet_field is None:
-            self._packet_field = ledger_field.rsplit('.',1)[-1]
-        else:
-            self._packet_field = packet_field
-
-    def end_of_session(self,
-                       packet,
-                       ledger,
-                       sessions,
-                       session_ix):
-        field = self._packet_field
-        packet['daily_perf'][field] = \
-            self._get_ledger_field(ledger)
-
-
-class StartOfPeriodLedgerField(object):
-    """Keep track of the value of a ledger field at the start of the period.
-
-    Parameters
-    ----------
-    ledger_field : str
-        The ledger field to read.
-    packet_field : str, optional
-        The name of the field to populate in the packet. If not provided,
-        ``ledger_field`` will be used.
+    Notes
+    -----
+    This exists to maintain the existing structure of the perf packets. We
+    should kill this as soon as possible.
     """
-    def __init__(self, ledger_field, packet_field=None):
-        self._get_ledger_field = op.attrgetter(ledger_field)
-        if packet_field is None:
-            self._packet_field = ledger_field.rsplit('.', 1)[-1]
-        else:
-            self._packet_field = packet_field
+    def __init__(self, field, value):
+        self._field = field
+        self._value = value
 
-    def start_of_simulation(self,
-                            ledger):
-        self._start_of_simulation = self._get_ledger_field(ledger)
+    def end_of_session(self, packet, *args):
+        packet['cumulative_risk_metrics'][self._field] = self._value
 
-    def start_of_session(self, ledger):
-        self._previous_day = self._get_ledger_field(ledger)
-
-    def _end_of_period(self, sub_field, packet,ledger):
-        packet_field = self._packet_field
-        # start_of_simulation 不变的
-        packet['cumulative_perf'][packet_field] = self._start_of_simulation
-        packet[sub_field][packet_field] = self._previous_day
-
-    def end_of_session(self,
-                       packet,
-                       ledger,
-                       sessions,
-                       session_ix,
-                       benchmark_sourc):
-        self._end_of_period('daily_perf', packet,ledger)
+    def end_of_simulation(self,packet,*args):
+        packet['cumulative_risk_metrics'][self._field] = self._value
 
 
 class PNL(object):
     """Tracks daily and cumulative PNL.
     """
     def start_of_simulation(self,
-                            ledger):
+                            ledger,
+                            benchmark,
+                            sessions):
         self._previous_pnl = 0.0
 
     def start_of_session(self, ledger):
@@ -88,9 +49,7 @@ class PNL(object):
     def end_of_session(self,
                        packet,
                        ledger,
-                       sessions,
-                       session_ix,
-                       benchmark_source):
+                       session_ix):
         self._end_of_period('daily_perf', packet, ledger)
 
 
@@ -100,36 +59,33 @@ class Returns(object):
     def end_of_session(self,
                        packet,
                        ledger,
-                       sessions,
-                       session_ix,
-                       benchmark_source):
+                       session_ix):
         packet['daily_perf']['returns'] = ledger.daily_returns
         packet['cumulative_perf']['returns'] = ledger.portfolio.returns
 
-def __init__(self, start_date=None, capital_base=0.0):
-    self_ = MutableView(self)
-    self_.cash_flow = 0.0
-    self_.starting_cash = capital_base
-    self_.portfolio_value = capital_base
-    self_.pnl = 0.0
-    self_.returns = 0.0
-    self_.cash = capital_base
-    self_.positions = Positions()
-    self_.start_date = start_date
-    self_.positions_value = 0.0
-    self_.positions_exposure = 0.0
 
+class Profits(object):
+    """
+        track the daily profit of the algorithm
+        dict --- asset : profit
+    """
+    def end_of_session(self,
+                       packet,
+                       ledger,
+                       session_ix):
+        packet['daily_perf']['profit'] = ledger.daily_position_stats(session_ix)
 
 
 class CashFlow(object):
     """Tracks daily and cumulative cash flow.
-
     Notes
     -----
     For historical reasons, this field is named 'capital_used' in the packets.
     """
     def start_of_simulation(self,
-                            ledger):
+                            ledger,
+                            benchmark,
+                            sessions):
         self._previous_cash_flow = 0.0
 
     def start_of_session(self,ledger):
@@ -138,7 +94,6 @@ class CashFlow(object):
     def end_of_session(self,
                        packet,
                        ledger,
-                       sessions,
                        session_ix):
         cash_flow = ledger.portfolio.cash_flow
         packet['daily_perf']['capital_used'] = (
@@ -148,49 +103,184 @@ class CashFlow(object):
         self._previous_cash_flow = cash_flow
 
 
+# class MaxLeverage(object):
+#     """Tracks the maximum account leverage.
+#     """
+#     def start_of_simulation(self,
+#                             ledger,
+#                             benchmark,
+#                             sessions):
+#         self._max_leverage = 0.0
+#
+#     def end_of_session(self,
+#                        packet,
+#                        ledger,
+#                        session_ix):
+#         self._max_leverage = max(self._max_leverage, ledger.account.leverage)
+#         packet['cumulative_risk_metrics']['max_leverage'] = self._max_leverage
+
+class Weights(object):
+
+    def end_of_session(self,
+                        packet,
+                        ledger,
+                        benchmark,
+                        session_ix):
+        weights  = ledger.portolio.current_portfolio_weights
+        packet['cumulative_risk_metrics']['portfolio_weights'] = weights
+
+
+class Uility(object):
+
+    def start_of_simulation(self,
+                            ledger,
+                            benchmark,
+                            sessions):
+        self._capital_usage = 0.0
+
+    def end_of_session(self,
+                       packet,
+                       ledger,
+                       session_ix):
+        packet['cumulative_risk_metrics']['max_leverage'] = ledger.portfolio.uility
+
+
+class Cushion(object):
+    """Tracks the maximum account leverage.
+    """
+    def start_of_simulation(self,
+                            ledger,
+                            benchmark,
+                            sessions):
+        self.cushion = 1.0
+
+    def end_of_session(self,
+                       packet,
+                       ledger,
+                       session_ix):
+        packet['cumulative_risk_metrics']['cushion'] = 1 - ledger.portfolio.uility
+
+
+class Proportion(object):
+    """
+        计算持仓按照资产类别计算比例
+    """
+    def end_of_session(self,
+                       packet,
+                       ledger,
+                       session_ix):
+        # 按照资产类别计算持仓
+        portfolio = ledger.portfolio
+        portfolio_positon_values = portfolio.portfolio_value - portfolio.start_cash
+        # 持仓分类
+        protocols = ledger.get_positions()
+        mappings = groupby(lambda x : x.asset.asset_type,protocols)
+        # 计算大类权重
+        from toolz import valmap
+        mappings_value = valmap(lambda x : sum([p.amount * p.last_sync_price for p in x]),mappings)
+        ratio = valmap(lambda x : x / portfolio_positon_values , mappings_value)
+        packet['cumulative_risk_metrics']['proportion'] = ratio
+
+
+class Hitrate(object):
+    """
+        1、度量算法触发的概率（生成transaction)
+        2、算法的胜率（产生正的收益概率）--- 当仓位完全退出时
+    """
+    def start_of_simulation(self,
+                            ledger,
+                            benchmark,
+                            sessions):
+        self.benchmark = benchmark
+
+    def end_of_simulation(self,
+                          packet,
+                          ledger,
+                          sessions):
+        closed_positions = ledger.position_tracker.record_closed_position
+        packet = groupby(lambda p : np.sign(p.last_sync_price - p.cost_basis),closed_positions)
+        packet['cumulative_risk_metrics']['hitRate'] = len(packet[1.0]) / len(closed_positions)
+        packet['cumulative_risk_metrics']['evenRate'] = len(packet[0.0]) / len(closed_positions)
+        packet['cumulative_risk_metrics']['lossRate'] = 1 - len(packet[-1.0]) / len(closed_positions)
+
+
+class Positions(object):
+    """Tracks and analyse daily positions
+    """
+    def end_of_session(self,
+                       packet,
+                       ledger,
+                       session_ix):
+        packet['daily_perf']['positions'] = ledger.positions()
+
+
 class Transactions(object):
     """Tracks daily transactions.
     """
     def end_of_session(self,
                        packet,
                        ledger,
-                       sessions,
                        session_ix):
         packet['daily_perf']['transactions'] = ledger.get_transactions(session_ix)
 
 
-class Positions(object):
-    """Tracks daily positions.
+class PeriodLabel(object):
+    """Backwards compat, please kill me.
     """
     def end_of_session(self,
                        packet,
                        ledger,
-                       sessions,
                        session_ix):
-        packet['daily_perf']['positions'] = ledger.positions()
+        packet['cumulative_risk_metrics']['period_label'] = session_ix.strftime('%Y-%m')
+
+
+class NumTradingDays(object):
+    """Report the number of trading days.
+    """
+
+    def start_of_simulation(self,
+                            ledger,
+                            benchmark,
+                            sessions):
+        self._num_trading_days = 0
+
+    def end_of_session(self,
+                       packet,
+                       ledger,
+                       session_ix):
+        self._num_trading_days += 1
+
+    def end_of_simulation(self,
+                          packet,
+                          ledger,
+                          sessions):
+        packet['cumulative_risk_metrics']['trading_days'] = \
+            self._num_trading_days
 
 
 class BenchmarkReturnsAndVolatility(object):
     """Tracks daily and cumulative returns for the benchmark as well as the
     volatility of the benchmark returns.
     """
+    def __init__(self,benchmark):
+        self.benchmark = benchmark
+
     def start_of_simulation(self,
                             ledger,
-                            benchmark):
-        self.benchmark = benchmark
-        self._previous_cash_flow = 0.0
+                            benchmark,
+                            sessions):
+        #计算基准收益率
+        self.returns_series = get_benchmark_returns(
+            self.benchmark,
+            max(sessions),
+        )
 
     def end_of_session(self,
-                          packet,
-                          ledger,
-                          sessions,
-                          session_ix):
-        #计算基准收益率
-        returns_series = get_benchmark_returns(
-            session_ix,
-            self.benchmark
-        )
-        daily_returns_series = returns_series[sessions[0]:]
+                        packet,
+                        ledger,
+                        session_ix):
+        returns_series = self.returns_series
+        daily_returns_series = self.returns_series[session_ix]
         #Series.expanding(self, min_periods=1, center=False, axis=0)
         cumulative_annual_volatility = (
             daily_returns_series.expanding(2).std(ddof=1) * np.sqrt(252)
@@ -206,21 +296,21 @@ class BenchmarkReturnsAndVolatility(object):
 class AlphaBeta(object):
     """End of simulation alpha and beta to the benchmark.
     """
+    def start_of_simulation(self,
+                            ledger,
+                            benchmark,
+                            sessions):
+        self.return_series = get_benchmark_returns(benchmark,max(sessions))
+
     def end_of_simulation(self,
                    packet,
                    ledger,
-                   sessions,
-                   benchmark):
+                   sessions):
         risk = packet['cumulative_risk_metrics']
-        returns_series = get_benchmark_returns(
-            sessions[-1],
-            benchmark
-        )
-        benchmark_returns = returns_series[sessions[0]:]
-        alpha, beta = ep.alpha_beta_aligned(
+        benchmark_returns = self.returns_series[sessions[0]:]
+        alpha, beta = alpha_beta_aligned(
             ledger.daily_returns_array,
             benchmark_returns)
-
         if np.isnan(alpha):
             alpha = None
         if np.isnan(beta):
@@ -228,137 +318,6 @@ class AlphaBeta(object):
 
         risk['alpha'] = alpha
         risk['beta'] = beta
-
-
-class ProbStatistics(object):
-    """
-        1、度量算法触发的概率（生成transaction)
-        2、算法的胜率（产生正的收益概率）--- 当仓位完全退出时
-    """
-    def end_of_simulation(self,
-                          packet,
-                          ledger,
-                          sessions,
-                          benchmark):
-
-        def calculate_rate(c_positions):
-            dct = {}
-            positive = [p.cost_basis > 0 for p in c_positions]
-            negative = [p.cost_basis < 0 for p in c_positions]
-            dct['win'] = len(positive)/ len(c_positions)
-            dct['loss'] = len(negative)/ len(c_positions)
-            return dct
-
-        closed_positions = ledger.position_tracker.record_closed_position
-
-        for origin, sliced_position in groupby(lambda x : x.asset_type.origin, closed_positions):
-            packet['cumulative_risk_metrics']['hitrate']= calculate_rate(sliced_position)
-
-        packet['cumulative_risk_metrics']['winrate'] = len([position.cost_basis > 0 for position in closed_positions])\
-                                                                  /len(closed_positions)
-
-
-class MaxLeverage(object):
-    """Tracks the maximum account leverage.
-    """
-    def start_of_simulation(self, *args):
-        self._max_leverage = 0.0
-
-    def end_of_session(self,
-                   packet,
-                   ledger,
-                   sessions,
-                   session_ix):
-        self._max_leverage = max(self._max_leverage, ledger.account.leverage)
-        packet['cumulative_risk_metrics']['max_leverage'] = self._max_leverage
-
-
-class NumTradingDays(object):
-    """Report the number of trading days.
-    """
-    def start_of_simulation(self, *args):
-        self._num_trading_days = 0
-
-    def start_of_session(self,*args):
-        self._num_trading_days += 1
-
-    def end_of_simulation(self,
-                          packet,
-                          ledger,
-                          sessions,
-                          benchmark):
-        packet['cumulative_risk_metrics']['trading_days'] = \
-            self._num_trading_days
-
-    # def end_of_bar(self,
-    #                packet,
-    #                ledger,
-    #                dt,
-    #                session_ix,
-    #                data_portal):
-    #     packet['cumulative_risk_metrics']['trading_days'] = (
-    #         self._num_trading_days
-    #     )
-    #
-    # end_of_session = end_of_bar
-
-
-class _ConstantCumulativeRiskMetric(object):
-    """A metrics which does not change, ever.
-
-    Notes
-    -----
-    This exists to maintain the existing structure of the perf packets. We
-    should kill this as soon as possible.
-    """
-    def __init__(self, field, value):
-        self._field = field
-        self._value = value
-
-    def end_of_bar(self, packet, *args):
-        packet['cumulative_risk_metrics'][self._field] = self._value
-
-    def end_of_session(self, packet, *args):
-        packet['cumulative_risk_metrics'][self._field] = self._value
-
-
-class PeriodLabel(object):
-    """Backwards compat, please kill me.
-    """
-    def start_of_session(self, ledger, session, data_portal):
-        self._label = session.strftime('%Y-%m')
-
-    def end_of_bar(self, packet, *args):
-        packet['cumulative_risk_metrics']['period_label'] = self._label
-
-    end_of_session = end_of_bar
-
-
-class SQN(object):
-    """
-    SQN or SystemQualityNumber. Defined by Van K. Tharp to categorize trading
-    systems.
-
-      - 1.6 - 1.9 Below average
-      - 2.0 - 2.4 Average
-      - 2.5 - 2.9 Good
-      - 3.0 - 5.0 Excellent
-      - 5.1 - 6.9 Superb
-      - 7.0 -     Holy Grail?
-
-    The formula:
-
-      - SquareRoot(NumberTrades) * Average(TradesProfit) / StdDev(TradesProfit)
-
-    The sqn value should be deemed reliable when the number of trades >= 30
-
-    Methods:
-
-      - get_analysis
-
-        Returns a dictionary with keys "sqn" and "trades" (number of
-        considered trades)
-    """
 
 
 class ReturnsStatistic(object):
@@ -392,24 +351,37 @@ class ReturnsStatistic(object):
         conditional_value_at_risk,
         ]
     """
-    def __init__(self, function, field_name=None):
+    def __init__(self, function, benchmark,field_name=None):
         if field_name is None:
             field_name = function.__name__
 
         self._function = function
+        self.benchmark = benchmark
         self._field_name = field_name
+
+    def start_of_simulation(self,
+                            ledger,
+                            benchmark,
+                            sessions):
+        #计算基准收益率
+        self.returns_series = get_benchmark_returns(
+            self.benchmark,
+            max(sessions),
+        )
 
     def end_of_session(self,
                    packet,
                    ledger,
-                   sessions,
                    session_ix):
-        # res = self._function(ledger.daily_returns_array[:session_ix + 1])
-        res = self._function(ledger.daily_returns_array)
+        #定位loc
+        idx = np.searchsorted(session_ix,self.returns_series.index)
+        benchmark_returns = self.returns_series[:idx+1]
+        returns_array = ledger.daily_returns_series
+        #主体计算
+        res = self._function(returns_array,benchmark_returns)
         if not np.isfinite(res):
             res = None
         packet['cumulative_risk_metrics'][self._field_name] = res
-
 
 
 class MetricsTracker(object):
