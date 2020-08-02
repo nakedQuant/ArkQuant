@@ -10,7 +10,7 @@ import pandas as pd, pytz, numpy as np
 from datetime import datetime
 from dateutil import rrule
 from toolz import partition_all
-from gateWay.driver.db_schema import  engine
+from gateWay.driver.db_schema import engine
 from ._config import autumn,spring ,Holiday
 
 
@@ -23,12 +23,55 @@ class TradingCalendar (object):
         self.engine = engine
         self._fixed_holiday()
 
-    def _init_calendar_cache(self):
-        """获取交易日"""
-
     @property
-    def calendar(self):
-        pass
+    def _fixed_holiday(self,):
+        non_trading_rules = dict()
+        non_trading_rules['spring'] = spring
+        non_trading_rules['autumn'] = autumn
+        tz = pytz.timezone('Asia/Shanghai')
+        start = pd.Timestamp(min(self.all_sessions), tz=tz)
+        end = pd.Timestamp(max(self.all_sessions), tz=tz)
+
+        new_year = rrule.rrule(
+            rrule.YEARLY,
+            byyearday= 1,
+            cache = True,
+            dstart = start,
+            until = end
+        )
+        non_trading_rules.update({'new_year':new_year})
+
+        april_4 = rrule.rrule(
+            rrule.YEARLY,
+            bymonth= 4,
+            bymonthday= 4,
+            cache=True,
+            dtstart=start,
+            until=end
+        )
+        non_trading_rules.update({'tomb':april_4})
+
+        may_day = rrule.rrule(
+            rrule.YEARLY,
+            bymonth=5,
+            bymonthday=1,
+            cache=True,
+            dtstart=start,
+            until=end
+        )
+        non_trading_rules.update({'labour':may_day})
+
+        national_day = rrule.rrule(
+            rrule.YEARLY,
+            bymonth=10,
+            bymonthday= 1,
+            cache=True,
+            dtstart=start,
+            until=end
+        )
+
+        non_trading_rules.update({'national':national_day})
+        return non_trading_rules
 
     def _roll_forward(self, dt,window):
         """
@@ -94,13 +137,34 @@ class TradingCalendar (object):
                                 dts)
         return minutes_session
 
+    def execution_time_from_open(self,sessions):
+        opens = [ pd.Timestamp(dt) + 9 * 60 * 60 + 30 * 60 for dt in sessions]
+        _opens = [ pd.Timestamp(dt) + 13 * 60 * 60 for dt in sessions]
+        # 熔断期间 --- 2次提前收市
+        if '20160107' in sessions:
+            idx = np.searchsorted('20160107',sessions)
+            _opens[idx] = np.nan
+        return zip(opens,_opens)
+
+    def excution_time_from_close(self,sessions):
+        closes = [ pd.Timestamp(dt) + 11 * 60 * 60 + 30 * 60 for dt in sessions]
+        _closes = [ pd.Timestamp(dt) + 15 * 60 * 60 for dt in sessions]
+        # 熔断期间 --- 2次提前收市
+        if '20160104' in sessions:
+            idx = np.searchsorted('20160104',sessions)
+            _closes[idx] = pd.Timestamp('20160104') + 13 * 60 * 60 + 34 * 60
+        elif '20160107' in sessions:
+            idx = np.searchsorted('20160107',sessions)
+            closes[idx] = pd.Timestamp('20160107') + 10 * 60 * 60
+            _closes[idx] = np.nan
+        return zip(closes,_closes)
+
     def open_and_close_for_session(self,dts):
-        opens = [ pd.Timestamp(dt) + 9 * 60 * 60 + 30 * 60 for dt in dts]
-        moring_closes = [ pd.Timestamp(dt) + 11 * 60 * 60 + 30 * 60 for dt in dts]
-        afternoon_opens = [ pd.Timestamp(dt) + 13 * 60 * 60 for dt in dts]
-        closes = [ pd.Timestamp(dt) + 15 * 60 * 60 for dt in dts]
-        o_c = zip(opens,moring_closes,afternoon_opens,closes)
-        return list(o_c)
+        # 每天开盘，休盘，开盘，收盘的时间
+        opens = self.execution_time_from_open(dts)
+        closes = self.excution_time_from_close(dts)
+        o_c = zip(opens,closes)
+        return o_c
 
     def compute_range_chunks(self,start_date, end_date, chunksize):
         """Compute the start and end dates to run a pipeline for.
@@ -120,56 +184,6 @@ class TradingCalendar (object):
             chunksize, sessions
         )
         )
-
-    @property
-    def _fixed_holiday(self,):
-        non_trading_rules = dict()
-        non_trading_rules['spring'] = spring
-        non_trading_rules['autumn'] = autumn
-        tz = pytz.timezone('Asia/Shanghai')
-        start = pd.Timestamp(min(self.all_sessions), tz=tz)
-        end = pd.Timestamp(max(self.all_sessions), tz=tz)
-
-        new_year = rrule.rrule(
-            rrule.YEARLY,
-            byyearday= 1,
-            cache = True,
-            dstart = start,
-            until = end
-        )
-        non_trading_rules.update({'new_year':new_year})
-
-        april_4 = rrule.rrule(
-            rrule.YEARLY,
-            bymonth= 4,
-            bymonthday= 4,
-            cache=True,
-            dtstart=start,
-            until=end
-        )
-        non_trading_rules.update({'tomb':april_4})
-
-        may_day = rrule.rrule(
-            rrule.YEARLY,
-            bymonth=5,
-            bymonthday=1,
-            cache=True,
-            dtstart=start,
-            until=end
-        )
-        non_trading_rules.update({'labour':may_day})
-
-        national_day = rrule.rrule(
-            rrule.YEARLY,
-            bymonth=10,
-            bymonthday= 1,
-            cache=True,
-            dtstart=start,
-            until=end
-        )
-
-        non_trading_rules.update({'national':national_day})
-        return non_trading_rules
 
     def get_trading_day_near_holiday(self,holiday_name,forward = True):
         if holiday_name not in Holiday:
@@ -205,10 +219,19 @@ class TradingCalendar (object):
     def get_early_close_days(self):
         """
             circuitBreaker --- 熔断机制 2016-01-01 2016-01-07
+            自1月8日起暂停实施指数熔断机制
+            具体：
+                2016年1月4日，A股遇到史上首次“熔断”。早盘，两市双双低开，随后沪指一度跳水大跌，跌破3500点与3400点，各大板块纷纷下挫。
+                午后，沪深300指数在开盘之后继续下跌，并于13点13分超过5%，引发熔断，三家交易所暂停交易15分钟，恢复交易之后，沪深300指数继续下跌，
+                并于13点34分触及7%的关口，三个交易所暂停交易至收市。
+                2016年1月7日，早盘9点42分，沪深300指数跌幅扩大至5%，再度触发熔断线，两市将在9点57分恢复交易。开盘后，仅3分钟（10:00），
+                沪深300指数再度快速探底，最大跌幅7.21%，二度熔断触及阈值。这是2016年以来的第二次提前收盘，同时也创造了休市最快记录
         """
         early_close_days = self.session_in_range('2016-01-01','2016-01-07')
         return early_close_days
 
+
 calendar = TradingCalendar()
+
 
 __all__ = [calendar]

@@ -5,7 +5,6 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-from gateWay.driver.calendar.trading_calendar import trading_calendar
 
 
 class Domain(object):

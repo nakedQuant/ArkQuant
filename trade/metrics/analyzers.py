@@ -8,9 +8,12 @@ Created on Sun Feb 17 16:11:34 2019
 import pandas as pd , numpy as np
 from scipy import stats
 
-# APPROX_BDAYS_PER_YEAR
 
-def cum_returns(returns):
+def cum_returns(
+                returns,
+                risk_free=0.0,
+                required_return=0.0
+                ):
     """
     Compute cumulative returns from simple returns.
 
@@ -38,10 +41,8 @@ def cum_returns(returns):
     np.add(returns, 1, out=out)
     out.cumprod(axis=0, out=out)
     # cum_returns_s = np.exp(np.log(1 + returns_s).cumsum())
-
     np.subtract(out, 1, out=out)
     # np.multiply(out, starting_value, out=out)
-
     if returns.ndim == 1 and isinstance(returns, pd.Series):
         out = pd.Series(out, index=returns.index)
     elif isinstance(returns, pd.DataFrame):
@@ -51,7 +52,11 @@ def cum_returns(returns):
     return out
 
 
-def cum_returns_final(returns):
+def cum_returns_final(
+                    returns,
+                    risk_free=0.0,
+                    required_return=0.0
+                    ):
     """
     Compute total returns from simple returns.
 
@@ -79,7 +84,12 @@ def cum_returns_final(returns):
         result = np.nanprod(returns + 1, axis=0)
     return result
 
-def max_drawdown(returns):
+
+def max_drawdown(
+                returns,
+                risk_free=0.0,
+                required_return=0.0
+                ):
     """
     Determines the maximum drawdown of a strategy.
 
@@ -118,7 +128,12 @@ def max_drawdown(returns):
     succession = max(np.diff(sub_mask_loc))
     return out ,duration , succession
 
-def annual_return(returns):
+
+def annual_return(
+                returns,
+                risk_free=0.0,
+                required_return=0.0
+                ):
     """
     Determines the mean annual growth rate of returns. This is equivilent
     to the compound annual growth rate.
@@ -156,7 +171,42 @@ def annual_return(returns):
     ending_value = cum_returns_final(returns)
     return ending_value ** (1 / num_years) - 1
 
-def cagr(returns):
+
+def annual_volatility(
+                    returns,
+                    risk_free=0.0,
+                    required_return=0.0
+                    ):
+    """
+    Determines the annual volatility of a strategy.
+
+    Parameters
+    ----------
+    returns : pd.Series or np.ndarray
+        Periodic returns of the strategy, noncumulative.
+        - See full explanation in :func:`~empyrical.stats.cum_returns`.
+
+    'monthly':12
+    'weekly': 52
+    'daily': 252
+
+    Returns
+    -------
+    annual_volatility : float
+    """
+    if len(returns) < 2:
+        return  np.nan
+    out = np.empty(returns.shape[1:])
+    np.nanstd(returns, ddof=1, axis=0, out=out)
+    out = np.multiply(out, 252 ** (1.0 / 2), out=out)
+    return out
+
+
+def cagr(
+        returns,
+        risk_free=0.0,
+        required_return=0.0
+        ):
     """
     Compute compound annual growth rate. Alias function for
     :func:`~empyrical.stats.annual_return`
@@ -189,32 +239,12 @@ def cagr(returns):
     """
     return annual_return(returns)
 
-def annual_volatility(returns):
-    """
-    Determines the annual volatility of a strategy.
 
-    Parameters
-    ----------
-    returns : pd.Series or np.ndarray
-        Periodic returns of the strategy, noncumulative.
-        - See full explanation in :func:`~empyrical.stats.cum_returns`.
-
-    'monthly':12
-    'weekly': 52
-    'daily': 252
-
-    Returns
-    -------
-    annual_volatility : float
-    """
-    if len(returns) < 2:
-        return  np.nan
-    out = np.empty(returns.shape[1:])
-    np.nanstd(returns, ddof=1, axis=0, out=out)
-    out = np.multiply(out, 252 ** (1.0 / 2), out=out)
-    return out
-
-def calmar_ratio(returns):
+def calmar_ratio(
+                returns,
+                risk_free=0.0,
+                required_return=0.0
+                ):
     """
     Determines the Calmar ratio, or drawdown ratio, of a strategy.
 
@@ -254,14 +284,16 @@ def calmar_ratio(returns):
         temp = annual_return(returns=returns) / abs(max_dd)
     else:
         return np.nan
-
     if np.isinf(temp):
         return np.nan
-
     return temp
 
 
-def omega_ratio(returns, risk_free=0.0, required_return=0.0):
+def omega_ratio(
+                returns,
+                risk_free=0.0,
+                required_return=0.0
+                ):
     """Determines the Omega ratio of a strategy.
 
     Parameters
@@ -310,7 +342,11 @@ def omega_ratio(returns, risk_free=0.0, required_return=0.0):
         return np.nan
 
 
-def sharpe_ratio(returns,risk_free=0):
+def sharpe_ratio(
+                returns,
+                risk_free=0.0,
+                required_return=0.0
+                ):
     """
     Determines the Sharpe ratio of a strategy.
 
@@ -367,8 +403,56 @@ def sharpe_ratio(returns,risk_free=0):
     return out
 
 
-def sortino_ratio(returns,
-                  required_return=0):
+def excess_sharpe(
+                excess_returns,
+                risk_free=0.0,
+                required_return=0.0
+                ):
+    """
+    Determines the Excess Sharpe of a strategy.
+
+    Parameters
+    ----------
+    excess_returns : pd.Series or np.ndarray
+        Daily returns of the strategy, noncumulative.
+        - See full explanation in :func:`~empyrical.stats.cum_returns`.
+        returns - factor_returns : float / series Benchmark return to compare returns against.
+    out : array-like, optional
+        Array to use as output buffer.
+        If not passed, a new array will be created.
+
+    Returns
+    -------
+    excess_sharpe : float
+
+    Note
+    -----
+    The excess Sharpe is a simplified Information Ratio that uses
+    tracking error rather than "active risk" as the denominator.
+    """
+    # if len(returns) < 2:
+    #     return np.nan
+    # out = np.empty(returns.shape[1:])
+    # active_return = _adjust_returns(returns, factor_returns)
+    if len(excess_returns) < 2:
+        return np.nan
+    out = np.empty(excess_returns.shape[1:])
+    active_return = excess_returns
+    tracking_error = np.nan_to_num(np.nanstd(active_return, ddof=1, axis=0))
+
+    out = np.divide(
+        np.nanmean(active_return, axis=0, out=out),
+        tracking_error,
+        out=out,
+    )
+    return out
+
+
+def sortino_ratio(
+                returns,
+                risk_free=0.0,
+                required_return=0.0
+                ):
     """
     Determines the Sortino ratio of a strategy.
 
@@ -430,8 +514,12 @@ def sortino_ratio(returns,
 
     return out
 
-def downside_risk(returns,
-                  required_return=0):
+
+def downside_risk(
+                returns,
+                risk_free=0.0,
+                required_return=0
+                ):
     """
     Determines the downside deviation below a threshold
 
@@ -495,45 +583,11 @@ def downside_risk(returns,
     return out
 
 
-def excess_sharpe(returns, factor_returns):
-    """
-    Determines the Excess Sharpe of a strategy.
-
-    Parameters
-    ----------
-    returns : pd.Series or np.ndarray
-        Daily returns of the strategy, noncumulative.
-        - See full explanation in :func:`~empyrical.stats.cum_returns`.
-    factor_returns: float / series
-        Benchmark return to compare returns against.
-    out : array-like, optional
-        Array to use as output buffer.
-        If not passed, a new array will be created.
-
-    Returns
-    -------
-    excess_sharpe : float
-
-    Note
-    -----
-    The excess Sharpe is a simplified Information Ratio that uses
-    tracking error rather than "active risk" as the denominator.
-    """
-    if len(returns) < 2:
-        return np.nan
-    out = np.empty(returns.shape[1:])
-    active_return = _adjust_returns(returns, factor_returns)
-    tracking_error = np.nan_to_num(np.nanstd(active_return, ddof=1, axis=0))
-
-    out = np.divide(
-        np.nanmean(active_return, axis=0, out=out),
-        tracking_error,
-        out=out,
-    )
-    return out
-
-
-class SQN(object):
+def sqn(
+        returns,
+        risk_free=0.0,
+        required_return=0.0
+        ):
     """
     SQN or SystemQualityNumber. Defined by Van K. Tharp to categorize trading
     systems.
@@ -558,9 +612,15 @@ class SQN(object):
         Returns a dictionary with keys "sqn" and "trades" (number of
         considered trades)
     """
+    sqn = np.sqrt(len(returns)) * np.nanmean(returns) / np.nanstd(returns)
+    return sqn
 
 
-def stability_of_timeseries(returns):
+def stability_of_timeseries(
+                            returns,
+                            risk_free=0.0,
+                            required_return=0.0
+                            ):
     """Determines R-squared of a linear fit to the cumulative
     log returns. Computes an ordinary least squares linear fit,
     and returns R-squared.
@@ -590,7 +650,11 @@ def stability_of_timeseries(returns):
     return rhat ** 2
 
 
-def tail_ratio(returns):
+def tail_ratio(
+                returns,
+                risk_free=0.0,
+                required_return=0.0
+                ):
     """Determines the ratio between the right (95%) and left tail (5%).
 
     For example, a ratio of 0.25 means that losses are four times
@@ -620,7 +684,12 @@ def tail_ratio(returns):
         np.abs(np.percentile(returns, 5))
 
 
-def value_at_risk(returns, cutoff=0.05):
+def value_at_risk(
+                returns,
+                risk_free=0.0,
+                required_return=0.0,
+                cutoff=0.05
+                ):
     """
     Value at risk (VaR) of a returns stream.
 
@@ -640,7 +709,12 @@ def value_at_risk(returns, cutoff=0.05):
     return np.percentile(returns, 100 * cutoff)
 
 
-def conditional_value_at_risk(returns, cutoff=0.05):
+def conditional_value_at_risk(
+                            returns,
+                            risk_free=0.0,
+                            required_return=0.0,
+                            cutoff=0.05
+                            ):
     """
     Conditional value at risk (CVaR) of a returns stream.
 
@@ -679,6 +753,7 @@ SIMPLE_STAT_FUNCS = [
     annual_return,
     annual_volatility,
     sharpe_ratio,
+    sqn,
     excess_sharpe,
     calmar_ratio,
     stability_of_timeseries,

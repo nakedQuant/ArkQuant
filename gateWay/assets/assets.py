@@ -11,7 +11,7 @@ from sqlalchemy import MetaData,select
 from gateWay.driver.db_schema import  engine
 from gateWay.driver.bar_reader import AssetSessionReader
 from gateWay.driver.tools import  _parse_url
-from gateWay.driver.calendar.trading_calendar import calendar
+from calendar.trading_calendar import calendar
 
 
 class Asset(object):

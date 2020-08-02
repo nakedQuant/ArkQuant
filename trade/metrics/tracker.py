@@ -8,6 +8,146 @@ Created on Sun Feb 17 16:11:34 2019
 import numpy as np ,pandas as pd,datetime
 from toolz import partition_all
 from functools import partial
+from calendar import trading_calendar
+from .analyzers import (
+                        sortino_ratio,
+                        sharpe_ratio,
+                        downside_risk,
+                        annual_volatility,
+                        max_drawdown,
+                        )
+from .exposure import alpha_beta_aligned
+
+
+class MetricsTracker(object):
+    """
+    The algorithm's interface to the registered risk and performance
+    metrics.
+
+    Parameters
+    ----------
+    trading_calendar : TrandingCalendar
+        The trading calendar used in the simulation.
+    first_session : pd.Timestamp
+        The label of the first trading session in the simulation.
+    last_session : pd.Timestamp
+        The label of the last trading session in the simulation.
+    capital_base : float
+        The starting capital for the simulation.
+    metrics : list[Metric]
+        The metrics to track.
+    emission_rate : {'daily', 'minute'}
+        How frequently should a performance packet be generated?
+    """
+    _hooks = (
+        'start_of_simulation',
+        'end_of_simulation',
+        'start_of_session',
+        'end_of_session',
+    )
+
+    def __init__(self,
+                 ledger,
+                 benchmark,
+                 first_session,
+                 last_session,
+                 capital_base,
+                 metrics,
+                 ):
+
+        self._sessions = trading_calendar.sessions_in_range(
+            first_session,
+            last_session,
+        )
+        self._ledger = ledger
+        self._capital_base = capital_base
+        self._benchmark = benchmark
+
+        # bind all of the hooks from the passed metrics objects.
+        for hook in self._hooks:
+            registered = []
+            for metric in metrics:
+                try:
+                    registered.append(getattr(metric, hook))
+                except AttributeError:
+                    pass
+
+            def closing_over_loop_variables_is_hard(registered):
+                def hook_implementation(*args, **kwargs):
+                    for impl in registered:
+                        impl(*args, **kwargs)
+
+                return hook_implementation
+            #属性 --- 方法
+            hook_implementation = closing_over_loop_variables_is_hard()
+            hook_implementation.__name__ = hook
+            # 属性 --- 方法
+            setattr(self, hook, hook_implementation)
+
+    def handle_start_of_simulation(self):
+        self.start_of_simulation(
+            self._ledger,
+            self._benchmark,
+            self._sessions
+        )
+
+    def handle_market_open(self, session_label):
+        """Handles the start of each session.
+
+        Parameters
+        ----------
+        session_label : Timestamp
+            The label of the session that is about to begin.
+        """
+        ledger = self._ledger
+        # 账户初始化
+        ledger.start_of_session(session_label)
+        self.start_of_session(ledger)
+
+    def handle_market_close(self,completed_session):
+        """Handles the close of the given day.
+
+        Parameters
+        ----------
+        dt : Timestamp
+            The most recently completed simulation datetime.
+        data_portal : DataPortal
+            The current data portal.
+
+        Returns
+        -------
+        A daily perf packet.
+        """
+        packet = {
+            'period_start': self._first_session,
+            'period_end': self._last_session,
+            'capital_base': self._capital_base,
+            'daily_perf': {},
+            'cumulative_perf': {},
+            'cumulative_risk_metrics': {},
+        }
+        ledger = self._ledger
+        ledger.end_of_session()
+        self.end_of_session(
+            packet,
+            ledger,
+            completed_session,
+        )
+        return packet
+
+    def handle_simulation_end(self):
+        """
+        When the simulation is complete, run the full period risk report
+        and send it out on the results socket.
+        """
+        packet = {}
+        self.end_of_simulation(
+            packet,
+            self._ledger,
+            self._benchmark,
+            self._sessions,
+        )
+        return packet
 
 
 class _ClassicRiskMetrics(object):
@@ -69,16 +209,16 @@ class _ClassicRiskMetrics(object):
         ]
 
         excess_returns = algorithm_returns - benchmark_returns
-
+        # 区间收益
         benchmark_period_returns = np.prod(benchmark_returns + 1) - 1
         algorithm_period_returns = np.prod(algorithm_returns + 1) - 1
         excess_period_returens = np.prod(excess_returns +1) - 1
 
-        #组合胜率、超额胜率、
+        #组合胜率、超额胜率
         absoulte_winrate = [algorithm_period_returns > 0].sum() / len(algorithm_period_returns)
         excess_winrate = (algorithm_period_returns > benchmark_period_returns).sum() / len(algorithm_period_returns)
 
-        alpha, beta = ep.alpha_beta_aligned(
+        alpha, beta = alpha_beta_aligned(
             algorithm_returns.values,
             benchmark_returns.values,
         )
@@ -98,7 +238,7 @@ class _ClassicRiskMetrics(object):
         sortino = sortino_ratio(
             algorithm_returns.values,
             # 回撤
-            _downside_risk=ep.downside_risk(algorithm_returns.values),
+            _downside_risk = downside_risk(algorithm_returns.values),
         )
 
         rval = {
@@ -113,9 +253,9 @@ class _ClassicRiskMetrics(object):
             'sortino': sortino,
             'period_label': end_session.strftime("%Y-%m"),
             'trading_days': len(benchmark_returns),
-            'algo_volatility': ep.annual_volatility(algorithm_returns),
-            'benchmark_volatility': ep.annual_volatility(benchmark_returns),
-            'max_drawdown': ep.max_drawdown(algorithm_returns.values),
+            'algo_volatility': annual_volatility(algorithm_returns),
+            'benchmark_volatility': annual_volatility(benchmark_returns),
+            'max_drawdown': max_drawdown(algorithm_returns.values),
         }
 
         # check if a field in rval is nan or inf, and replace it with None
@@ -135,7 +275,6 @@ class _ClassicRiskMetrics(object):
                           end_session,
                           algorithm_returns,
                           benchmark_returns,
-                          # algorithm_leverages,
                           months_per):
         if months.size < months_per:
             return

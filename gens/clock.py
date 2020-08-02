@@ -13,96 +13,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np ,pandas as pd
+import pandas as pd
 
-_nanos_in_minute = 60000000000
-NANOS_IN_MINUTE = _nanos_in_minute
+BAR = 0
+SESSION_START = 1
+SESSION_END = 2
+MINUTE_END = 3
+BEFORE_TRADING_START_BAR = 4
 
+# before trading  , session start , session end 三个阶段
 
-# for dt, action in self.clock:
-#     if action == BEFORE_TRADING_START_BAR:
-#         # algo.before_trading_start(self.current_data)
-#         metrics_tracker.handle_market_open(dt)
-#     elif action == SESSION_START:
-#         once_a_day(dt)
-#     elif action == SESSION_END:
-#         # End of the session.
-#         yield daily_perf_metrics
-
-
-
-class MinuteSimulationClock:
+class MinuteSimulationClock(object):
 
     def __init__(self,
                  sessions,
-                 market_opens,
-                 market_closes,
-                 before_trading_start_minutes,
-                 minute_emission=False):
-        self.minute_emission = minute_emission
+                 trading_calendar):
 
-        self.market_opens_nanos = market_opens.values.astype(np.int64)
-        self.market_closes_nanos = market_closes.values.astype(np.int64)
-        self.sessions_nanos = sessions.values.astype(np.int64)
-        self.bts_nanos = before_trading_start_minutes.values.astype(np.int64)
-
-        self.minutes_by_session = self.calc_minutes_by_session()
-
-    def calc_minutes_by_session(self):
-        minutes_by_session = {}
-        for session_idx, session_nano in enumerate(self.sessions_nanos):
-            minutes_nanos = np.arange(
-                self.market_opens_nanos[session_idx],
-                self.market_closes_nanos[session_idx] + _nanos_in_minute,
-                _nanos_in_minute
-            )
-            minutes_by_session[session_nano] = pd.to_datetime(
-                minutes_nanos, utc=True, box=True
-            )
-        return minutes_by_session
+        self.sessions_nanos = trading_calendar.session_in_range(sessions)
+        self.trading_o_and_c = trading_calendar.open_and_close_for_session(self.sim_params.sessions)
+        self.minute_emission = 'minute'
 
     def __iter__(self):
-        minute_emission = self.minute_emission
-
-        for idx, session_nano in enumerate(self.sessions_nanos):
-            yield pd.Timestamp(session_nano, tz='UTC'), SESSION_START
-
-            bts_minute = pd.Timestamp(self.bts_nanos[idx], tz='UTC')
-            regular_minutes = self.minutes_by_session[session_nano]
-
-            if bts_minute > regular_minutes[-1]:
-                # before_trading_start is after the last close,
-                # so don't emit it
-                for minute, evt in self._get_minutes_for_list(
-                    regular_minutes,
-                    minute_emission
-                ):
-                    yield minute, evt
-            else:
-                # we have to search anew every session, because there is no
-                # guarantee that any two session start on the same minute
-                bts_idx = regular_minutes.searchsorted(bts_minute)
-
-                # emit all the minutes before bts_minute
-                for minute, evt in self._get_minutes_for_list(
-                    regular_minutes[0:bts_idx],
-                    minute_emission
-                ):
-                    yield minute, evt
-
-                yield bts_minute, BEFORE_TRADING_START_BAR
-
-                # emit all the minutes after bts_minute
-                for minute, evt in self._get_minutes_for_list(
-                    regular_minutes[bts_idx:],
-                    minute_emission
-                ):
-                    yield minute, evt
-
-            yield regular_minutes[-1], SESSION_END
-
-    def _get_minutes_for_list(self, minutes, minute_emission):
-        for minute in minutes:
-            yield minute, BAR
-            if minute_emission:
-                yield minute, MINUTE_END
+        """
+        If the clock property is not set, then create one based on frequency.
+        """
+        for session_label , session_minutes in zip(self.trading_days,self.trading_o_and_c):
+            yield session_label, BEFORE_TRADING_START_BAR
+            bts_minute = pd.Timestamp(session_label) + 9 * 60 * 60 + 30 * 60
+            if bts_minute == session_minutes[0]:
+                yield bts_minute , SESSION_START
+            bts_end = max(session_minutes[2:])
+            yield bts_end , SESSION_END

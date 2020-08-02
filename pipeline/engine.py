@@ -80,7 +80,7 @@ class Engine(ABC):
         dct = {{p.tag:p} for p in outputs}
         return dct
 
-    def execute_engine(self, ledger):
+    def execute_engine(self, ledger,restrictions):
         """
             计算ump和所有pipelines --- 如果ump为0，但是pipelines得到与持仓一直的标的相当于变相加仓
             umps --- 根据资产类别话费不同退出策略 ，symbols , etf , bond

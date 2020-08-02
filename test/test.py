@@ -6842,58 +6842,73 @@ from six.moves.urllib_error import HTTPError
 #
 #         return _DeprecatedSidLookupPosition(key)
 
-class DailyFieldLedger(object):
+# class DailyFieldLedger(object):
+#
+#     def __init__(self,ledger_field,packet_field = None):
+#         self._get_ledger_field = op.attrgetter(ledger_field)
+#         if packet_field is None:
+#             self._packet_field = ledger_field.rsplit('.',1)[-1]
+#         else:
+#             self._packet_field = packet_field
+#
+#     def end_of_session(self,
+#                        packet,
+#                        ledger,
+#                        session_ix):
+#         field = self._packet_field
+#         packet['daily_perf'][field] = \
+#             self._get_ledger_field(ledger)
+#
+# class StartOfPeriodLedgerField(object):
+#     """Keep track of the value of a ledger field at the start of the period.
+#
+#     Parameters
+#     ----------
+#     ledger_field : str
+#         The ledger field to read.
+#     packet_field : str, optional
+#         The name of the field to populate in the packet. If not provided,
+#         ``ledger_field`` will be used.
+#     """
+#     def __init__(self, ledger_field, packet_field=None):
+#         self._get_ledger_field = op.attrgetter(ledger_field)
+#         if packet_field is None:
+#             self._packet_field = ledger_field.rsplit('.', 1)[-1]
+#         else:
+#             self._packet_field = packet_field
+#
+#     def start_of_simulation(self,
+#                             ledger,
+#                             benchmark,
+#                             sessions):
+#         self._start_of_simulation = self._get_ledger_field(ledger)
+#
+#     def start_of_session(self, ledger):
+#         self._previous_day = self._get_ledger_field(ledger)
+#
+#     def _end_of_period(self, sub_field, packet,ledger):
+#         packet_field = self._packet_field
+#         # start_of_simulation 不变的
+#         packet['cumulative_perf'][packet_field] = self._start_of_simulation
+#         packet[sub_field][packet_field] = self._previous_day
+#
+#     def end_of_session(self,
+#                        packet,
+#                        ledger,
+#                        session_ix):
+#         self._end_of_period('daily_perf', packet,ledger)
 
-    def __init__(self,ledger_field,packet_field = None):
-        self._get_ledger_field = op.attrgetter(ledger_field)
-        if packet_field is None:
-            self._packet_field = ledger_field.rsplit('.',1)[-1]
-        else:
-            self._packet_field = packet_field
+# We don't have a datetime for the current snapshot until we
+# receive a message.
+# This object is the way that user algorithms interact with OHLCV data,
+# fetcher data, and some API methods like `data.can_trade`.
+# self.current_data = self._create_bar_data()
 
-    def end_of_session(self,
-                       packet,
-                       ledger,
-                       session_ix):
-        field = self._packet_field
-        packet['daily_perf'][field] = \
-            self._get_ledger_field(ledger)
-
-class StartOfPeriodLedgerField(object):
-    """Keep track of the value of a ledger field at the start of the period.
-
-    Parameters
-    ----------
-    ledger_field : str
-        The ledger field to read.
-    packet_field : str, optional
-        The name of the field to populate in the packet. If not provided,
-        ``ledger_field`` will be used.
-    """
-    def __init__(self, ledger_field, packet_field=None):
-        self._get_ledger_field = op.attrgetter(ledger_field)
-        if packet_field is None:
-            self._packet_field = ledger_field.rsplit('.', 1)[-1]
-        else:
-            self._packet_field = packet_field
-
-    def start_of_simulation(self,
-                            ledger,
-                            benchmark,
-                            sessions):
-        self._start_of_simulation = self._get_ledger_field(ledger)
-
-    def start_of_session(self, ledger):
-        self._previous_day = self._get_ledger_field(ledger)
-
-    def _end_of_period(self, sub_field, packet,ledger):
-        packet_field = self._packet_field
-        # start_of_simulation 不变的
-        packet['cumulative_perf'][packet_field] = self._start_of_simulation
-        packet[sub_field][packet_field] = self._previous_day
-
-    def end_of_session(self,
-                       packet,
-                       ledger,
-                       session_ix):
-        self._end_of_period('daily_perf', packet,ledger)
+# #获取日数据，封装为一个API(fetch process flush other api)
+# def _create_bar_data(self):
+#     return BarData(
+#         data_portal=self.data_portal,
+#         data_frequency=self.sim_params.data_frequency,
+#         trading_calendar=self.algo.trading_calendar,
+#         restrictions=self.restrictions,
+#     )

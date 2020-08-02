@@ -79,7 +79,6 @@ def parse_content_from_header(header):
     contents = pd.DataFrame.from_dict(text)
     return contents
 
-
 def last_modified_time(path):
     """
     Get the last modified time of path as a Timestamp.
@@ -115,10 +114,3 @@ def has_data_for_dates(series_or_df, first_date, last_date):
         raise TypeError("Expected a DatetimeIndex, but got %s." % type(dts))
     first, last = dts[[0, -1]]
     return (first <= first_date) and (last >= last_date)
-
-def reformat_sid(f):
-    @wraps(f)
-    def inner(sid,dt):
-        _sid = '1.' + sid if sid.startswith('0') else '0.'+ sid
-        return f(_sid,dt)
-    return inner

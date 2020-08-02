@@ -8,6 +8,9 @@ Created on Sun Feb 17 16:11:34 2019
 import pandas as pd , numpy as np
 from scipy.stats import linregress
 from collections import OrderedDict
+from .uility import _to_pandas , annualization_factor , _adjust_returns ,roll
+from .analyzers import  annual_return
+
 
 def rsquared(x, y):
     """
@@ -15,6 +18,7 @@ def rsquared(x, y):
     """
     slope, intercept, r_value, p_value, std_err = linregress(x, y)
     return r_value**2
+
 
 def _aligned_series(*many_series):
     """
@@ -51,7 +55,7 @@ def _aligned_series(*many_series):
 def alpha_aligned(returns,
                   factor_returns,
                   risk_free=0.0,
-                  period=DAILY,
+                  period='daily',
                   annualization=None,
                   out=None,
                   _beta=None):
@@ -120,7 +124,7 @@ def alpha_aligned(returns,
     out = np.subtract(
         np.power(
             np.add(
-                nanmean(alpha_series, axis=0, out=out),
+                np.nanmean(alpha_series, axis=0, out=out),
                 1,
                 out=out
             ),
@@ -139,10 +143,11 @@ def alpha_aligned(returns,
 
     return out
 
+
 def alpha(returns,
           factor_returns,
           risk_free=0.0,
-          period=DAILY,
+          period='daily',
           annualization=None,
           out=None,
           _beta=None):
@@ -264,16 +269,16 @@ def beta_aligned(returns, factor_returns, risk_free=0.0, out=None):
     )
 
     # 计算序列协方差的公式
-    ind_residual = independent - nanmean(independent, axis=0)
+    ind_residual = independent - np.nanmean(independent, axis=0)
     # mean((X - mean(X)) * (Y - mean(Y))) --- X_res = (X - mean(X)) ， mean(X_res * Y)
-    covariances = nanmean(ind_residual * returns, axis=0)
+    covariances = np.nanmean(ind_residual * returns, axis=0)
 
     # We end up with different variances in each column here because each
     # column may have a different subset of the data dropped due to missing
     # data in the corresponding dependent column.
     # shape: (M,)
     np.square(ind_residual, out=ind_residual)
-    independent_variances = nanmean(ind_residual, axis=0)
+    independent_variances = np.nanmean(ind_residual, axis=0)
     independent_variances[independent_variances < 1.0e-30] = np.nan
     # Calculate beta as Cov(X, Y) / Cov(X, X).
     np.divide(covariances, independent_variances, out=out)
@@ -322,7 +327,7 @@ def beta(returns, factor_returns, risk_free=0.0, out=None):
 def alpha_beta_aligned(returns,
                        factor_returns,
                        risk_free=0.0,
-                       period=DAILY,
+                       period='daily',
                        annualization=None,
                        out=None):
     """Calculates annualized alpha and beta.
@@ -384,7 +389,7 @@ def alpha_beta_aligned(returns,
 def alpha_beta(returns,
                factor_returns,
                risk_free=0.0,
-               period=DAILY,
+               period='daily',
                annualization=None,
                out=None):
     """Calculates annualized alpha and beta.
@@ -780,7 +785,7 @@ def down(returns, factor_returns, **kwargs):
     factor_returns = factor_returns[factor_returns < 0]
     return func(returns, factor_returns, **kwargs)
 
-def capture(returns, factor_returns, period=DAILY):
+def capture(returns, factor_returns, period='daily'):
     """Compute capture ratio.
 
     Parameters
@@ -1019,7 +1024,6 @@ def roll_up_down_capture(returns, factor_returns, window=10, **kwargs):
     """
     return roll(returns, factor_returns, window=window,
                 function=up_down_capture, **kwargs)
-
 
 
 FACTOR_STAT_FUNCS = [

@@ -79,9 +79,9 @@ class TradingEngine(object):
             p_txns,p_uility,c_txns,c_uility = zip(*results)
         return p_txns,p_uility,c_txns,c_uility
 
-    def carry_out(self,ledger):
+    def carry_out(self,ledger,restrictions):
         """建立执行计划"""
-        capital, negatives,dual,positives,dts =  self.engine.execute_engine(ledger)
+        capital, negatives,dual,positives,dts =  self.engine.execute_engine(ledger,restrictions)
         # 直接卖出
         negatives, neg_uility = self.implement_based_on_amount(negatives,dts)
         # 卖出 --- 买入
