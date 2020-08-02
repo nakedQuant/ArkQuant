@@ -17,24 +17,24 @@ class Pipeline(object):
     """
         拓扑执行逻辑
     """
-    __slots__ = ['_term_store']
+    __slots__ = ('_term_store','_workspace')
 
-    def __init__(self,
-                 terms,
-                 ):
+    def __init__(self,terms):
         self._terms_store = terms
-        self._name = uuid.uuid4().hex()
-        self._init_graph()
+        self._workspace = OrderedDict()
+        self._graph = self._init_graph()
+        self._name = uuid.uuid4()
 
     @property
     def name(self):
         return self._name
 
-    def set_default(self,default):
-        self.default = default
+    @property
+    def terms(self):
+        return self._terms_store
 
     def _initialize_workspace(self):
-        self._workspace = OrderedDict()
+        self._workspace = OrderedDict
 
     def _init_graph(self):
         """
@@ -50,7 +50,8 @@ class Pipeline(object):
         graph : zipline.pipeline.graph.TermGraph
             Graph encoding term dependencies.
         """
-        self._graph = TermGraph(self._terms_store).graph
+        _graph = TermGraph(self._terms_store).graph
+        return _graph
 
     def __add__(self,term):
         if not isinstance(term, Term):
@@ -73,29 +74,29 @@ class Pipeline(object):
     def __setattr__(self, key, value):
         raise NotImplementedError
 
-    def _load_term(self, term):
+    def _load_term(self, term,default):
         if term.dependencies != NotSpecific :
             # 将节点的依赖 --- 交集 作为下一个input
-            slice_inputs = keyfilter(lambda x : x in term.dependencies,
+            inter_inputs = keyfilter(lambda x : x in term.dependencies,
                                      self._workspace)
             input_of_term = reduce(lambda x, y: set(x) & set(y),
-                                   slice_inputs.values())
+                                   inter_inputs.values())
         else:
-            input_of_term = self.default
+            input_of_term = default
         return input_of_term
 
-    def _decref_recursive(self,metadata):
+    def _decref_recursive(self,metadata,default):
         """
             internal method for decref_recursive
         """
         decref_nodes = self._graph.decref_dependencies()
         for node in decref_nodes:
-            _input = self._load_term(node)
+            _input = self._load_term(node,default)
             output = node.compute(_input,metadata)
             self._workspace[node] = output
-            self._decref_recursive(metadata)
+            self._decref_recursive(metadata,default)
 
-    def decref_recursive(self,metadata):
+    def decref_recursive(self,metadata,default):
         """
         Return a topologically-sorted list of the terms in ``self`` which
         need to be computed.
@@ -105,30 +106,27 @@ class Pipeline(object):
 
         Parameters
         ----------
-        workspace : dict[Term, np.ndarray]
+        metadata : dict[Term, np.ndarray]
             Initial state of workspace for a pipeline execution. May contain
             pre-computed values provided by ``populate_initial_workspace``.
-        refcounts : dict[Term, int]
+        default : assets list
             Reference counts for terms to be computed. Terms with reference
             counts of 0 do not need to be computed.
         """
-        self._decref_recursive(metadata)
+        self._initialize_workspace()
+        self._decref_recursive(metadata,default)
 
-    def fit_out(self,alternative):
+    def fit(self,alternative):
         """将pipeline.name --- outs"""
         outputs = self._workspace.popitem(last=True).values()
         #打上标记 pipeline_name : asset
         outputs = [asset.tag(self.name) for asset in outputs[:alternative]]
         return outputs
 
-    def to_execution_plan(self,metadata,alternative):
+    def to_execution_plan(self,metadata,alternative,default):
         """
             source: accumulated data from all terms
         """
-        # assert self.initialized, ValueError('attach_default first')
-        #initialize
-        self._initialize_workspace()
-        # main engine
-        self.decref_recursive(metadata)
-        pipeline_output = self.fit_out(alternative)
-        return pipeline_output
+        self.decref_recursive(metadata,default)
+        result = self.fit(alternative)
+        return result

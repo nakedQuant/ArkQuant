@@ -101,6 +101,10 @@ class TradingCalendar (object):
                 )
             )
 
+    def dt_window_size(self,dt ,window):
+        dt = self._roll_forward(dt,window)
+        return dt
+
     def _compute_date_range_slice(self, start_date, end_date):
         # Get the index of the start of dates for ``start_date``.
         start_ix = self.dates.searchsorted(start_date)

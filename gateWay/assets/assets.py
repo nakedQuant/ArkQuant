@@ -29,6 +29,7 @@ class Asset(object):
                  sid):
         self.sid = sid
         self.engine = engine
+        self._tag = None
         self._retrieve_asset_mappings()
         self._supplementary_for_asset()
         self.trading_calendar = calendar
@@ -88,6 +89,11 @@ class Asset(object):
             active = self.first_trade <= session_label
         return active
 
+    @property
+    def tag(self):
+        return self._tag
+
+    @tag.setter
     def tag(self,name):
         """
         :param name: pipeline name which simulate asset

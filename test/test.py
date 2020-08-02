@@ -6912,3 +6912,24 @@ from six.moves.urllib_error import HTTPError
 #         trading_calendar=self.algo.trading_calendar,
 #         restrictions=self.restrictions,
 #     )
+# if isinstance(assets, Asset):
+#     return False
+# return pd.Series(index=pd.Index(assets), data=False)
+# if isinstance(assets, Asset):
+#     return assets in self._restricted_set
+# return pd.Series(
+#     index=pd.Index(assets),
+#     # list 内置的__contains__ 方法
+#     # data=vectorized_is_element(assets, self._restricted_set)
+#     data = np.vectorize(self._restricted_set.__contains__,otypes = [bool])(assets)
+# )
+# def is_restricted(self, assets, dt):
+#     if isinstance(assets, Asset):
+#         return any(
+#             r.is_restricted(assets, dt) for r in self.sub_restrictions
+#         )
+#
+#     return reduce(
+#         operator.or_,
+#         (r.is_restricted(assets, dt) for r in self.sub_restrictions)
+#     )

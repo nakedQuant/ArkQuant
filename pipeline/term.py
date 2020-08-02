@@ -166,14 +166,23 @@ class Term(object):
                 raise TypeError('dependencies must be Term')
         return terms
 
-    def compute(self,inputs,data):
+    def _compute(self,inputs,data):
         """
+            inner method
             1. subclass should implement when _verify_asset_finder is True
             2. self.postprocess()
         """
         output = self.term_logic.compute(inputs,data)
         validate_output = self.postprocess(output)
         return validate_output
+
+    def compute(self,inputs,data):
+        """
+            1. subclass should implement when _verify_asset_finder is True
+            2. self.postprocess()
+        """
+        output = self._compute(inputs,data)
+        return output
 
     def recursive_repr(self):
         """A short repr to use when recursively rendering terms with inputs.

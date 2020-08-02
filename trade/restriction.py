@@ -10,7 +10,7 @@ from abc import ABC,abstractmethod
 from functools import reduce
 import pandas as pd , numpy as np, operator
 from gateWay.assets.assets import Asset
-from utils.uility import vectorized_is_element
+from calendar.trading_calendar import  calendar
 
 
 class Restrictions(ABC):
@@ -92,17 +92,14 @@ class _UnionRestrictions(Restrictions):
                 self.sub_restrictions + other_restriction.sub_restrictions
         else:
             new_sub_restrictions = self.sub_restrictions + [other_restriction]
-
         return _UnionRestrictions(new_sub_restrictions)
 
     def is_restricted(self, assets, dt):
         if isinstance(assets, Asset):
-            return any(
-                r.is_restricted(assets, dt) for r in self.sub_restrictions
-            )
-
+            return assets if len(set(r.is_restricted(assets, dt)
+                                     for r in self.sub_restrictions)) == 1 else None
         return reduce(
-            operator.or_,
+            operator.and_,
             (r.is_restricted(assets, dt) for r in self.sub_restrictions)
         )
 
@@ -112,9 +109,7 @@ class NoRestrictions(Restrictions):
     A no-op restrictions that contains no restrictions.
     """
     def is_restricted(self, assets, dt):
-        if isinstance(assets, Asset):
-            return False
-        return pd.Series(index=pd.Index(assets), data=False)
+        return assets
 
 
 class StaticRestrictions(Restrictions):
@@ -135,37 +130,30 @@ class StaticRestrictions(Restrictions):
         """
         An asset is restricted for all dts if it is in the static list.
         """
-        if isinstance(assets, Asset):
-            return assets in self._restricted_set
-        return pd.Series(
-            index=pd.Index(assets),
-            # list 内置的__contains__ 方法
-            # data=vectorized_is_element(assets, self._restricted_set)
-            data = np.vectorize(self._restricted_set.__contains__,otypes = [bool])(assets)
-        )
+        selector = set(assets) - set(self._restricted_set)
+        return selector
 
 
-class SecuritySessionRestrictions(Restrictions):
+class SecurityListRestrictions(Restrictions):
     """
         a. 剔除停盘
         b. 剔除上市不足一个月的 --- 次新股波动性太大
         c. 剔除进入退市整理期的30个交易日
     """
     def __init__(self,
-                 assert_finder,
-                 trading_calendar):
-        self.assert_finder = assert_finder
-        self.trading_calendar = trading_calendar
+                 asset_finder,
+                 window = [3*22,30]):
+        self.asset_finder = asset_finder
+        self.window = window
 
-    def is_restricted(self,windows,dt):
-        assert len(windows) == 2 ,('only dual args needed')
-        before,after = windows
+    def is_restricted(self,assets,dt):
+        before,after = self.window
         alive_assets = self.asset_finder.was_active(dt)
-        sdate = self.trading_calendar._roll_forward(dt,before)
-        edate = self.trading_calendar._roll_forward(dt, after)
-        active_assets = self.asset_finder.lifetime([sdate,edate])
-        select_assets = set(alive_assets) & set(active_assets)
-        return select_assets
+        s_date = calendar.dt_window_size(dt,before)
+        e_date = calendar.dt_window_size(dt, after)
+        active_assets = self.asset_finder.lifetime([s_date,e_date])
+        ensure_assets = set(alive_assets) & set(active_assets)
+        return ensure_assets
 
 
 class TemporaryRestrictions(object):

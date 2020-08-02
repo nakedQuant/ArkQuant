@@ -25,9 +25,6 @@ class UmpPickers(object):
     def __init__(self,pickers):
         self._validate_features(pickers)
 
-    def __setattr__(self, key, value):
-        raise NotImplementedError
-
     def _validate_features(self,features):
         for feature in features:
             assert isinstance(feature,Term),ValueError('must term type')
@@ -35,8 +32,15 @@ class UmpPickers(object):
                 raise Exception('bool term needed for ump')
         self._poll_pickers = features
 
+    @property
+    def pickers(self):
+        return self._poll_pickers
+
+    def __setattr__(self, key, value):
+        raise NotImplementedError
+
     def _evaluate_for_sid(self,position, metadata):
-        votes = [term_picker._compute([position.asset],metadata)
+        votes = [term_picker.compute([position.asset],metadata)
                                 for term_picker in self._poll_pickers]
         if np.all(votes):
             return position

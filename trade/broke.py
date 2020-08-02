@@ -10,7 +10,7 @@ from multiprocessing import Pool
 from functools import partial
 
 
-class TradingEngine(object):
+class BrokerEngine(object):
     """
         --- interactive , orderCreated
         撮合成交
@@ -47,8 +47,8 @@ class TradingEngine(object):
             results = [ pool.apply_async(p_func,p.asset,p.amount)
                        for p in puts ]
             #卖出订单，买入订单分开来
-            txns, uility = zip(*results)
-        return txns,uility
+            transactions, utility = zip(*results)
+        return transactions,utility
 
     def implemnt_based_on_capital(self,calls,capital,dts):
         """基于资金买入对应仓位"""
@@ -63,8 +63,8 @@ class TradingEngine(object):
                                        )
                       for asset in calls.values() ]
         # transaction , efficiency
-        transactions,uility = list(zip(*result))
-        return transactions , uility
+        transactions,utility = list(zip(*result))
+        return transactions , utility
 
     def implement_dual(self,targets,dts):
         """
@@ -76,19 +76,19 @@ class TradingEngine(object):
             results = [ pool.apply_async(p_func,*obj)
                        for obj in targets ]
             #卖出订单，买入订单分开来
-            p_txns,p_uility,c_txns,c_uility = zip(*results)
-        return p_txns,p_uility,c_txns,c_uility
+            p_transactions ,p_utility ,c_transactions ,c_utility = zip(*results)
+        return p_transactions ,p_utility ,c_transactions ,c_utility
 
-    def carry_out(self,ledger,restrictions):
+    def carry_out(self,ledger):
         """建立执行计划"""
-        capital, negatives,dual,positives,dts =  self.engine.execute_engine(ledger,restrictions)
+        capital, negatives,dual,positives,dts =  self.engine.execute_engine(ledger)
         # 直接卖出
-        negatives, neg_uility = self.implement_based_on_amount(negatives,dts)
+        negatives, neg_utility = self.implement_based_on_amount(negatives,dts)
         # 卖出 --- 买入
-        p_txns,p_uility,c_txns,c_uility = self.implement_dual(dual,dts)
+        p_transactions,p_utility,c_transactions,c_utility = self.implement_dual(dual,dts)
         # 直接买入
-        positives , pos_uility = self.implemnt_based_on_capital(positives,capital,dts)
+        positives , pos_utility = self.implemnt_based_on_capital(positives,capital,dts)
         # 根据标的追踪 --- 具体卖入订单根据volume计算成交率，买入订单根据成交额来计算资金利用率 --- 评估撮合引擎撮合的的效率
-        uility_ratio = np.mean(neg_uility + p_uility + c_uility + pos_uility)
-        transactions = negatives + p_txns + c_txns + positives
-        return transactions , uility_ratio
+        utility_ratio = np.mean(neg_utility + p_utility + c_utility + pos_utility)
+        transactions = negatives + p_transactions + c_transactions + positives
+        return transactions , utility_ratio

@@ -11,35 +11,30 @@ from multiprocessing import Pool
 from itertools import chain
 from abc import ABC , abstractmethod
 from .loader.loader import PricingLoader
-
-# 剔除上市不足3个月的 , 剔除进入退市整理期的30个交易日
-RestrictedSession = frozenset([3*20 , 30])
+from trade.restriction import _UnionRestrictions
 
 
 class Engine(ABC):
 
     def _init_loader(self,pipelines,pickers):
+        _inner_terms = chain([pipeline.terms for pipeline in pipelines])
+        _inner_pickers = pickers.pickers
+        _engine_terms = set(_inner_terms + _inner_pickers)
         # get_loader
-        _pipeline_inner_terms = chain(pipeline._terms_store
-                             for pipeline in pipelines)
-        _picker_inner_terms = pickers._poll_pickers
-        engine_terms = set(_picker_inner_terms + _pipeline_inner_terms)
-        self._get_loader = PricingLoader(engine_terms)
-        self.pipelines = pipelines
-        self.ump_pickers = pickers
+        _get_loader = PricingLoader(_engine_terms)
+        return pipelines , pickers , _get_loader
 
-    def register_default(self,dts):
+    def _compute_default(self,dts):
         """
         Register a Pipeline default for pipeline on every day.
         :param dts: initialize attach pipeline and cache metadata for engine
         :return:
         """
-        default_assets = self.restrictions.is_restricted(RestrictedSession,dts)
-        # default --- pipeline sids
-        [pipeline.set_default(default_assets) for pipeline in self.pipelines]
-        # _cache_metada
-        meta_loader = self._get_loader.load_pipeline_arrays(dts,default_assets)
-        return meta_loader
+        equities = self.asset_finder.retrieve_type_assets('equity')
+        default = self._restricted_rule.is_restricted(equities,dts)
+        # set pipeline metadata
+        metadata_loader = self._get_loader.load_pipeline_arrays(dts,default)
+        return default , metadata_loader
 
     def _run_pipeline(self,pipeline,metadata):
         """
@@ -49,7 +44,7 @@ class Engine(ABC):
         """
         yield pipeline.to_execution_plan(metadata,self.alternatives)
 
-    def run_pipelines(self,pipeline_metadata):
+    def run_pipelines(self,pipeline_metadata,default):
         """
         Compute values for  pipelines on a specific date.
         Parameters
@@ -57,14 +52,15 @@ class Engine(ABC):
         pipeline_metadata : cache data for pipeline
         """
         _implement = partial(self._run_pipeline,
-                             metadata = pipeline_metadata)
+                             metadata = pipeline_metadata,
+                             default = default)
 
         with Pool(processes = len(self.pipelines))as pool:
             results = [pool.apply_async(_implement, pipeline)
                       for pipeline in self.pipelines]
             outputs = chain(* results)
         #pipeline_name : asset
-        mappings = {{asset._tag: asset} for asset in outputs}
+        mappings = {{asset.tag: asset} for asset in outputs}
         return mappings
 
     def run_pickers(self,holdings,picker_metadata):
@@ -77,10 +73,15 @@ class Engine(ABC):
             result = self.ump_pickers[asset_type].evalute(positions,picker_metadata)
             outputs.extend(result)
         # pipeline_name : position
-        dct = {{p.tag:p} for p in outputs}
+        dct = {{p.tag : p} for p in outputs}
         return dct
 
-    def execute_engine(self, ledger,restrictions):
+    @staticmethod
+    @abstractmethod
+    def resolve_conflicts(*args):
+        raise NotImplementedError()
+
+    def execute_engine(self,ledger):
         """
             计算ump和所有pipelines --- 如果ump为0，但是pipelines得到与持仓一直的标的相当于变相加仓
             umps --- 根据资产类别话费不同退出策略 ，symbols , etf , bond
@@ -89,23 +90,18 @@ class Engine(ABC):
         dts = ledger.synchronized_clock
         capital = ledger.porfolio.cash
         # default
-        engine_metadata = self.register_default(dts)
+        default, engine_metadata = self._compute_default(dts)
         #获取剔除配股的仓位之后的持仓 -- 配股的持仓必须卖出（至少需要停盘7天，风险太大）
         holdings = set(ledger.positions) - set(ledger.get_rights_positions(dts))
         #执行算法逻辑
-        poll_maapingss = self.run_pickers(holdings,engine_metadata)
-        pipe_mapings = self.run_pipelines(engine_metadata)
+        poll_mappings = self.run_pickers(holdings,engine_metadata)
+        pipe_mappings = self.run_pipelines(engine_metadata,default)
         #处理冲突
-        self._pipeline_cache[dts] = self.resovle_conflicts(poll_maapingss,pipe_mapings,holdings)
+        self._pipeline_cache[dts] = self.resolve_conflicts(poll_mappings,pipe_mappings,holdings)
         return capital,self._pipeline_cache[dts[0]]
 
-    @staticmethod
-    @abstractmethod
-    def _resovle_conflicts(*args):
-        raise NotImplementedError()
 
-
-class SimplePipelineEngine(object):
+class SimplePipelineEngine(Engine):
     """
     Computation engines for executing Pipelines.
 
@@ -144,28 +140,29 @@ class SimplePipelineEngine(object):
     ump_picker : strategy for putting positions
     """
     __slots__ = (
-        'pipelines',
-        'ump_picker',
         'asset_finder'
-    )
+        '_restricted_rule'
+        'alternatives',
+        '_pipeline_cache'
+                )
 
     def __init__(self,
                  pipelines,
                  ump_pickers,
                  asset_finder,
-                 alternatives = 10 ,
+                 alternatives = 10,
                  restrictions = None):
         self.asset_finder = asset_finder
-        self.restrictions = restrictions
+        self._restricted_rule = _UnionRestrictions(restrictions)
         self.alternatives = alternatives
-        self._init_loader(pipelines,ump_pickers)
         self._pipeline_cache = {}
+        self.pipelines , self.ump_pickers , self._get_loader = self._init_loader(pipelines,ump_pickers)
 
     def __setattr__(self, key, value):
         raise NotImplementedError
 
     @staticmethod
-    def resovle_conflicts(puts, calls, holdings):
+    def resolve_conflicts(puts, calls, holdings):
         """
             防止策略冲突 当pipeline的结果与ump的结果出现重叠 --- 说明存在问题，正常情况退出策略与买入策略应该不存交集
 
