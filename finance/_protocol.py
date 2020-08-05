@@ -63,13 +63,17 @@ class Portfolio(object):
         self._cash_flow = 0.0
         self.pnl = 0.0
         self.returns = 0.0
-        self.uility = 0.0
+        self.utility = 0.0
         # 获取postiions protocol
         self.positions = None
 
     @property
     def cash_flow(self):
         return self._cash_flow
+
+    @cash_flow.setter
+    def cash_flow(self,capital):
+        return capital
 
     def __getattr__(self, item):
         return self.__dict__[item]

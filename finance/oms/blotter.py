@@ -16,7 +16,7 @@ class Blotter(object):
                  commission,
                  multiplier = 1,
                  delay = 1):
-        self.creator = creator
+        self._order_creator = creator
         self.commission = commission
         self.multiplier = multiplier
         self.delay = delay
@@ -30,7 +30,7 @@ class Blotter(object):
         """
             基于capital --- 买入标的
         """
-        orders = self.creator.simulate_capital_order(asset,capital,dts)
+        orders = self._order_creator.simulate_capital_order(asset,capital,dts)
         #将orders --- transactions
         fee = self.commission.calculate_rate(asset,'positive',dts)
         txns = self.create_bulk_transactions(orders,fee)
@@ -39,8 +39,8 @@ class Blotter(object):
         return txns,efficiency
 
     def simulate_txn(self,asset,amount,dts,direction):
-        sizes,data = self.creator.calculate_size_arrays(asset,amount,dts)
-        direct_orders = self.creator.simulate_order(asset,sizes,data,direction)
+        sizes,data = self._order_creator.calculate_size_arrays(asset,amount,dts)
+        direct_orders = self._order_creator.simulate_order(asset,sizes,data,direction)
         p_fee = self.commission.calculate_rate(asset,direction,dts)
         transactions = self.create_bulk_transactions(direct_orders,p_fee)
         #计算效率
@@ -73,7 +73,7 @@ class Blotter(object):
         p_transactions,p_uility = self.simulate_txn(p.asset,p.amount,dts,'negative')
         #计算效率
         # 执行对应的买入算法
-        c_data = self.creator._create_data(dts,c)
+        c_data = self._order_creator._create_data(dts,c)
         # 切换之间存在时间差，默认以minutes为单位
         c_tickers = [pd.Timedelta(minutes='%dminutes'%self.delay) + txn.created_dt for txn in p_transactions]
         #根据ticker价格比值
@@ -83,7 +83,7 @@ class Blotter(object):
         # 模拟买入订单数量
         c_sizes = [np.floor(p.amount * ratio) for p in p_transactions]
         #生成对应的买入订单
-        c_orders = self.creator.simulate_order(c, c_sizes,c_data,'positive')
+        c_orders = self._order_creator.simulate_order(c, c_sizes,c_data,'positive')
         #订单 --- 交易
         c_fee = self.commission_rate(c,'positive',dts)
         c_transactions = self.create_bulk_transactions(c_orders,c_fee)

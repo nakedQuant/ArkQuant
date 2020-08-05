@@ -1,40 +1,52 @@
-# Copyright 2015 Quantopian, Inc.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-from .base import PipelineLoader
+# !/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Mar 12 15:37:47 2019
 
-EVENT = frozenset(['massive','release','holder','structure','gross','margin'])
+@author: python
+"""
+from .base import PipelineLoader
+from calendar.trading_calendar import  calendar
+from gateWay.driver.fundamental_reader import (
+                        MassiveSessionReader,
+                        ReleaseSessionReader,
+                        HolderSessionReader,
+                        StructureSessionReader,
+                        GrossSessionReader,
+                        MarginSessionReader
+                                            )
+
+EVENT = {
+        'massive': MassiveSessionReader(),
+        'release': ReleaseSessionReader(),
+        'holder': HolderSessionReader(),
+        'structure': StructureSessionReader(),
+        'gross': GrossSessionReader(),
+        'margin': MarginSessionReader()
+        }
 
 
 class PricingLoader(PipelineLoader):
 
-    def __init__(self,terms,reader):
+    def __init__(self,terms,data_portal):
         """
             A pipeline for loading daily adjusted qfq live OHLCV data.
             terms --- pipeline terms and ump terms
         """
-        self._pricing_reader = reader
         domains = [term.domain for term in terms]
         self.pipeline_domain = self._resolve_domains(domains)
+        self._data_portal = data_portal
 
-    def load_pipeline_arrays(self,dts,sids):
+    def load_pipeline_arrays(self, dts, assets, data_frequency):
         fields = self.pipeline_domain.fields
         window = self.pipeline_domain.window
-        adjust_kline = self._pricing_reader.history(self,
-                                                    sids,
-                                                    fields,
-                                                    dts,
-                                                    window)
+        adjust_kline = self._data_portal.history(self,
+                                                 assets,
+                                                 dts,
+                                                 window,
+                                                 fields,
+                                                 data_frequency
+                                                 )
         return adjust_kline
 
 
@@ -57,19 +69,19 @@ class EventLoader(PipelineLoader):
         columns = ['declared_date','sid','bid_price','discount','bid_volume','buyer','seller','cleltszb']
         --- 主要折价率和每天大宗交易暂流通市值的比例 ，第一种清仓式出货， 第二种资金对导接力
     """
-    def __init__(self,terms,event_reader):
-        self._reader_dct = event_reader
+    def __init__(self,terms):
         domains = [term.domain for term in terms]
         self.pipeline_domain = self._resolve_domains(domains,True)
 
-    def load_pipeline_arrays(self,dts,sids,op_name):
+    def load_pipeline_arrays(self, dts, assets=None, data_frequency='daily'):
+        if data_frequency == 'minute':
+            raise ValueError('event data only be daily frequency')
+        event_mappings = dict()
         fields = self.pipeline_domain.fields
         window = self.pipeline_domain.window
-        assert op_name in EVENT , ValueError('unidentified event')
-        raw = self._reader_dct[op_name].load_raw_arrays(self,
-                                                            dts,
-                                                            window,
-                                                            sids
-                                                            )
-        kline = raw.loc[:,fields]
-        return kline
+        assert set(fields).issubset(set(EVENT)), ValueError('unknown event')
+        sessions = calendar.session_in_window(dts, window, include=False)
+        for field in fields:
+            raw = EVENT[field].load_raw_arrays(self, sessions, assets)
+            event_mappings[field] = raw
+        return event_mappings

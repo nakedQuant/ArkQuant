@@ -6,9 +6,11 @@ Created on Sat Feb 16 13:56:19 2019
 @author: python
 """
 
-import functools,logging,pdb,time,warnings
+import functools,logging,pdb,time
 import warnings
 from functools import wraps
+from contextlib import contextmanager
+
 
 class Deprecated(object):
     """
@@ -477,3 +479,16 @@ def _make_unsupported_method(name):
     method.__name__ = name
     method.__doc__ = "Unsupported LabelArray Method: %s" % name
     return method
+
+
+@contextmanager
+def ignore_pandas_nan_categorical_warning():
+    with warnings.catch_warnings():
+        # Pandas >= 0.18 doesn't like null-ish values in categories, but
+        # avoiding that requires a broader change to how missing values are
+        # handled in pipeline, so for now just silence the warning.
+        warnings.filterwarnings(
+            'ignore',
+            category=FutureWarning,
+        )
+        yield

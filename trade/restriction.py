@@ -8,9 +8,9 @@ Created on Tue Mar 12 15:37:47 2019
 
 from abc import ABC,abstractmethod
 from functools import reduce
-import pandas as pd , numpy as np, operator
+import pandas as pd ,operator
 from gateWay.assets.assets import Asset
-from calendar.trading_calendar import  calendar
+from calendar.trading_calendar import calendar
 
 
 class Restrictions(ABC):
@@ -46,12 +46,12 @@ class Restrictions(ABC):
         # _UnionRestrictions implementation of `|`, which intelligently
         # flattens restricted lists
         # 调用 _UnionRestrictions 的__or__
-        if isinstance(other_restriction, _UnionRestrictions):
+        if isinstance(other_restriction, UnionRestrictions):
             return other_restriction | self
-        return _UnionRestrictions([self, other_restriction])
+        return UnionRestrictions([self, other_restriction])
 
 
-class _UnionRestrictions(Restrictions):
+class UnionRestrictions(Restrictions):
     """
     A union of a number of sub restrictions.
 
@@ -77,7 +77,7 @@ class _UnionRestrictions(Restrictions):
         elif len(sub_restrictions) == 1:
             return sub_restrictions[0]
 
-        new_instance = super(_UnionRestrictions, cls).__new__(cls)
+        new_instance = super(UnionRestrictions, cls).__new__(cls)
         new_instance.sub_restrictions = sub_restrictions
         return new_instance
 
@@ -87,12 +87,12 @@ class _UnionRestrictions(Restrictions):
         which the left side is a _UnionRestrictions.
         """
         # Flatten the underlying sub restrictions of _UnionRestrictions
-        if isinstance(other_restriction, _UnionRestrictions):
+        if isinstance(other_restriction, UnionRestrictions):
             new_sub_restrictions = \
                 self.sub_restrictions + other_restriction.sub_restrictions
         else:
             new_sub_restrictions = self.sub_restrictions + [other_restriction]
-        return _UnionRestrictions(new_sub_restrictions)
+        return UnionRestrictions(new_sub_restrictions)
 
     def is_restricted(self, assets, dt):
         if isinstance(assets, Asset):

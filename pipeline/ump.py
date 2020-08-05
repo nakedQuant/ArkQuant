@@ -40,8 +40,8 @@ class UmpPickers(object):
         raise NotImplementedError
 
     def _evaluate_for_sid(self,position, metadata):
-        votes = [term_picker.compute([position.asset],metadata)
-                                for term_picker in self._poll_pickers]
+        votes = [_picker.compute([position.asset],metadata)
+                                for _picker in self._poll_pickers]
         if np.all(votes):
             return position
         return False
@@ -51,7 +51,7 @@ class UmpPickers(object):
         #执行退出算法
         with Pool(processes=len(positions))as pool:
             picker_votes = [pool.apply_async(_impl, position)
-                      for position in positions]
+                            for position in positions]
             # selector --- position or False
             selector = [vote for vote in picker_votes if vote]
         return selector

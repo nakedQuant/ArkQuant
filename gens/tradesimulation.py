@@ -21,6 +21,22 @@ from .clock import ( SESSION_START,
 
 
 class AlgorithmSimulator(object):
+    """
+        simulation start:
+                        a.初始化相关模块以及参数
+        before trading:
+                        a. 针对ledger预处理
+                        b. pipelineEngine计算的结果
+                        c. 9:25（撮合价格） --- cancelPolicy过滤pipelineEngine的标的集合 -- 筛选可行域
+                        d. 实施具体的执行计划 （非bid_mechnasim --- 创建订单）
+        session start:
+                        a.基于可行域 -- 调用blotter模块(orders --- transactions)
+                        b.transactions --- update ledger
+        session end:
+                        a.调用metrics_tracker --- generate metrics_perf
+        simulation_end:
+                        a. 收尾
+    """
 
     EMISSION_TO_PERF_KEY_MAP = {
         'minute': 'minute_perf',

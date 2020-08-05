@@ -16,9 +16,6 @@
 import pandas as pd ,requests ,re,os
 from bs4 import BeautifulSoup
 from collections import defaultdict
-from functools import wraps
-
-# Mapping from index symbol to appropriate bond data
 
 ONE_HOUR = pd.Timedelta(hours=1)
 
@@ -114,3 +111,14 @@ def has_data_for_dates(series_or_df, first_date, last_date):
         raise TypeError("Expected a DatetimeIndex, but got %s." % type(dts))
     first, last = dts[[0, -1]]
     return (first <= first_date) and (last >= last_date)
+
+def transfer_to_timestamp(dt):
+    if not isinstance(dt,pd.Timestamp):
+        try:
+            stamp = pd.Timestamp(dt)
+        except Exception as e:
+            raise TypeError('cannot tranform %r to timestamp due to %s'%(dt,e))
+    else:
+        stamp = dt
+    timestamps = stamp.timestamp()
+    return timestamps

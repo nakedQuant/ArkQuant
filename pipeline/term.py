@@ -5,8 +5,7 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-import glob,warnings,numpy as np
-from contextlib import contextmanager
+import glob,numpy as np
 from weakref import WeakValueDictionary
 
 
@@ -16,18 +15,6 @@ class NotSpecific(Exception):
         return ('object not specific')
 
     __repr__ = __str__()
-
-@contextmanager
-def ignore_pandas_nan_categorical_warning():
-    with warnings.catch_warnings():
-        # Pandas >= 0.18 doesn't like null-ish values in categories, but
-        # avoiding that requires a broader change to how missing values are
-        # handled in pipeline, so for now just silence the warning.
-        warnings.filterwarnings(
-            'ignore',
-            category=FutureWarning,
-        )
-        yield
 
 
 class Term(object):
@@ -49,12 +36,11 @@ class Term(object):
             3 outputs --- algorithm list & asset list
     """
     default_input = NotSpecific
-    final = False
-
-    namespace = dict()
     _term_cache = WeakValueDictionary
 
-    __slots__ = ['domain','script','params','dtype']
+    namespace = dict()
+
+    __slots__ = ['domain','dtype','term_logic','_subclass_called_validate']
 
     def __new__(cls,
                 domain,
@@ -63,7 +49,7 @@ class Term(object):
                 dtype = None
                 ):
 
-        dtype = dtype if dtype else list
+        dtype = dtype if dtype else list()
 
         script_path= glob.glob('strategy/%s.py'%script)
         with open(script_path, 'r') as f:
@@ -80,8 +66,7 @@ class Term(object):
 
     @classmethod
     def _static_identity(cls,domain,script_class,script_params,dtype):
-
-        return (domain,script_class,script_params,dtype)
+        return domain,script_class,script_params,dtype
 
     def _init(self, domain,script,params,dtype):
         """
@@ -113,7 +98,6 @@ class Term(object):
             self.term_logic = instance
             self._validate()
         except TypeError:
-            raise Exception('cannot initialize strategy')
             self._subclass_called_validate = False
 
         assert self._subclass_called_super_validate, (
@@ -133,24 +117,6 @@ class Term(object):
         # call super().
         self._subclass_called_super_validate = True
 
-    def postprocess(self,data):
-        """
-            called with an result of self ,after any user-defined screens have been applied
-            this is mostly useful for transforming  the dtype of an output
-
-            the default implementation is to just return data unchange
-        """
-        if self.dtype == bool:
-            if not isinstance(data,self.dtype):
-                raise TypeError('style of data is not %s' % self.dtype)
-            return data
-        else:
-            try:
-                data = self.dtype(data)
-            except:
-                raise TypeError('cannot transform the style of data to %s'%self.dtype)
-            return data
-
     @property
     def dependencies(self):
         """
@@ -165,6 +131,22 @@ class Term(object):
             if not isinstance(item,self):
                 raise TypeError('dependencies must be Term')
         return terms
+
+    def postprocess(self,data):
+        """
+            called with an result of self ,after any user-defined screens have been applied
+            this is mostly useful for transforming  the dtype of an output
+        """
+        if self.dtype == bool:
+            if not isinstance(data,self.dtype):
+                raise TypeError('style of data is not %s' % self.dtype)
+            return data
+        else:
+            try:
+                data = self.dtype(data)
+            except Exception as e:
+                raise TypeError('cannot transform the style of data to %s due to error %s' % (self.dtype, e))
+            return data
 
     def _compute(self,inputs,data):
         """

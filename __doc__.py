@@ -240,28 +240,19 @@ mysql tool：
     # alter add constraint
     # alter  drop foreign key
 
-@property
-def birth(self):
-    return self._birth
-
-@birth.setter
-def birth(self, value):
-    self._birth = value
-
-@birth.getter
-def birth(self):
-    return self._birth
-
-getter  ---- property ;  setter --- @func.setter
-
-__delete__(instance), __get__(instance,owner) , __set__(instance,value) 描述器 , 实例为类的类属性
-__getattribute__ --- __getattr__ (显式访问不存在饿属性,除非显示调用或引发AttributeError异常） ）
-
-
-__delete__(self,instance) ,__del__(self)
-
-math.copysign(x, y)
-Return x with the sign of y. On a platform that supports signed zeros, copysign(1.0, -0.0) returns -1.0.
+# Copyright 2015 Quantopian, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 '''
 

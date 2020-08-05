@@ -7,7 +7,6 @@ Created on Tue Mar 12 15:37:47 2019
 """
 
 import pandas as pd,json
-from toolz import keyfilter, valmap
 from .tools import  _parse_url
 from .history_loader import (
     HistoryDailyLoader,
@@ -46,15 +45,13 @@ class DataPortal(object):
 
     OHLCV_FIELDS = frozenset(["open", "high", "low", "close", "volume"])
 
-    Asset_Type = frozenset(['equity','etf','bond'])
-
     def __init__(self,
-                asset_finder,
-                trading_calendar,
-                first_trading_day,
-                _session_reader,
-                _minute_reader,
-                adjustment_reader,
+                 asset_finder,
+                 trading_calendar,
+                 first_trading_day,
+                 _session_reader,
+                 _minute_reader,
+                 adjustment_reader,
                  ):
         self.asset_finder = asset_finder
 
@@ -164,19 +161,27 @@ class DataPortal(object):
         rights = self._adjustment_reader.load_right_for_sid(sid,trading_day)
         return rights
 
-    def get_equity_pct(self,dts,asset):
-        assert asset.asset_type == 'equity',ValueError('only support equity for pctchange')
-        pct = self._pricing_reader['daily'].get_pctchange(asset,dts)
-        return pct
-
-    def get_prevalue(self,dts,asset,frequency):
-        pre_dts = self.trading_calendar._roll_forward(dts,1)
-        pre_value = self.get_spot_value(pre_dts,asset,frequency)
-        return pre_value
-
     def get_spot_value(self,dts,asset,frequency):
         spot_value = self._pricing_reader[frequency].get_spot_value(dts,asset)
         return spot_value
+
+    # def get_pre_spot_value(self,dts,asset,frequency):
+    #     pre_dts = self.trading_calendar.dt_window_size(dts,1)
+    #     pre_value = self.get_spot_value(pre_dts,asset,frequency)
+    #     return pre_value
+
+    def _get_equity_pct(self,dts,assets):
+        df = self._pricing_reader['daily'].get_stock_pct(dts)
+        sids = [asset.sid for asset in assets] if assets else None
+        pct = df.loc[sids,:] if sids else df
+        return pct
+
+    def get_open_pct(self,dts,assets):
+        pct = self._get_equity_pct(dts,assets)
+        kline = self.get_window_data(assets,dts,1,'close','daily')
+        preclose = {{sid: bar[sid]['close'][-1]/(1+pct[sid])} for sid, bar in kline.items()}
+        open_pct = {{sid: kline[sid]['open'][-1] / pre} for sid, pre in preclose.items()}
+        return open_pct
 
     def _get_history_sliding_window(self,assets,
                                     end_dt,
@@ -189,12 +194,12 @@ class DataPortal(object):
         of minute frequency for the given sids.
         """
         history = self._history_loader[frequency]
-        history_arrays = history.history(assets,fields,end_dt,window = bar_count)
+        history_arrays = history.history(assets,fields,end_dt,bar_count)
         return history_arrays
 
     def get_history_window(self,
                            assets,
-                           end_dt,
+                           end_date,
                            bar_count,
                            field,
                            data_frequency):
@@ -206,6 +211,8 @@ class DataPortal(object):
         ----------
         assets : list of zipline.data.Asset objects
             The assets whose data is desired.
+
+        end_date : history date(not include)
 
         bar_count: int
             The number of bars desired.
@@ -234,19 +241,20 @@ class DataPortal(object):
             raise ValueError(
                 "bar_count must be >= 1, but got {}".format(bar_count)
             )
-        history_window_arrays = self._get_history_sliding_window(assets,
-                                                             end_dt,
-                                                             field,
-                                                             bar_count,
-                                                             data_frequency)
+        history_window_arrays = self._get_history_sliding_window(
+                                                            assets,
+                                                            end_date,
+                                                            field,
+                                                            bar_count,
+                                                            data_frequency)
         return history_window_arrays
 
     def get_window_data(self,
-                         assets,
-                         dt,
-                         field,
-                         days_in_window,
-                         frequency):
+                        assets,
+                        dt,
+                        days_in_window,
+                        field,
+                        data_frequency):
         """
         Internal method that gets a window of adjusted daily data for a sid
         and specified date range.  Used to support the history API method for
@@ -254,16 +262,16 @@ class DataPortal(object):
 
         Parameters
         ----------
-        asset : Asset
+        assets : list --- element is Asset
             The asset whose data is desired.
 
         dt: pandas.Timestamp
             The end of the desired window of data.
 
-        field: string
+        field: string or list
             The specific field to return.  "open", "high", "close_price", etc.
 
-        bar_count: int
+        days_in_window: int
             The number of days of data to return.
 
         data_frequency : minute or daily
@@ -273,37 +281,39 @@ class DataPortal(object):
         A numpy array with requested values.  Any missing slots filled with
         nan.
         """
-        _reader = self._pricing_reader[frequency]
-        window_array = _reader.load_raw_arrays(dt, days_in_window, assets,field)
+        _reader = self._pricing_reader[data_frequency]
+        sessions = self.trading_calendar.session_in_window(dt,days_in_window,False)
+        window_array = _reader.load_raw_arrays(sessions,assets,field)
         return window_array
 
     def get_resize_data(self,dt,window,freq,assets,field):
         """
             return resample daily kline --- Year Month Day
         """
-        resampled_data = self._history_loader['daily'].get_resampled(
+        resample_data = self._history_loader['daily'].get_resampled(
                                                                 dt,
                                                                 window,
                                                                 freq,
                                                                 assets,
                                                                 field
                                                                     )
-        return resampled_data
+        return resample_data
 
     def get_specific_ticker_data(self,dt,window,ticker,assets,field):
         """
             eg --- 9:30 or 11:20
         """
-        resampled_ticker_data = self._history_loader['minute'].get_resampled(
+        resample_ticker_data = self._history_loader['minute'].get_resampled(
                                                                 dt,
                                                                 window,
                                                                 ticker,
                                                                 assets,
                                                                 field
                                                                     )
-        return resampled_ticker_data
+        return resample_ticker_data
 
-    def get_current(self,sid):
+    @staticmethod
+    def get_current(sid):
         """
             return current live tickers data
         """
@@ -315,8 +325,8 @@ class DataPortal(object):
         obj = _parse_url(req_url, bs=False)
         d = json.loads(obj)
         raw_array = [item.split(',') for item in d['data']['trends']]
-        minutes = pd.DataFrame(raw_array,
-                          columns=['ticker', 'open', 'close', 'high', 'low', 'volume', 'turnover', 'avg'])
+        minutes = pd.DataFrame(raw_array,columns=['ticker', 'open', 'close', 'high',
+                                                  'low', 'volume', 'turnover', 'avg'])
         return minutes
 
     def handle_extra_source(self,source_df):

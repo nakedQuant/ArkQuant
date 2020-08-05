@@ -1,9 +1,7 @@
 """
 Module for building a complete dataset from local directory with csv files.
 """
-import os
-import sys
-
+import os , sys
 from logbook import Logger, StreamHandler
 from numpy import empty
 from pandas import DataFrame, read_csv, Index, Timedelta, NaT
@@ -52,7 +50,6 @@ def csvdir_equities(tframes=None, csvdir=None):
                 csvdir_equities(["daily", "minute"],
                 '/full/path/to/the/csvdir/directory'))
     """
-
     return CSVDIRBundle(tframes, csvdir).ingest
 
 

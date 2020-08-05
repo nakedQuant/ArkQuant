@@ -21,11 +21,15 @@ class HistoryCompatibleAdjustments(object):
         self._adjustments_reader = adjustment_reader
         self._reader = _reader
 
+    @property
+    def reader(self):
+        return self._reader
+
     def _init_raw_array(self,assets,edate,window):
-        if self._reader.data_frequency == 'daily':
-            bars = self._reader.load_raw_arrays(edate, window, assets,['close'])
-        elif self._reader.data_frequency == 'minute':
-            bars = self._reader.get_resampled(edate,window,'15:00',assets,['close'])
+        if self.reader.data_frequency == 'daily':
+            bars = self.reader.load_raw_arrays(edate, window, assets,['close'])
+        elif self.reader.data_frequency == 'minute':
+            bars = self.reader.get_resampled(edate,window,'15:00',assets,['close'])
         return bars
 
     @staticmethod
@@ -95,14 +99,28 @@ class SlidingWindow(ABC):
 
     @property
     def frequency(self):
-        raise ValueError()
+        return None
+
+    def array(self, dts, assets, fields):
+        """
+        :param dts:  ticker or string
+        :param assets: list
+        :param fields: list
+        :return: unadjusted data
+        """
+        raw = self.reader.load_raw_arrays(
+            dts,
+            assets,
+            fields
+        )
+        return raw
 
     @abstractmethod
-    def _array(self):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def _window_arrays(self):
+    def window_arrays(self):
+        """
+            return adjusted data
+        :return:
+        """
         raise NotImplementedError()
 
 
@@ -123,8 +141,8 @@ class AdjustedDailyWindow(SlidingWindow):
     FIELDS = frozenset(['open', 'high', 'low', 'close', 'volume'])
 
     def __init__(self,
-                bar_reader,
-                equity_adjustment_reader):
+                 bar_reader,
+                 equity_adjustment_reader):
         self._trading_calendar = bar_reader.calendar
         self._adjustment = HistoryCompatibleAdjustments(
                                     equity_adjustment_reader,
@@ -134,22 +152,16 @@ class AdjustedDailyWindow(SlidingWindow):
     def frequency(self):
         return 'daily'
 
-    def _array(self, dts, assets, field):
-        _reader =  self._adjustment._reader
-        raw = _reader.load_raw_arrays(
-            [field],
-            dts[0],
-            dts[-1],
-            assets,
-        )
-        return raw
+    @property
+    def reader(self):
+        return self._adjustment.reader
 
-    def _window_arrays(self,edate,window,assets,field):
+    def window_arrays(self,edate,window,assets,field):
         """基于固定的fields才需要adjust"""
         #获取时间区间
-        session = self._trading_calendar.sessions_in_range(edate,window)
+        sessions = self._trading_calendar.sessions_in_range(edate,window,include = True)
         # 获取原始数据
-        raw_arrays = self._array(session,assets, field)
+        raw_arrays = self.array(sessions,assets, field)
         #需要调整的
         adjusted_fields = set(field) & self.FIELDS
         if adjusted_fields:
@@ -162,7 +174,7 @@ class AdjustedDailyWindow(SlidingWindow):
                 qfq = adjustments[sid]
                 raw = raw_arrays[sid]
                 try:
-                    qfq = qfq.reindex(session)
+                    qfq = qfq.reindex(sessions)
                     qfq.fillna(method = 'bfill',inplace = True)
                     qfq.fillna(1.0,inplace = True)
                     raw[adjusted_fields] = raw.loc[:, adjusted_fields].multiply(qfq, axis=0)
@@ -190,33 +202,27 @@ class AdjustedMinuteWindow(SlidingWindow):
     FIELDS = frozenset(['open', 'high', 'low', 'close', 'volume'])
 
     def __init__(self,
-                _minute_reader,
-                equity_adjustment_reader):
-        self._trading_calendar = _minute_reader.calendar
+                 ticker_reader,
+                 equity_adjustment_reader):
+        self._trading_calendar = ticker_reader.calendar
         self._adjustment = HistoryCompatibleAdjustments(
                                     equity_adjustment_reader,
-                                    _minute_reader)
+                                    ticker_reader)
 
     @property
     def frequency(self):
         return 'minute'
 
-    def _array(self, dts, assets, field):
-        _reader = self._adjustment._reader
-        raw = _reader.load_raw_arrays(
-                                    dts[0],
-                                    dts[-1],
-                                    assets,
-                                    field
-        )
-        return raw
+    @property
+    def reader(self):
+        return self._adjustment.reader
 
-    def _window_arrays(self,edate,window,assets,field):
+    def window_arrays(self,edate,window,assets,field):
         """基于固定的fields才需要adjust"""
         #获取时间区间
-        session = self._trading_calendar.sessions_in_range(edate,window)
+        sessions = self._trading_calendar.sessions_in_range(edate,window)
         # 获取原始数据
-        raw_arrays = self._array(session,assets,field)
+        raw_arrays = self.array(sessions,assets,field)
         #需要调整的
         adjusted_fields = set(field) & self.FIELDS
         if adjusted_fields:
@@ -231,7 +237,7 @@ class AdjustedMinuteWindow(SlidingWindow):
                 qfq.index = [ pd.Timestamp(inx).timestamp() + 15 * 60 * 60 for inx in qfq.index]
                 raw = raw_arrays[sid]
                 try:
-                    qfq = qfq.reindex(session)
+                    qfq = qfq.reindex(sessions)
                     qfq.fillna(method = 'bfill',inplace = True)
                     qfq.fillna(1.0,inplace = True)
                     raw[adjusted_fields] = raw.loc[:, adjusted_fields].multiply(qfq, axis=0)

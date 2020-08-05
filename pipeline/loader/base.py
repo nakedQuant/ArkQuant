@@ -48,16 +48,17 @@ class PipelineLoader(ABC):
         return True
 
     @abstractmethod
-    def load_pipeline_arrays(self, dt,sids):
+    def load_pipeline_arrays(self, date, sids, data_frequency):
         """
         Load data for ``columns`` as AdjustedArrays.
 
         Parameters
         ----------
-        dates : pd.DatetimeIndex
+        date : pd.Timestamp or str
             Dates for which data is being requested.
         sids : pd.Int64Index
             Asset identifiers for which data is being requested.
+        data_frequency : daily or minute
 
         Returns
         -------

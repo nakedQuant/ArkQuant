@@ -5,27 +5,17 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-import pandas as pd,bcolz,os,datetime
+import pandas as pd,bcolz,os
 from .bar_reader import BarReader
+from .tools import transfer_to_timestamp
 
 default = frozenset(['open', 'high', 'low', 'close','amount','volume'])
 
 
 class BcolzReader(BarReader):
-
-    @staticmethod
-    def _to_timestamp(dt,last = False):
-        if not isinstance(dt,pd.Timestamp):
-            try:
-                stamp = pd.Timestamp(dt)
-            except Exception as e:
-                raise TypeError('cannot tranform %r to timestamp due to %s'%(dt,e))
-        else:
-            stamp = dt
-        final = datetime.datetime(stamp.year,stamp.month,stamp.day,hour = 15,minute = 0,second=0) if last else \
-            datetime.datetime(stamp.year,stamp.month,stamp.day,hour = 9,minute = 30,second=0)
-        return final
-
+    """
+       restricted to equity
+    """
     def get_sid_attr(self, sid):
         sid_path = '{}.bcolz'.format(sid)
         root = os.path.join(self._rootdir, sid_path)
@@ -37,7 +27,7 @@ class BcolzReader(BarReader):
         table = bcolz.open(rootdir=rootdir, mode='r')
         return table
 
-    def get_value(self, sid,sdate,edate):
+    def get_value(self,sid,sdate,edate):
         """
         Retrieve the pricing info for the given sid, dt, and field.
 
@@ -70,9 +60,9 @@ class BcolzReader(BarReader):
         assert meta.end_session >= sdate,('%r exceed metadata end_session'%sdate)
         #获取数据
         if self.data_frequency == 'minute':
-            start = self.transfer_to_timestamp(sdate)
-            end = self.transfer_to_timestamp(edate, last=True)
-            condition = '({0} <= timestamp) & (timestamp <= {1)'.format(start.timestamp(), end.timestamp())
+            start = transfer_to_timestamp(sdate)
+            end = transfer_to_timestamp(edate)
+            condition = '({0} <= timestamp) & (timestamp <= {1)'.format(start, end)
         else:
             condition = '({0} <= trade_dt) & (trade_dt <= {1)'.format(sdate, edate)
         raw = table.fetchwhere(condition)
@@ -82,8 +72,20 @@ class BcolzReader(BarReader):
         scale = dataframe.apply(lambda x : [ x[col] * inverse_ratio
                                 for col in ['open','high','low','close']],
                                 axis = 1)
-        scale.set_index('ticker',inplace= True) if 'ticker' in scale.columns else scale.set_index('trade_dt',inplace = True)
+        scale.set_index('ticker',inplace= True) if 'ticker' in scale.columns \
+            else scale.set_index('trade_dt',inplace = True)
         return scale
+
+    def load_raw_arrays(self,sessions,assets,columns):
+        assert set(columns) in default,'unkown field'
+        sdate , edate = sessions
+        supplements = columns + ['trade_dt'] \
+            if self.data_frequency == 'daily' else columns + ['ticker']
+        daily = dict()
+        for i, asset in enumerate(assets):
+            out = self.get_value(asset.sid,sdate,edate)
+            daily[asset.sid] = out.loc[:,supplements]
+        return daily
 
 
 class BcolzMinuteReader(BcolzReader):
@@ -108,29 +110,24 @@ class BcolzMinuteReader(BcolzReader):
 
     """
     def __init__(self,
-                 rootdir,
-                 trading_calendar):
-
+                 rootdir):
         self._rootdir = rootdir
-        self._calendar = trading_calendar
 
     @property
     def data_frequency(self):
         return "minute"
 
-    def get_spot_value(self,dt,sids,fields = default):
-        dts = self.transfer_to_timestamp(dt)
-        minutes = self.load_raw_arrays(dts,0,sids,fields)
-        return minutes
-
-    def load_raw_arrays(self,end_dt,window,sids,fields = default):
-        sdate = self._window_dt(end_dt,window)
-        supplement_fields = fields + ['ticker']
-        minutes = []
-        for i, sid in enumerate(sids):
-            out = self.get_value(sid,sdate,end_dt)
-            minutes.append(out.loc[:,supplement_fields])
-        return minutes
+    def get_spot_value(self,dt,asset,fields):
+        """
+        :param dt: str '%Y-%m-%d'
+        :param asset: Asset
+        :param fields: list
+        :return:
+        """
+        start_dts = transfer_to_timestamp(dt + '09:30:00')
+        end_dts = transfer_to_timestamp(dt + '15:00:00')
+        minutes = self.get_value(asset.sid, start_dts, end_dts)
+        return minutes.loc[:, fields + 'ticker']
 
 
 class BcolzDailyReader(BcolzReader):
@@ -154,28 +151,16 @@ class BcolzDailyReader(BcolzReader):
     - Day is interpreted as seconds since midnight UTC, Jan 1, 1970.
     """
     def __init__(self,
-                 rootdir,
-                 trading_calendar):
-
+                 rootdir):
         self._rootdir = rootdir
-        self._calendar = trading_calendar
 
     @property
     def data_frequency(self):
         return "daily"
 
-    def get_spot_value(self,dt,asset):
-        minutes = self.load_raw_arrays(dt, dt, asset)
-        return minutes
-
-    def load_raw_arrays(self,end,window,assets,columns = default):
-        sdate = self._window_dt(end,window)
-        supplement_fields = columns + ['trade_dt']
-        daily = []
-        for i, sid in enumerate(assets):
-            out = self.get_value(sid,sdate,end)
-            daily.append(out.loc[:,supplement_fields])
-        return daily
+    def get_spot_value(self,date,asset,fields):
+        kline = self.get_value(asset.sid, date, date)
+        return kline.loc[:, fields + 'trade_dt']
 
 
 __all__ = [BcolzDailyReader,BcolzMinuteReader]

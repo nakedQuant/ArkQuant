@@ -13,16 +13,15 @@ context = threading.local()
 def get_algo_instance():
     return getattr(context, 'algorithm', None)
 
-
 def set_algo_instance(algo):
     context.algorithm = algo
+
 
 class ZiplineAPI(object):
     """
     Context manager for making an algorithm instance available to zipline API
     functions within a scoped block.
     """
-
     def __init__(self, algo_instance):
         self.algo_instance = algo_instance
 

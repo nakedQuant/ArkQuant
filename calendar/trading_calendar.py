@@ -86,11 +86,13 @@ class TradingCalendar (object):
         -------
         pd.Timestamp
         """
+        if window == 0:
+            return dt
         pos = self.all_sessions.searchsorted(dt)
         try:
             loc = pos if self.all_sessions[pos] == dt else pos -1
-            forward_dt = self.all_sessions[loc - window]
-            return self.all_sessions[forward_dt]
+            forward = self.all_sessions[loc + 1 - window]
+            return self.all_sessions[forward]
         except IndexError:
             raise ValueError(
                 "Date {} was past the last session for domain {}. "
@@ -101,9 +103,40 @@ class TradingCalendar (object):
                 )
             )
 
-    def dt_window_size(self,dt ,window):
-        dt = self._roll_forward(dt,window)
+    def dt_window_size(self, dt, window):
+        dt = self._roll_forward(dt, window)
         return dt
+
+    def session_in_window(self,end_date,window,include):
+        """
+        :param end_date: '%Y-%m-%d'
+        :param window:  int
+        :param include: bool --- determin whether include end_date
+        :return: sessions
+        """
+        # assert window != 0, 'sessions means window is not equal with zero'
+        if window == 0:
+            return [end_date,end_date]
+        start_date = self._roll_forward(end_date,window)
+        session_labels = self.session_in_range(start_date,end_date,include)
+        return session_labels
+
+    def session_in_range(self,start_date,end_date,include):
+        """
+        :param start_date: '%Y-%m-%d'
+        :param end_date: '%Y-%m-%d'
+        :param include: bool --- determin whether include end_date
+        :return: sessions
+        """
+        if end_date < start_date:
+            raise ValueError("End date %s cannot precede start date %s." %
+                             (end_date.strftime("%Y-%m-%d"),
+                              start_date.strftime("%Y-%m-%d")))
+        idx_s = np.searchsorted(self.all_sessions, start_date)
+        idx_e = np.searchsorted(self.all_sessions,end_date)
+        sessions = np.array(self.all_sessions[idx_s , idx_e +1])
+        flag = sessions <= end_date if include else sessions < end_date
+        return sessions[flag]
 
     def _compute_date_range_slice(self, start_date, end_date):
         # Get the index of the start of dates for ``start_date``.
@@ -113,27 +146,6 @@ class TradingCalendar (object):
         end_ix = self.dates.searchsorted(end_date, side='right')
 
         return slice(start_ix, end_ix)
-
-    def session_in_range(self,start_date,end_date):
-        if end_date < start_date:
-            raise ValueError("End date %s cannot precede start date %s." %
-                             (end_date.strftime("%Y-%m-%d"),
-                              start_date.strftime("%Y-%m-%d")))
-        idx_s = np.searchsorted(self.all_sessions, start_date)
-        idx_e = np.searchsorted(self.all_sessions,end_date)
-        end = idx_e -1 if self.all_sessions[idx_e] > end_date else idx_e
-        return self.all_sessions[idx_s:end]
-
-    def session_in_window(self,end_date,window):
-        start_date = self._roll_forward(end_date,window)
-        if end_date < start_date:
-            raise ValueError("End date %s cannot precede start date %s." %
-                             (end_date.strftime("%Y-%m-%d"),
-                              start_date.strftime("%Y-%m-%d")))
-        idx_s = np.searchsorted(self.all_sessions, start_date)
-        idx_e = np.searchsorted(self.all_sessions,end_date)
-        end = idx_e -1 if self.all_sessions[idx_e] > end_date else idx_e
-        return self.all_sessions[idx_s:end]
 
     def minutes_in_sessions(self,dts):
         minutes_session = map(lambda x : list(range(pd.Timestamp(x) + 9*60*60 + 30*60,
