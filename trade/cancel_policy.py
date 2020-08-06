@@ -39,14 +39,14 @@ class ComposedCancel(CancelPolicy):
     """
      compose two rule with some composing function
     """
-    def __init__(self,first,second):
-        if not np.all(isinstance(first,CancelPolicy) and isinstance(second,CancelPolicy)):
+    def __init__(self, first, second):
+        if not np.all(isinstance(first, CancelPolicy) and isinstance(second, CancelPolicy)):
             raise ValueError('only StatelessRule can be composed')
 
         self.first = first
         self.second = second
 
-    def should_trigger(self,order):
+    def should_trigger(self, order):
 
         return self.first.should_cancel(order) & self.second.should_cancel(order)
 
@@ -79,7 +79,7 @@ class NeverCancel(CancelPolicy):
 
 class LimitCancel(CancelPolicy):
 
-    def __init__(self,limit = 0.0990):
+    def __init__(self, limit = 0.0990):
         self.default_limit = limit
 
     def should_cancel(self, event):

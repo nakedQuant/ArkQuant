@@ -1,5 +1,10 @@
-# -*-coding : utf-8 -*-
+# !/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Mar 12 15:37:47 2019
 
+@author: python
+"""
 from contextlib import ExitStack
 import sqlalchemy as sa
 from gateWay.assets.asset_spider import AssetSpider
@@ -57,6 +62,7 @@ _rename_fund_cols = {
 
 spider = AssetSpider()
 
+
 def check_version_info(conn, version_table, expected_version):
     """
     Checks for a version value in the version table.
@@ -91,6 +97,7 @@ def check_version_info(conn, version_table, expected_version):
         #                           expected_version=expected_version)
         raise ValueError('db_version != version_from_table')
 
+
 def write_version_info(conn, version_table, version_value):
     """
     Inserts the version value in to the version table.
@@ -119,7 +126,7 @@ class AssetWriter(object):
     DEFAULT_CHUNK_SIZE = SQLITE_MAX_VARIABLE_NUMBER
 
     # @preprocess(engine=coerce_string_to_eng(require_exists=False))
-    def __init__(self,engine):
+    def __init__(self, engine):
         self.engine = engine
         self._asset_spider = spider
 
@@ -203,12 +210,12 @@ class AssetWriter(object):
                     chunk_size
                 )
 
-    def _write_df_to_table(self, tbl, df, txn, chunk_size,include = True):
+    def _write_df_to_table(self, tbl, df, txn, chunk_size, include=True):
         df = df.copy()
         if include:
-            self._write_assets(df,txn,chunk_size)
+            self._write_assets(df,txn, chunk_size)
         # asset supplement to db
-        supplement = df.loc[:,]
+        supplement = df.loc[:, ]
         df.to_sql(
             tbl.name,
             txn.connection,
@@ -223,7 +230,7 @@ class AssetWriter(object):
                       mapping_data,
                       txn,
                       chunk_size):
-        symbols_mapping = mapping_data.loc[:,_rename_router_cols]
+        symbols_mapping = mapping_data.loc[:, _rename_router_cols]
 
         symbols_mapping.to_sql(
             asset_router.name,
@@ -233,7 +240,7 @@ class AssetWriter(object):
             chunksize=chunk_size
         )
 
-    def _generate_output_dataframe(self,data_set):
+    def _generate_output_dataframe(self, data_set):
         """
         Generates an output dataframe from the given subset of user-provided
         data, the given column names, and the given default values.
@@ -256,21 +263,22 @@ class AssetWriter(object):
             A DataFrame containing all user-provided metadata, and default values
             wherever user-provided metadata was missing
         """
-        data_set.equities.rename(columns = _rename_equity_cols,inplace = True)
-        data_set.convertibles.rename(columns = _rename_convertible_cols,inplace =True)
-        data_set.funds.rename(columns = _rename_fund_cols,inplace =True)
+        data_set.equities.rename(columns=_rename_equity_cols, inplace=True)
+        data_set.convertibles.rename(columns=_rename_convertible_cols, inplace =True)
+        data_set.funds.rename(columns=_rename_fund_cols, inplace =True)
         return data_set
 
-    def write(self,chunk_size=DEFAULT_CHUNK_SIZE):
+
+    def write(self, chunk_size=DEFAULT_CHUNK_SIZE):
         """Write asset metadata to a sqlite database.
         """
         assetData = self._asset_spider.load_data()
         reformat_data = self._generate_output_dataframe(assetData)
 
         self._real_write(
-            equity_supplementary_mappings = reformat_data.equities,
-            convertible_supplementary_mappings = reformat_data.converibles,
-            fund_mappings = reformat_data.funds,
+            equity_supplementary_mappings=reformat_data.equities,
+            convertible_supplementary_mappings=reformat_data.converibles,
+            fund_mappings=reformat_data.funds,
             chunk_size=chunk_size,
         )
 

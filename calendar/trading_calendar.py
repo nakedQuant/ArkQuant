@@ -107,7 +107,7 @@ class TradingCalendar (object):
         dt = self._roll_forward(dt, window)
         return dt
 
-    def session_in_window(self,end_date,window,include):
+    def session_in_window(self, end_date, window, include):
         """
         :param end_date: '%Y-%m-%d'
         :param window:  int
@@ -118,7 +118,7 @@ class TradingCalendar (object):
         if window == 0:
             return [end_date,end_date]
         start_date = self._roll_forward(end_date,window)
-        session_labels = self.session_in_range(start_date,end_date,include)
+        session_labels = self.session_in_range(start_date, end_date, include)
         return session_labels
 
     def session_in_range(self,start_date,end_date,include):
@@ -138,6 +138,12 @@ class TradingCalendar (object):
         flag = sessions <= end_date if include else sessions < end_date
         return sessions[flag]
 
+    @staticmethod
+    def sessions_in_minutes(dts):
+        minutes_session = map(lambda x: list(range(pd.Timestamp(x) + 9*60*60 + 30*60,
+                                                   pd.Timestamp(x) + 15*60*60 + 1)), dts)
+        return minutes_session
+
     def _compute_date_range_slice(self, start_date, end_date):
         # Get the index of the start of dates for ``start_date``.
         start_ix = self.dates.searchsorted(start_date)
@@ -146,12 +152,6 @@ class TradingCalendar (object):
         end_ix = self.dates.searchsorted(end_date, side='right')
 
         return slice(start_ix, end_ix)
-
-    def minutes_in_sessions(self,dts):
-        minutes_session = map(lambda x : list(range(pd.Timestamp(x) + 9*60*60 + 30*60,
-                                                    pd.Timestamp(x) + 15*60*60 + 1)),
-                                dts)
-        return minutes_session
 
     def execution_time_from_open(self,sessions):
         opens = [ pd.Timestamp(dt) + 9 * 60 * 60 + 30 * 60 for dt in sessions]

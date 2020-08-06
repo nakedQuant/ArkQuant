@@ -6,8 +6,8 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 from collections import namedtuple
-from abc import ABC , abstractmethod
-import struct,pandas as pd,bcolz,numpy as np,os,glob,datetime
+from abc import ABC, abstractmethod
+import struct, pandas as pd, bcolz, numpy as np, os, glob, datetime
 
 OHLC_RATIO = 100
 
@@ -92,18 +92,18 @@ class BcolzWriter(ABC):
         return bcolz.ctable(rootdir=sidpath, mode='a')
 
     @staticmethod
-    def _normalize_date(source):
-        source['year'] = source['dates'] // 2048 + 2004
-        source['month'] = (source['dates'] % 2048) // 100
-        source['day'] = (source['dates'] % 2048) % 100
-        source['hour'] = source['sub_dates'] // 60
-        source['minutes'] = source['sub_dates'] % 60
-        source['ticker'] = source.apply(lambda x: pd.Timestamp(
+    def _normalize_date(raw):
+        raw['year'] = raw['dates'] // 2048 + 2004
+        raw['month'] = (raw['dates'] % 2048) // 100
+        raw['day'] = (raw['dates'] % 2048) % 100
+        raw['hour'] = raw['sub_dates'] // 60
+        raw['minutes'] = raw['sub_dates'] % 60
+        raw['ticker'] = raw.apply(lambda x: pd.Timestamp(
             datetime.datetime(int(x['year']), int(x['month']), int(x['day']),
                               int(x['hour']), int(x['minutes']))),
                                 axis=1)
-        source['timestamp'] = source['ticker'].apply(lambda x: x.timestamp())
-        return source.loc[:, ['timestamp', 'open', 'high', 'low', 'close', 'amount', 'volume']]
+        raw['timestamp'] = raw['ticker'].apply(lambda x: x.timestamp())
+        return raw.loc[:, ['timestamp', 'open', 'high', 'low', 'close', 'amount', 'volume']]
 
     @abstractmethod
     def retrieve_data_from_tdx(self, path):
@@ -111,7 +111,7 @@ class BcolzWriter(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def _write_internal(self, sid,data):
+    def _write_internal(self, sid, data):
         """
         Internal method for `write_cols` and `write`.
 
@@ -130,14 +130,14 @@ class BcolzWriter(ABC):
         """
         raise NotImplementedError()
 
-    def write_sid(self, sid,appendix):
+    def write_sid(self, sid, appendix):
         """
         Write a stream of minute data.
         :param sid: asset type
         :param appendix: .01 / .5 / .day
         :return: dataframe
         """
-        path = os.path.join(self._source_dir,sid + appendix)
+        path = os.path.join(self._source_dir, sid + appendix)
         try:
             data = self.retrieve_data_from_tdx(path)
         except IOError:
@@ -145,9 +145,9 @@ class BcolzWriter(ABC):
         #
         self._write_internal(sid, data)
 
-    def truncate(self,size = 0 ):
+    def truncate(self, size=0):
         """Truncate data when size = 0"""
-        glob_path = os.path.join(self._rootdir,"*.bcolz")
+        glob_path = os.path.join(self._rootdir, "*.bcolz")
         sid_paths = sorted(glob(glob_path))
         for sid_path in sid_paths:
             try:
@@ -187,7 +187,7 @@ class BcolzMinuteBarWriter(BcolzWriter):
     def __init__(self,
                  rootdir,
                  tdx_minutes_dir,
-                 default_ratio = OHLC_RATIO):
+                 default_ratio=OHLC_RATIO):
 
         self._rootdir = rootdir
         self._source_dir = tdx_minutes_dir
@@ -198,7 +198,7 @@ class BcolzMinuteBarWriter(BcolzWriter):
 
         raise NotImplementedError()
 
-    def retrieve_data_from_tdx(self,path):
+    def retrieve_data_from_tdx(self, path):
         """解析通达信数据"""
         with open(path, 'rb') as f:
             buf = f.read()
@@ -214,7 +214,7 @@ class BcolzMinuteBarWriter(BcolzWriter):
             ticker = self._normalize_date(dataframe)
             return ticker
 
-    def _write_internal(self, sid,data):
+    def _write_internal(self, sid, data):
         table = self._ensure_ctable(sid)
         #剔除重复的
         metadata = table.attr['metadata']
@@ -223,7 +223,7 @@ class BcolzMinuteBarWriter(BcolzWriter):
             table.append(dataframes)
             #更新metadata
             metadata.end_session = dataframes['timestamp'].max()
-            if not metadata.start_session :
+            if not metadata.start_session:
                 metadata.start_session = dataframes['timestamp'].min()
             table.attrs['metadata'] = metadata
             # data in memory to disk
@@ -245,7 +245,7 @@ class BcolzDailyBarWriter(BcolzWriter):
     --------
     zipline.data.bcolz_daily_bars.BcolzDailyBarReader
     """
-    COL_NAMES = frozenset(['trade_dt','open', 'high', 'low', 'close','amount','volume'])
+    COL_NAMES = frozenset(['trade_dt', 'open', 'high', 'low', 'close', 'amount', 'volume'])
 
     def __init__(self,
                  rootdir,
@@ -268,10 +268,10 @@ class BcolzDailyBarWriter(BcolzWriter):
                 struct_line = struct.unpack('IIIIIfII', buf[idx:idx + 32])
                 data.append(struct_line)
             raw = pd.DataFrame(data,columns=['trade_dt', 'open', 'high', 'low',
-                                            'close', 'amount', 'volume', 'appendix'])
+                                             'close', 'amount', 'volume', 'appendix'])
             return raw
 
-    def _write_internal(self, sid,data):
+    def _write_internal(self, sid, data):
         table = self._ensure_ctable(sid)
         #剔除重复的
         metadata = table.attr['metadata']
@@ -280,11 +280,11 @@ class BcolzDailyBarWriter(BcolzWriter):
             table.append(dataframes)
             #更新metadata
             metadata.end_session = dataframes['trade_dt'].max()
-            if not metadata.start_session :
+            if not metadata.start_session:
                 metadata.start_session = dataframes['trade_dt'].min()
             table.attrs['metadata'] = metadata
             # data in memory to disk
             table.flush()
 
 
-__all__ = [BcolzDailyBarWriter,BcolzMinuteBarWriter]
+__all__ = [BcolzDailyBarWriter, BcolzMinuteBarWriter]

@@ -5,7 +5,7 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-from abc import ABC , abstractmethod
+from abc import ABC, abstractmethod
 
 
 class SlippageModel(ABC):
@@ -29,7 +29,7 @@ class FixedBasisPointSlippage(SlippageModel):
         basics_points * 0.0001
     """
 
-    def __init__(self, basis_points= 0.005):
+    def __init__(self, basis_points=0.005):
         super(FixedBasisPointSlippage, self).__init__()
         self.basis_points = basis_points
 

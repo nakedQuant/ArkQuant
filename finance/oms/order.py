@@ -25,7 +25,7 @@ class OrderType(Enum):
 
 class BaseOrder(object):
 
-    def __init__(self,asset,price,ticker,style,slippage_model):
+    def __init__(self, asset, price, ticker, style, slippage_model):
         self.asset = asset
         self._price = price
         self._created_dt = ticker
@@ -33,7 +33,7 @@ class BaseOrder(object):
         self.slippage_model = slippage_model
 
     def make_id(self):
-        return  uuid.uuid4().hex()
+        return uuid.uuid4().hex()
 
     @property
     def sid(self):
@@ -68,7 +68,7 @@ class BaseOrder(object):
         return False
 
     def __eq__(self, other):
-        if isinstance(other , Order) and self.__dict__ == other.__dict__ :
+        if isinstance(other, Order) and self.__dict__ == other.__dict__:
             return True
         return False
 
@@ -79,7 +79,7 @@ class BaseOrder(object):
         return "Event({0})".format(self.__dict__)
 
     def to_dict(self):
-        dct = {name : getattr(self.name)
+        dct = {name: getattr(self.name)
                for name in self.__slots__}
         return dct
 
@@ -115,10 +115,10 @@ class Order(BaseOrder):
     """
     __slot__ = ['asset','amount','price','_created_dt','style','slippage_model']
 
-    def __init__(self, asset,amount,price,ticker,style,slippage_model):
+    def __init__(self, asset, amount, price, ticker, style, slippage_model):
         self.amount = amount
         # --- 找到baseOrder 父类 -- self
-        super(BaseOrder,self).__init__(self, asset, price, ticker, style, slippage_model)
+        super(BaseOrder, self).__init__(self, asset, price, ticker, style, slippage_model)
         self.broker_order_id = self.make_id()
 
 
@@ -144,9 +144,9 @@ class PriceOrder(BaseOrder):
     """
     __slot__ = ['asset','capital','price','_created_dt','style','slippage_model']
 
-    def __init__(self,asset,capital,price,ticker,style,slippage_model):
+    def __init__(self,asset, capital, price, ticker, style, slippage_model):
         self.capital = capital
-        super(BaseOrder,self).__init__(self, asset, price, ticker, style, slippage_model)
+        super(BaseOrder, self).__init__(self, asset, price, ticker, style, slippage_model)
         self.broker_order_id = self.make_id()
 
 

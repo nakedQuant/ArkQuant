@@ -6,10 +6,11 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 from itertools import chain
-import numpy as np , pandas as pd
+import numpy as np
+import pandas as pd
 from collections import namedtuple
-from abc import ABC,abstractmethod
-from finance.oms.order import Order,PriceOrder
+from abc import ABC, abstractmethod
+from finance.oms.order import Order, PriceOrder
 from utils.dt_utilty import locate_pos
 
 OrderData = namedtuple('OrderData','min kline pre pct')
@@ -18,7 +19,7 @@ OrderData = namedtuple('OrderData','min kline pre pct')
 class BaseCreated(ABC):
 
     @abstractmethod
-    def yield_tickers_on_size(self,size):
+    def yield_tickers_on_size(self, size):
         """
             根据size在交易时间段构建ticker组合
         :return:
@@ -33,7 +34,7 @@ class BaseCreated(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def simulate_dist(self,*args):
+    def simulate_dist(self, *args):
         """
             根据统计分布构建模拟的价格分布用于设立价格订单
             e.g.:
@@ -94,10 +95,10 @@ class OrderCreated(BaseCreated):
 
     def _create_data(self,dt,asset):
         """生成OrderData"""
-        OrderData.bar = self._data_protal.get_spot_value(dt,asset,'minute')
-        OrderData.kline = self._data_protal.get_spot_value(dt,asset,'daily')
-        OrderData.pre = self._data_protal.get_prevalue(dt,asset,'daily')
-        OrderData.pct = self._data_protal.get_equity_pct(dt,asset)
+        OrderData.bar = self._data_protal.get_spot_value(dt, asset,'minute')
+        OrderData.kline = self._data_protal.get_spot_value(dt, asset,'daily')
+        OrderData.pre = self._data_protal.get_prevalue(dt, asset,'daily')
+        OrderData.pct = self._data_protal.get_equity_pct(dt, asset)
         return OrderData
 
     def calculate_size_arrays(self,asset,dts,q):
@@ -121,14 +122,14 @@ class OrderCreated(BaseCreated):
         tick_interval.append(pd.Timestamp('2020-06-17 14:57:00', freq='%dmin' % interval))
         return tick_interval
 
-    def yield_size_on_capital(self,asset,dts,capital):
+    def yield_size_on_capital(self,asset, dts, capital):
         """根据capital 生成资金订单"""
-        orderdata = self._create_data(dts,asset)
+        orderdata = self._create_data(dts, asset)
         #满足限制
         restricted_capital = orderdata.pre['volume'] * self.fraction
         capital = capital if restricted_capital > capital else restricted_capital
         # 确保满足最低的一手
-        per_capital = min([asset.tick_size * orderdata.pre['close'] * asset.tick_size * (1+asset.restricted),self.base_capital])
+        per_capital = min([asset.tick_size * orderdata.pre['close'] * asset.tick_size * (1+asset.restricted), self.base_capital])
         assert capital < per_capital , ValueError('capital must satisfy the base tick size')
         size = capital / per_capital
         self.per_capital = per_capital
@@ -142,11 +143,11 @@ class OrderCreated(BaseCreated):
         alpha = 1 if open_pct == 0.00 else 100 * open_pct
         if size > 0:
             #模拟价格分布
-            dist = 1 + np.copysign(alpha,np.random.beta(alpha,100,size))
+            dist = 1 + np.copysign(alpha,np.random.beta(alpha, 100, size))
         else:
             dist = [1 + alpha / 100]
         #避免跌停或者涨停
-        clip_pct = np.clip(dist,(1 - restricted ),(1+restricted))
+        clip_pct = np.clip(dist, (1 - restricted), (1+restricted))
         sim_prices = clip_pct * preclose
         return sim_prices
 
@@ -159,10 +160,10 @@ class OrderCreated(BaseCreated):
             而科创板前5个交易日不设立涨跌停而后20%波动但是30%，60%临时停盘10分钟，如果超过2.57(复盘)；
             科创板盘后固定价格交易 --- 以后15:00收盘价格进行交易 --- 15:00 -- 15:30(按照时间优先原则，逐步撮合成交）
         """
-        clip_prices = self.simulate_dist(data,size,restricted)
-        tickers = [locate_pos(price,data.minutes,'positive') for price in clip_prices]
-        orders = [PriceOrder(asset,self.per_capital,price,ticker,self._style,self._slippage)
-                  for price,ticker in zip(clip_prices,tickers)]
+        clip_prices = self.simulate_dist(data, size, restricted)
+        tickers = [locate_pos(price, data.minutes, 'positive') for price in clip_prices]
+        orders = [PriceOrder(asset, self.per_capital, price,ticker, self._style, self._slippage)
+                  for price, ticker in zip(clip_prices, tickers)]
         trigger_orders = [order for order in orders if order.check_trigger(data.pre['close'])]
         return trigger_orders
 
@@ -172,36 +173,36 @@ class OrderCreated(BaseCreated):
         """
         ticker_intervals = self.yield_tickers_on_size(size)
         ticker_prices = [data.min[ticker] for ticker in ticker_intervals]
-        orders = [PriceOrder(asset,self.per_capital,price,ticker,self._style,self._slippage)
-                  for price , ticker in zip(ticker_prices,ticker_prices)]
+        orders = [PriceOrder(asset, self.per_capital, price,ticker, self._style, self._slippage)
+                  for price, ticker in zip(ticker_prices, ticker_prices)]
         trigger_orders = [order for order in orders if order.check_trigger(data.pre['close'])]
         return trigger_orders
 
-    def simulate_capital_order(self,asset,capital,dts):
+    def simulate_capital_order(self, asset, capital, dts):
         """
             capital --- order
         """
-        size,orderdata = self.yield_tickers_on_size(asset,dts,capital)
+        size,orderdata = self.yield_tickers_on_size(asset, dts, capital)
         if asset.bid_mechanism :
-            trigger_orders = self._create_ticker_order(asset,size,orderdata)
+            trigger_orders = self._create_ticker_order(asset, size, orderdata)
         else:
             restricted = asset.restricted(dts)
-            trigger_orders = self._create_price_order(asset,size,orderdata,restricted)
+            trigger_orders = self._create_price_order(asset, size, orderdata, restricted)
         return trigger_orders
 
-    def simulate_order(self,asset,size_array,data,direction):
+    def simulate_order(self, asset, size_array, data, direction):
         """
             基于amount 生成订单
         """
         if asset.bid_mechanism :
             tickers = self.yield_tickers_on_size(len(size_array))
             ticker_prices = [data.min[ticker] for ticker in tickers]
-            iterator = zip(ticker_prices,tickers)
+            iterator = zip(ticker_prices, tickers)
         else :
             #simulate_dist 已经包含剔除限制
-            simulate_prices = self.simulate_dist(data,len(size_array))
-            tickers = [locate_pos(price,data.minutes,direction) for price in simulate_prices]
-            iterator = zip(simulate_prices,tickers)
-        orders = [Order(asset,amount,*args,self._slippage) for amount,args in zip(size_array,iterator)]
+            simulate_prices = self.simulate_dist(data, len(size_array))
+            tickers = [locate_pos(price, data.minutes, direction) for price in simulate_prices]
+            iterator = zip(simulate_prices, tickers)
+        orders = [Order(asset,amount, *args, self._slippage) for amount, args in zip(size_array, iterator)]
         trigger_orders = [order for order in orders if order.check_trigger(data.pre['close'])]
         return trigger_orders

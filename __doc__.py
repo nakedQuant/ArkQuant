@@ -240,6 +240,8 @@ mysql tool：
     # alter add constraint
     # alter  drop foreign key
 
+mysql --- between and (include edge)
+
 # Copyright 2015 Quantopian, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");

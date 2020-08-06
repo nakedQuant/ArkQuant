@@ -1,17 +1,10 @@
-# Copyright 2016 Quantopian, Inc.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# !/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Mar 12 15:37:47 2019
 
+@author: python
+"""
 equity_url = 'http://70.push2.eastmoney.com/api/qt/clist/get?pn=1&pz=10000&po=1&np=1&fltt=2&invt=2&' \
              'fid=f3&fs=m:0+t:6,m:0+t:13,m:0+t:80,m:1+t:2,m:1+t:23&fields=f12'
 
@@ -27,11 +20,11 @@ benchmark_url = 'http://71.push2.eastmoney.com/api/qt/clist/get?pn=1&pz=12&po=1&
             'fid=&fs=b:MK0010&fields=f12,f14'
 
 ASSERT_URL_MAPPING = {
-                    'equity':equity_url,
-                    'bond':bond_url,
-                    'fund':fund_url,
-                    'dual':dual_url,
-                    'benchmark':benchmark_url,
+                    'equity': equity_url,
+                    'bond': bond_url,
+                    'fund': fund_url,
+                    'dual': dual_url,
+                    'benchmark': benchmark_url,
                     }
 
 equity_supplement_url = 'https://vip.stock.finance.sina.com.cn/corp/go.php/vCI_CorpInfo/stockid/%s.phtml'
@@ -39,8 +32,8 @@ equity_supplement_url = 'https://vip.stock.finance.sina.com.cn/corp/go.php/vCI_C
 bond_supplement_url = 'https://www.jisilu.cn/data/cbnew/cb_list/?'
 
 ASSET_SUPPLEMENT_URL = {
-                    'equity_supplement':equity_supplement_url,
-                    'convertible_supplement':bond_supplement_url
+                    'equity_supplement': equity_supplement_url,
+                    'convertible_supplement': bond_supplement_url
                         }
 
 

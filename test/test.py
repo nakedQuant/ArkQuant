@@ -8880,3 +8880,153 @@ class NamesTestCase(unittest.TestCase):
 # stamp = dt
 # final = datetime.datetime(stamp.year,stamp.month,stamp.day,hour = 15,minute = 0,second=0) if last else \
 #     datetime.datetime(stamp.year,stamp.month,stamp.day,hour = 9,minute = 30,second=0)
+
+# @preprocess(conn=coerce_string_to_conn(require_exists=True))
+
+# def _init_raw_array(self, assets, edate, window):
+#     if self.reader.data_frequency == 'daily':
+#         bars = self.reader.load_raw_arrays(edate, window, assets, ['close'])
+#     elif self.reader.data_frequency == 'minute':
+#         bars = self.reader.get_resampled(edate, window, '15:00', assets, ['close'])
+#     return bars
+# def window_arrays(self, edate, window, assets, field):
+#     """基于固定的fields才需要adjust"""
+#     #获取时间区间
+#     sessions = self.trading_calendar.sessions_in_range(edate, window, include=True)
+#     # # 获取原始数据
+#     # raw_arrays = self.array(sessions,assets, field)
+#     #需要调整的
+#     adjusted_fields = set(field) & self.FIELDS
+#     if adjusted_fields:
+#         #调整系数
+#         adjustments, raw_arrays = self._adjustment.calculate_adjustments_in_sessions(edate,window,assets)
+#         #计算调整数据
+#         adjust_arrays = {}
+#         for asset in assets:
+#             sid = asset.sid
+#             qfq = adjustments[sid]
+#             raw = raw_arrays[sid]
+#             try:
+#                 qfq = qfq.reindex(sessions)
+#                 qfq.fillna(method = 'bfill',inplace = True)
+#                 qfq.fillna(1.0,inplace=True)
+#                 raw[adjusted_fields] = raw.loc[:, adjusted_fields].multiply(qfq, axis=0)
+#             except Exception as e:
+#                 print(e,asset)
+#             adjust_arrays[sid] = raw
+#     else:
+#         adjust_arrays = raw_arrays
+#     return adjust_arrays
+
+# def history(self, assets, field, dts, window):
+#     """
+#     A window of pricing data with adjustments applied assuming that the
+#     end of the window is the day before the current simulation time.
+#     default fields --- OHLCV
+#
+#     Parameters
+#     ----------
+#     assets : iterable of Assets
+#         The assets in the window.
+#     dts : iterable of datetime64-like
+#         The datetimes for which to fetch data.
+#         Makes an assumption that all dts are present and contiguous,
+#         in the calendar.
+#     field : str or list
+#         The OHLCV field for which to retrieve data.
+#     window : int
+#         The length of window
+#     Returns
+#     -------
+#     out : np.ndarray with shape(len(days between start, end), len(assets))
+#     """
+#     if window != 1:
+#         block_arrays = self._ensure_sliding_windows(
+#                                         dts,
+#                                         window,
+#                                         assets,
+#                                         field
+#                                         )
+#     else:
+#         # 获取昨天的数据
+#         pre_date = self.trading_calendar.dt_window_size(dts, 1)
+#         block_arrays = self.adjust_window.array(pre_date, assets, field)
+#     return block_arrays
+
+# def load_pricing_adjustments(self, date, window,
+#                              should_include_dividends=True,
+#                              should_include_rights=True,
+#                              ):
+#     sessions = self.trading_calendar.sessions_in_range(date, window, include=True)
+#     pricing_adjustments = self._load_adjustments_from_sqlite(
+#                             sessions,
+#                             should_include_dividends,
+#                             should_include_rights)
+#     return pricing_adjustments
+# sessions = self.trading_calendar.sessions_in_range(date, window, include=True)
+
+# def window_arrays(self, date, window, assets, field):
+#     """
+#     :param date: str
+#     :param window: int
+#     :param assets: Assets list
+#     :param field: str or list
+#     :return: arrays which is adjusted by divdends and rights
+#     """
+#     adjustments, raw_arrays, sessions = self._adjustment.calculate_adjustments_in_sessions(date, window, assets)
+#     adjusted_fields = set(field) & self.FIELDS
+#     if adjusted_fields:
+#         #计算调整数据
+#         adjust_arrays = {}
+#         for asset in assets:
+#             sid = asset.sid
+#             qfq = adjustments[sid]
+#             raw = raw_arrays[sid]
+#             try:
+#                 qfq = qfq.reindex(sessions)
+#                 qfq.fillna(method='bfill', inplace=True)
+#                 qfq.fillna(1.0, inplace=True)
+#                 raw[adjusted_fields] = raw.loc[:, adjusted_fields].multiply(qfq, axis=0)
+#             except Exception as e:
+#                 print(e, asset)
+#             adjust_arrays[sid] = raw
+#     else:
+#         adjust_arrays = raw_arrays
+#     return adjust_arrays
+
+
+# def calculate_adjustments_in_sessions(self, date, window, assets):
+#     #     """
+#     #     Returns
+#     #     -------
+#     #     adjustments : list[dict[int -> Adjustment]]
+#     #         A list, where each element corresponds to the `columns`, of
+#     #         mappings from index to adjustment objects to apply at that index.
+#     #     """
+#     #     adjs = {}
+#     #     #获取全部的分红除权配股数据
+#     #     adjustments = self._adjustments_reader.load_pricing_adjustments(date, window)
+#     #     # 基于data_frequency --- 调整adjustments
+#     #     adapted_adjustments = self.adapt_to_frequency(adjustments)
+#     #     #获取对应的收盘价数据
+#     #     history, sessions = self._load_raw_array(date, window, assets)
+#     #     close = valmap(lambda x: x['close'], history)
+#     #     #计算前复权系数
+#     #     _calculate = partial(self._calculate_adjustments_for_sid, adjustments=adapted_adjustments, close=close)
+#     #     for asset in assets:
+#     #         adjs[asset] = _calculate(sid=asset.sid)
+#     #     return adjs, history, sessions
+
+# Get the first trading minute
+# self._first_trading_minute, _ = (
+#     calendar.open_and_close_for_session(
+#         [self._first_trading_day]
+#     )
+#     if self._first_trading_day is not None else (None, None)
+# )
+#
+# # Store the locs of the first day and first minute
+# self._first_trading_day_loc = (
+#     calendar.all_sessions.get_loc(self._first_trading_day)
+#     if self._first_trading_day is not None else None
+# )

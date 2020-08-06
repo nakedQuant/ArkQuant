@@ -1,9 +1,16 @@
-# -*- coding : utf-8 -*=
-from collections import defaultdict,namedtuple
-import json,pandas as pd
-from itertools import chain
+# !/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Mar 12 15:37:47 2019
 
-from gateWay.assets._config import ASSERT_URL_MAPPING,ASSET_SUPPLEMENT_URL
+@author: python
+"""
+from collections import defaultdict, namedtuple
+import json, pandas as pd
+from itertools import chain
+from toolz import partition_all
+
+from gateWay.assets._config import ASSERT_URL_MAPPING, ASSET_SUPPLEMENT_URL
 from gateWay.driver.tools import _parse_url
 
 AssetData = namedtuple(
@@ -23,22 +30,21 @@ class AssetSpider(object):
     @staticmethod
     def _fetch_equities_from_dfcf():
         # 获取存量股票包括退市
-        raw = json.loads(_parse_url( ASSERT_URL_MAPPING['equity'], bs=False))
+        raw = json.loads(_parse_url(ASSERT_URL_MAPPING['equity'], bs=False))
         equities = [item['f12'] for item in raw['data']['diff']]
         return equities
 
     @staticmethod
-    def _fetch_duals_from_dfcf(self):
+    def _fetch_duals_from_dfcf():
         dual_mappings = {}
         page = 1
         while True:
-            url =  ASSERT_URL_MAPPING['dual']% page
+            url =  ASSERT_URL_MAPPING['dual'] % page
             raw = _parse_url(url, bs=False, encoding=None)
             raw = json.loads(raw)
             diff = raw['data']
             if diff and len(diff['diff']):
                 # f12 -- hk ; 191 -- code
-                # diff = {item['f191']: item['f12'] for item in diff['diff']}
                 diff = {item['f12']: item['f191'] for item in diff['diff']}
                 dual_mappings.update(diff)
                 page = page + 1
@@ -47,7 +53,7 @@ class AssetSpider(object):
         return dual_mappings
 
     @staticmethod
-    def _fetch_convertibles_from_dfcf(self):
+    def _fetch_convertibles_from_dfcf():
         # 剔除未上市的
         page = 1
         bonds = []
@@ -66,11 +72,10 @@ class AssetSpider(object):
         return bond_mappings
 
     @staticmethod
-    def _fetch_funds_from_dfcf(self):
+    def _fetch_funds_from_dfcf():
         # 基金主要分为 固定收益 分级杠杆（A/B） (ETF场内|QDII-ETF)
         obj = _parse_url( ASSERT_URL_MAPPING['equity']['fund'])
         # print(obj.prettify())
-        from toolz import partition_all
         raw = [data.find_all('td') for data in obj.find_all(id='tableDiv')]
         text = [t.get_text() for t in raw[0]]
         df = pd.DataFrame(partition_all(14, text[18:]), columns=text[2:16])

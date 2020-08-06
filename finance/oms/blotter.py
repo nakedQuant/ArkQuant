@@ -5,7 +5,8 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-import numpy as np , pandas as pd
+import numpy as np
+import pandas as pd
 from finance.transaction import create_transaction
 
 
@@ -14,40 +15,40 @@ class Blotter(object):
     def __init__(self,
                  creator,
                  commission,
-                 multiplier = 1,
-                 delay = 1):
+                 multiplier=1,
+                 delay=1):
         self._order_creator = creator
         self.commission = commission
         self.multiplier = multiplier
         self.delay = delay
 
     @staticmethod
-    def create_bulk_transactions(orders,fee):
+    def create_bulk_transactions(orders, fee):
         txns = [create_transaction(order,fee) for order in orders]
         return txns
 
-    def simulate_capital_txn(self,asset,capital,dts):
+    def simulate_capital_txn(self,asset, capital, dts):
         """
             基于capital --- 买入标的
         """
-        orders = self._order_creator.simulate_capital_order(asset,capital,dts)
+        orders = self._order_creator.simulate_capital_order(asset, capital, dts)
         #将orders --- transactions
-        fee = self.commission.calculate_rate(asset,'positive',dts)
-        txns = self.create_bulk_transactions(orders,fee)
+        fee = self.commission.calculate_rate(asset,'positive', dts)
+        txns = self.create_bulk_transactions(orders, fee)
         #计算效率
         efficiency = sum([order.per_capital for order in orders]) / capital
         return txns,efficiency
 
     def simulate_txn(self,asset,amount,dts,direction):
-        sizes,data = self._order_creator.calculate_size_arrays(asset,amount,dts)
-        direct_orders = self._order_creator.simulate_order(asset,sizes,data,direction)
-        p_fee = self.commission.calculate_rate(asset,direction,dts)
-        transactions = self.create_bulk_transactions(direct_orders,p_fee)
+        sizes,data = self._order_creator.calculate_size_arrays(asset, amount, dts)
+        direct_orders = self._order_creator.simulate_order(asset, sizes, data, direction)
+        p_fee = self.commission.calculate_rate(asset, direction, dts)
+        transactions = self.create_bulk_transactions(direct_orders, p_fee)
         #计算效率
         uility = sum([txn.amount for txn in transactions]) / amount
-        return transactions , uility
+        return transactions, uility
 
-    def simulate_dual_txn(self,p,c,dts):
+    def simulate_dual_txn(self, p, c, dts):
         """
             holding , asset ,dts
             基于触发器构建 通道 基于策略 卖出 --- 买入
@@ -70,12 +71,12 @@ class Blotter(object):
             卖出标的 --- 对应买入标的 ，闲于的资金
         """
         # #卖出持仓
-        p_transactions,p_uility = self.simulate_txn(p.asset,p.amount,dts,'negative')
+        p_transactions, p_uility = self.simulate_txn(p.asset, p.amount, dts, 'negative')
         #计算效率
         # 执行对应的买入算法
-        c_data = self._order_creator._create_data(dts,c)
+        c_data = self._order_creator._create_data(dts, c)
         # 切换之间存在时间差，默认以minutes为单位
-        c_tickers = [pd.Timedelta(minutes='%dminutes'%self.delay) + txn.created_dt for txn in p_transactions]
+        c_tickers = [pd.Timedelta(minutes='%dminutes' % self.delay) + txn.created_dt for txn in p_transactions]
         #根据ticker价格比值
         c_ticker_prices = np.array([c_data[ticker] for ticker in c_tickers])
         p_transaction_prices = np.array([p_txn.price for p_txn in p_transactions])
@@ -83,10 +84,10 @@ class Blotter(object):
         # 模拟买入订单数量
         c_sizes = [np.floor(p.amount * ratio) for p in p_transactions]
         #生成对应的买入订单
-        c_orders = self._order_creator.simulate_order(c, c_sizes,c_data,'positive')
+        c_orders = self._order_creator.simulate_order(c, c_sizes, c_data, 'positive')
         #订单 --- 交易
-        c_fee = self.commission_rate(c,'positive',dts)
-        c_transactions = self.create_bulk_transactions(c_orders,c_fee)
+        c_fee = self.commission_rate(c, 'positive', dts)
+        c_transactions = self.create_bulk_transactions(c_orders, c_fee)
         #计算效率
         c_uility = sum([txn.amount for txn in c_transactions]) / sum(c_sizes)
-        return p_transactions,p_uility,c_transactions,c_uility
+        return p_transactions, p_uility, c_transactions, c_uility

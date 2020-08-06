@@ -2,8 +2,8 @@
 import numpy as np,pandas as pd
 
 from gateWay import Event,GateReq,Quandle
-from algorithm.features import BaseFeature
-from algorithm.Mathmetics import zoom
+from test.algorithm import BaseFeature
+from test.algorithm import zoom
 
 class CurveScorer(BaseFeature):
     """

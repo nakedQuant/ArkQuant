@@ -84,31 +84,31 @@ Sample layout of the full file with multiple countries.
          |- /start_date
          |- /end_date
 """
-
 from functools import partial
 from itertools import chain
 
-import numpy as np , pandas as pd ,h5py , tables
+import numpy as np, pandas as pd, h5py, tables
 
 VERSION = 0
 
+# Retain 3 decimal places for prices.
+# Volume is expected to be a whole integer.
 DEFAULT_SCALING_FACTORS = {
-    # Retain 3 decimal places for prices.
     'open': 1000,
     'high': 1000,
     'low': 1000,
     'close': 1000,
-    # Volume is expected to be a whole integer.
     'volume': 1,
 }
 
-FIELDS = ['open','high','low','close','volume','amount']
+FIELDS = ['open', 'high', 'low', 'close', 'volume', 'amount']
+
 
 def convert_price_with_scaling_factor(a, scaling_factor):
     conversion_factor = (1.0 / scaling_factor)
-
     zeroes = (a == 0)
     return np.where(zeroes, np.nan, a.astype('float64')) * conversion_factor
+
 
 def check_indexes_all_same(indexes, message="Indexes are not equal."):
     """Check that a list of Index objects are all equal.
@@ -117,7 +117,7 @@ def check_indexes_all_same(indexes, message="Indexes are not equal."):
     ----------
     indexes : iterable[pd.Index]
         Iterable of indexes to check.
-
+    message : Indexes are not equal.
     Raises
     ------
     ValueError
@@ -136,6 +136,7 @@ def check_indexes_all_same(indexes, message="Indexes are not equal."):
                     message, bad_loc, first[bad_loc], other[bad_loc]
                 ),
             )
+
 
 def days_and_sids_for_frames(frames):
     """
@@ -173,7 +174,7 @@ def days_and_sids_for_frames(frames):
     days = set(chain(*[frame.index for frame in frames.values()]))
     sids = set(frames)
     cols = frames.values()[0].columns
-    return days,sids,cols
+    return days, sids, cols
 
 
 class HDF5DailyBarWriter(object):
@@ -201,7 +202,7 @@ class HDF5DailyBarWriter(object):
     def h5_file(self, mode):
         return h5py.File(self._filename, mode)
 
-    def write(self, asset_type,frames, scaling_factors=None):
+    def write(self, asset_type, frames, scaling_factors=None):
         """Write the OHLCV data for one country to the HDF5 file.
 
         Parameters
@@ -223,7 +224,6 @@ class HDF5DailyBarWriter(object):
         """
         # Add id to the index, so the frame is indexed by (date, id).
         # ohlcv_frame.set_index(sid_ix, append=True, inplace=True)
-
         if scaling_factors is None:
             scaling_factors = DEFAULT_SCALING_FACTORS
 
@@ -240,7 +240,7 @@ class HDF5DailyBarWriter(object):
             # share the same days and sids.
             days, sids,fields = days_and_sids_for_frames(frames)
             # Write sid and date indices.
-            index_group.create_dataset('sid',data=sids)
+            index_group.create_dataset('sid', data=sids)
             # h5py does not support datetimes, so they need to be stored
             # as integers.
             index_group.create_dataset('day', data=days.astype(np.int64))
@@ -346,7 +346,7 @@ class HDF5DailyBarReader(object):
         for asset in assets:
             data = self._category['data'][asset]
             scaled_data = data * self._postprocessors
-            out.append(data.loc[start_date:scaled_data,cols])
+            out.append(scaled_data.loc[start_date:end_date, cols])
         return out
 
     def get_value(self, sid, dt, field):

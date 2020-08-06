@@ -37,7 +37,7 @@ class BrokerEngine(object):
         self.blotter = blotter
         self.allocation = allocation
 
-    def implement_based_on_amount(self,puts,dts):
+    def implement_based_on_amount(self, puts, dts):
         """单独的卖出仓位"""
         proc = self.blotter.simulate_txn
         p_func = partial(proc,

@@ -32,8 +32,9 @@ class Commission(CommissionModel):
         2、过户费：深圳交易所无此项费用，上海交易所收费标准(按成交金额的0.02‰人民币)
         3、交易佣金：最高收费为3‰，最低收费5元。各家劵商收费不一，开户前可咨询清楚。 2015年之后万/3
     """
-    def __init__(self, multiplier = 3):
-        self.mulitplier = multiplier
+    def __init__(self, multiplier=3):
+        self.multiplier = multiplier
+        self._commission_rate = 0.0
 
     @property
     def min_cost(self):
@@ -45,8 +46,8 @@ class Commission(CommissionModel):
 
     def gen_base_fee(self,dt):
         base_fee = 1e-4 if dt > '2015-06-09' else 1e-3
-        self.commission_rate = base_fee * self.mulitplier
-        self.base_capital = self.min_cost / self.commission_rate
+        self._commission_rate = base_fee * self.multiplier
+        self.base_capital = self.min_cost / self._commission_rate
 
     def calculate_rate(self,asset,direction,dts):
         # 印花税 1‰(卖的时候才收取，此为国家税收，全国统一)

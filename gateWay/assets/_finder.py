@@ -19,7 +19,7 @@ from functools import partial
 from .asset_db_schema import asset_db_table_names
 from .assets import Equity,Convertible,Fund
 from ._config import ASSERT_URL_MAPPING
-from gateWay.driver.client import TsClient
+from gateWay.driver.third_api.client import TsClient
 from gateWay.driver.tools import _parse_url
 
 ts = TsClient()
@@ -201,7 +201,7 @@ class AssetFinder(object):
             基于A股代码找到对应的可转债
         """
         bonds = self.retrieve_all('bond')
-        bond_equities = valfilter(lambda x : x.swap_code == sid,bonds)
+        bond_equities = valfilter(lambda x : x.sid == sid,bonds)
         return bond_equities
 
     def lifetimes(self, sessions, include_start_date=False):

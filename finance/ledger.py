@@ -19,7 +19,7 @@ class Ledger(object):
     __slots__ = ['_portfolio', 'position_tracker', '_processed_transaction',
                  '_previous_total_returns', '_dirty_portfolio', 'daily_returns_series']
 
-    def __init__(self,trading_sessions,capital_base):
+    def __init__(self, trading_sessions, capital_base):
         """构建可变、不可变的组合、账户"""
         if not len(trading_sessions):
             raise Exception('calendars must not be null')
@@ -28,14 +28,14 @@ class Ledger(object):
         self._processed_transaction = []
         self._previous_total_returns = 0
         self._dirty_portfolio = True
-        self.daily_returns_series = pd.Series(np.nan,index = trading_sessions)
+        self.daily_returns_series = pd.Series(np.nan, index=trading_sessions)
         self.position_tracker = PositionTracker()
 
     @property
     def synchronized_clock(self):
         dts = set([p.last_sync_date
                    for p in self.positions.values()])
-        assert len(dts) == 1,Exception('positions must sync at the same time')
+        assert len(dts) == 1, Exception('positions must sync at the same time')
         return dts
 
     @property
@@ -48,8 +48,8 @@ class Ledger(object):
         if self._dirty_portfolio:
             raise Exception('today_returns is avaiable at the end of session ')
         return (
-            (self.portfolio.returns +1) /
-            (self._previous_total_returns +1) - 1
+            (self.portfolio.returns + 1) /
+            (self._previous_total_returns + 1) - 1
         )
 
     @property
@@ -74,7 +74,7 @@ class Ledger(object):
         left_cash = self.position_tracker.handle_spilts()
         self._cash_flow(left_cash)
 
-    def start_of_session(self,session_ix):
+    def start_of_session(self, session_ix):
         # 每天同步时间
         self.position_tracker.sync_last_date(session_ix)
         self._process_dividends()
@@ -91,8 +91,8 @@ class Ledger(object):
         """同步持仓的close价格"""
         self.position_tracker.sync_last_prices()
         # 计算持仓组合净值
-        position_values = sum([p.amount * p.last_sync_price for
-                     p in self.positions.values()])
+        position_values = sum([p.amount * p.last_sync_price
+                               for p in self.positions.values()])
         # 持仓组合
         portfolio = self._portfolio
         self._previous_total_returns = portfolio.returns
@@ -141,7 +141,7 @@ class Ledger(object):
         return txns_on_dt
 
     # position_stats
-    def daily_position_stats(self,dts):
+    def daily_position_stats(self, dts):
         """
         :param dts: %Y-%m-%d --- 包括已有持仓以及当天关闭持仓的收益率
         engine -- conflicts解决了策略冲突具体就是标的冲突
@@ -149,14 +149,14 @@ class Ledger(object):
         assert not self._dirty_portfolio, 'stats is accurate after end_session'
         stats = dict()
         for asset, p in self.positions.items():
-            stats[asset] = p.amount * (p.last_sync_price  - p.cost_basis)
+            stats[asset] = p.amount * (p.last_sync_price - p.cost_basis)
 
         closed_position = self.position_tracker.record_closed_position[dts]
         for p in closed_position:
-            stats[p.asset] = p.amount * (p.last_sync_price  - p.cost_basis)
+            stats[p.asset] = p.amount * (p.last_sync_price - p.cost_basis)
         return stats
 
-    def manual_withdraw_operation(self,assets):
+    def manual_withdraw_operation(self, assets):
         """
             self.position_tracker.maybe_create_close_position_transaction
             self.process_transaction(txn)

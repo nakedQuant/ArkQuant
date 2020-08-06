@@ -6,11 +6,14 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 import uuid
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 from toolz import keyfilter
 from functools import reduce
-from .term import Term , NotSpecific
-from .graph import  TermGraph
+from .term import Term, NotSpecific
+from .graph import TermGraph
+
+
+PIPE = namedtuple('pipe', 'tag priority asset')
 
 
 class Pipeline(object):
@@ -96,7 +99,7 @@ class Pipeline(object):
             self._workspace[node] = output
             self._decref_recursive(metadata,default)
 
-    def decref_recursive(self, metadata, default):
+    def _inner_decref_recursive(self, metadata, default):
         """
         Return a topologically-sorted list of the terms in ``self`` which
         need to be computed.
@@ -112,21 +115,23 @@ class Pipeline(object):
         default : assets list
             Reference counts for terms to be computed. Terms with reference
             counts of 0 do not need to be computed.
+        return : PIPE list
         """
         self._initialize_workspace()
         self._decref_recursive(metadata,default)
 
-    def fit(self, alternative):
+    def _fit(self, alternative):
         """将pipeline.name --- outs"""
-        outputs = self._workspace.popitem(last=True).values()
-        #打上标记 pipeline_name : asset
-        outputs = [asset.tag(self.name) for asset in outputs[:alternative]]
+        out = self._workspace.popitem(last=True).values()
+        # transform to  pipe
+        outputs = [PIPE(property, self.name, asset) for priority, asset
+                   in enumerate(out[:alternative])]
         return outputs
 
     def to_execution_plan(self, metadata, alternative, default):
         """
             source: accumulated data from all terms
         """
-        self.decref_recursive(metadata,default)
-        result = self.fit(alternative)
+        self._inner_decref_recursive(metadata,default)
+        result = self._fit(alternative)
         return result

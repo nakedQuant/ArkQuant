@@ -5,8 +5,8 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-from sqlalchemy import select,cast,and_,Numeric,Integer
-import pandas as pd , datetime , sqlalchemy as sa , json
+from sqlalchemy import select, cast, and_, Numeric, Integer
+import pandas as pd, datetime, sqlalchemy as sa, json
 from gateWay.driver.tools import _parse_url
 from gateWay.driver._config import ASSET_FUNDAMENTAL_URL
 from gateWay.driver.bar_reader import BarReader
@@ -22,20 +22,21 @@ class MassiveSessionReader(BarReader):
     def data_frequency(self):
         return 'daily'
 
-    def get_spot_value(self, asset, dt):
+    def get_spot_value(self, asset, dt, fields=None):
         table = self.metadata['massive']
         sql = select([cast(table.c.bid_price, Numeric(10,2)),
                       cast(table.c.discount, Numeric(10,5)),
                       cast(table.c.bid_volume, Integer),
                       table.c.buyer,
                       table.c.seller,
-                      table.c.cleltszb]).where(and_(table.c.trade_dt == dt,table.c.sid == asset.sid))
+                      table.c.cleltszb]).where(and_(table.c.trade_dt == dt, table.c.sid == asset.sid))
         raw = self.engine.execute(sql).fetchall()
-        share_massive = pd.DataFrame(raw, columns=['bid_price','discount','bid_volume',
-                                                   'buyer','seller','cleltszb'])
-        return share_massive
+        share_massive = pd.DataFrame(raw, columns=['bid_price', 'discount', 'bid_volume',
+                                                   'buyer', 'seller', 'cleltszb'])
+        massive = share_massive.loc[:, fields] if fields else share_massive
+        return massive
 
-    def load_raw_arrays(self, sessions, assets):
+    def load_raw_arrays(self, sessions, assets, fields=None):
         sdate , edate = sessions
         sids = [asset.sid for asset in assets]
         #获取数据
@@ -49,10 +50,11 @@ class MassiveSessionReader(BarReader):
                       table.c.seller,
                       table.c.cleltszb]).where(table.c.trade_dt.between(sdate,edate))
         raw = self.engine.execute(sql).fetchall()
-        df = pd.DataFrame(raw, columns=['trade_dt','code','bid_price','discount',
-                                       'bid_volume','buyer','seller','cleltszb'])
-        df.set_index('code',inplace= True)
-        massive = df.loc[sids]
+        df = pd.DataFrame(raw, columns=['trade_dt', 'code', 'bid_price', 'discount',
+                                        'bid_volume', 'buyer', 'seller', 'cleltszb'])
+        df.set_index('code', inplace=True)
+        df = df.loc[sids]
+        massive = df.loc[:, fields] if fields else df
         return massive
 
 
@@ -65,16 +67,17 @@ class ReleaseSessionReader(BarReader):
     def data_frequency(self):
         return 'daily'
 
-    def get_spot_value(self, asset, dt):
+    def get_spot_value(self, asset, dt, fields=None):
         table = self.metadata['release']
         sql = select([cast(table.c.release_type, Numeric(10, 2)),
-                      cast(table.c.cjeltszb, Numeric(10, 5)), ]).\
-            where(and_(table.c.release_date == dt,table.c.sid == asset.sid))
+                      cast(table.c.cjeltszb, Numeric(10, 5))]).\
+            where(and_(table.c.release_date == dt, table.c.sid == asset.sid))
         raw = self.engine.execute(sql).fetchall()
         release = pd.DataFrame(raw, columns=['release_type', 'cjeltszb'])
+        release = release.loc[:, fields] if fields else release
         return release
 
-    def load_raw_arrays(self, sessions, assets):
+    def load_raw_arrays(self, sessions, assets, fields=None):
         sdate , edate = sessions
         sids = [asset.sid for asset in assets]
         table = self.metadata['release']
@@ -87,8 +90,9 @@ class ReleaseSessionReader(BarReader):
         df = pd.DataFrame(raw, columns=['sid', 'release_date',
                                         'release_type', 'cjeltszb'])
         df.set_index('sid',inplace= True)
-        releases = df.loc[sids]
-        return releases
+        df = df.loc[sids]
+        release = df.loc[:, fields] if fields else df
+        return release
 
 
 class HolderSessionReader(BarReader):
@@ -100,7 +104,7 @@ class HolderSessionReader(BarReader):
     def data_frequency(self):
         return 'daily'
 
-    def get_spot_value(self, asset, dt):
+    def get_spot_value(self, asset, dt, fields=None):
         """股东持仓变动"""
         table = self.metadata['holder']
         sql = select([table.c.股东,
@@ -113,9 +117,10 @@ class HolderSessionReader(BarReader):
         raw = self.engine.execute(sql).fetchall()
         share_tracker = pd.DataFrame(raw, columns=['股东','方式','变动股本','总持仓',
                                                    '占总股本比例','总流通股','占总流通比例'])
+        share_tracker = share_tracker.loc[:, fields] if fields else share_tracker
         return share_tracker
 
-    def load_raw_arrays(self, sessions,assets):
+    def load_raw_arrays(self, sessions, assets, fields=None):
         """股东持仓变动"""
         sdate, edate = sessions
         sids = [asset.sid for asset in assets]
@@ -131,10 +136,11 @@ class HolderSessionReader(BarReader):
                       cast(table.c.占总流通比例, Numeric(10, 5))]).where(
                     table.c.declared_date.between(sdate,edate))
         raw = self.engine.execute(sql).fetchall()
-        df = pd.DataFrame(raw, columns=['sid','公告日','股东','方式','变动股本',
-                                        '总持仓','占总股本比例','总流通股','占总流通比例'])
+        df = pd.DataFrame(raw, columns=['sid', '公告日', '股东', '方式', '变动股本',
+                                        '总持仓', '占总股本比例', '总流通股', '占总流通比例'])
         df.set_index('sid',inplace= True)
-        trackers = df.loc[sids]
+        df = df.loc[sids]
+        trackers = df.loc[:, fields] if fields else df
         return trackers
 
 
@@ -147,7 +153,7 @@ class StructureSessionReader(BarReader):
     def data_frequency(self):
         return 'daily'
 
-    def get_spot_value(self, asset, dt):
+    def get_spot_value(self, asset, dt, fields=None):
         """
             extra information about asset --- equity structure
             股票的总股本、流通股本，公告日期,变动日期结构
@@ -164,9 +170,10 @@ class StructureSessionReader(BarReader):
         rp = self.engine.execute(ins)
         structure = pd.DataFrame(rp.fetchall(), columns = ['declared_date', 'effective_day',
                                                            'general', 'float', 'strict'])
+        structure = structure.loc[:, fields] if fields else structure
         return structure
 
-    def load_raw_arrays(self, sessions, assets):
+    def load_raw_arrays(self, sessions, assets, fields=None):
         sdate, edate = sessions
         sids = [asset.sid for asset in assets]
 
@@ -181,7 +188,8 @@ class StructureSessionReader(BarReader):
         df = pd.DataFrame(rp.fetchall(), columns=['sid','declared_date', 'effective_day',
                                                   'general', 'float', 'strict'])
         df.set_index('sid', inplace=True)
-        equity_structures = df.loc[sids]
+        df = df.loc[sids]
+        equity_structures = df.loc[:, fields] if fields else df
         return equity_structures
 
 
@@ -194,10 +202,10 @@ class GrossSessionReader(BarReader):
     def data_frequency(self):
         return 'daily'
 
-    def get_spot_value(self, asset, dt, field):
+    def get_spot_value(self, asset, dt, field=None):
         NotImplementedError ('get_values is deprescated by gpd ,use load_raw_arrays method')
 
-    def load_raw_arrays(self, sessions, assets):
+    def load_raw_arrays(self, sessions, assets, fields=None):
         """获取GDP数据"""
         sdate, edate = sessions
         page = 1
@@ -218,7 +226,9 @@ class GrossSessionReader(BarReader):
         #截取时间戳
         start_idx = gross_value.index(sdate)
         end_idx = gross_value.index(edate)
-        return gross_value.iloc[start_idx:end_idx + 1, :]
+        gross = gross_value.iloc[start_idx:end_idx + 1, :]
+        gross = gross.loc[:, fields] if fields else gross
+        return gross
 
 
 class MarginSessionReader(BarReader):
@@ -230,10 +240,10 @@ class MarginSessionReader(BarReader):
     def data_frequency(self):
         return 'daily'
 
-    def get_spot_value(self, asset, dt, field):
+    def get_spot_value(self, asset, dt, field=None):
         raise NotImplementedError('get_values is deprescated ,use load_raw_arrays method')
 
-    def load_raw_arrays(self, sessions, assets):
+    def load_raw_arrays(self, sessions, assets, fields=None):
         """获取市场全量融资融券"""
         sdate, edate = sessions
         page = 1
@@ -258,4 +268,6 @@ class MarginSessionReader(BarReader):
         #
         start_idx = margin.index(sdate)
         end_idx = margin.index(edate)
-        return margin.iloc[start_idx:end_idx + 1, :]
+        margin = margin.iloc[start_idx:end_idx + 1, :]
+        margin = margin.loc[:, fields] if fields else margin
+        return margin

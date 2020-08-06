@@ -4,7 +4,7 @@ Filters that apply smoothing operations on other filters.
 These are generally useful for controlling/minimizing turnover on existing
 Filters.
 """
-from algorithm.features.filter import CustomFilter
+from test.algorithm import CustomFilter
 
 
 class All(CustomFilter):

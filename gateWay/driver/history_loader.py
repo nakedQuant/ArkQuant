@@ -5,15 +5,14 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-
 from collections import defaultdict
-from abc import ABC , abstractmethod
+from abc import ABC, abstractmethod
 import pandas as pd
+from calendar.trading_calendar import calendar
 from gateWay.driver.adjustArray import (
                         AdjustedDailyWindow,
                         AdjustedMinuteWindow
                                         )
-from calendar.trading_calendar import  calendar
 
 Seconds_Per_Day = 24 * 60 * 60
 
@@ -22,6 +21,7 @@ class Expired(Exception):
     """
         mark a cacheobject has expired
     """
+
 
 class CachedObject(object):
     """
@@ -147,10 +147,10 @@ class HistoryLoader(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def _compute_slice_window(self,data,dt,window):
+    def _compute_slice_window(self, data, date, window):
         raise NotImplementedError
 
-    def _ensure_adjust_windows(self, edate, window,assets,field):
+    def _ensure_adjust_windows(self, dts, assets, field):
         """
         Ensure that there is a Float64Multiply window for each asset that can
         provide data for the given parameters.
@@ -170,20 +170,14 @@ class HistoryLoader(ABC):
             in the calendar.
         field : str or list
             The OHLCV field for which to retrieve data.
-        is_perspective_after : bool
-            see: `PricingHistoryLoader.history`
-
         Returns
         -------
         out : list of Float64Window with sufficient data so that each asset's
         window can provide `get` for the index corresponding with the last
         value in `dts`
         """
-        dts = self.trading_calendar.sessions_in_range(edate,window,include = False)
-        #设立参数
         asset_windows = {}
         needed_assets = []
-        #默认获取OHLCV数据
         for asset in assets:
             try:
                 _window = self._window_blocks[asset].get(
@@ -191,26 +185,25 @@ class HistoryLoader(ABC):
             except KeyError or Expired:
                 needed_assets.append(asset)
             else:
-                slice_window = self._compute_slice_window(_window,dts)
+                slice_window = self._compute_slice_window(_window, dts)
                 asset_windows[asset] = slice_window
 
         if needed_assets:
             for i, asset in enumerate(needed_assets):
                 sliding_window = self.adjust_window.window_arrays(
-                        edate,
-                        window,
+                        dts,
                         asset,
                         field
                             )
                 asset_windows[asset] = sliding_window
-                #设置ExpiredCache
+                # ExpiredCache
                 self._window_blocks[asset].set(
                     field,
                     sliding_window,
                     dts)
         return [asset_windows[asset] for asset in assets]
 
-    def history(self,assets,field,dts,window):
+    def history(self, assets, field, dts, window):
         """
         A window of pricing data with adjustments applied assuming that the
         end of the window is the day before the current simulation time.
@@ -233,20 +226,20 @@ class HistoryLoader(ABC):
         out : np.ndarray with shape(len(days between start, end), len(assets))
         """
         # 不包括当天数据
-        if window != 0:
+        session = self.trading_calendar.sessions_in_range(dts, window, include=False)
+
+        if len(session) == 1:
+            block_arrays = self.adjust_window.array(session, assets, field)
+        else:
             block_arrays = self._ensure_sliding_windows(
-                                            dts,
-                                            window,
+                                            session,
                                             assets,
                                             field
                                             )
-        else:
-            pre_dt = self.trading_calendar.dt_window_size(dts,1)
-            block_arrays = self.adjust_window.array([pre_dt,pre_dt],assets,field)
         return block_arrays
 
     @abstractmethod
-    def get_resampled_history(self,dts,window,freq,assets,field):
+    def get_resample(self, dts, window, freq, assets, field):
         raise NotImplementedError()
 
 
@@ -262,29 +255,29 @@ class HistoryDailyLoader(HistoryLoader):
         self.adjust_window = AdjustedDailyWindow(
                                             _daily_reader,
                                             equity_adjustment_reader)
-        # 不同频率 --- 单独设立 cacheobj
+        # 不同频率 --- 单独设立
         self._window_blocks = defaultdict(ExpiredCache)
 
     @property
     def frequency(self):
         return 'daily'
 
-    def _compute_slice_window(self,_window,sessions):
+    def _compute_slice_window(self, _window, sessions):
         slice_window = _window.reindex(sessions)
         return slice_window
 
     @abstractmethod
-    def get_resampled_history(self,dts,window,freq,assets,field):
+    def get_resample(self, dts, window, freq, assets, field):
         """
             select specific dts  Year Month Day
         """
-        resample_groups = dict()
-        his = self.history(dts,window,assets,field)
-        init_date = self.trading_calendar.dt_window_size(dts,window)
-        pds = [dt.strftime('%Y%m%d') for dt in pd.date_range(init_date,dts,freq = freq)]
+        groups = dict()
+        his = self.history(dts, window, assets, field)
+        init_date = self.trading_calendar.dt_window_size(dts, window)
+        pds = [dt.strftime('%Y%m%d') for dt in pd.date_range(init_date, dts, freq=freq)]
         for sid,raw in his.items():
-            resample_groups[sid] = raw.reindex(pds)
-        return resample_groups
+            groups[sid] = raw.reindex(pds)
+        return groups
 
 
 class HistoryMinuteLoader(HistoryLoader):
@@ -301,25 +294,24 @@ class HistoryMinuteLoader(HistoryLoader):
     def frequency(self):
         return 'minute'
 
-    def _compute_slice_window(self,raw,dts):
-
+    def _compute_slice_window(self, _window, dts):
         # 时间区间为子集，需要过滤
-        dts_minutes = self._trading_calendar.minutes_in_window(dts)
-        _slice_window = raw.reindex(dts_minutes)
+        dts_minutes = self._trading_calendar.sessions_in_minutes(dts)
+        _slice_window = _window.reindex(dts_minutes)
         return _slice_window
 
     @abstractmethod
-    def get_resampled_history(self,dts,window,freq,assets,field):
+    def get_resample(self, dts, window, freq, assets, field):
         """
             select specific dts minutes ,e,g --- 9:30,10:30
         """
-        resample_groups = dict()
-        his = self.history(dts,window,assets,field)
+        _groups = dict()
+        his = self.history(dts, window, assets, field)
         for sid,raw in his.items():
-            seconds = dts.split(':')[0] * 60 * 60 + dts.split(':')[0] * 60
-            ticker_index = map(lambda x : (x - seconds) / Seconds_Per_Day == 0 , raw.index)
-            resample_groups[sid] = raw.reindex(ticker_index)
-        return resample_groups
+            seconds = dts.split(':')[0] * 60 * 60 + dts.split(':')[-1] * 60
+            ticker_index = map(lambda x: (x - seconds) / Seconds_Per_Day == 0, raw.index)
+            _groups[sid] = raw.reindex(ticker_index)
+        return _groups
 
 
-__all__ = [HistoryMinuteLoader,HistoryDailyLoader]
+__all__ = [HistoryMinuteLoader, HistoryDailyLoader]

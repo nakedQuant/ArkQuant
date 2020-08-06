@@ -1,17 +1,22 @@
-# -*- coding : utf-8 -*-
+# !/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Mar 12 15:37:47 2019
 
+@author: python
+"""
 import pandas as pd,sqlalchemy as sa
 from sqlalchemy import inspect
 from contextlib import ExitStack
 from weakref import WeakValueDictionary
-from .db_schema import engine,metadata,asset_db_table_names
+from .db_schema import engine, metadata, asset_db_table_names
 
 
 class DBWriter(object):
 
     _cache = WeakValueDictionary()
 
-    def __new__(cls,engine):
+    def __new__(cls):
         try:
             return cls._cache[engine]
         except KeyError:
@@ -72,13 +77,13 @@ class DBWriter(object):
         return self
 
     @staticmethod
-    def set_isolation_level(conn,level = "READ COMMITTED"):
+    def set_isolation_level(conn, level="READ COMMITTED"):
         connection = conn.execution_options(
-            isolation_level= level
+            isolation_level=level
         )
         return connection
 
-    def _write_df_to_table(self,conn,tbl,frame,chunksize = 5000):
+    def _write_df_to_table(self, conn, tbl, frame, chunksize=5000):
         inspection = inspect(self.engine)
         expected_cols = [item['name'] for item in inspection.get_columns(tbl)]
         if frozenset(frame.columns) != frozenset(expected_cols):
@@ -99,7 +104,7 @@ class DBWriter(object):
             chunksize=chunksize,
         )
 
-    def _writer_direct(self,con,tbl,data):
+    def _writer_direct(self, con, tbl, data):
         ins = metadata.tables[tbl].insert()
         if isinstance(data, pd.DataFrame):
             formatted = list(data.T.to_dict().values())
@@ -109,7 +114,7 @@ class DBWriter(object):
             raise ValueError('must be dataframe or series')
         con.execute(ins, formatted)
 
-    def writer(self,tbl,df,direct = True):
+    def writer(self, tbl, df, direct = True):
         with open('db_schema.py','r') as f:
             string_obj = f.read()
         exec(string_obj)
@@ -119,11 +124,11 @@ class DBWriter(object):
             # self.metadata.create_all(bind=engine)
             con = self.set_isolation_level(conn)
             if direct:
-                self._writer_direct(con,tbl,df)
+                self._writer_direct(con, tbl, df)
             else:
-                self._write_df_to_table(con,tbl,df)
+                self._write_df_to_table(con, tbl, df)
 
-    def reset(self,overwriter = False):
+    def reset(self, overwriter=False):
         if overwriter:
             metadata.drop_all()
         else:

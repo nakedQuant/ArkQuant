@@ -6,15 +6,15 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 import numpy as np
-from finance.oms.order import  Order,PriceOrder
+from finance.oms.order import Order, PriceOrder
 from ._protocol import MutableView
 
 
 class Transaction(object):
 
-    __slots__ = ['asset','amount','price','_created_dt']
+    # __slots__ = ['asset', 'amount', 'price', '_created_dt']
 
-    def __init__(self, asset,amount,price,dt):
+    def __init__(self, asset, amount, price, dt):
         self_ = MutableView(self)
         self_.asset = asset
         self_.amount = amount
@@ -44,7 +44,7 @@ class Transaction(object):
         """
             pickle dumps
         """
-        p_dict = {name : self.name for name in self.__slots__}
+        p_dict = {name: self.name for name in self.__slots__}
         return p_dict
 
 
@@ -65,9 +65,9 @@ def create_transaction(order,fee):
     else:
         raise TypeError('unkown order type')
     transaction = Transaction(
-        asset = asset,
-        amount = sign * amount,
-        price = order.price,
-        created_dt = order._created_dt
+        asset=asset,
+        amount=sign * amount,
+        price=order.price,
+        created_dt=order._created_dt
     )
     return transaction

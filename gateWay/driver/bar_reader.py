@@ -12,40 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from abc import ABC, abstractmethod
-import sqlalchemy as sa,pandas as pd
+import sqlalchemy as sa
+import pandas as pd
 from functools import partial
 from sqlalchemy import MetaData
-from functools import lru_cache
 from toolz import groupby
-from .tools import  unpack_df_to_component_dict
-from calendar.trading_calendar import  calendar
+from .db_schema import engine
+from .tools import unpack_df_to_component_dict
 
 
 class BarReader(ABC):
 
     @property
     def data_frequency(self):
-        raise NotImplementedError()
+        return None
 
     @property
     def metadata(self):
-        return MetaData(bind = self.engine)
-
-    @property
-    def calendar(self):
-        """
-        Returns the zipline.utils.calendar.trading_calendar used to read
-        the data.  Can be None (if the writer didn't specify it).
-        """
-        return self._calendar
-
-    @lru_cache
-    def _window_dt(self,dt,length):
-        _forward_dt = self.calendar.dt_window_size(dt,length)
-        return _forward_dt
+        return MetaData(bind=engine)
 
     @abstractmethod
-    def get_spot_value(self, asset, dt,fields):
+    def get_spot_value(self, asset, dt, fields):
         """
         Retrieve the value at the given coordinates.
 
@@ -73,18 +60,16 @@ class BarReader(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def load_raw_arrays(self, date, window,assets,columns):
+    def load_raw_arrays(self, sessions, assets, columns):
         """
         Parameters
         ----------
-        columns : list of str
-           'open', 'high', 'low', 'close', or 'volume'
-        start_date: Timestamp
+        sessions: list --- element:str
            Beginning of the window range.
-        end_date: Timestamp
-           End of the window range.
         assets : list of int
            The asset identifiers in the window.
+        columns : list of str
+           'open', 'high', 'low', 'close', or 'volume'
 
         Returns
         -------
@@ -101,62 +86,61 @@ class AssetSessionReader(BarReader):
     Reader for raw pricing data from mysql.
     return different asset types : etf bond symbol
     """
-    def __init__(self,
-                 engine):
+    def __init__(self):
         self.engine = engine
-        self._calendar = calendar
 
     @property
     def data_frequency(self):
         return 'daily'
 
-    def get_stock_pct(self,dt):
+    def get_stock_pct(self, dt):
         tbl = self.metadata['equity_price']
-        sql = sa.select([tbl.c.sid,sa.cast(tbl.c.pct, sa.Numeric(10, 2)).label('pct')])\
+        sql = sa.select([tbl.c.sid, sa.cast(tbl.c.pct, sa.Numeric(10, 2)).label('pct')])\
             .where(tbl.c.trade_dt == dt)
         rp = self.engine.execute(sql)
-        data = pd.DataFrame(rp.fetchall(),columns = ['sid','pct'])
-        data.set_index('sid',inplace= True)
+        data = pd.DataFrame(rp.fetchall(), columns=['sid', 'pct'])
+        data.set_index('sid', inplace=True)
         return data
 
-    def get_spot_value(self,dt,asset):
+    def get_spot_value(self, dt, asset, fields):
         """
             retrieve asset data  on dt
         """
-        table_name = '%s_price'%asset.asset_type
+        table_name = '%s_price' % asset.asset_type
         tbl = self.metadata[table_name]
-        orm = sa.select([sa.cast(tbl.c.open, sa.Numeric(10, 2)).label('open'),
-                      sa.cast(tbl.c.close, sa.Numeric(12, 2)).label('close'),
-                      sa.cast(tbl.c.high, sa.Numeric(10, 2)).label('high'),
-                      sa.cast(tbl.c.low, sa.Numeric(10, 3)).label('low'),
-                      sa.cast(tbl.c.volume, sa.Numeric(15, 0)).label('volume'),
-                      sa.cast(tbl.c.amount, sa.Numeric(15, 2)).label('amount')])\
-            .where(sa.and_(tbl.c.trade_dt == dt,tbl.c.sid == asset.sid))
+        orm = sa.select([
+                    sa.cast(tbl.c.open, sa.Numeric(10, 2)).label('open'),
+                    sa.cast(tbl.c.close, sa.Numeric(12, 2)).label('close'),
+                    sa.cast(tbl.c.high, sa.Numeric(10, 2)).label('high'),
+                    sa.cast(tbl.c.low, sa.Numeric(10, 3)).label('low'),
+                    sa.cast(tbl.c.volume, sa.Numeric(15, 0)).label('volume'),
+                    sa.cast(tbl.c.amount, sa.Numeric(15, 2)).label('amount')])\
+            .where(sa.and_(tbl.c.trade_dt == dt, tbl.c.sid == asset.sid))
         rp = self.engine.execute(orm)
         arrays = [[r.trade_dt, r.code, r.open, r.close, r.high, r.low, r.volume] for r in
                   rp.fetchall()]
-        kline = pd.DataFrame(arrays,columns=['open', 'close', 'high',
-                                             'low', 'volume','amount'])
-        return kline
+        kline = pd.DataFrame(arrays, columns=['open', 'close', 'high',
+                                              'low', 'volume', 'amount'])
+        return kline.loc[:, fields]
 
-    def _retrieve_assets(self,table,sids,fields,start_date,end_date):
+    def _retrieve_assets(self, table, sids, fields, start_date, end_date):
         """
             retrieve specific categroy assets
         """
-        tbl = self.metadata['%s_price' & table]
+        tbl = self.metadata['%s_price' % table]
         orm = sa.select([tbl.c.trade_dt, tbl.c.sid,
-                    sa.cast(tbl.c.open,sa.Numeric(10, 2)).label('open'),
-                    sa.cast(tbl.c.high, sa.Numeric(10, 2)).label('high'),
-                    sa.cast(tbl.c.low, sa.Numeric(10, 3)).label('low'),
-                    sa.cast(tbl.c.close, sa.Numeric(12, 2)).label('close'),
-                    sa.cast(tbl.c.volume, sa.Numeric(15, 0)).label('volume'),
-                    sa.cast(tbl.c.amount, sa.Numeric(15, 2)).label('amount')]). \
+                         sa.cast(tbl.c.open,sa.Numeric(10, 2)).label('open'),
+                         sa.cast(tbl.c.high, sa.Numeric(10, 2)).label('high'),
+                         sa.cast(tbl.c.low, sa.Numeric(10, 3)).label('low'),
+                         sa.cast(tbl.c.close, sa.Numeric(12, 2)).label('close'),
+                         sa.cast(tbl.c.volume, sa.Numeric(15, 0)).label('volume'),
+                         sa.cast(tbl.c.amount, sa.Numeric(15, 2)).label('amount')]). \
             where(tbl.c.trade_dt.between(start_date, end_date))
         rp = self.engine.execute(orm)
         arrays = [[r.trade_dt, r.code, r.open, r.close, r.high, r.low, r.volume] for r in
                   rp.fetchall()]
-        raw = pd.DataFrame(arrays,columns=['trade_dt', 'code', 'open','high',
-                                           'low', 'close','volume','amount'])
+        raw = pd.DataFrame(arrays, columns=['trade_dt', 'code', 'open','high',
+                                           'low', 'close', 'volume', 'amount'])
         raw.set_index('code', inplace=True)
         # 基于code
         _slice = raw.loc[sids]
@@ -165,16 +149,17 @@ class AssetSessionReader(BarReader):
         unpack_kline = unpack_df_to_component_dict(kline)
         return unpack_kline
 
-    def load_raw_arrays(self,session_labels,assets,columns):
-        start_date ,end_date = session_labels
-        _get_bundles = partial(self._retrieve_assets(fields=columns,
-                                                     start_date=start_date,
-                                                     end_date=end_date)
+    def load_raw_arrays(self, session_labels, assets, columns):
+        start_date, end_date = session_labels
+        columns = set(columns + ['trade_dt'])
+        func = partial(self._retrieve_assets(fields=columns,
+                                             start_date=start_date,
+                                             end_date=end_date)
                               )
         sid_groups = groupby(lambda x: x.asset_type, assets)
         #获取数据
         batch_arrays = {}
-        for name,sids in sid_groups.items():
-            raw = _get_bundles(table=name,sids=sids)
+        for name, sids in sid_groups.items():
+            raw = func(table=name, sids=sids)
             batch_arrays.update(raw)
         return batch_arrays

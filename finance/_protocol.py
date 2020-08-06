@@ -6,7 +6,8 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 
-import pandas as pd,warnings
+import pandas as pd
+import warnings
 from gateWay.assets.assets import Asset
 
 
@@ -56,6 +57,9 @@ class Portfolio(object):
         Dict-like object containing information about currently-held positions.
 
     """
+    __slots__ = ['capital_base', 'start_cash', 'portfolio_value', '_cash_flow',
+                 'pnl', 'returns', 'utility', 'positions']
+
     def __init__(self,capital_base=0.0):
         self.capital_base = capital_base
         self.start_cash = capital_base - self.cash_flow
@@ -64,7 +68,6 @@ class Portfolio(object):
         self.pnl = 0.0
         self.returns = 0.0
         self.utility = 0.0
-        # 获取postiions protocol
         self.positions = None
 
     @property
@@ -124,6 +127,7 @@ class InnerPosition:
     :class:`zipline.finance.position.Position` and a
     :class:`zipline.protocol.Position` at the same time without a cycle.
     """
+    __slots__ = ['asset', 'amount', 'cost_basis', 'last_sync_price', 'last_sync_date']
 
     def __init__(self,
                  asset,
@@ -149,7 +153,6 @@ class InnerPosition:
                     self.last_sync_date,
                 )
         )
-
 
 
 class MutableView(object):
@@ -182,7 +185,7 @@ class Position(object):
     """
     A protocol position which is not mutated ,but inner can be changed
     """
-    __slots__ = ('_underlying_position')
+    __slots__ = ['_underlying_position']
 
     def __init__(self,inner):
         self._underlying_position = MutableView(inner)

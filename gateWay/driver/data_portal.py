@@ -5,13 +5,13 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-
-import pandas as pd,json
-from .tools import  _parse_url
+import pandas as pd, json
+from .tools import _parse_url
 from .history_loader import (
     HistoryDailyLoader,
     HistoryMinuteLoader
 )
+# from calendar.trading_calendar import calendar
 
 
 class DataPortal(object):
@@ -47,17 +47,11 @@ class DataPortal(object):
 
     def __init__(self,
                  asset_finder,
-                 trading_calendar,
-                 first_trading_day,
                  _session_reader,
                  _minute_reader,
-                 adjustment_reader,
-                 ):
+                 adjustment_reader):
+
         self.asset_finder = asset_finder
-
-        self.trading_calendar = trading_calendar
-
-        self._first_trading_day = first_trading_day
 
         self._adjustment_reader = adjustment_reader
 
@@ -69,32 +63,16 @@ class DataPortal(object):
         _history_daily_loader = HistoryDailyLoader(
             _minute_reader,
             self._adjustment_reader,
-            trading_calendar,
         )
         _history_minute_loader = HistoryMinuteLoader(
             _session_reader,
             self._adjustment_reader,
-            trading_calendar,
 
         )
         self._history_loader = {
-            'daily':_history_daily_loader,
-            'minute':_history_minute_loader,
+            'daily': _history_daily_loader,
+            'minute': _history_minute_loader,
         }
-
-        # Get the first trading minute
-        self._first_trading_minute, _ = (
-            self.trading_calendar.open_and_close_for_session(
-                [self._first_trading_day]
-            )
-            if self._first_trading_day is not None else (None, None)
-        )
-
-        # Store the locs of the first day and first minute
-        self._first_trading_day_loc = (
-            self.trading_calendar.all_sessions.get_loc(self._first_trading_day)
-            if self._first_trading_day is not None else None
-        )
         self._extra_source = None
 
     @property
@@ -112,10 +90,10 @@ class DataPortal(object):
         """
         # return a list of assets for the current date, as defined by the
         # fetcher source
-        found,missing = self.asset_finder.retrieve_asset(sids)
-        return found,missing
+        found, missing = self.asset_finder.retrieve_asset(sids)
+        return found, missing
 
-    def get_all_assets(self,asset_type = None):
+    def get_all_assets(self, asset_type=None):
         all_assets = self.asset_finder.retrieve_all(asset_type)
         return all_assets
 
@@ -138,7 +116,7 @@ class DataPortal(object):
         -------
             equity divdends or cash divdends
         """
-        divdends = self._adjustment_reader.load_divdend_for_sid(sid,trading_day)
+        divdends = self._adjustment_reader.load_divdend_for_sid(sid, trading_day)
         return divdends
 
     def get_rights_for_sid(self, sid, trading_day):
@@ -158,7 +136,7 @@ class DataPortal(object):
         -------
             equity rights
         """
-        rights = self._adjustment_reader.load_right_for_sid(sid,trading_day)
+        rights = self._adjustment_reader.load_right_for_sid(sid, trading_day)
         return rights
 
     def get_spot_value(self,dts,asset,frequency):
@@ -170,31 +148,31 @@ class DataPortal(object):
     #     pre_value = self.get_spot_value(pre_dts,asset,frequency)
     #     return pre_value
 
-    def _get_equity_pct(self,dts,assets):
+    def _get_equity_pct(self, dts, assets):
         df = self._pricing_reader['daily'].get_stock_pct(dts)
         sids = [asset.sid for asset in assets] if assets else None
-        pct = df.loc[sids,:] if sids else df
+        pct = df.loc[sids, :] if sids else df
         return pct
 
-    def get_open_pct(self,dts,assets):
-        pct = self._get_equity_pct(dts,assets)
-        kline = self.get_window_data(assets,dts,1,'close','daily')
+    def get_open_pct(self, dts, assets):
+        pct = self._get_equity_pct(dts, assets)
+        kline = self.get_window_data(assets, dts, 1, 'close','daily')
         preclose = {{sid: bar[sid]['close'][-1]/(1+pct[sid])} for sid, bar in kline.items()}
         open_pct = {{sid: kline[sid]['open'][-1] / pre} for sid, pre in preclose.items()}
         return open_pct
 
-    def _get_history_sliding_window(self,assets,
+    def _get_history_sliding_window(self,
+                                    assets,
                                     end_dt,
                                     fields,
                                     bar_count,
-                                    frequency
-                                   ):
+                                    frequency):
         """
         Internal method that returns a dataframe containing history bars
         of minute frequency for the given sids.
         """
         history = self._history_loader[frequency]
-        history_arrays = history.history(assets,fields,end_dt,bar_count)
+        history_arrays = history.history(assets, fields, end_dt, bar_count)
         return history_arrays
 
     def get_history_window(self,
@@ -282,8 +260,8 @@ class DataPortal(object):
         nan.
         """
         _reader = self._pricing_reader[data_frequency]
-        sessions = self.trading_calendar.session_in_window(dt,days_in_window,False)
-        window_array = _reader.load_raw_arrays(sessions,assets,field)
+        sessions = self.trading_calendar.session_in_window(dt, days_in_window, False)
+        window_array = _reader.load_raw_arrays(sessions, assets, field)
         return window_array
 
     def get_resize_data(self,dt,window,freq,assets,field):
@@ -299,7 +277,7 @@ class DataPortal(object):
                                                                     )
         return resample_data
 
-    def get_specific_ticker_data(self,dt,window,ticker,assets,field):
+    def get_specific_ticker_data(self, dt, window, ticker, assets, field):
         """
             eg --- 9:30 or 11:20
         """
@@ -325,11 +303,11 @@ class DataPortal(object):
         obj = _parse_url(req_url, bs=False)
         d = json.loads(obj)
         raw_array = [item.split(',') for item in d['data']['trends']]
-        minutes = pd.DataFrame(raw_array,columns=['ticker', 'open', 'close', 'high',
-                                                  'low', 'volume', 'turnover', 'avg'])
+        minutes = pd.DataFrame(raw_array, columns=['ticker', 'open', 'close', 'high',
+                                                   'low', 'volume', 'turnover', 'avg'])
         return minutes
 
-    def handle_extra_source(self,source_df):
+    def handle_extra_source(self, source_df):
         """
             Internal method that determines if this asset/field combination
             represents a fetcher value or a regular OHLCVP lookup.

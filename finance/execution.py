@@ -5,7 +5,7 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-from abc import ABC , abstractmethod
+from abc import ABC, abstractmethod
 import numpy as np
 
 
@@ -14,7 +14,7 @@ class ExecutionStyle(ABC):
     """
 
     @abstractmethod
-    def get_limit_price_ratio(self,_is_buy):
+    def get_limit_price_ratio(self, _is_buy):
         """
         Get the limit price ratio for this order.
         Returns either None or a numerical value >= 0.
@@ -22,7 +22,7 @@ class ExecutionStyle(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_stop_price_ratio(self,_is_buy):
+    def get_stop_price_ratio(self, _is_buy):
         """
         Get the stop price for this order.
         Returns either None or a numerical value >= 0.
@@ -40,10 +40,10 @@ class MarketOrder(ExecutionStyle):
     def __init__(self, exchange=None):
         self._exchange = exchange
 
-    def get_limit_price_ratio(self,_is_buy):
+    def get_limit_price_ratio(self, _is_buy):
         return -np.inf
 
-    def get_stop_price_ratio(self,_is_buy):
+    def get_stop_price_ratio(self, _is_buy):
         return np.inf
 
 
@@ -61,10 +61,10 @@ class LimitOrder(ExecutionStyle):
     def __init__(self, limit_price):
         self.limit_price = limit_price
 
-    def get_limit_price_ratio(self,_is_buy):
+    def get_limit_price_ratio(self, _is_buy):
         return self.limit_price
 
-    def get_stop_price_ratio(self,_is_buy):
+    def get_stop_price_ratio(self, _is_buy):
         return -np.inf
 
 
@@ -83,7 +83,7 @@ class StopOrder(ExecutionStyle):
     def __init__(self, stop_price):
         self.stop_price = stop_price
 
-    def get_limit_price_ratio(self,_is_buy):
+    def get_limit_price_ratio(self, _is_buy):
         return np.inf
 
     def get_stop_price_ratio(self, _is_buy):
