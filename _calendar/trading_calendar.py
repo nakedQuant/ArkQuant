@@ -11,7 +11,7 @@ from datetime import datetime
 from dateutil import rrule
 from toolz import partition_all
 from gateWay.driver.db_schema import engine
-from ._config import autumn,spring ,Holiday
+from ._config import autumn, spring, Holiday
 
 
 class TradingCalendar (object):
@@ -34,22 +34,22 @@ class TradingCalendar (object):
 
         new_year = rrule.rrule(
             rrule.YEARLY,
-            byyearday= 1,
-            cache = True,
-            dstart = start,
-            until = end
+            byyearday=1,
+            cache=True,
+            dstart=start,
+            until=end
         )
-        non_trading_rules.update({'new_year':new_year})
+        non_trading_rules.update({'new_year': new_year})
 
         april_4 = rrule.rrule(
             rrule.YEARLY,
             bymonth= 4,
-            bymonthday= 4,
+            bymonthday=4,
             cache=True,
             dtstart=start,
             until=end
         )
-        non_trading_rules.update({'tomb':april_4})
+        non_trading_rules.update({'tomb': april_4})
 
         may_day = rrule.rrule(
             rrule.YEARLY,
@@ -59,23 +59,22 @@ class TradingCalendar (object):
             dtstart=start,
             until=end
         )
-        non_trading_rules.update({'labour':may_day})
+        non_trading_rules.update({'labour': may_day})
 
         national_day = rrule.rrule(
             rrule.YEARLY,
             bymonth=10,
-            bymonthday= 1,
+            bymonthday=1,
             cache=True,
             dtstart=start,
             until=end
         )
-
-        non_trading_rules.update({'national':national_day})
+        non_trading_rules.update({'national': national_day})
         return non_trading_rules
 
-    def _roll_forward(self, dt,window):
+    def _roll_forward(self, dt, window):
         """
-        Given a date, align it to the calendar of the pipeline's domain.
+        Given a date, align it to the _calendar of the pipeline's domain.
         dt = pd.Timestamp(dt, tz='UTC')
 
         Parameters
@@ -90,7 +89,7 @@ class TradingCalendar (object):
             return dt
         pos = self.all_sessions.searchsorted(dt)
         try:
-            loc = pos if self.all_sessions[pos] == dt else pos -1
+            loc = pos if self.all_sessions[pos] == dt else pos - 1
             forward = self.all_sessions[loc + 1 - window]
             return self.all_sessions[forward]
         except IndexError:
@@ -116,12 +115,12 @@ class TradingCalendar (object):
         """
         # assert window != 0, 'sessions means window is not equal with zero'
         if window == 0:
-            return [end_date,end_date]
-        start_date = self._roll_forward(end_date,window)
+            return [end_date, end_date]
+        start_date = self._roll_forward(end_date, window)
         session_labels = self.session_in_range(start_date, end_date, include)
         return session_labels
 
-    def session_in_range(self,start_date,end_date,include):
+    def session_in_range(self, start_date, end_date, include):
         """
         :param start_date: '%Y-%m-%d'
         :param end_date: '%Y-%m-%d'
@@ -133,15 +132,15 @@ class TradingCalendar (object):
                              (end_date.strftime("%Y-%m-%d"),
                               start_date.strftime("%Y-%m-%d")))
         idx_s = np.searchsorted(self.all_sessions, start_date)
-        idx_e = np.searchsorted(self.all_sessions,end_date)
-        sessions = np.array(self.all_sessions[idx_s , idx_e +1])
+        idx_e = np.searchsorted(self.all_sessions, end_date)
+        sessions = np.array(self.all_sessions[idx_s, idx_e +1])
         flag = sessions <= end_date if include else sessions < end_date
         return sessions[flag]
 
     @staticmethod
     def sessions_in_minutes(dts):
-        minutes_session = map(lambda x: list(range(pd.Timestamp(x) + 9*60*60 + 30*60,
-                                                   pd.Timestamp(x) + 15*60*60 + 1)), dts)
+        minutes_session = map(lambda x: list(range(pd.Timestamp(x).timestamp() + 9 * 60 * 60 + 30 * 60,
+                                                   pd.Timestamp(x).timestamp() + 15*60*60 + 1)), dts)
         return minutes_session
 
     def _compute_date_range_slice(self, start_date, end_date):
@@ -182,7 +181,7 @@ class TradingCalendar (object):
         o_c = zip(opens,closes)
         return o_c
 
-    def compute_range_chunks(self,start_date, end_date, chunksize):
+    def compute_range_chunks(self, start_date, end_date, chunksize):
         """Compute the start and end dates to run a pipeline for.
 
         Parameters
@@ -201,13 +200,13 @@ class TradingCalendar (object):
         )
         )
 
-    def get_trading_day_near_holiday(self,holiday_name,forward = True):
+    def get_trading_day_near_holiday(self, holiday_name, forward=True):
         if holiday_name not in Holiday:
             raise ValueError('unidentified holiday name')
         holiday_days = self._fixed_holiday[holiday_name]
         idx_list = [ np.searchsorted(self.all_sessions, t)  for t in holiday_days]
         if forward:
-            trading_list = self.all_sessions[list(map(lambda x : x -1,idx_list))]
+            trading_list = self.all_sessions[list(map(lambda x: x -1, idx_list))]
         else:
             trading_list = self.all_sessions[idx_list]
         return trading_list
@@ -243,7 +242,7 @@ class TradingCalendar (object):
                 2016年1月7日，早盘9点42分，沪深300指数跌幅扩大至5%，再度触发熔断线，两市将在9点57分恢复交易。开盘后，仅3分钟（10:00），
                 沪深300指数再度快速探底，最大跌幅7.21%，二度熔断触及阈值。这是2016年以来的第二次提前收盘，同时也创造了休市最快记录
         """
-        early_close_days = self.session_in_range('2016-01-01','2016-01-07')
+        early_close_days = self.session_in_range('2016-01-01', '2016-01-07')
         return early_close_days
 
 

@@ -21,7 +21,7 @@ def csvdir_equities(tframes=None, csvdir=None):
     Generate an ingest function for custom data bundle
     This function can be used in ~/.zipline/extension.py
     to register bundle with custom parameters, e.g. with
-    a custom trading calendar.
+    a custom trading _calendar.
 
     Parameters
     ----------
@@ -153,8 +153,8 @@ def csvdir_bundle(environ,
                      show_progress=show_progress)
 
         # Hardcode the exchange to "CSVDIR" for all assets and (elsewhere)
-        # register "CSVDIR" to resolve to the NYSE calendar, because these
-        # are all equities and thus can use the NYSE calendar.
+        # register "CSVDIR" to resolve to the NYSE _calendar, because these
+        # are all equities and thus can use the NYSE _calendar.
         metadata['exchange'] = "CSVDIR"
 
         asset_db_writer.write(equities=metadata)

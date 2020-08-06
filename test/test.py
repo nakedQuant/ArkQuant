@@ -3406,14 +3406,14 @@
 #         end_session
 #
 # @staticmethod
-# def default_pipeline_domain(calendar):
+# def default_pipeline_domain(_calendar):
 #     """
-#     Get a default Pipeline domain for algorithms running on ``calendar``.
+#     Get a default Pipeline domain for algorithms running on ``_calendar``.
 #
 #     This will be used to infer a domain for pipelines that only use generic
 #     datasets when running in the context of a TradingAlgorithm.
 #     """
-#     return _DEFAULT_DOMAINS.get(calendar.name, domain.GENERIC)
+#     return _DEFAULT_DOMAINS.get(_calendar.name, domain.GENERIC)
 #
 # def compute_eager_pipelines(self):
 #     """
@@ -4080,9 +4080,9 @@ import array,binascii,struct , numpy as np,sqlalchemy as sa
 #                 )
 #             )
 #         else:
-#             raise ValueError("Query start %s not in calendar" % start_date)
+#             raise ValueError("Query start %s not in _calendar" % start_date)
 #
-#     # Make sure that shifting doesn't push us out of the calendar.
+#     # Make sure that shifting doesn't push us out of the _calendar.
 #     if start < shift:
 #         raise NoFurtherDataError(
 #             msg=(
@@ -4106,7 +4106,7 @@ import array,binascii,struct , numpy as np,sqlalchemy as sa
 #                 )
 #             )
 #         else:
-#             raise ValueError("Query end %s not in calendar" % end_date)
+#             raise ValueError("Query end %s not in _calendar" % end_date)
 #     return dates[start - shift], dates[end - shift]
 
 # class HsymboleSessionReader(BarReader):
@@ -4218,16 +4218,16 @@ def _parse_url(url, encoding='gbk', bs=True):
 # print('supspend',text['data'])
 
 #
-bond_asset_url = 'http://dcfm.eastmoney.com/em_mutisvcexpandinterface/api/js/get?type=KZZ_LB2.0' \
-                 '&token=70f12f2f4f091e459a279469fe49eca5&cmd=&sr=-1&p=1&ps=50&js={"pages":(tp),"data":(x)}'
-text = _parse_url(bond_asset_url, encoding= 'utf-8',bs=False)
-text = json.loads(text)
-sids = text['data']
-print(sids)
+# bond_asset_url = 'http://dcfm.eastmoney.com/em_mutisvcexpandinterface/api/js/get?type=KZZ_LB2.0' \
+#                  '&token=70f12f2f4f091e459a279469fe49eca5&cmd=&sr=-1&p=1&ps=50&js={"pages":(tp),"data":(x)}'
+# text = _parse_url(bond_asset_url, encoding= 'utf-8',bs=False)
+# text = json.loads(text)
+# sids = text['data']
+# print(sids)
 #
 # # @preprocess(engine=coerce_string_to_eng(require_exists=False))
 #
-# #公司基本情况
+#公司基本情况
 basics_url = 'https://vip.stock.finance.sina.com.cn/corp/go.php/vCI_CorpInfo/stockid/%s.phtml'
 code = '002570'
 url = basics_url % code
@@ -4269,12 +4269,12 @@ df['基金简称'] = df['基金简称'].apply(lambda x: x[:-5])
 print(df.head())
 print(df['基金代码'].values)
 
-# # equity_url = 'http://70.push2.eastmoney.com/api/qt/clist/get?pn=1&pz=10000&po=1&np=1&fltt=2&invt=2&' \
-#              'fid=f3&fs=m:0+t:6,m:0+t:13,m:0+t:80,m:1+t:2,m:1+t:23&fields=f12'
-# # 获取存量股票包括退市
-# raw = json.loads(_parse_url(equity_url, bs=False))
-# equities = [item['f12'] for item in raw['data']['diff']]
-# print('equities',equities)
+equity_url = 'http://70.push2.eastmoney.com/api/qt/clist/get?pn=1&pz=10000&po=1&np=1&fltt=2&invt=2&' \
+             'fid=f3&fs=m:0+t:6,m:0+t:13,m:0+t:80,m:1+t:2,m:1+t:23&fields=f12'
+# 获取存量股票包括退市
+raw = json.loads(_parse_url(equity_url, bs=False))
+equities = [item['f12'] for item in raw['data']['diff']]
+print('equities', equities)
 
 # def _generate_output_dataframe(self,data, default_cols):
 #     """
@@ -4846,11 +4846,11 @@ from six.moves.urllib_error import HTTPError
 #         market_opens = trading_o_and_c['market_open']
 #         minutely_emission = self.sim_params.emission_rate == "minute"
 #
-#         # The calendar's execution times are the minutes over which we
+#         # The _calendar's execution times are the minutes over which we
 #         # actually want to run the clock. Typically the execution times
 #         # simply adhere to the market open and close times. In the case of
-#         # the futures calendar, for example, we only want to simulate over
-#         # a subset of the full 24 hour calendar, so the execution times
+#         # the futures _calendar, for example, we only want to simulate over
+#         # a subset of the full 24 hour _calendar, so the execution times
 #         # dictate a market open time of 6:31am US/Eastern and a close of
 #         # 5:00pm US/Eastern.
 #         execution_opens = \
@@ -5010,7 +5010,7 @@ from six.moves.urllib_error import HTTPError
 #         -------
 #         returns : pd.Series or float
 #             The returns in the given period. The index will be the trading
-#             calendar in the range [start, end]. If just ``start`` is provided,
+#             _calendar in the range [start, end]. If just ``start`` is provided,
 #             return the scalar value on that day.
 #         """
 #         if end is None:
@@ -6743,10 +6743,10 @@ from six.moves.urllib_error import HTTPError
 #     return default_assets
 
 # @staticmethod
-# def _execution_open_and_close(calendar, session):
-#     open_, close = calendar.open_and_close_for_session(session)
-#     execution_open = calendar.execution_time_from_open(open_)
-#     execution_close = calendar.execution_time_from_close(close)
+# def _execution_open_and_close(_calendar, session):
+#     open_, close = _calendar.open_and_close_for_session(session)
+#     execution_open = _calendar.execution_time_from_open(open_)
+#     execution_close = _calendar.execution_time_from_close(close)
     # cal = self._trading_calendar
     # self._market_open, self._market_close = self._execution_open_and_close(
     #     cal,
@@ -8669,7 +8669,7 @@ from itertools import product
 
 #toolz.itertoolz.groupby(key, seq)
 from dateutil.relativedelta import relativedelta
-import datetime , pandas as pd
+# import datetime , pandas as pd
 #
 # start_session = datetime.datetime.strptime('2010-01-31','%Y-%m-%d')
 # end_session = datetime.datetime.strptime('2012-01-31','%Y-%m-%d')
@@ -8826,24 +8826,24 @@ import datetime , pandas as pd
 
 # -*- coding:utf-8 -*-
 
-import unittest
-
-class NamesTestCase(unittest.TestCase):
-    """
-        所有以test_开头的方法都会自动运行
-        assertEqual,assertNotEqual,assertTrue,assertFalse,assertIn,assertNotIn
-        setUp -- called before test method ; setUpClass --A  class method called before tests in an individual class are run
-    """
-    @classmethod
-    def setUpClass(cls) -> None:
-        pass
-
-    def test_first_last_name(self):
-        pass
-
-    @classmethod
-    def tearDownClass(cls) -> None:
-        pass
+# import unittest
+#
+# class NamesTestCase(unittest.TestCase):
+#     """
+#         所有以test_开头的方法都会自动运行
+#         assertEqual,assertNotEqual,assertTrue,assertFalse,assertIn,assertNotIn
+#         setUp -- called before test method ; setUpClass --A  class method called before tests in an individual class are run
+#     """
+#     @classmethod
+#     def setUpClass(cls) -> None:
+#         pass
+#
+#     def test_first_last_name(self):
+#         pass
+#
+#     @classmethod
+#     def tearDownClass(cls) -> None:
+#         pass
 
 
 # @property
@@ -8931,7 +8931,7 @@ class NamesTestCase(unittest.TestCase):
 #     dts : iterable of datetime64-like
 #         The datetimes for which to fetch data.
 #         Makes an assumption that all dts are present and contiguous,
-#         in the calendar.
+#         in the _calendar.
 #     field : str or list
 #         The OHLCV field for which to retrieve data.
 #     window : int
@@ -9019,7 +9019,7 @@ class NamesTestCase(unittest.TestCase):
 
 # Get the first trading minute
 # self._first_trading_minute, _ = (
-#     calendar.open_and_close_for_session(
+#     _calendar.open_and_close_for_session(
 #         [self._first_trading_day]
 #     )
 #     if self._first_trading_day is not None else (None, None)
@@ -9027,6 +9027,45 @@ class NamesTestCase(unittest.TestCase):
 #
 # # Store the locs of the first day and first minute
 # self._first_trading_day_loc = (
-#     calendar.all_sessions.get_loc(self._first_trading_day)
+#     _calendar.all_sessions.get_loc(self._first_trading_day)
 #     if self._first_trading_day is not None else None
 # )
+# -*- coding : utf-8 -*-
+# Copyright 2015 Quantopian, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# index=True,
+# index_label=first(tbl.primary_key.columns).name,
+
+# def _update_cache_for_asset(self):
+#     self._request_cache = {}
+#     equities = self._fetch_equities_from_dfcf()
+#     self._request_cache['equity'] = set(equities) - set(self._assets_cache['equity'])
+#     self._assets_cache['equity'] = equities
+#
+#     convertibles = self._fetch_convertibles_from_dfcf()
+#     self._request_cache['convertible'] = set(convertibles) - set(self._assets_cache['convertible'])
+#     self._assets_cache['convertible'] = convertibles
+#
+#     funds = self._fetch_funds_from_dfcf()
+#     self._request_cache['fund'] = set(funds['基金代码'].values) - set(self._assets_cache['fund'])
+#     self._assets_cache['fund'] = funds
+#
+#     duals = self._fetch_duals_from_dfcf()
+#     self._request_cache['dual'] = set(duals) - set(self._assets_cache['dual'])
+#     self._assets_cache['dual'] = duals
+
+# if self.symbol:
+#     return '%s(%d [%s])' % (type(self).__name__, self.sid, self.symbol)
+# else:
+#     return '%s(%d)' % (type(self).__name__, self.sid)

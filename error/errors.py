@@ -707,7 +707,7 @@ class UnsupportedDataType(ZiplineError):
 
 class NoFurtherDataError(ZiplineError):
     """
-    Raised by calendar operations that would ask for dates beyond the extent of
+    Raised by _calendar operations that would ask for dates beyond the extent of
     our known data.
     """
     # This accepts an arbitrary message string because it's used in more places
@@ -781,7 +781,7 @@ class NonExistentAssetInTimeFrame(ZiplineError):
 
 class InvalidCalendarName(ZiplineError):
     """
-    Raised when a calendar with an invalid name is requested.
+    Raised when a _calendar with an invalid name is requested.
     """
     msg = (
         "The requested TradingCalendar, {calendar_name}, does not exist."
@@ -790,24 +790,24 @@ class InvalidCalendarName(ZiplineError):
 
 class CalendarNameCollision(ZiplineError):
     """
-    Raised when the static calendar registry already has a calendar with a
+    Raised when the static _calendar registry already has a _calendar with a
     given name.
     """
     msg = (
-        "A calendar with the name {calendar_name} is already registered."
+        "A _calendar with the name {calendar_name} is already registered."
     )
 
 
 class CyclicCalendarAlias(ZiplineError):
     """
-    Raised when calendar aliases form a cycle.
+    Raised when _calendar aliases form a cycle.
     """
-    msg = "Cycle in calendar aliases: [{cycle}]"
+    msg = "Cycle in _calendar aliases: [{cycle}]"
 
 
 class ScheduleFunctionWithoutCalendar(ZiplineError):
     """
-    Raised when schedule_function is called but there is not a calendar to be
+    Raised when schedule_function is called but there is not a _calendar to be
     used in the construction of an event rule.
     """
     # TODO update message when new TradingSchedules are built
@@ -819,10 +819,10 @@ class ScheduleFunctionWithoutCalendar(ZiplineError):
 
 class ScheduleFunctionInvalidCalendar(ZiplineError):
     """
-    Raised when schedule_function is called with an invalid calendar argument.
+    Raised when schedule_function is called with an invalid _calendar argument.
     """
     msg = (
-        "Invalid calendar '{given_calendar}' passed to schedule_function. "
+        "Invalid _calendar '{given_calendar}' passed to schedule_function. "
         "Allowed options are {allowed_calendars}."
     )
 

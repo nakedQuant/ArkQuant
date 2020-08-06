@@ -29,7 +29,7 @@ class SimulationParameters(object):
         assert type(end_session) == pd.Timestamp
 
         assert trading_calendar is not None, \
-            "Must pass in trading calendar!"
+            "Must pass in trading _calendar!"
         assert start_session <= end_session, \
             "Period start falls after period end."
         assert start_session <= trading_calendar.last_trading_session, \
@@ -54,14 +54,14 @@ class SimulationParameters(object):
         self._trading_calendar = trading_calendar
 
         if not trading_calendar.is_session(self._start_session):
-            # if the start date is not a valid session in this calendar,
+            # if the start date is not a valid session in this _calendar,
             # push it forward to the first valid session
             self._start_session = trading_calendar.minute_to_session_label(
                 self._start_session
             )
 
         if not trading_calendar.is_session(self._end_session):
-            # if the end date is not a valid session in this calendar,
+            # if the end date is not a valid session in this _calendar,
             # pull it backward to the last valid session before the given
             # end date.
             self._end_session = trading_calendar.minute_to_session_label(
@@ -710,7 +710,7 @@ def run_algorithm(start,
         The datetime to lookup the bundle data for. This defaults to the
         current time.
     trading_calendar : TradingCalendar, optional
-        The trading calendar to use for your backtest.
+        The trading _calendar to use for your backtest.
     metrics_set : iterable[Metric] or str, optional
         The set of metrics to compute in the simulation. If a string is passed,
         resolve the set with :func:`zipline.finance.metrics.load`.
@@ -1597,7 +1597,7 @@ class TradingAlgorithm(object):
         half_days : bool, optional
             Should this rule fire on half days? Default is True.
         calendar : Sentinel, optional
-            Calendar used to compute rules that depend on the trading calendar.
+            Calendar used to compute rules that depend on the trading _calendar.
 
         See Also
         --------
@@ -1620,7 +1620,7 @@ class TradingAlgorithm(object):
                      # If we are in daily mode the time_rule is ignored.
                      time_rules.every_minute())
 
-        # Check the type of the algorithm's schedule before pulling calendar
+        # Check the type of the algorithm's schedule before pulling _calendar
         # Note that the ExchangeTradingSchedule is currently the only
         # TradingSchedule class, so this is unlikely to be hit
         if calendar is None:
@@ -1655,7 +1655,7 @@ class TradingAlgorithm(object):
             inner_rule = date_rule & time_rule & NotHalfDay()
 
         opd = OncePerDay(rule=inner_rule)
-        # This is where a scheduled function's rule is associated with a calendar.
+        # This is where a scheduled function's rule is associated with a _calendar.
         opd.cal = cal
         return opd
 

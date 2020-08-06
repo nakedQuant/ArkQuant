@@ -56,10 +56,8 @@ class TsClient:
 
     def _get_ts_status(self, status):
         """status : D -- delist ; P --- suspend """
-        abnormal = self.pro.stock_basic(exchange='', list_status=status, fields='symbol,name,delist')
-        abnormal.columns = ['code', 'name', 'delist']
-        abnormal.loc[:, 'status'] = status
-        abnormal.fillna('', inplace=True)
+        abnormal = self.pro.stock_basic(exchange='', list_status=status, fields='symbol,name,list_date')
+        abnormal.loc[:,'status'] = status
         return abnormal
 
     def to_ts_stats(self):
@@ -70,5 +68,10 @@ class TsClient:
         delist = self._get_ts_status('D')
         suspend = self._get_ts_status('P')
         status = delist.append(suspend)
-        status.index = range(len(status))
+        status.set_index('symbol', inplace=True)
         return status
+
+
+tsclient = TsClient()
+
+__all__ = [tsclient]

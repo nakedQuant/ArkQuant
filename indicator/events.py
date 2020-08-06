@@ -50,7 +50,7 @@ class BusinessDaysUntilNextEvent(Factor):
     Returns the number of **business days** (not trading days!) until
     the next known event date for each asset.
 
-    This doesn't use trading days because the trading calendar includes
+    This doesn't use trading days because the trading _calendar includes
     information that may not have been available to the algorithm at the time
     when `compute` is called.
 

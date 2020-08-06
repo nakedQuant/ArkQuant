@@ -273,7 +273,7 @@ class TradingAlgorithm(object):
         self.benchmark_returns = benchmark_returns
 
         # XXX: This is also a mess. We should remove all of this and only allow
-        #      one way to pass a calendar.
+        #      one way to pass a _calendar.
         #
         # We have a required sim_params argument as well as an optional
         # trading_calendar argument, but sim_params has a trading_calendar
@@ -496,11 +496,11 @@ class TradingAlgorithm(object):
             market_opens = trading_o_and_c['market_open']
             minutely_emission = self.sim_params.emission_rate == "minute"
 
-            # The calendar's execution times are the minutes over which we
+            # The _calendar's execution times are the minutes over which we
             # actually want to run the clock. Typically the execution times
             # simply adhere to the market open and close times. In the case of
-            # the futures calendar, for example, we only want to simulate over
-            # a subset of the full 24 hour calendar, so the execution times
+            # the futures _calendar, for example, we only want to simulate over
+            # a subset of the full 24 hour _calendar, so the execution times
             # dictate a market open time of 6:31am US/Eastern and a close of
             # 5:00pm US/Eastern.
             execution_opens = \
@@ -915,7 +915,7 @@ class TradingAlgorithm(object):
         half_days : bool, optional
             Should this rule fire on half days? Default is True.
         calendar : Sentinel, optional
-            Calendar used to compute rules that depend on the trading calendar.
+            Calendar used to compute rules that depend on the trading _calendar.
 
         See Also
         --------
@@ -938,7 +938,7 @@ class TradingAlgorithm(object):
                      # If we are in daily mode the time_rule is ignored.
                      time_rules.every_minute())
 
-        # Check the type of the algorithm's schedule before pulling calendar
+        # Check the type of the algorithm's schedule before pulling _calendar
         # Note that the ExchangeTradingSchedule is currently the only
         # TradingSchedule class, so this is unlikely to be hit
         if calendar is None:
@@ -2382,7 +2382,7 @@ class TradingAlgorithm(object):
     @staticmethod
     def default_pipeline_domain(calendar):
         """
-        Get a default Pipeline domain for algorithms running on ``calendar``.
+        Get a default Pipeline domain for algorithms running on ``_calendar``.
 
         This will be used to infer a domain for pipelines that only use generic
         datasets when running in the context of a TradingAlgorithm.
@@ -2415,9 +2415,9 @@ class TradingAlgorithm(object):
         ]
 
 
-# Map from calendar name to default domain for that calendar.
+# Map from _calendar name to default domain for that _calendar.
 _DEFAULT_DOMAINS = {d.calendar_name: d for d in domain.BUILT_IN_DOMAINS}
-# Map from calendar name to default country code for that calendar.
+# Map from _calendar name to default country code for that _calendar.
 _DEFAULT_FETCH_CSV_COUNTRY_CODES = {
     d.calendar_name: d.country_code for d in domain.BUILT_IN_DOMAINS
 }

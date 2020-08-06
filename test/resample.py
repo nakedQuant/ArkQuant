@@ -679,26 +679,26 @@ class ReindexBarReader(with_metaclass(ABCMeta)):
     Used to align the reading assets which trade on different calendars.
 
     Currently only supports a ``trading_calendar`` which is a superset of the
-    ``reader``'s calendar.
+    ``reader``'s _calendar.
 
     Parameters
     ----------
 
     - trading_calendar : zipline.utils.trading_calendar.TradingCalendar
-       The calendar to use when indexing results from the reader.
+       The _calendar to use when indexing results from the reader.
     - reader : MinuteBarReader|SessionBarReader
-       The reader which has a calendar that is a subset of the desired
+       The reader which has a _calendar that is a subset of the desired
        ``trading_calendar``.
     - first_trading_session : pd.Timestamp
        The first trading session the reader should provide. Must be specified,
        since the ``reader``'s first session may not exactly align with the
-       desired calendar. Specifically, in the case where the first session
-       on the target calendar is a holiday on the ``reader``'s calendar.
+       desired _calendar. Specifically, in the case where the first session
+       on the target _calendar is a holiday on the ``reader``'s _calendar.
     - last_trading_session : pd.Timestamp
        The last trading session the reader should provide. Must be specified,
        since the ``reader``'s last session may not exactly align with the
-       desired calendar. Specifically, in the case where the last session
-       on the target calendar is a holiday on the ``reader``'s calendar.
+       desired _calendar. Specifically, in the case where the last session
+       on the target _calendar is a holiday on the ``reader``'s _calendar.
     """
 
     def __init__(self,

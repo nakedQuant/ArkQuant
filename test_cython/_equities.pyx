@@ -70,12 +70,12 @@ cpdef _compute_row_slices(dict asset_starts_absolute,
         Dictionary containing the index of the last row of each asset in the
         bcolz file from which we will query.
     asset_starts_calendar : dict
-        Dictionary containing the index of in our calendar corresponding to the
+        Dictionary containing the index of in our _calendar corresponding to the
         start date of each asset
     query_start : intp
-        Start index in our calendar of the dates for which we're querying.
+        Start index in our _calendar of the dates for which we're querying.
     query_end : intp
-        End index in our calendar of the dates for which we're querying.
+        End index in our _calendar of the dates for which we're querying.
     requested_assets : pandas.Int64Index
         The assets for which we want to load data.
 

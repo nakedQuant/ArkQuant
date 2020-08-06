@@ -226,8 +226,8 @@ def _make_bundle_core():
                   The daily bar writer to write into.
               adjustment_writer : SQLiteAdjustmentWriter
                   The adjustment db writer to write into.
-              calendar : trading_calendars.TradingCalendar
-                  The trading calendar to ingest for.
+              _calendar : trading_calendars.TradingCalendar
+                  The trading _calendar to ingest for.
               start_session : pd.Timestamp
                   The first session of data to ingest.
               end_session : pd.Timestamp
@@ -240,16 +240,16 @@ def _make_bundle_core():
               show_progress : bool
                   Show the progress for the current load where possible.
         calendar_name : str, optional
-            The name of a calendar used to align bundle data.
+            The name of a _calendar used to align bundle data.
             Default is 'NYSE'.
         start_session : pd.Timestamp, optional
             The first session for which we want data. If not provided,
             or if the date lies outside the range supported by the
-            calendar, the first_session of the calendar is used.
+            _calendar, the first_session of the _calendar is used.
         end_session : pd.Timestamp, optional
             The last session for which we want data. If not provided,
             or if the date lies outside the range supported by the
-            calendar, the last_session of the calendar is used.
+            _calendar, the last_session of the _calendar is used.
         minutes_per_day : int, optional
             The number of minutes in each normal trading day.
         create_writers : bool, optional
@@ -277,9 +277,9 @@ def _make_bundle_core():
                 stacklevel=3,
             )
 
-        # NOTE: We don't eagerly compute calendar values here because
+        # NOTE: We don't eagerly compute _calendar values here because
         # `register` is called at module scope in zipline, and creating a
-        # calendar currently takes between 0.5 and 1 seconds, which causes a
+        # _calendar currently takes between 0.5 and 1 seconds, which causes a
         # noticeable delay on the zipline CLI.
         _bundles[name] = RegisteredBundle(
             calendar_name=calendar_name,

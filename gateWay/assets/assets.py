@@ -6,11 +6,11 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 import pandas as pd, numpy as np, sqlalchemy as sa, json
-from sqlalchemy import MetaData,select
+from sqlalchemy import MetaData, select
 from gateWay.driver.db_schema import engine
 from gateWay.driver.bar_reader import AssetSessionReader
 from gateWay.driver.tools import _parse_url
-from calendar.trading_calendar import calendar
+from _calendar.trading_calendar import calendar
 
 
 class Asset(object):
@@ -26,6 +26,8 @@ class Asset(object):
     """
     __slots__ = ['sid', '_tag']
 
+    reader = AssetSessionReader()
+
     def __init__(self, sid):
         self.sid = sid
         self._tag = None
@@ -39,13 +41,17 @@ class Asset(object):
         ins = ins.where(table.c.sid == self.sid)
         rp = self.engine.execute(ins)
         assets = pd.DataFrame(rp.fetchall(), columns=['asset_type', 'asset_name', 'first_traded',
-                                                      'last_traded', 'country_code'])
-        for k,v in assets.iloc[0,:].items():
+                                                      'last_traded', 'country_code', 'status'])
+        for k, v in assets.iloc[0, :].items():
             self.__setattr__(k, v)
 
     @property
     def trading_calendar(self):
         return calendar
+
+    @property
+    def price_multiplier(self):
+        return 1.0
 
     @property
     def engine(self):
@@ -84,7 +90,7 @@ class Asset(object):
     def restricted(self, dt):
         raise NotImplementedError()
 
-    def bid_mechansim(self):
+    def bid_mechanism(self):
         raise NotImplementedError()
 
     def _is_active(self, session_label):
@@ -100,17 +106,14 @@ class Asset(object):
         -------
         boolean: whether the asset is alive at the given dt.
         """
-        if self.last_traded:
+        if self.last_traded != 'null':
             active = self.first_traded <= session_label <= self.last_traded
         else:
             active = self.first_trade <= session_label
         return active
 
     def __repr__(self):
-        if self.symbol:
-            return '%s(%d [%s])' % (type(self).__name__, self.sid, self.symbol)
-        else:
-            return '%s(%d)' % (type(self).__name__, self.sid)
+        return '%s(%d)' % (type(self).__name__, self.sid)
 
     def __reduce__(self):
         """
@@ -120,15 +123,15 @@ class Asset(object):
         be serialized/deserialized during pickling.
         """
         return (self.__class__, (self.sid,
-                                 self.exchange_info,
-                                 self.symbol,
                                  self.asset_name,
-                                 self.start_date,
-                                 self.end_date,
+                                 self.asset_type,
+                                 self.exchange,
                                  self.first_traded,
-                                 self.auto_close_date,
+                                 self.last_traded,
+                                 self.status,
                                  self.tick_size,
-                                 self.price_multiplier))
+                                 self.price_multiplier
+                                 ))
 
     def to_dict(self):
         """Convert to a python dict containing all attributes of the asset.
@@ -141,13 +144,13 @@ class Asset(object):
         """
         return {
             'sid': self.sid,
-            'symbol': self.symbol,
             'asset_name': self.asset_name,
             'first_traded': self.first_traded,
             'last_traded': self.last_traded,
+            'status': self.status,
             'exchange': self.exchange,
             'tick_size': self.tick_size,
-            'multiplier': self.price_multiplier,
+            'multiplier': self.price_multiplier
         }
 
 
@@ -156,11 +159,8 @@ class Equity(Asset):
     Asset subclass representing partial ownership of a company, trust, or
     partnership.
     """
-    _name = 'equity'
-
     def __init__(self, sid):
         super(Equity, self).__init__(sid)
-        self._reader = AssetSessionReader()
         self._retrieve_asset_mappings()
         self._supplementary_for_asset()
 
@@ -171,33 +171,31 @@ class Equity(Asset):
 
     @property
     def increment(self):
-        incre = 1 if self.sid.startswith('688') else self.tick_size
-        return incre
+        per = 1 if self.sid.startswith('688') else self.tick_size
+        return per
 
     def _supplementary_for_asset(self):
-        tbl = self.metadata.tables['equity_supplementary']
+        tbl = self.metadata.tables['equity_basics']
         ins = sa.select([tbl.c.dual,
-                         tbl.c.sector_canonical,
                          tbl.c.broker,
                          tbl.c.district,
                          tbl.c.initial_price]).where(tbl.c.sid == self.sid)
         rp = self.engine.execute(ins)
-        raw = pd.DataFrame(rp.fetchall(),columns = ['dual',
-                                                    'sector_canonical',
-                                                    'broker',
-                                                    'district',
-                                                    'initial_price'])
-        for k ,v in raw.iloc[0,:].to_dict().items():
-            self.setattr(k,v)
+        raw = pd.DataFrame(rp.fetchall(), columns=['dual',
+                                                   'broker',
+                                                   'district',
+                                                   'initial_price'])
+        for k, v in raw.iloc[0, :].to_dict().items():
+            self.setattr(k, v)
 
     def restricted(self, dt):
 
         """
             科创板股票上市后的前5个交易日不设涨跌幅限制，从第六个交易日开始设置20%涨跌幅限制
         """
-        end_dt = self.trading_calendar._roll_forward(dt,self._restricted_window)
+        end_dt = self.trading_calendar.dt_window_size(dt, self._restricted_window)
 
-        if self.first_traded == dt :
+        if self.first_traded == dt:
             _limit = np.inf if self.sid.startwith('688') else 0.44
         elif self.first_traded <= end_dt:
             _limit = np.inf if self.sid.startwith('688') else 0.1
@@ -206,7 +204,7 @@ class Equity(Asset):
         return _limit
 
     @property
-    def bid_mechansim(self):
+    def bid_mechanism(self):
         """在临时停牌阶段，投资者可以继续申报也可以撤销申报，并且申报价格不受2%的报价限制。
             复牌时，对已经接受的申报实行集合竞价撮合交易，申报价格最小变动单位为0.01"""
         bid_mechanism = 0.02 if self.sid.startwith('688') else None
@@ -215,7 +213,7 @@ class Equity(Asset):
     def is_active(self, session_label):
         active = self._is_active(session_label)
         #是否停盘
-        data = self._reader.load_raw_arrays(session_label, 0, 'close', self.sid)
+        data = self.reader.load_raw_arrays([session_label, session_label], self.sid, ['close'])
         active &= (True if data else False)
         return active
 
@@ -224,14 +222,13 @@ class Equity(Asset):
         """
             获取时间dt --- 2020-07-13停盘信息
         """
-        supspend_url = 'http://datainterface.eastmoney.com/EM_DataCenter/JS.aspx?type=FD&sty=SRB&st=0&sr=-1&p=1&ps=50&' \
+        supspend_url = 'http://datainterface.eastmoney.com/EM_DataCenter/JS.aspx?type=FD&sty=SRB&st=0&sr=-1&p=1&ps=50&'\
                        'js={"pages":(pc),"data":[(x)]}&mkt=1&fd=%s' % dt
         text = _parse_url(supspend_url, bs=False, encoding=None)
         text = json.loads(text)
         return text['data']
 
     def __setattr__(self, key, value):
-
         raise NotImplementedError()
 
 
@@ -247,15 +244,13 @@ class Convertible(Asset):
        2.可转换公司债券转换期结束前的10个交易日停止交易
        3.中国证监会和交易所认为必须停止交易
     """
-    _name = 'convertible'
-
     def __init__(self, bond_id):
-        super(Convertible, self)._init__(bond_id)
+        super(Convertible, self).__init__(bond_id)
         self._retrieve_asset_mappings()
         self._supplementary_for_asset()
 
     def _supplementary_for_asset(self):
-        tbl = self.metadata.tables['convertible_supplementary']
+        tbl = self.metadata.tables['convertible_basics']
         ins = sa.select([tbl.c.swap_code,
                          tbl.c.put_price,
                          tbl.c.redeem_price,
@@ -266,14 +261,14 @@ class Convertible(Asset):
             where(tbl.c.sid == self.sid)
         rp = self.engine.execute(ins)
         df = pd.DataFrame(rp.fetchall(), columns=['swap_code',
-                                                       'put_price',
-                                                       'put_price',
-                                                       'redeem_price',
-                                                       'convert_price',
-                                                       'convert_dt',
-                                                       'put_convert_price',
-                                                       'guarantor'])
-        for k,v in df.iloc[0,:].to_dict():
+                                                  'put_price',
+                                                  'put_price',
+                                                  'redeem_price',
+                                                  'convert_price',
+                                                  'convert_dt',
+                                                  'put_convert_price',
+                                                  'guarantor'])
+        for k, v in df.iloc[0, :].to_dict():
             setattr(k, v)
 
     @property
@@ -284,7 +279,7 @@ class Convertible(Asset):
         return None
 
     @property
-    def bid_mechansim(self):
+    def bid_mechanism(self):
         return None
 
     def is_active(self, dt):
@@ -301,18 +296,15 @@ class Fund(Asset):
     目前不是所有的ETF都是t+0的，只有跨境ETF、债券ETF、黄金ETF、货币ETF实行的是t+0，境内A股ETF暂不支持t+0
     10%
     """
-    _name = 'fund'
-
     def __init__(self,
                  fund_id):
-        super(Fund,self).__init__(fund_id,engine)
+        super(Fund, self).__init__(fund_id)
         self._retrieve_asset_mappings()
-        self._supplementary_for_asset()
 
     def _supplementary_for_asset(self):
-        pass
+        raise NotImplementedError()
 
-    def restricted(self,dt):
+    def restricted(self, dt):
         return 0.1
 
     @property

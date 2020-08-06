@@ -31,13 +31,13 @@ class HistoryCompatibleAdjustments(object):
 
     # @lru_cache(maxsize=8)
     # def _load_raw_array(self, assets, date, window):
-    #     sessions = calendar.session_in_window(date, window, include=True)
+    #     sessions = _calendar.session_in_window(date, window, include=True)
     #     close = self.reader.load_raw_arrays(sessions, assets, ['open', 'high', 'low', 'close', 'volume', 'amount'])
     #     return close, sessions
 
     @lru_cache(maxsize=8)
     def _load_raw_array(self, assets, sessions):
-        # sessions = calendar.session_in_window(date, window, include=True)
+        # sessions = _calendar.session_in_window(date, window, include=True)
         close = self.reader.load_raw_arrays(sessions, assets, ['open', 'high', 'low', 'close', 'volume', 'amount'])
         return close, sessions
 

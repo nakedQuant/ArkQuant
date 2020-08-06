@@ -12,11 +12,13 @@ from gateWay.assets.asset_db_schema import (
     metadata,
     ASSET_DB_VERSION,
     asset_db_table_names,
-    equity_supplementary,
-    convertible_supplementary,
+    equity_basics,
+    convertible_basics,
     asset_router,
     version_info
 )
+from gateWay.driver.db_schema import engine
+
 
 SQLITE_MAX_VARIABLE_NUMBER = 999
 
@@ -25,7 +27,8 @@ _rename_router_cols = frozenset(['sid',
                                  'asset_type',
                                  'exchange',
                                  'first_traded',
-                                 'last_traded'])
+                                 'last_traded',
+                                 'status'])
 
 _rename_equity_cols = {
     '代码': 'sid',
@@ -34,7 +37,8 @@ _rename_equity_cols = {
     '上市日期': 'first_traded',
     '发行价格': 'initial_price',
     '主承销商': 'broker',
-    '公司名称': 'company_symbol',
+    # '公司名称': 'company_symbol',
+    '公司名称': 'asset_name',
     '成立日期': 'establish_date',
     '注册资本': 'register_capital',
     '组织形式': 'organization',
@@ -43,7 +47,8 @@ _rename_equity_cols = {
     '公司简介': 'brief',
     '证券简称更名历史': 'history_name',
     '注册地址': 'register_area',
-    '办公地址': 'office_area'
+    '办公地址': 'office_area',
+    'list_date': 'last_traded',
 }
 
 _rename_convertible_cols = {
@@ -54,13 +59,12 @@ _rename_convertible_cols = {
     'maturity_dt': 'last_traded'
 }
 
+# fund -- first_traded
 _rename_fund_cols = {
     '基金代码': 'sid',
     '基金简称': 'asset_name',
     '类型': 'asset_type'
 }
-
-spider = AssetSpider()
 
 
 def check_version_info(conn, version_table, expected_version):
@@ -84,7 +88,7 @@ def check_version_info(conn, version_table, expected_version):
 
     # Read the version out of the table
     version_from_table = conn.execute(
-        sa.select((version_table.c.version,)),
+        sa.select(version_table.c.version),
     ).scalar()
 
     # A db without a version is considered v0
@@ -92,7 +96,7 @@ def check_version_info(conn, version_table, expected_version):
         version_from_table = 0
 
     # Raise an error if the versions do not match
-    if (version_from_table != expected_version):
+    if version_from_table != expected_version:
         # raise AssetDBVersionError(db_version=version_from_table,
         #                           expected_version=expected_version)
         raise ValueError('db_version != version_from_table')
@@ -126,11 +130,15 @@ class AssetWriter(object):
     DEFAULT_CHUNK_SIZE = SQLITE_MAX_VARIABLE_NUMBER
 
     # @preprocess(engine=coerce_string_to_eng(require_exists=False))
-    def __init__(self, engine):
-        self.engine = engine
-        self._asset_spider = spider
+    def __init__(self):
+        self._asset_spider = AssetSpider()
 
-    def _all_tables_present(self, txn):
+    @property
+    def engine(self):
+        return engine
+
+    @staticmethod
+    def _all_tables_present(txn):
         """
         Checks if any tables are present in the current assets database.
 
@@ -167,71 +175,19 @@ class AssetWriter(object):
         with ExitStack() as stack:
             if txn is None:
                 txn = stack.enter_context(self.engine.begin())
-
             tables_already_exist = self._all_tables_present(txn)
-
             # Create the SQL tables if they do not already exist.
             metadata.create_all(txn, checkfirst=True)
-
             if tables_already_exist:
                 check_version_info(txn, version_info, ASSET_DB_VERSION)
             else:
                 write_version_info(txn, version_info, ASSET_DB_VERSION)
 
-    def _read_writer(self,
-                     equity_supplementary_mappings = None,
-                     convertible_supplementary_mappings = None,
-                     fund_mappings = None,
-                     chunk_size=DEFAULT_CHUNK_SIZE):
-        with self.engine.begin() as conn:
-            # Create SQL tables if they do not exist.
-            self.init_db(conn)
-
-            if equity_supplementary_mappings is not None:
-                self._write_df_to_table(
-                    equity_supplementary,
-                    equity_supplementary_mappings,
-                    conn,
-                    chunk_size,
-                )
-
-            if convertible_supplementary_mappings is not None:
-                self._write_df_to_table(
-                    convertible_supplementary,
-                    convertible_supplementary_mappings,
-                    conn,
-                    chunk_size,
-                )
-
-            if fund_mappings is not None:
-                self._write_assets(
-                    fund_mappings,
-                    conn,
-                    chunk_size
-                )
-
-    def _write_df_to_table(self, tbl, df, txn, chunk_size, include=True):
-        df = df.copy()
-        if include:
-            self._write_assets(df,txn, chunk_size)
-        # asset supplement to db
-        supplement = df.loc[:, ]
-        df.to_sql(
-            tbl.name,
-            txn.connection,
-            # index=True,
-            # index_label=first(tbl.primary_key.columns).name,
-            index=False,
-            if_exists='append',
-            chunksize=chunk_size,
-        )
-
-    def _write_assets(self,
-                      mapping_data,
+    @staticmethod
+    def _write_assets(frame,
                       txn,
                       chunk_size):
-        symbols_mapping = mapping_data.loc[:, _rename_router_cols]
-
+        symbols_mapping = frame.loc[:, _rename_router_cols]
         symbols_mapping.to_sql(
             asset_router.name,
             txn.connection,
@@ -240,7 +196,52 @@ class AssetWriter(object):
             chunksize=chunk_size
         )
 
-    def _generate_output_dataframe(self, data_set):
+    def _write_df_to_table(self, tbl, df, txn, chunk_size, include=True):
+        df = df.copy()
+        if include:
+            self._write_assets(df, txn, chunk_size)
+        df.to_sql(
+            tbl.name,
+            txn.connection,
+            index=False,
+            if_exists='append',
+            chunksize=chunk_size,
+        )
+
+    def _read_writer(self,
+                     equity_frame,
+                     convertible_frame,
+                     fund_frame,
+                     chunk_size=DEFAULT_CHUNK_SIZE):
+        with self.engine.begin() as conn:
+            # Create SQL tables if they do not exist.
+            self.init_db(conn)
+
+            if equity_frame is not None:
+                self._write_df_to_table(
+                    equity_basics,
+                    equity_frame,
+                    conn,
+                    chunk_size,
+                )
+
+            if convertible_frame is not None:
+                self._write_df_to_table(
+                    convertible_basics,
+                    convertible_frame,
+                    conn,
+                    chunk_size,
+                )
+
+            if fund_frame is not None:
+                self._write_assets(
+                    fund_frame,
+                    conn,
+                    chunk_size
+                )
+
+    @staticmethod
+    def _rename_frame(data_set):
         """
         Generates an output dataframe from the given subset of user-provided
         data, the given column names, and the given default values.
@@ -264,30 +265,35 @@ class AssetWriter(object):
             wherever user-provided metadata was missing
         """
         data_set.equities.rename(columns=_rename_equity_cols, inplace=True)
-        data_set.convertibles.rename(columns=_rename_convertible_cols, inplace =True)
-        data_set.funds.rename(columns=_rename_fund_cols, inplace =True)
+        data_set.convertibles.rename(columns=_rename_convertible_cols, inplace=True)
+        data_set.funds.rename(columns=_rename_fund_cols, inplace=True)
         return data_set
-
 
     def write(self, chunk_size=DEFAULT_CHUNK_SIZE):
         """Write asset metadata to a sqlite database.
         """
-        assetData = self._asset_spider.load_data()
-        reformat_data = self._generate_output_dataframe(assetData)
+        asset_data = self._asset_spider.load_data()
+        frame = self._rename_frame(asset_data)
 
         self._real_write(
-            equity_supplementary_mappings=reformat_data.equities,
-            convertible_supplementary_mappings=reformat_data.converibles,
-            fund_mappings=reformat_data.funds,
+            equity_frame=frame.equities,
+            convertible_frame=frame.converibles,
+            fund_frame=frame.funds,
             chunk_size=chunk_size,
         )
 
     def write_direct(self,
-                     root_symbols=None,
-                     equity_supplementary_mappings=None,
-                     convertible_supplement_mappings=None,
+                     equity_frame,
+                     convertible_frame,
+                     fund_frame,
                      chunk_size=DEFAULT_CHUNK_SIZE):
         """Write asset metadata to a sqlite database in the format that it is
         stored in the assets db.
         """
-        raise NotImplementedError('not allowed to write metadata into db directly')
+        # raise NotImplementedError('not allowed to write metadata into db directly')
+        self._read_writer(
+            equity_supplementary_mappings=equity_frame,
+            convertible_supplementary_mappings=convertible_frame,
+            fund_mappings=fund_frame,
+            chunk_size=chunk_size,
+        )

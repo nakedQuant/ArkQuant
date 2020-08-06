@@ -30,7 +30,7 @@ def schedule_function(self,
     half_days : bool, optional
         Should this rule fire on half days? Default is True.
     calendar : Sentinel, optional
-        Calendar used to compute rules that depend on the trading calendar.
+        Calendar used to compute rules that depend on the trading _calendar.
 
     See Also
     --------
@@ -70,7 +70,7 @@ def schedule_function(self,
                  # If we are in daily mode the time_rule is ignored.
                  time_rules.every_minute())
 
-    # Check the type of the algorithm's schedule before pulling calendar
+    # Check the type of the algorithm's schedule before pulling _calendar
     # Note that the ExchangeTradingSchedule is currently the only
     # TradingSchedule class, so this is unlikely to be hit
     if calendar is None:

@@ -452,7 +452,7 @@ cdef class BarData:
            (if current simulation time is not a market minute, we use the next
            session).
         2. The asset's exchange is open at the current simulation time or at
-           the simulation calendar's next market minute.
+           the simulation _calendar's next market minute.
         3. There is a known last price for the asset.
 
         Parameters
@@ -464,11 +464,11 @@ cdef class BarData:
         -----
         The second condition above warrants some further explanation:
 
-        - If the asset's exchange calendar is identical to the simulation
-          calendar, then this condition always returns True.
-        - If there are market minutes in the simulation calendar outside of
+        - If the asset's exchange _calendar is identical to the simulation
+          _calendar, then this condition always returns True.
+        - If there are market minutes in the simulation _calendar outside of
           this asset's exchange's trading hours (for example, if the simulation
-          is running on the CMES calendar but the asset is MSFT, which trades
+          is running on the CMES _calendar but the asset is MSFT, which trades
           on the NYSE), during those minutes, this condition will return False
           (for example, 3:15 am Eastern on a weekday, during which the CMES is
           open but the NYSE is closed).
@@ -518,7 +518,7 @@ cdef class BarData:
             return False
 
         if not self._daily_mode:
-            # Find the next market minute for this calendar, and check if this
+            # Find the next market minute for this _calendar, and check if this
             # asset's exchange is open at that minute.
             if self._trading_calendar.is_open_on_minute(dt):
                 dt_to_use_for_exchange_check = dt

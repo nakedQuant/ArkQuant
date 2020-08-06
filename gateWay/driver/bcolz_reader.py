@@ -144,7 +144,7 @@ class BcolzDailyReader(BcolzReader):
         The ctable contaning the pricing data, with attrs corresponding to the
         Attributes list below.
     calendar_name: str
-        String identifier of trading calendar used (ie, "China").
+        String identifier of trading _calendar used (ie, "China").
 
     Attributes:
 

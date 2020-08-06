@@ -5,8 +5,9 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-from gateWay.assets.assets import Asset,Equity,Convertible,Fund
+from gateWay.assets.assets import Asset, Equity, Convertible, Fund
 from abc import ABC
+
 
 class AssetConvertible(ABC):
     """
@@ -16,10 +17,6 @@ class AssetConvertible(ABC):
     Includes Asset, six.string_types, and Integral
     """
     pass
-
-
-AssetConvertible.register(Asset)
-
 
 
 class NotAssetConvertible(ValueError):
@@ -45,8 +42,8 @@ class PricingDataAssociable(ABC):
     pass
 
 
+AssetConvertible.register(Asset)
 PricingDataAssociable.register(Asset)
 PricingDataAssociable.register(Equity)
 PricingDataAssociable.register(Convertible)
 PricingDataAssociable.register(Fund)
-

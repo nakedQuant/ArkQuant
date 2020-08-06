@@ -27,7 +27,7 @@ class MetricsTracker(object):
     Parameters
     ----------
     trading_calendar : TrandingCalendar
-        The trading calendar used in the simulation.
+        The trading _calendar used in the simulation.
     first_session : pd.Timestamp
         The label of the first trading session in the simulation.
     last_session : pd.Timestamp

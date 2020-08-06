@@ -7,11 +7,11 @@ Created on Tue Mar 12 15:37:47 2019
 """
 import pandas as pd, json
 from .tools import _parse_url
+from .third_api.client import tsclient
 from .history_loader import (
     HistoryDailyLoader,
     HistoryMinuteLoader
 )
-# from calendar.trading_calendar import calendar
 
 
 class DataPortal(object):
@@ -25,8 +25,8 @@ class DataPortal(object):
     ----------
     asset_finder : zipline.assets.assets.AssetFinder
         The AssetFinder instance used to resolve assets.
-    trading_calendar: zipline.utils.calendar.exchange_calendar.TradingCalendar
-        The calendar instance used to provide minute->session information.
+    trading_calendar: zipline.utils._calendar.exchange_calendar.TradingCalendar
+        The _calendar instance used to provide minute->session information.
     first_trading_day : pd.Timestamp
         The first trading day for the simulation.
     equity_daily_reader : BcolzDailyBarReader, optional
@@ -316,3 +316,13 @@ class DataPortal(object):
             the simulation dates, so that lookup is fast during simulation.
         """
         raise NotImplementedError()
+
+    @staticmethod
+    def get_equities_pledge(symbol):
+        frame = tsclient.to_ts_pledge(symbol)
+        return frame
+
+    @staticmethod
+    def get_equity_adjfactor(code):
+        factor = tsclient.to_ts_adjfactor(code)
+        return factor

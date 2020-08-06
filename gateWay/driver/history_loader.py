@@ -167,7 +167,7 @@ class HistoryLoader(ABC):
         dts : iterable of datetime64-like
             The datetimes for which to fetch data.
             Makes an assumption that all dts are present and contiguous,
-            in the calendar.
+            in the _calendar.
         field : str or list
             The OHLCV field for which to retrieve data.
         Returns
@@ -216,7 +216,7 @@ class HistoryLoader(ABC):
         dts : iterable of datetime64-like
             The datetimes for which to fetch data.
             Makes an assumption that all dts are present and contiguous,
-            in the calendar.
+            in the _calendar.
         field : str or list
             The OHLCV field for which to retrieve data.
         window : int
