@@ -93,7 +93,7 @@ class AssetSessionReader(BarReader):
     def data_frequency(self):
         return 'daily'
 
-    def get_stock_pct(self, dt):
+    def get_equity_pct(self, dt):
         tbl = self.metadata['equity_price']
         sql = sa.select([tbl.c.sid, sa.cast(tbl.c.pct, sa.Numeric(10, 2)).label('pct')])\
             .where(tbl.c.trade_dt == dt)

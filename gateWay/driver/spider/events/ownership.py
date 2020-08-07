@@ -13,7 +13,7 @@ from gateWay.driver.tools import _parse_url, parse_content_from_header
 from gateWay.driver.db_writer import db
 
 
-class FundamentalWriter(Crawler):
+class OwnershipWriter(Crawler):
 
     def _retrieve_from_sqlite(self):
         table = self.metadata.tables['onwership']

@@ -14,7 +14,7 @@ class ExecutionStyle(ABC):
     """
 
     @abstractmethod
-    def get_limit_price_ratio(self, _is_buy):
+    def get_limit_price_ratio(self):
         """
         Get the limit price ratio for this order.
         Returns either None or a numerical value >= 0.
@@ -22,7 +22,7 @@ class ExecutionStyle(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_stop_price_ratio(self, _is_buy):
+    def get_stop_price_ratio(self):
         """
         Get the stop price for this order.
         Returns either None or a numerical value >= 0.
@@ -37,13 +37,13 @@ class MarketOrder(ExecutionStyle):
     This is the default for orders placed with :func:`~zipline.api.order`.
     """
 
-    def __init__(self, exchange=None):
-        self._exchange = exchange
+    # def __init__(self, exchange=None):
+    #     self._exchange = exchange
 
-    def get_limit_price_ratio(self, _is_buy):
+    def get_limit_price_ratio(self):
         return -np.inf
 
-    def get_stop_price_ratio(self, _is_buy):
+    def get_stop_price_ratio(self):
         return np.inf
 
 
@@ -61,10 +61,10 @@ class LimitOrder(ExecutionStyle):
     def __init__(self, limit_price):
         self.limit_price = limit_price
 
-    def get_limit_price_ratio(self, _is_buy):
+    def get_limit_price_ratio(self):
         return self.limit_price
 
-    def get_stop_price_ratio(self, _is_buy):
+    def get_stop_price_ratio(self):
         return -np.inf
 
 
@@ -83,10 +83,10 @@ class StopOrder(ExecutionStyle):
     def __init__(self, stop_price):
         self.stop_price = stop_price
 
-    def get_limit_price_ratio(self, _is_buy):
+    def get_limit_price_ratio(self):
         return np.inf
 
-    def get_stop_price_ratio(self, _is_buy):
+    def get_stop_price_ratio(self,):
         return self.get_stop_price()
 
 
@@ -105,13 +105,12 @@ class StopLimitOrder(ExecutionStyle):
         order will be placed if market price falls below this value. For buys,
         the order will be placed if market price rises above this value.
     """
-    def __init__(self, limit_price, stop_price):
-        self.limit_price = limit_price
-        self.stop_price = stop_price
+    def __init__(self, limit_pct, stop_pct):
+        self.limit_pct = limit_pct
+        self.stop_pct = stop_pct
 
-    def get_limit_price_ratio(self, _is_buy):
-        return self.limit_price,
+    def get_limit_price_ratio(self):
+        return self.limit_pct
 
-    def get_stop_price_ratio(self, _is_buy):
-        return self.stop_price,
-
+    def get_stop_price_ratio(self):
+        return self.stop_pct

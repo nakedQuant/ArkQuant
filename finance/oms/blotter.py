@@ -13,40 +13,41 @@ from finance.transaction import create_transaction
 class Blotter(object):
 
     def __init__(self,
-                 creator,
-                 commission,
-                 multiplier=1,
+                 gens,
                  delay=1):
-        self._order_creator = creator
-        self.commission = commission
-        self.multiplier = multiplier
+        self._gens = gens
         self.delay = delay
 
     @staticmethod
     def create_bulk_transactions(orders, fee):
-        txns = [create_transaction(order,fee) for order in orders]
-        return txns
+        transactions = [create_transaction(order, fee) for order in orders]
+        return transactions
 
-    def simulate_capital_txn(self,asset, capital, dts):
+    def simulate_capital_txn(self, asset, capital, dts, direction):
         """
             基于capital --- 买入标的
         """
-        orders = self._order_creator.simulate_capital_order(asset, capital, dts)
-        #将orders --- transactions
-        fee = self.commission.calculate_rate(asset,'positive', dts)
-        txns = self.create_bulk_transactions(orders, fee)
-        #计算效率
-        efficiency = sum([order.per_capital for order in orders]) / capital
-        return txns,efficiency
+        orders = self._gens.simulate_capital_order(asset, capital, dts, direction)
 
-    def simulate_txn(self,asset,amount,dts,direction):
-        sizes,data = self._order_creator.calculate_size_arrays(asset, amount, dts)
-        direct_orders = self._order_creator.simulate_order(asset, sizes, data, direction)
-        p_fee = self.commission.calculate_rate(asset, direction, dts)
+        # 将orders --- transactions
+        # fee = self.commission.calculate_rate(asset, 'positive', dts)
+
+        txns = self.create_bulk_transactions(orders, fee)
+
+        # 计算效率
+        utility = sum([order.per_capital for order in orders]) / capital
+        return txns, utility
+
+    def simulate_txn(self, asset, amount, dts, direction):
+        direct_orders = self._gens.simulate_order(asset, amount, dts, direction)
+
+        # p_fee = self.commission.calculate_rate(asset, dts, direction)
+
         transactions = self.create_bulk_transactions(direct_orders, p_fee)
-        #计算效率
-        uility = sum([txn.amount for txn in transactions]) / amount
-        return transactions, uility
+
+        # 计算效率
+        utility = sum([txn.amount for txn in transactions]) / amount
+        return transactions, utility
 
     def simulate_dual_txn(self, p, c, dts):
         """
@@ -91,3 +92,9 @@ class Blotter(object):
         #计算效率
         c_uility = sum([txn.amount for txn in c_transactions]) / sum(c_sizes)
         return p_transactions, p_uility, c_transactions, c_uility
+
+    def centralized(self):
+        """
+            在14:57集中处理为成交订单
+        :return:
+        """

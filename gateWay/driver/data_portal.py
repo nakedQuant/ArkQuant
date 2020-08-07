@@ -6,6 +6,7 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 import pandas as pd, json
+from functools import lru_cache
 from .tools import _parse_url
 from .third_api.client import tsclient
 from .history_loader import (
@@ -139,27 +140,25 @@ class DataPortal(object):
         rights = self._adjustment_reader.load_right_for_sid(sid, trading_day)
         return rights
 
-    def get_spot_value(self,dts,asset,frequency):
-        spot_value = self._pricing_reader[frequency].get_spot_value(dts,asset)
-        return spot_value
-
-    # def get_pre_spot_value(self,dts,asset,frequency):
-    #     pre_dts = self.trading_calendar.dt_window_size(dts,1)
-    #     pre_value = self.get_spot_value(pre_dts,asset,frequency)
-    #     return pre_value
-
-    def _get_equity_pct(self, dts, assets):
-        df = self._pricing_reader['daily'].get_stock_pct(dts)
-        sids = [asset.sid for asset in assets] if assets else None
-        pct = df.loc[sids, :] if sids else df
+    @lru_cache(maxsize=32)
+    def _retrieve_pct(self, dts):
+        pct = self._pricing_reader['daily'].get_stock_pct(dts)
         return pct
 
-    def get_open_pct(self, dts, assets):
-        pct = self._get_equity_pct(dts, assets)
-        kline = self.get_window_data(assets, dts, 1, 'close','daily')
-        preclose = {{sid: bar[sid]['close'][-1]/(1+pct[sid])} for sid, bar in kline.items()}
-        open_pct = {{sid: kline[sid]['open'][-1] / pre} for sid, pre in preclose.items()}
-        return open_pct
+    def get_open_pct(self, asset, dts):
+        # 获取标的pct_change
+        frame = self._retrieve_pct(dts)
+        pct = frame.loc[asset.sid, 'pct']
+        # 获取close
+        kline = self.get_spot_value(asset, dts, 'daily', ['open', 'close'])
+        # 计算close
+        preclose = kline['close'] / (1 + pct)
+        open_pct = kline['open'][-1] / preclose
+        return open_pct, preclose
+
+    def get_spot_value(self, asset, dts, frequency, fields):
+        spot_value = self._pricing_reader[frequency].get_spot_value(dts, asset, fields)
+        return spot_value
 
     def _get_history_sliding_window(self,
                                     assets,
@@ -168,8 +167,9 @@ class DataPortal(object):
                                     bar_count,
                                     frequency):
         """
-        Internal method that returns a dataframe containing history bars
-        of minute frequency for the given sids.
+            Internal method that gets a window of adjusted daily data for a sid
+            and specified date range.  Used to support the history API method for
+            daily bars.
         """
         history = self._history_loader[frequency]
         history_arrays = history.history(assets, fields, end_dt, bar_count)
@@ -234,7 +234,7 @@ class DataPortal(object):
                         field,
                         data_frequency):
         """
-        Internal method that gets a window of adjusted daily data for a sid
+        Internal method that gets a window of raw daily data for a sid
         and specified date range.  Used to support the history API method for
         daily bars.
 

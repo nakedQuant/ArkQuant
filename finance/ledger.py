@@ -5,8 +5,8 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-import pandas as pd , numpy as np,warnings
-from ._protocol import Portfolio , Account
+import pandas as pd, numpy as np, warnings
+from ._protocol import Portfolio, Account
 from .position_tracker import PositionTracker
 
 

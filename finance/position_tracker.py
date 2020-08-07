@@ -5,7 +5,7 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-from collections import defaultdict,OrderedDict
+from collections import defaultdict, OrderedDict
 from functools import partial
 from finance.position import Position
 
@@ -94,7 +94,7 @@ class PositionTracker(object):
                             frequency='daily'
                             )
         last_sync_prices = get_price(assets=set(self.positions))
-        for asset,inner_position in self.positions.items():
+        for asset, inner_position in self.positions.items():
             assert asset == inner_position.asset, ValueError('unmatched position')
             inner_position.last_sync_price = last_sync_prices[asset]
 
@@ -112,7 +112,7 @@ class PositionTracker(object):
             配股机制有点复杂 ， freeze capital
             如果不缴纳款，自动放弃到期除权相当于亏损,在股权登记日卖出，一般的配股缴款起止日为5个交易日
         """
-        rights = self.data_portal.load_rights_for_sid(asset.sid,dt)
+        rights = self.data_portal.load_rights_for_sid(asset.sid, dt)
         return rights
 
     def maybe_create_close_position_transaction(self, asset):

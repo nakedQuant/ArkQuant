@@ -13,7 +13,7 @@ from gateWay.driver.db_writer import db
 from gateWay.driver.spider.xml import HolderFields, ASSET_FUNDAMENTAL_URL
 
 
-class FundamentalWriter(Crawler):
+class HolderWriter(Crawler):
 
     def _retrieve_from_sqlite(self):
         table = self.metadata.tables['ownership']

@@ -19,20 +19,24 @@ class OrderType(Enum):
     ITC = 'itc'
     B5TC = 'b5tc'
     B5TL = 'b5tl'
-    FOK =  'fok'
-    FAK =  'fak'
+    FOK = 'fok'
+    FAK = 'fak'
 
 
 class BaseOrder(object):
 
-    def __init__(self, asset, price, ticker, style, slippage_model):
+    __slots__ = ['asset', 'price', 'created_dt', 'direction', 'execution_style', 'slippage_model']
+
+    def __init__(self, asset, price, ticker, direction, style, slippage_model):
         self.asset = asset
-        self._price = price
-        self._created_dt = ticker
-        self.style = style
+        self.price = price
+        self.created_dt = ticker
+        self.direction = direction
+        self.execution_style = style
         self.slippage_model = slippage_model
 
-    def make_id(self):
+    @staticmethod
+    def make_id():
         return uuid.uuid4().hex()
 
     @property
@@ -41,11 +45,11 @@ class BaseOrder(object):
         # custom slippage models.
         return self.asset.sid
 
-    def fit_slippage(self):
+    def _fit_slippage(self):
         point = 1 + self.slippage_model.calculate_slippage_factor()
-        self.price = self._price * point
+        self.price = self.price * point
 
-    def check_trigger(self,preclose):
+    def check_trigger(self, pre_close):
         """
         Given an order and a trade event, return a tuple of
         (stop_reached, limit_reached).
@@ -60,9 +64,9 @@ class BaseOrder(object):
         --- 可以扩展为bid_mechanism
         """
         # 设定价格限制 , iterator里面的对象为第一个为price
-        self.fit_slippage()
-        bottom = preclose * (1 - self._style.get_stop_price)
-        upper = preclose * (1 + self._style.get_limit_price)
+        self._fit_slippage()
+        bottom = pre_close * (1 - self.execution_style.get_stop_price())
+        upper = pre_close * (1 + self.execution_style.get_limit_price())
         if bottom <= self.price <= upper:
             return True
         return False
@@ -76,7 +80,7 @@ class BaseOrder(object):
         return name in self.__dict__
 
     def __repr__(self):
-        return "Event({0})".format(self.__dict__)
+        return "Event({0})".format(self.__slots__)
 
     def to_dict(self):
         dct = {name: getattr(self.name)
@@ -113,13 +117,20 @@ class Order(BaseOrder):
         市价单 --- 针对与卖出 --- 被动算法 ，基于时刻去卖出，这样避免被检测到 --- 将大订单拆分多个小订单然后基于时点去按照市价卖出
         实时订单
     """
-    __slot__ = ['asset','amount','price','_created_dt','style','slippage_model']
+    __slot__ = ['asset', 'amount', 'price', 'created_dt', 'direction', 'execution_style', 'slippage_model']
 
-    def __init__(self, asset, amount, price, ticker, style, slippage_model):
-        self.amount = amount
+    def __init__(self,
+                 asset,
+                 amount,
+                 price,
+                 ticker,
+                 direction,
+                 style,
+                 slippage_model):
         # --- 找到baseOrder 父类 -- self
-        super(BaseOrder, self).__init__(self, asset, price, ticker, style, slippage_model)
-        self.broker_order_id = self.make_id()
+        super(BaseOrder, self).__init__(self, asset, price, ticker, direction, style, slippage_model)
+        self.amount = amount
+        self.order_id = self.make_id()
 
 
 class PriceOrder(BaseOrder):
@@ -142,12 +153,19 @@ class PriceOrder(BaseOrder):
 
         买1 价格超过卖1，买方以卖1价成交
     """
-    __slot__ = ['asset','capital','price','_created_dt','style','slippage_model']
+    __slot__ = ['asset', 'capital', 'price', 'created_dt', 'direction', 'execution_style', 'slippage_model']
 
-    def __init__(self,asset, capital, price, ticker, style, slippage_model):
+    def __init__(self,
+                 asset,
+                 capital,
+                 price,
+                 ticker,
+                 direction,
+                 style,
+                 slippage_model):
+        super(BaseOrder, self).__init__(self, asset, price, ticker, direction, style, slippage_model)
         self.capital = capital
-        super(BaseOrder, self).__init__(self, asset, price, ticker, style, slippage_model)
-        self.broker_order_id = self.make_id()
+        self.order_id = self.make_id()
 
 
-__all__ = [Order,PriceOrder]
+__all__ = [Order, PriceOrder]
