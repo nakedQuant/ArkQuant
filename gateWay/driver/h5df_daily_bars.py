@@ -86,7 +86,6 @@ Sample layout of the full file with multiple countries.
 """
 from functools import partial
 from itertools import chain
-
 import numpy as np, pandas as pd, h5py, tables
 
 VERSION = 0

@@ -5,7 +5,6 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-
 import pandas as pd, pytz, numpy as np
 from datetime import datetime
 from dateutil import rrule
@@ -24,7 +23,7 @@ class TradingCalendar (object):
         self._fixed_holiday()
 
     @property
-    def _fixed_holiday(self,):
+    def _fixed_holiday(self):
         non_trading_rules = dict()
         non_trading_rules['spring'] = spring
         non_trading_rules['autumn'] = autumn
@@ -133,55 +132,50 @@ class TradingCalendar (object):
                               start_date.strftime("%Y-%m-%d")))
         idx_s = np.searchsorted(self.all_sessions, start_date)
         idx_e = np.searchsorted(self.all_sessions, end_date)
-        sessions = np.array(self.all_sessions[idx_s, idx_e +1])
+        sessions = np.array(self.all_sessions[idx_s, idx_e + 1])
         flag = sessions <= end_date if include else sessions < end_date
         return sessions[flag]
 
     @staticmethod
     def sessions_in_minutes(dts):
-        minutes_session = map(lambda x: list(range(pd.Timestamp(x).timestamp() + 9 * 60 * 60 + 30 * 60,
-                                                   pd.Timestamp(x).timestamp() + 15*60*60 + 1)), dts)
+        minutes_session = map(lambda x: list(range(int(pd.Timestamp(x).timestamp() + 9 * 60 * 60 + 30 * 60),
+                                                   int(pd.Timestamp(x).timestamp() + 15 * 60 * 60 + 1))), dts)
+        # int --- float
+        minutes_session = map(lambda x: float(x), minutes_session)
         return minutes_session
 
-    def _compute_date_range_slice(self, start_date, end_date):
-        # Get the index of the start of dates for ``start_date``.
-        start_ix = self.dates.searchsorted(start_date)
-
-        # Get the index of the start of the first date **after** end_date.
-        end_ix = self.dates.searchsorted(end_date, side='right')
-
-        return slice(start_ix, end_ix)
-
-    def execution_time_from_open(self,sessions):
+    @staticmethod
+    def execution_time_from_open(sessions):
         opens = [ pd.Timestamp(dt) + 9 * 60 * 60 + 30 * 60 for dt in sessions]
         _opens = [ pd.Timestamp(dt) + 13 * 60 * 60 for dt in sessions]
         # 熔断期间 --- 2次提前收市
         if '20160107' in sessions:
-            idx = np.searchsorted('20160107',sessions)
+            idx = np.searchsorted('20160107', sessions)
             _opens[idx] = np.nan
-        return zip(opens,_opens)
+        return zip(opens, opens)
 
-    def excution_time_from_close(self,sessions):
-        closes = [ pd.Timestamp(dt) + 11 * 60 * 60 + 30 * 60 for dt in sessions]
-        _closes = [ pd.Timestamp(dt) + 15 * 60 * 60 for dt in sessions]
+    @staticmethod
+    def execution_time_from_close(sessions):
+        closes = [pd.Timestamp(dt).timestamp() + 11 * 60 * 60 + 30 * 60 for dt in sessions]
+        _closes = [pd.Timestamp(dt).timestamp() + 15 * 60 * 60 for dt in sessions]
         # 熔断期间 --- 2次提前收市
         if '20160104' in sessions:
-            idx = np.searchsorted('20160104',sessions)
-            _closes[idx] = pd.Timestamp('20160104') + 13 * 60 * 60 + 34 * 60
+            idx = np.searchsorted('20160104', sessions)
+            _closes[idx] = pd.Timestamp('20160104').timestamp() + 13 * 60 * 60 + 34 * 60
         elif '20160107' in sessions:
-            idx = np.searchsorted('20160107',sessions)
-            closes[idx] = pd.Timestamp('20160107') + 10 * 60 * 60
+            idx = np.searchsorted('20160107', sessions)
+            closes[idx] = pd.Timestamp('20160107').timestamp() + 10 * 60 * 60
             _closes[idx] = np.nan
-        return zip(closes,_closes)
+        return zip(closes, _closes)
 
-    def open_and_close_for_session(self,dts):
+    def open_and_close_for_session(self, dts):
         # 每天开盘，休盘，开盘，收盘的时间
         opens = self.execution_time_from_open(dts)
         closes = self.excution_time_from_close(dts)
-        o_c = zip(opens,closes)
+        o_c = zip(opens, closes)
         return o_c
 
-    def compute_range_chunks(self, start_date, end_date, chunksize):
+    def compute_range_chunks(self, start_date, end_date, chunk_size):
         """Compute the start and end dates to run a pipeline for.
 
         Parameters
@@ -190,14 +184,12 @@ class TradingCalendar (object):
             The first date in the pipeline.
         end_date : pd.Timestamp
             The last date in the pipeline.
-        chunksize : int or None
+        chunk_size : int or None
             The size of the chunks to run. Setting this to None returns one chunk.
         """
-        sessions = self.session_in_range(start_date,end_date)
+        sessions = self.session_in_range(start_date, end_date)
         return (
-            (r[0], r[-1]) for r in partition_all(
-            chunksize, sessions
-        )
+            (r[0], r[-1]) for r in partition_all(chunk_size, sessions)
         )
 
     def get_trading_day_near_holiday(self, holiday_name, forward=True):
@@ -206,13 +198,13 @@ class TradingCalendar (object):
         holiday_days = self._fixed_holiday[holiday_name]
         idx_list = [ np.searchsorted(self.all_sessions, t)  for t in holiday_days]
         if forward:
-            trading_list = self.all_sessions[list(map(lambda x: x -1, idx_list))]
+            trading_list = self.all_sessions[list(map(lambda x: x - 1, idx_list))]
         else:
             trading_list = self.all_sessions[idx_list]
         return trading_list
 
+    @staticmethod
     def get_open_and_close(day):
-
         market_open = pd.Timestamp(
             datetime(
                 year=day.year,
@@ -228,7 +220,7 @@ class TradingCalendar (object):
                 day=day.day,
                 hour=15,
                 minute=0),
-                tz='Asia/Shanghai')
+            tz='Asia/Shanghai')
         return market_open, market_close
 
     def get_early_close_days(self):
@@ -247,6 +239,5 @@ class TradingCalendar (object):
 
 
 calendar = TradingCalendar()
-
 
 __all__ = [calendar]

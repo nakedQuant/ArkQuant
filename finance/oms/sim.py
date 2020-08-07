@@ -13,7 +13,7 @@ from abc import ABC, abstractmethod
 from finance.oms.order import Order, PriceOrder
 from utils.dt_utilty import locate_pos
 
-OrderData = namedtuple('OrderData','min kline pre pct')
+OrderData = namedtuple('OrderData', 'min kline pre pct')
 
 
 class BaseCreated(ABC):

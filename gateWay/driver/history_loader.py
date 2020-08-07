@@ -8,7 +8,7 @@ Created on Tue Mar 12 15:37:47 2019
 from collections import defaultdict
 from abc import ABC, abstractmethod
 import pandas as pd
-from calendar.trading_calendar import calendar
+from _calendar.trading_calendar import calendar
 from gateWay.driver.adjustArray import (
                         AdjustedDailyWindow,
                         AdjustedMinuteWindow

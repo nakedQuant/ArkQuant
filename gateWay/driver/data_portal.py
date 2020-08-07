@@ -281,14 +281,14 @@ class DataPortal(object):
         """
             eg --- 9:30 or 11:20
         """
-        resample_ticker_data = self._history_loader['minute'].get_resampled(
+        resample_tickers = self._history_loader['minute'].get_resampled(
                                                                 dt,
                                                                 window,
                                                                 ticker,
                                                                 assets,
                                                                 field
                                                                     )
-        return resample_ticker_data
+        return resample_tickers
 
     @staticmethod
     def get_current(sid):

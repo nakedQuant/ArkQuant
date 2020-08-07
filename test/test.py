@@ -4276,6 +4276,34 @@ raw = json.loads(_parse_url(equity_url, bs=False))
 equities = [item['f12'] for item in raw['data']['diff']]
 print('equities', equities)
 
+
+asset = '002570'
+
+cols = {'变动日期': 'ex_date', '公告日期': 'declared_date', '总股本': 'general', '流通A股': 'float', '限售A股': 'strict',
+        '流通B股': 'b_float', '限售B股': 'b_strict', '流通H股': 'h_float'}
+
+_url = 'http://vip.stock.finance.sina.com.cn/corp/go.php/vCI_StockStructure/stockid/%s.phtml' % asset
+
+frame = pd.DataFrame()
+content = _parse_url(_url)
+# resource = content['equity']
+tbody = content.findAll('tbody')
+if len(tbody) == 0:
+    print('due to sina error ,it raise cannot set a frame with no defined index and a scalar when tbody is null')
+for th in tbody:
+    formatted = parse_content_from_header(th)
+    frame = frame.append(formatted)
+# 调整
+frame.loc[:, 'sid'] = asset
+frame.index = range(len(frame))
+# deadline = self.deadline['equity_structure'][asset]
+# equity = frame[frame['公告日期'] > deadline] if deadline else frame
+# 需要rename cols
+print(frame.columns)
+print(frame.iloc[0,:])
+frame.rename(columns=cols, inplace=True)
+print('new', frame)
+
 # def _generate_output_dataframe(self,data, default_cols):
 #     """
 #     Generates an output dataframe from the given subset of user-provided
@@ -9069,3 +9097,13 @@ from dateutil.relativedelta import relativedelta
 #     return '%s(%d [%s])' % (type(self).__name__, self.sid, self.symbol)
 # else:
 #     return '%s(%d)' % (type(self).__name__, self.sid)
+
+# def _compute_date_range_slice(self, start_date, end_date):
+#     # Get the index of the start of dates for ``start_date``.
+#     start_ix = self.dates.searchsorted(start_date)
+#
+#     # Get the index of the start of the first date **after** end_date.
+#     end_ix = self.dates.searchsorted(end_date, side='right')
+#
+#     return slice(start_ix, end_ix)
+# ins = ins.groupby(table.c.sid)

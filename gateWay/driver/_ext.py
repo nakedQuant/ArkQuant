@@ -4,36 +4,14 @@
 Created on Sun Feb 17 16:39:46 2019
 @author: python
 """
-import pandas as pd,time
-from concurrent.futures import ThreadPoolExecutor,as_completed
-
-def load_ashare_mkv(self, sdate, edate, asset):
-    """股票流通市值、总市值、B股市值，H股市值"""
-    table = self.tables['ashareValue']
-    if asset:
-        ins = select(
-            [table.c.trade_dt, table.c.code, cast(table.c.mkt, Numeric(20, 5)), cast(table.c.cap, Numeric(20, 5)),
-             cast(table.c.strict, Numeric(20, 5)), cast(table.c.hk, Numeric(20, 5))]).where \
-            (and_(table.c.code == asset, table.c.trade_dt.between(sdate, edate)))
-    else:
-        ins = select(
-            [table.c.trade_dt, table.c.code, cast(table.c.mkt, Numeric(20, 5)), cast(table.c.cap, Numeric(20, 5)),
-             cast(table.c.strict, Numeric(20, 5)), cast(table.c.hk, Numeric(20, 5))]).where \
-            (table.c.trade_dt.between(sdate, edate))
-    rp = self._proc(ins)
-    market_value = rp.fetchall()
-    return market_value
+import pandas as pd
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 class MarketValue:
 
-    __slots__ = ['frequency','db','bar','edate']
-
-    def __init__(self,mode,dt):
+    def __init__(self, mode):
         self.frequency = mode
-        self.db = DataLayer()
-        self.bar = BarReader()
-        self.edate = dt
 
     def enroll_market_value(self,asset,sdate):
         conn = self.db.db_init()

@@ -159,8 +159,12 @@ equity_rights = sa.Table(
 )
 
 #股权结构
-equity_structure = sa.Table(
-    'equity_structure',
+# ['变动日期', '公告日期', '股本结构图', '变动原因', '总股本', '流通股', '流通A股', '高管股', '限售A股',
+#  '流通B股', '限售B股', '流通H股', '国家股', '国有法人股', '境内法人股', '境内发起人股', '募集法人股',
+#  '一般法人股', '战略投资者持股', '基金持股', '转配股', '内部职工股', '优先股'],
+# 高管股 属于限售股 --- 限售A股为空 ， 但是高管股不为0 ，总股本 = 流通A股 + 高管股 + 限售A股
+ownership = sa.Table(
+    'ownership',
     metadata,
     sa.Column(
         'id',
@@ -185,24 +189,6 @@ equity_structure = sa.Table(
     sa.Column('b_strict', sa.Numeric(15, 5)),
     sa.Column('h_float', sa.Numeric(15, 5)),
 )
-
-# 流通市值
-# equity_mcap = sa.Table(
-#     'equity_mcap',
-#     metadata,
-#     sa.Column(
-#         'sid',
-#         sa.Integer,
-#         sa.ForeignKey(equity_price.c.sid),
-#         unique=True,
-#         nullable=False,
-#         primary_key=True,
-#     ),
-#     sa.Column('trade_dt', sa.String(10), nullable=False),
-#     sa.Column('mkv', sa.Numeric(15,5), nullable=False),
-#     sa.Column('mkv_cap', sa.Numeric(15, 5), nullable=False),
-#     sa.Column('mkv_strict', sa.Numeric(15, 5), nullable=False),
-#     )
 
 #股东增减持
 holder = sa.Table(
@@ -306,6 +292,26 @@ version_info = sa.Table(
     # This constraint ensures a single entry in this table
     sa.CheckConstraint('id <= 1')
 )
+
+
+# 流通市值
+# mcap = sa.Table(
+#     'mcap',
+#     metadata,
+#     sa.Column(
+#         'sid',
+#         sa.Integer,
+#         sa.ForeignKey(equity_price.c.sid),
+#         unique=True,
+#         nullable=False,
+#         primary_key=True,
+#     ),
+#     sa.Column('trade_dt', sa.String(10), nullable=False),
+#     sa.Column('mkv', sa.Numeric(15,5), nullable=False),
+#     sa.Column('mkv_cap', sa.Numeric(15, 5), nullable=False),
+#     sa.Column('mkv_strict', sa.Numeric(15, 5), nullable=False),
+#     )
+
 
 asset_db_table_names = frozenset(['equity_price', 'convertible_price', 'fund_price', 'equity_splits',
                                   'equity_rights', 'equity_structure', 'equity_mcap',

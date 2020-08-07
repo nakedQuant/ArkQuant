@@ -91,4 +91,4 @@ class BrokerEngine(object):
         # 根据标的追踪 --- 具体卖入订单根据volume计算成交率，买入订单根据成交额来计算资金利用率 --- 评估撮合引擎撮合的的效率
         utility_ratio = np.mean(neg_utility + p_utility + c_utility + pos_utility)
         transactions = negatives + p_transactions + c_transactions + positives
-        return transactions , utility_ratio
+        return transactions, utility_ratio

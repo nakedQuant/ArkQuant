@@ -71,14 +71,14 @@ class BcolzReader(BarReader):
         dataframe = pd.DataFrame(raw)
         #调整系数
         inverse_ratio = 1 / meta.ohlc_ratio
-        scale = dataframe.apply(lambda x: [ x[col] * inverse_ratio
+        scale = dataframe.apply(lambda x: [x[col] * inverse_ratio
                                 for col in ['open', 'high', 'low', 'close']],
                                 axis=1)
         scale.set_index('ticker', inplace= True) if 'ticker' in scale.columns \
             else scale.set_index('trade_dt', inplace=True)
         return scale
 
-    def get_spot_value(self,asset, dt, fields):
+    def get_spot_value(self, asset, dt, fields):
         raise NotImplementedError()
 
     def load_raw_arrays(self, sessions, assets, columns):

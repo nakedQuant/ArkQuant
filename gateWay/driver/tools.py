@@ -22,6 +22,7 @@ from collections import defaultdict
 
 ONE_HOUR = pd.Timedelta(hours=1)
 
+
 def _parse_url(url, encoding='gbk', bs=True):
     Header = {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_3) AppleWebKit/537.36(KHTML, like Gecko)'
@@ -118,7 +119,7 @@ def has_data_for_dates(series_or_df, first_date, last_date):
 
 
 def transfer_to_timestamp(dt):
-    if not isinstance(dt,pd.Timestamp):
+    if not isinstance(dt, pd.Timestamp):
         try:
             stamp = pd.Timestamp(dt)
         except Exception as e:

@@ -140,3 +140,8 @@ class DBWriter(object):
 
     def __exit__(self, * exc_info):
         self.close()
+
+
+db = DBWriter()
+
+__all__ = [db]
