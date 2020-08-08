@@ -46,7 +46,7 @@ class ComposedCancel(CancelPolicy):
         self.first = first
         self.second = second
 
-    def should_trigger(self, order):
+    def should_cancel(self, order):
 
         return self.first.should_cancel(order) & self.second.should_cancel(order)
 

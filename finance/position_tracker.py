@@ -16,10 +16,8 @@ class PositionTracker(object):
         the current state of position held
     """
     def __init__(self,
-                 data_portal,
-                 commission):
+                 data_portal):
         self.data_portal = data_portal
-        self.commission = commission
         self.positions = OrderedDict()
         #根据时间记录关闭的交易
         self.record_closed_position = defaultdict(list)
@@ -65,7 +63,7 @@ class PositionTracker(object):
             position = self.positions[asset]
         except KeyError:
             position = self.positions[asset] = Position(asset)
-        cash_flow = position.update(transaction, self.commission)
+        cash_flow = position.update(transaction)
         if position.closed:
             dts = transaction.created_dt.strftime('%Y-%m-%d')
             self.record_closed_position[dts].append(position)
@@ -87,7 +85,8 @@ class PositionTracker(object):
 
     def sync_last_prices(self):
         """update last_sale_price of position"""
-        get_price = partial(self.data_portal.get_window_data,
+        get_price = partial(
+                            self.data_portal.get_window_data,
                             dt=self.update_sync_date,
                             field='close',
                             days_in_window=0,

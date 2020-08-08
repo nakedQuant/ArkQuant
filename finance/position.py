@@ -66,14 +66,14 @@ class Position(object):
         self.inner_position.cost_basis = adjust_cost_basics
         return left_cash
 
-    def update(self,txn,commission):
+    def update(self, txn):
         if self.asset == txn.asset:
             raise Exception('transaction asset must same with position asset')
         # 持仓基本净值
         base_value = self.amount * self.cost_basis
         # 交易净值 以及成本
         txn_value = txn.amount * txn.price
-        txn_cost = commission.calculate(txn)
+        txn_cost = txn.cost
         # 根据交易对持仓进行更新
         total_amount = txn.amount + self.amount
         if total_amount < 0 :

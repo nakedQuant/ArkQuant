@@ -44,7 +44,7 @@ class Commission(CommissionModel):
     @property
     def min_cost(self):
         """为保证满足最小交易成本 --- e.g : 5所需的capital """
-        self._base_cost
+        return self._base_cost
 
     @min_cost.setter
     def min_cost(self, val):
@@ -63,7 +63,7 @@ class Commission(CommissionModel):
         if out:
             return base_capital
 
-    def _calculate_rate(self, asset, dts, direction):
+    def calculate_rate(self, asset, dts, direction):
         # 印花税 1‰(卖的时候才收取，此为国家税收，全国统一)
         stamp_cost = 0 if direction == 'positive' else 1e-3
         # 过户费：深圳交易所无此项费用，上海交易所收费标准(按成交金额的0.02)
@@ -74,18 +74,6 @@ class Commission(CommissionModel):
         fee = stamp_cost + transfer_cost + self.commission_rate
         return fee
 
-    # def calculate(self, transaction):
-    #     """
-    #     :param transaction: Transaction object
-    #     :return: transaction cost
-    #     """
-    #     capital = transaction.amount * transaction.price
-    #     direction = 'negative' if np.sign(transaction.amount) == -1 else 'positive'
-    #     base_capital = self.gen_base_capital(transaction.ticker)
-    #     fee = self._calculate_rate(transaction.asset, direction, transaction.ticker)
-    #     txn_cost = capital * fee if capital > base_capital else base_capital * fee
-    #     return txn_cost
-
     def calculate(self, order):
         """
         :param order: Order object
@@ -94,6 +82,6 @@ class Commission(CommissionModel):
         capital = order.amount * order.price
         direction = 'negative' if np.sign(order.amount) == -1 else 'positive'
         base_capital = self.gen_base_capital(order.ticker)
-        rate = self._calculate_rate(order.asset, direction, order.ticker)
+        rate = self.calculate_rate(order.asset, direction, order.ticker)
         txn_cost = capital * rate if capital > base_capital else base_capital * rate
         return txn_cost

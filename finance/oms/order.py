@@ -23,13 +23,14 @@ class OrderType(Enum):
     FAK = 'fak'
 
 
-class BaseOrder(object):
+class Order(object):
 
-    __slots__ = ['asset', 'price', 'created_dt', 'direction', 'execution_style', 'slippage_model']
+    __slots__ = ['asset', 'price', 'amount', 'created_dt', 'direction', 'execution_style', 'slippage_model']
 
-    def __init__(self, asset, price, ticker, direction, style, slippage_model):
+    def __init__(self, asset, price, amount, ticker, direction, style, slippage_model):
         self.asset = asset
         self.price = price
+        self.amount = amount
         self.created_dt = ticker
         self.direction = direction
         self.execution_style = style
@@ -41,8 +42,6 @@ class BaseOrder(object):
 
     @property
     def sid(self):
-        # For backwards compatibility because we pass this object to
-        # custom slippage models.
         return self.asset.sid
 
     def _fit_slippage(self):
@@ -79,9 +78,6 @@ class BaseOrder(object):
     def __contains__(self, name):
         return name in self.__dict__
 
-    def __repr__(self):
-        return "Event({0})".format(self.__slots__)
-
     def to_dict(self):
         dct = {name: getattr(self.name)
                for name in self.__slots__}
@@ -97,75 +93,8 @@ class BaseOrder(object):
         """ pickle -- __getstate__ , __setstate__"""
         return self.__dict__()
 
-
-class Order(BaseOrder):
-    # using __slots__ to save on memory usage --- __dict__.  Simulations can create many
-    # Order objects and we keep them all in memory, so it's worthwhile trying
-    # to cut down on the memory footprint of this object.
-    """
-        Parameters
-        ----------
-        asset : AssetEvent
-            The asset that this order is for.
-        amount : int
-            The amount of shares to order. If ``amount`` is positive, this is
-            the number of shares to buy or cover. If ``amount`` is negative,
-            this is the number of shares to sell or short.
-        dt : str, optional
-            The date created order.
-
-        市价单 --- 针对与卖出 --- 被动算法 ，基于时刻去卖出，这样避免被检测到 --- 将大订单拆分多个小订单然后基于时点去按照市价卖出
-        实时订单
-    """
-    __slot__ = ['asset', 'amount', 'price', 'created_dt', 'direction', 'execution_style', 'slippage_model']
-
-    def __init__(self,
-                 asset,
-                 amount,
-                 price,
-                 ticker,
-                 direction,
-                 style,
-                 slippage_model):
-        # --- 找到baseOrder 父类 -- self
-        super(BaseOrder, self).__init__(self, asset, price, ticker, direction, style, slippage_model)
-        self.amount = amount
-        self.order_id = self.make_id()
+    def __setattr__(self, key, value):
+        raise NotImplementedError()
 
 
-class PriceOrder(BaseOrder):
-    # using __slots__ to save on memory usage --- __dict__.  Simulations can create many
-    # Order objects and we keep them all in memory, so it's worthwhile trying
-    # to cut down on the memory footprint of this object.
-    """
-        Parameters
-        ----------
-        asset : AssetEvent
-            The asset that this order is for.
-        amount : int
-            The amount of shares to order. If ``amount`` is positive, this is
-            the number of shares to buy or cover. If ``amount`` is negative,
-            this is the number of shares to sell or short.
-        dt : str, optional
-            The date created order.
-
-        限价单 --- 执行买入算法， 如果确定标的可以买入，偏向于涨的概率，主动买入而不是被动买入
-
-        买1 价格超过卖1，买方以卖1价成交
-    """
-    __slot__ = ['asset', 'capital', 'price', 'created_dt', 'direction', 'execution_style', 'slippage_model']
-
-    def __init__(self,
-                 asset,
-                 capital,
-                 price,
-                 ticker,
-                 direction,
-                 style,
-                 slippage_model):
-        super(BaseOrder, self).__init__(self, asset, price, ticker, direction, style, slippage_model)
-        self.capital = capital
-        self.order_id = self.make_id()
-
-
-__all__ = [Order, PriceOrder]
+__all__ = [Order]

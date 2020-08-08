@@ -5,17 +5,17 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-from finance.oms.order import Order, PriceOrder
 
 
 class Transaction(object):
 
     __slots__ = ['asset', 'amount', 'price', 'created_dt']
 
-    def __init__(self, asset, amount, price, dt):
+    def __init__(self, asset, amount, price, cost, dt):
         self.asset = asset
         self.amount = amount
         self.price = price
+        self.cost = cost
         self.created_dt = dt
 
     def __repr__(self):
@@ -46,24 +46,22 @@ class Transaction(object):
         return p_dict
 
 
-def create_transaction(order, fee):
+def create_transaction(order, commission):
     """
     :param order: Ticker order or Price order
-    :param fee: float
+    :param commission: Commission object used for calculating order cost
     :return: transaction
     """
     asset = order.asset
     sign = -1 if order.direction == 'negative' else 1
-    if isinstance(order, PriceOrder):
-        assert order.price * (1 + fee) * asset.tick_size <= order.capital, \
-            "order capital statisfy tick_size after remove cost"
-    elif isinstance(order, Order):
-        amount = order.amount
+    # calculate cost
+    cost = commission.calculate(order)
     # create txn
     transaction = Transaction(
         asset=asset,
-        amount=sign * amount,
+        amount=order.amount * sign,
         price=order.price,
-        dt=order.created_dt
+        dt=order.created_dt,
+        cost=cost
     )
     return transaction

@@ -99,13 +99,13 @@ class Ledger(object):
         start_value = portfolio.portfolio_value
         portfolio.portfolio_value = end_value = \
             position_values + portfolio.start_cash
-        #资金使用效率
+        # 资金使用效率
         portfolio.utility = position_values / end_value
-        #更新组合投资的收益，并计算组合的符合收益率
+        # 更新组合投资的收益，并计算组合的符合收益率
         pnl = end_value - start_value
         returns = pnl / start_value
         portfolio.pnl += pnl
-        #复合收益率
+        # 复合收益率
         portfolio.returns = (
             (1+portfolio.returns) *
             (1+returns) - 1
