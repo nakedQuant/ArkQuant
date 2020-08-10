@@ -51,7 +51,7 @@ cpdef _compute_row_slices(dict asset_starts_absolute,
     """
     Core indexing functionality for loading raw data from bcolz.
 
-    For each asset in requested assets, computes three values:
+    For each asset in requested asset, computes three values:
 
     1.) The index in the raw bcolz data of first row to load.
     2.) The index in the raw bcolz data of the last row to load.
@@ -77,7 +77,7 @@ cpdef _compute_row_slices(dict asset_starts_absolute,
     query_end : intp
         End index in our _calendar of the dates for which we're querying.
     requested_assets : pandas.Int64Index
-        The assets for which we want to load data.
+        The asset for which we want to load data.
 
     Returns
     -------

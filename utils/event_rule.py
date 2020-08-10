@@ -9,20 +9,6 @@ from abc import ABC, abstractmethod
 from collections import namedtuple
 
 
-class Event(namedtuple('Event',['rule','callback'])):
-    """
-        event consists of rule and callback
-        when rule is triggered ,then callback
-    """
-    def __new__(cls,rule,callback=None):
-        callback = callback or (lambda *args,**kwargs : None)
-        return super(cls,cls).__new__(cls,rule = rule,callback = callback)
-
-    def handle_data(self,context,data,dt):
-        if self.rule.should_trigger(dt):
-            self.callback(context,data)
-
-
 class EventRule(ABC):
     """
         event --- rule
@@ -34,45 +20,50 @@ class EventRule(ABC):
         return self._cal
 
     @cal.setter
-    def cal(self,value):
+    def cal(self, value):
         self._cal = value
 
     @abstractmethod
-    def should_trigger(self,dt):
+    def should_trigger(self, dt):
         raise NotImplementedError
+
 
 class StatelessRule(EventRule):
     """
         a stateless rule can be composed to create new rule
     """
-    def and_(self,rule):
+    def and_(self, rule):
         """
             trigger only when both rules trigger
         :param rule:
         :return:
         """
-        return ComposedRule(self,rule,ComposedRule.lazy_and)
+        return ComposedRule(self, rule, ComposedRule.lazy_and)
 
     __and__ = and_
+
+    def should_trigger(self):
+        pass
+
 
 class ComposedRule(StatelessRule):
     """
      compose two rule with some composing function
     """
-    def __init__(self,first,second,composer):
-        if not (isinstance(first,StatelessRule) and isinstance(second,StatelessRule)):
+    def __init__(self, first, second, composer):
+        if not (isinstance(first, StatelessRule) and isinstance(second, StatelessRule)):
             raise ValueError('only StatelessRule can be composed')
 
         self.first = first
         self.second = second
         self.composer = composer
 
-    def should_trigger(self,dt):
+    def should_trigger(self, dt):
 
-        return self.composer(self.first,self.second)
+        return self.composer(self.first, self.second)
 
     @staticmethod
-    def lazy_and(first_trigger,second_trigger,dt):
+    def lazy_and(first_trigger, second_trigger, dt):
         """
             lazy means : lazy_and will not call whenwhen first_trigger is not Stateless
         :param first_trigger:
@@ -87,7 +78,7 @@ class ComposedRule(StatelessRule):
         return self.first.cal
 
     @cal.setter
-    def cal(self,value):
+    def cal(self, value):
         self.first.cal = self.second.cal = value
 
 
@@ -103,7 +94,21 @@ class Always(StatelessRule):
 class Never(StatelessRule):
 
     @staticmethod
-    def never_trigger():
+    def never_trigger(dt):
         return False
 
     should_trigger = never_trigger
+
+
+class Event(namedtuple('Event', ['rule', 'callback'])):
+    """
+        event consists of rule and callback
+        when rule is triggered ,then callback
+    """
+    def __new__(cls, rule, callback=None):
+        callback = callback or (lambda *args, **kwargs: None)
+        return super(cls, cls).__new__(cls, rule=rule, callback=callback)
+
+    def handle_data(self, context, data, dt):
+        if self.rule.should_trigger(dt):
+            self.callback(context, data)

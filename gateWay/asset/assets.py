@@ -174,6 +174,9 @@ class Equity(Asset):
         per = 1 if self.sid.startswith('688') else self.tick_size
         return per
 
+    def __setattr__(self, key, value):
+        raise NotImplementedError()
+
     def _supplementary_for_asset(self):
         tbl = self.metadata.tables['equity_basics']
         ins = sa.select([tbl.c.dual,
@@ -228,8 +231,13 @@ class Equity(Asset):
         text = json.loads(text)
         return text['data']
 
-    def __setattr__(self, key, value):
-        raise NotImplementedError()
+    def is_specialized(self, dt):
+        """
+            equity is special treatment on dt
+        :param dt: str e.g. %Y-%m-%d
+        :return: bool
+        """
+        raise NotImplementedError
 
 
 class Convertible(Asset):

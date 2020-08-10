@@ -49,7 +49,7 @@ class Initialize:
 
     def calc_weight(self,start_date,end_date,asset):
         """
-            shift before one year or specify year to determine the weight of assets of specify category
+            shift before one year or specify year to determine the weight of asset of specify category
             weight based on mkt and growth ,mkv means stable and status ,growth --- pct of year means prospection
         """
         event = Event([start_date,end_date],asset)

@@ -19,13 +19,13 @@ class DataPortal(object):
     """Interface to all of the data that a simulation needs.
 
     This is used by the simulation runner to answer questions about the data,
-    like getting the prices of assets on a given day or to service history
+    like getting the prices of asset on a given day or to service history
     calls.
 
     Parameters
     ----------
     asset_finder : zipline.assets.assets.AssetFinder
-        The AssetFinder instance used to resolve assets.
+        The AssetFinder instance used to resolve asset.
     trading_calendar: zipline.utils._calendar.exchange_calendar.TradingCalendar
         The _calendar instance used to provide minute->session information.
     first_trading_day : pd.Timestamp
@@ -82,14 +82,14 @@ class DataPortal(object):
 
     def get_fetcher_assets(self, sids):
         """
-        Returns a list of assets for the current date, as defined by the
+        Returns a list of asset for the current date, as defined by the
         fetcher data.
 
         Returns
         -------
         list: a list of Asset objects.
         """
-        # return a list of assets for the current date, as defined by the
+        # return a list of asset for the current date, as defined by the
         # fetcher source
         found, missing = self.asset_finder.retrieve_asset(sids)
         return found, missing
@@ -188,7 +188,7 @@ class DataPortal(object):
         Parameters
         ----------
         assets : list of zipline.data.Asset objects
-            The assets whose data is desired.
+            The asset whose data is desired.
 
         end_date : history date(not include)
 

@@ -113,8 +113,8 @@ def handle_extra_source(self, source_df, sim_params):
         # Normalize all the dates in the df
         source_df.index = source_df.index.normalize()
 
-        # source_df's sid column can either consist of assets we know about
-        # (such as sid(24)) or of assets we don't know about (such as
+        # source_df's sid column can either consist of asset we know about
+        # (such as sid(24)) or of asset we don't know about (such as
         # palladium).
         #
         # In both cases, we break up the dataframe into individual dfs
@@ -145,7 +145,7 @@ def handle_extra_source(self, source_df, sim_params):
         for group_name in group_names:
             group_dict[group_name] = grouped_by_sid.get_group(group_name)
 
-        # This will be the dataframe which we query to get fetcher assets at
+        # This will be the dataframe which we query to get fetcher asset at
         # any given time. Get's overwritten every time there's a new fetcher
         # call
         extra_source_df = pd.DataFrame()
@@ -248,7 +248,7 @@ class DailyHistoryAggregator(object):
 
         Returns
         -------
-        np.array with dtype=float64, in order of assets parameter.
+        np.array with dtype=float64, in order of asset parameter.
         """
         market_open, prev_dt, dt_value, entries = self._prelude(dt, 'open')
 
@@ -317,7 +317,7 @@ class DailyHistoryAggregator(object):
 
         Returns
         -------
-        np.array with dtype=float64, in order of assets parameter.
+        np.array with dtype=float64, in order of asset parameter.
         """
         market_open, prev_dt, dt_value, entries = self._prelude(dt, 'high')
 
@@ -386,7 +386,7 @@ class DailyHistoryAggregator(object):
 
         Returns
         -------
-        np.array with dtype=float64, in order of assets parameter.
+        np.array with dtype=float64, in order of asset parameter.
         """
         market_open, prev_dt, dt_value, entries = self._prelude(dt, 'low')
 
@@ -452,7 +452,7 @@ class DailyHistoryAggregator(object):
 
         Returns
         -------
-        np.array with dtype=float64, in order of assets parameter.
+        np.array with dtype=float64, in order of asset parameter.
         """
         market_open, prev_dt, dt_value, entries = self._prelude(dt, 'close')
 
@@ -526,7 +526,7 @@ class DailyHistoryAggregator(object):
 
         Returns
         -------
-        np.array with dtype=int64, in order of assets parameter.
+        np.array with dtype=int64, in order of asset parameter.
         """
         market_open, prev_dt, dt_value, entries = self._prelude(dt, 'volume')
 
@@ -676,7 +676,7 @@ class ReindexBarReader(with_metaclass(ABCMeta)):
     A base class for readers which reindexes results, filling in the additional
     indices with empty data.
 
-    Used to align the reading assets which trade on different calendars.
+    Used to align the reading asset which trade on different calendars.
 
     Currently only supports a ``trading_calendar`` which is a superset of the
     ``reader``'s _calendar.

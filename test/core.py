@@ -65,7 +65,7 @@ def minute_equity_relative(bundle_name, timestr, environ=None):
 def asset_db_relative(bundle_name, timestr, environ=None, db_version=None):
     db_version = ASSET_DB_VERSION if db_version is None else db_version
 
-    return bundle_name, timestr, 'assets-%d.sqlite' % db_version
+    return bundle_name, timestr, 'asset-%d.sqlite' % db_version
 
 
 def to_bundle_ingest_dirname(ts):
@@ -330,7 +330,7 @@ def _make_bundle_core():
             The timestamp to use for the load.
             By default this is the current time.
         assets_versions : Iterable[int], optional
-            Versions of the assets db to which to downgrade.
+            Versions of the asset db to which to downgrade.
         show_progress : bool, optional
             Tell the ingest function to display the progress where possible.
         """
@@ -412,7 +412,7 @@ def _make_bundle_core():
                 adjustment_db_writer = None
                 if assets_versions:
                     raise ValueError('Need to ingest a bundle that creates '
-                                     'writers in order to downgrade the assets'
+                                     'writers in order to downgrade the asset'
                                      ' db.')
             bundle.ingest(
                 environ,

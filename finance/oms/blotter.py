@@ -10,7 +10,11 @@ import pandas as pd
 from finance.transaction import create_transaction
 
 
-class Blotter(object):
+class SimulationBlotter(object):
+    """
+        transform orders which are simulated by gen module to transactions
+        撮合成交逻辑基于时间或者价格
+    """
 
     def __init__(self,
                  gen,
@@ -18,17 +22,17 @@ class Blotter(object):
         self._iterator = gen
         self.delay = delay
 
-    @property
-    def commission(self):
-        return self._iterator.commission
-
     def create_bulk_transactions(self, orders):
-        transactions = [create_transaction(order, self.commission) for order in orders]
+        transactions = [create_transaction(order, self._iterator.commission) for order in orders]
         return transactions
 
     def generate(self, asset, capital, dts, direction):
         """
-            基于capital --- 买入标的
+        :param asset: Asset
+        :param capital: float
+        :param dts: pd.Timestamp or str
+        :param direction: positive or negative
+        :return: list of transactions
         """
         orders = self._iterator.simulate(asset, capital, dts, direction)
         transactions = self.create_bulk_transactions(orders)
@@ -36,7 +40,14 @@ class Blotter(object):
         utility = sum([t.amount for t in transactions]) / sum([order.amount for order in orders])
         return transactions, utility
 
-    def generate_txn(self, asset, amount, dts, direction):
+    def generate_direct(self, asset, amount, dts, direction):
+        """
+        :param asset: Asset
+        :param amount: order.amount ,int
+        :param dts: pd.Timestamp or str
+        :param direction: positive or negative
+        :return: list of transactions
+        """
         direct_orders = self._iterator.simulate_order(asset, amount, dts, direction)
         transactions = self.create_bulk_transactions(direct_orders)
         # 计算效率
@@ -85,9 +96,3 @@ class Blotter(object):
         # 计算效率
         c_utility = sum([txn.amount for txn in c_transactions]) / sum(c_sizes)
         return p_transactions, p_utility, c_transactions, c_utility
-
-    def centralized(self):
-        """
-            a. cancel _policy
-            b. 14:57集中处理为成交订单
-        """

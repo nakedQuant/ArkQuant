@@ -4,12 +4,12 @@ Filters that apply smoothing operations on other filters.
 These are generally useful for controlling/minimizing turnover on existing
 Filters.
 """
-from test.algorithm import CustomFilter
+from algorithm import CustomFilter
 
 
 class All(CustomFilter):
     """
-    A Filter requiring that assets produce True for ``window_length``
+    A Filter requiring that asset produce True for ``window_length``
     consecutive days.
 
     **Default Inputs:** None
@@ -23,7 +23,7 @@ class All(CustomFilter):
 
 class Any(CustomFilter):
     """
-    A Filter requiring that assets produce True for at least one day in the
+    A Filter requiring that asset produce True for at least one day in the
     last ``window_length`` days.
 
     **Default Inputs:** None
@@ -37,7 +37,7 @@ class Any(CustomFilter):
 
 class AtLeastN(CustomFilter):
     """
-    A Filter requiring that assets produce True for at least N days in the
+    A Filter requiring that asset produce True for at least N days in the
     last ``window_length`` days.
 
     **Default Inputs:** None

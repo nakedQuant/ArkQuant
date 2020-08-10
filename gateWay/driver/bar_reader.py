@@ -125,7 +125,7 @@ class AssetSessionReader(BarReader):
 
     def _retrieve_assets(self, table, sids, fields, start_date, end_date):
         """
-            retrieve specific categroy assets
+            retrieve specific categroy asset
         """
         tbl = self.metadata['%s_price' % table]
         orm = sa.select([tbl.c.trade_dt, tbl.c.sid,

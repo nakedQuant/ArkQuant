@@ -149,6 +149,7 @@ def ensure_timestamp(func, argname, arg):
             ),
         )
 
+
 def restrict_to_dtype(dtype, message_template):
     """
     A factory for decorators that restrict Term methods to only be callable on
@@ -192,6 +193,7 @@ def restrict_to_dtype(dtype, message_template):
             )
         return term_instance
     return preprocess(self=processor)
+
 
 #扩展 --- 通过字典对不同的参数进行函数限制，即为每一个参数调用preprocess
 def expect_dtypes(__funcname=_qualified_name, **named):
@@ -381,6 +383,7 @@ def expect_types(__funcname=_qualified_name, **named):
         )
 
     return preprocess(**valmap(_expect_type, named))
+
 
 def optional(type_):
     """

@@ -8,7 +8,7 @@ Created on Tue Mar 12 15:37:47 2019
 
 import pandas as pd
 import warnings
-from gateWay.assets.assets import Asset
+from gateWay.asset.assets import Asset
 
 
 def _deprecated_getitem_method(name, attrs):
@@ -75,7 +75,7 @@ class Portfolio(object):
         return self._cash_flow
 
     @cash_flow.setter
-    def cash_flow(self,capital):
+    def cash_flow(self, capital):
         return capital
 
     def __getattr__(self, item):
@@ -241,7 +241,7 @@ class Account(object):
     If connected to a broker, one can update these values with the trading
     account values as reported by the broker.
     """
-    def __init__(self,portfolio):
+    def __init__(self, portfolio):
         self_ = MutableView(self)
         self_.settled_cash = portfolio.cash
         self_.total_value = portfolio.portfolio_value

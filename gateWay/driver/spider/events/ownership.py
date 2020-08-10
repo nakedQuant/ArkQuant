@@ -53,7 +53,7 @@ class OwnershipWriter(Crawler):
     def writer(self):
         # initialize deadline
         deadline = self._retrieve_from_sqlite()
-        # obtain assets
+        # obtain asset
         assets = self._retrieve_equities_from_sqlite()
         for asset in assets:
             content = _parse_url(OWNERSHIP % asset)

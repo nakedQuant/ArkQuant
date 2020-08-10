@@ -10,7 +10,7 @@ import json, pandas as pd
 from itertools import chain
 from toolz import partition_all
 
-from gateWay.assets._config import ASSERT_URL_MAPPING, ASSET_SUPPLEMENT_URL
+from gateWay.asset._config import ASSERT_URL_MAPPING, ASSET_SUPPLEMENT_URL
 from gateWay.driver.third_api.client import tsclient
 from gateWay.driver.tools import _parse_url
 

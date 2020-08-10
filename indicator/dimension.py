@@ -1,7 +1,7 @@
 # -*- coding : utf-8 -*-
 import numpy as np
 
-from test.algorithm import BaseFeature
+from algorithm import BaseFeature
 
 class PCA(BaseFeature):
     '''

@@ -5,7 +5,7 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-import os,inspect , numpy as np
+import os, inspect, numpy as np, pandas as pd
 
 
 def vectorized_is_element(array, choices):
@@ -25,6 +25,7 @@ def vectorized_is_element(array, choices):
     """
     return np.vectorize(choices.__contains__, otypes=[bool])(array)
 
+
 def getargspec(f):
     full_argspec = inspect.getfullargspec(f)
     return inspect.ArgSpec(
@@ -32,6 +33,7 @@ def getargspec(f):
         varargs = full_argspec.varargs,
         keywords = full_argspec.varkw,
         defaults = full_argspec.defaults)
+
 
 def signature():
     """
@@ -43,6 +45,7 @@ def signature():
         sig.parameters['b'].annotation
         #<class 'int'>
     """
+
 
 def display():
     """
@@ -57,7 +60,7 @@ def display():
     """
 
 
-def encryt(obj,hex = False):
+def encrypt(obj):
 
     """
         method : md5(), sha1(), sha224(), sha256(), sha384(), and sha512()
@@ -72,6 +75,7 @@ def encryt(obj,hex = False):
     else:
         res = m.digest()
     return res
+
 
 def extract(_p_dir,file='RomDataBu/df_kl.h5.zip'):
     """
@@ -144,7 +148,7 @@ def validate_keys(dict_, expected, funcname):
 
 
 # @deprecated(msg=DATAREADER_DEPRECATION_WARNING)
-def cache_dir(environ=environ):
+def cache_dir(environ):
     try:
         return environ['EMPYRICAL_CACHE_DIR']
     except KeyError:
@@ -160,7 +164,7 @@ def cache_dir(environ=environ):
 
 # @deprecated(msg=DATAREADER_DEPRECATION_WARNING)
 def data_path(name):
-    return join(cache_dir(), name)
+    return os.join(cache_dir(), name)
 
 
 # @deprecated(msg=DATAREADER_DEPRECATION_WARNING)
@@ -170,9 +174,9 @@ def ensure_directory(path):
     """
 
     try:
-        makedirs(path)
+        os.makedirs(path)
     except OSError as exc:
-        if exc.errno != errno.EEXIST or not isdir(path):
+        if exc.errno != os.errno.EEXIST or not os.isdir(path):
             raise
 
 

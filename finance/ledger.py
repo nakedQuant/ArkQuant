@@ -8,6 +8,7 @@ Created on Tue Mar 12 15:37:47 2019
 import pandas as pd, numpy as np, warnings
 from ._protocol import Portfolio, Account
 from .position_tracker import PositionTracker
+from ._protocol import MutableView
 
 
 class Ledger(object):
@@ -48,7 +49,7 @@ class Ledger(object):
         if self._dirty_portfolio:
             raise Exception('today_returns is avaiable at the end of session ')
         return (
-            (self.portfolio.returns + 1) /
+            (self._portfolio.returns + 1) /
             (self._previous_total_returns + 1) - 1
         )
 
@@ -56,11 +57,11 @@ class Ledger(object):
     def portfolio(self):
         if self._dirty_portfolio:
             raise Exception('portofilio is accurate at the end of session ')
-        return self._portfolio
+        return MutableView(self._portfolio)
 
     @property
     def account(self):
-        return Account(self.portfolio)
+        return Account(self._portfolio)
 
     def _cash_flow(self, capital_amount):
         """
@@ -78,7 +79,7 @@ class Ledger(object):
         # 每天同步时间
         self.position_tracker.sync_last_date(session_ix)
         self._process_dividends()
-        self._previous_total_returns = self.portfolio.returns
+        self._previous_total_returns = self._portfolio.returns
         self._dirty_portfolio = True
 
     def process_transaction(self, transactions):

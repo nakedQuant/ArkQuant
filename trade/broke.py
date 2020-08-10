@@ -10,72 +10,59 @@ from multiprocessing import Pool
 from functools import partial
 
 
-class BrokerEngine(object):
+class Broker(object):
     """
-        --- interactive , orderCreated
-        撮合成交
-        如果open_pct 达到10% --- 是否买入
-        分为不同的模块 创业板，科创板，ETF
-        包含 --- sell orders buy orders 同时存在，但是buy_orders --- 基于sell orders 和 ledger
-        通过限制买入capital的pct实现分布买入
-        但是卖出订单 --- 通过追加未成交订单来实现
-        如何连接卖出与买入模块
-
-        由capital --- calculate orders 应该属于在统一模块 ，最后将订单 --- 引擎生成交易 --- 执行计划式的，非手动操作类型的
-        剔除ReachCancel --- 10%
-        剔除SwatCancel --- 黑天鹅
-        原则：
-            主要针对于买入标的的
-            对于卖出的，遵循最大程度卖出
+        combine simpleEngine and blotter module
+        engine --- asset --- orders --- transactions
+        订单 --- 引擎生成交易 --- 执行计划式的
     """
     def __init__(self,
                  engine,
-                 blotter,
-                 allocation):
+                 simulation_blotter,
+                 allocation_model):
         # simple_engine
         self.engine = engine
-        self.blotter = blotter
-        self.allocation = allocation
+        self.blotter = simulation_blotter
+        self.allocation = allocation_model
 
     def implement_based_on_amount(self, puts, dts):
         """单独的卖出仓位"""
-        proc = self.blotter.simulate_txn
-        p_func = partial(proc,
-                         dts=dts,
-                         direction='negative')
+        p_func = partial(
+                        self.blotter.generate_direct,
+                        dts=dts,
+                        direction='negative')
         with Pool(processes=len(puts))as pool:
             results = [pool.apply_async(p_func, p.asset, p.amount)
                        for p in puts]
-            #卖出订单，买入订单分开来
+            # 卖出订单，买入订单分开来
             transactions, utility = zip(*results)
         return transactions, utility
 
     def implemnt_based_on_capital(self, calls, capital, dts):
         """基于资金买入对应仓位"""
-        p_func = partial(self.blotter.simulate_capital_txn(dts=dts))
+        p_func = partial(self.blotter.generate,
+                         dts=dts,
+                         direction='positive')
         # 资金分配
-        cap_mappings = self.allocation.compute(calls.values(), capital)
+        mappings = self.allocation.compute(calls.values(), capital)
         # 并行计算
-        with Pool(processes= len(calls)) as pool:
-            result = [ pool.apply_async(p_func,
-                                       asset = asset,
-                                       capital = cap_mappings[asset]
-                                       )
-                      for asset in calls.values() ]
+        with Pool(processes=len(calls)) as pool:
+            result = [pool.apply_async(p_func,
+                                       asset=asset,
+                                       capital=mappings[asset])
+                      for asset in calls.values()]
         # transaction , efficiency
         transactions, utility = list(zip(*result))
-        return transactions , utility
+        return transactions, utility
 
-    def implement_dual(self, targets, dts):
+    def implement_dual(self, duals, dts):
         """
             针对一个pipeline算法，卖出 -- 买入
         """
-        dual_func = self.blotter.simulate_dual_txn
-        p_func = partial(dual_func,dts = dts)
-        with Pool(processes=len(targets))as pool:
-            results = [ pool.apply_async(p_func,*obj)
-                       for obj in targets ]
-            #卖出订单，买入订单分开来
+        p_func = partial(self.blotter.yield_txn, dts=dts)
+        with Pool(processes=len(duals))as pool:
+            results = [pool.apply_async(p_func, *obj) for obj in duals]
+            # 卖出订单，买入订单分开来
             p_transactions, p_utility, c_transactions, c_utility = zip(*results)
         return p_transactions, p_utility, c_transactions, c_utility
 

@@ -5,21 +5,22 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-
 import threading
 
 context = threading.local()
 
+
 def get_algo_instance():
     return getattr(context, 'algorithm', None)
+
 
 def set_algo_instance(algo):
     context.algorithm = algo
 
 
-class ZiplineAPI(object):
+class PxAPI(object):
     """
-    Context manager for making an algorithm instance available to zipline API
+    Context manager for making an algorithm instance available to PxAPI
     functions within a scoped block.
     """
     def __init__(self, algo_instance):

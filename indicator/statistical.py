@@ -72,7 +72,7 @@ class RollingPearson(_RollingCorrelation):
         Length of the lookback window over which to compute each correlation
         coefficient.
     mask : zipline.pipeline.Filter, optional
-        A Filter describing which assets (columns) of `base_factor` should have
+        A Filter describing which asset (columns) of `base_factor` should have
         their correlation with `target` computed each day.
 
     See Also
@@ -118,7 +118,7 @@ class RollingSpearman(_RollingCorrelation):
         Length of the lookback window over which to compute each correlation
         coefficient.
     mask : zipline.pipeline.Filter, optional
-        A Filter describing which assets (columns) of `base_factor` should have
+        A Filter describing which asset (columns) of `base_factor` should have
         their correlation with `target` computed each day.
 
     See Also
@@ -162,7 +162,7 @@ class RollingLinearRegression(CustomFactor):
     regression_length : int
         Length of the lookback window over which to compute each regression.
     mask : zipline.pipeline.Filter, optional
-        A Filter describing which assets (columns) of `dependent` should be
+        A Filter describing which asset (columns) of `dependent` should be
         regressed against `independent` each day.
 
     See Also
@@ -224,7 +224,7 @@ class RollingLinearRegression(CustomFactor):
 class RollingPearsonOfReturns(RollingPearson):
     """
     Calculates the Pearson product-moment correlation coefficient of the
-    returns of the given asset with the returns of all other assets.
+    returns of the given asset with the returns of all other asset.
 
     Pearson correlation is what most people mean when they say "correlation
     coefficient" or "R-value".
@@ -232,7 +232,7 @@ class RollingPearsonOfReturns(RollingPearson):
     Parameters
     ----------
     target : zipline.assets.Asset
-        The asset to correlate with all other assets.
+        The asset to correlate with all other asset.
     returns_length : int >= 2
         Length of the lookback window over which to compute returns. Daily
         returns require a window length of 2.
@@ -240,18 +240,18 @@ class RollingPearsonOfReturns(RollingPearson):
         Length of the lookback window over which to compute each correlation
         coefficient.
     mask : zipline.pipeline.Filter, optional
-        A Filter describing which assets should have their correlation with the
+        A Filter describing which asset should have their correlation with the
         target asset computed each day.
 
     Notes
     -----
-    Computing this factor over many assets can be time consuming. It is
-    recommended that a mask be used in order to limit the number of assets over
+    Computing this factor over many asset can be time consuming. It is
+    recommended that a mask be used in order to limit the number of asset over
     which correlations are computed.
 
     Examples
     --------
-    Let the following be example 10-day returns for three different assets::
+    Let the following be example 10-day returns for three different asset::
 
                        SPY    MSFT     FB
         2017-03-13    -.03     .03    .04
@@ -317,12 +317,12 @@ class RollingPearsonOfReturns(RollingPearson):
 class RollingSpearmanOfReturns(RollingSpearman):
     """
     Calculates the Spearman rank correlation coefficient of the returns of the
-    given asset with the returns of all other assets.
+    given asset with the returns of all other asset.
 
     Parameters
     ----------
     target : zipline.assets.Asset
-        The asset to correlate with all other assets.
+        The asset to correlate with all other asset.
     returns_length : int >= 2
         Length of the lookback window over which to compute returns. Daily
         returns require a window length of 2.
@@ -330,13 +330,13 @@ class RollingSpearmanOfReturns(RollingSpearman):
         Length of the lookback window over which to compute each correlation
         coefficient.
     mask : zipline.pipeline.Filter, optional
-        A Filter describing which assets should have their correlation with the
+        A Filter describing which asset should have their correlation with the
         target asset computed each day.
 
     Notes
     -----
-    Computing this factor over many assets can be time consuming. It is
-    recommended that a mask be used in order to limit the number of assets over
+    Computing this factor over many asset can be time consuming. It is
+    recommended that a mask be used in order to limit the number of asset over
     which correlations are computed.
 
     See Also
@@ -367,25 +367,25 @@ class RollingSpearmanOfReturns(RollingSpearman):
 class RollingLinearRegressionOfReturns(RollingLinearRegression):
     """
     Perform an ordinary least-squares regression predicting the returns of all
-    other assets on the given asset.
+    other asset on the given asset.
 
     Parameters
     ----------
     target : zipline.assets.Asset
-        The asset to regress against all other assets.
+        The asset to regress against all other asset.
     returns_length : int >= 2
         Length of the lookback window over which to compute returns. Daily
         returns require a window length of 2.
     regression_length : int >= 1
         Length of the lookback window over which to compute each regression.
     mask : zipline.pipeline.Filter, optional
-        A Filter describing which assets should be regressed against the target
+        A Filter describing which asset should be regressed against the target
         asset each day.
 
     Notes
     -----
-    Computing this factor over many assets can be time consuming. It is
-    recommended that a mask be used in order to limit the number of assets over
+    Computing this factor over many asset can be time consuming. It is
+    recommended that a mask be used in order to limit the number of asset over
     which regressions are computed.
 
     This factor is designed to return five outputs:
@@ -405,7 +405,7 @@ class RollingLinearRegressionOfReturns(RollingLinearRegression):
 
     Examples
     --------
-    Let the following be example 10-day returns for three different assets::
+    Let the following be example 10-day returns for three different asset::
 
                        SPY    MSFT     FB
         2017-03-13    -.03     .03    .04
@@ -491,12 +491,12 @@ class SimpleBeta(CustomFactor, StandardOutputs):
     Parameters
     ----------
     target : zipline.Asset
-        Asset against which other assets should be regressed.
+        Asset against which other asset should be regressed.
     regression_length : int
         Number of days of daily returns to use for the regression.
     allowed_missing_percentage : float, optional
         Percentage of returns observations (between 0 and 1) that are allowed
-        to be missing when calculating betas. assets with more than this
+        to be missing when calculating betas. asset with more than this
         percentage of returns observations missing will produce values of
         NaN. Default behavior is that 25% of inputs can be missing.
     """

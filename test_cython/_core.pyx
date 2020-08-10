@@ -66,7 +66,7 @@ cdef _ffill_missing_value_2d_inplace(np.ndarray[column_type, ndim=2] array,
     Parameters
     ----------
     array : np.ndarray
-        The array to forward fill with shape (len(dates), len(assets)).
+        The array to forward fill with shape (len(dates), len(asset)).
     missing_value : any
         The missing value for this array.
     non_null_ts_ixs_by_column_ix : list[set[int]]
@@ -644,7 +644,7 @@ cdef arrays_from_rows_without_assets(DatetimeIndex_t dates,
                                      list columns,
                                      object all_rows,
                                      AsArrayKind array_kind):
-    # The no assets case is implemented as a special case of the with assets
+    # The no asset case is implemented as a special case of the with asset
     # code where every row is tagged with a dummy sid of 0. This gives us the
     # desired shape of (len(dates), 1) without much cost.
     return arrays_from_rows[AsArrayKind](
@@ -680,7 +680,7 @@ cpdef adjusted_arrays_from_rows_with_assets(DatetimeIndex_t dates,
         The datetime when data should no longer be considered available for
         a session.
     assets : iterable[int]
-        The assets in the order requested.
+        The asset in the order requested.
     columns : list[BoundColumn]
         The columns being loaded.
     all_rows : pd.DataFrame
@@ -750,7 +750,7 @@ cpdef baseline_arrays_from_rows_with_assets(DatetimeIndex_t dates,
         The datetime when data should no longer be considered available for
         a session.
     assets : iterable[int]
-        The assets in the order requested.
+        The asset in the order requested.
     columns : list[BoundColumn]
         The columns being loaded.
     all_rows : pd.DataFrame

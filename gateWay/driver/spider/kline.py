@@ -16,7 +16,7 @@ from.xml import ASSETS_BUNDLES_URL
 
 class BundlesWriter(Crawler):
     """
-        a. obtain assets from mysql
+        a. obtain asset from mysql
         b. request kline from dfcf
         c. update to mysql
     """

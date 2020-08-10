@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import pandas as pd
+# contextlib.manager 上下文管理
 from contextlib import ExitStack
 from utils.api_support import ZiplineAPI
 from .clock import ( SESSION_START,
@@ -68,9 +69,9 @@ class AlgorithmSimulator(object):
         clock = self.algo.clock
 
         def once_a_day():
-            #生成交易订单
-            txns,uility = oms_engine.carry_out(ledger,self.restrictions)
-            #处理交易订单
+            # 生成交易订单
+            txns, uility = oms_engine.carry_out(ledger, self.restrictions)
+            # 处理交易订单
             ledger.process_transaction(txns)
 
         def on_exit():
@@ -93,7 +94,6 @@ class AlgorithmSimulator(object):
 
             for session_label, action in clock:
                 if action == BEFORE_TRADING_START_BAR:
-                    # algo.before_trading_start(self.current_data)
                     self.metrics_tracker.handle_market_open(session_label)
                 elif action == SESSION_START:
                     once_a_day()
@@ -105,11 +105,11 @@ class AlgorithmSimulator(object):
             risk_message = self.metrics_tracker.handle_simulation_end()
             yield risk_message
 
-    def _get_daily_message(self,session_label):
+    def _get_daily_message(self, session_label):
         """
         Get a perf message for the given datetime.
         """
-        if isinstance(session_label,pd.Timestamp):
+        if isinstance(session_label, pd.Timestamp):
             session_label = session_label.strftime('%Y%m%d')
         perf_message = self.metrics_tracker.handle_market_close(session_label)
         return perf_message

@@ -152,7 +152,7 @@ def csvdir_bundle(environ,
                      divs_splits, show_progress),
                      show_progress=show_progress)
 
-        # Hardcode the exchange to "CSVDIR" for all assets and (elsewhere)
+        # Hardcode the exchange to "CSVDIR" for all asset and (elsewhere)
         # register "CSVDIR" to resolve to the NYSE _calendar, because these
         # are all equities and thus can use the NYSE _calendar.
         metadata['exchange'] = "CSVDIR"

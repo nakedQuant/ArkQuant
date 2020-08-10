@@ -16,7 +16,8 @@ class _Sentinel(object):
 def is_sentinel(obj):
     return isinstance(obj, _Sentinel)
 
-#返回 目标的具体信息文件名、行号基于_getframe
+
+# 返回 目标的具体信息文件名、行号基于_getframe
 def sentinel(name, doc=None):
     try:
         value = sentinel._cache[name]  # memoized

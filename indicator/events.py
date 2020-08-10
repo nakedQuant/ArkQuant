@@ -22,11 +22,11 @@ class BusinessDaysSincePreviousEvent(Factor):
     This doesn't use trading days for symmetry with
     BusinessDaysUntilNextEarnings.
 
-    assets which announced or will announce the event today will produce a
-    value of 0.0. assets that announced the event on the previous business
+    asset which announced or will announce the event today will produce a
+    value of 0.0. asset that announced the event on the previous business
     day will produce a value of 1.0.
 
-    assets for which the event date is `NaT` will produce a value of `NaN`.
+    asset for which the event date is `NaT` will produce a value of `NaN`.
     """
     window_length = 0
     dtype = float64_dtype
@@ -57,11 +57,11 @@ class BusinessDaysUntilNextEvent(Factor):
     For example, the NYSE closings September 11th 2001, would not have been
     known to the algorithm on September 10th.
 
-    assets that announced or will announce the event today will produce a value
-    of 0.0.  assets that will announce the event on the next upcoming business
+    asset that announced or will announce the event today will produce a value
+    of 0.0.  asset that will announce the event on the next upcoming business
     day will produce a value of 1.0.
 
-    assets for which the event date is `NaT` will produce a value of `NaN`.
+    asset for which the event date is `NaT` will produce a value of `NaN`.
     """
     window_length = 0
     dtype = float64_dtype

@@ -112,7 +112,7 @@ class Pipeline(object):
         metadata : dict[Term, np.ndarray]
             Initial state of workspace for a pipeline execution. May contain
             pre-computed values provided by ``populate_initial_workspace``.
-        default : assets list
+        default : asset list
             Reference counts for terms to be computed. Terms with reference
             counts of 0 do not need to be computed.
         return : PIPE list

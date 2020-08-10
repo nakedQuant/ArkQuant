@@ -4,7 +4,7 @@
 '''
 import numpy as np
 
-from test.algorithm import zoom
+from algorithm import zoom
 
 def Euclidean(x,y):
     """

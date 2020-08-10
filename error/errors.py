@@ -14,13 +14,14 @@
 from textwrap import dedent
 from itertools import chain
 
+
 class ZiplineError(Exception):
     msg = None
 
     def __init__(self, **kwargs):
         self.kwargs = kwargs
 
-    @lazyval
+    # @lazyval
     def message(self):
         return str(self)
 
@@ -412,18 +413,18 @@ class SidsNotFound(ZiplineError):
     Raised when a retrieve_asset() or retrieve_all() call contains a
     non-existent sid.
     """
-    @lazyval
+    # @lazyval
     def plural(self):
         return len(self.sids) > 1
 
-    @lazyval
+    # @lazyval
     def sids(self):
         return self.kwargs['sids']
 
-    @lazyval
+    # @lazyval
     def msg(self):
         if self.plural:
-            return "No assets found for sids: {sids}."
+            return "No asset found for sids: {sids}."
         return "No asset found for sid: {sids[0]}."
 
 
@@ -431,7 +432,7 @@ class EquitiesNotFound(SidsNotFound):
     """
     Raised when a call to `retrieve_equities` fails to find an asset.
     """
-    @lazyval
+    # @lazyval
     def msg(self):
         if self.plural:
             return "No equities found for sids: {sids}."
@@ -442,7 +443,7 @@ class FutureContractsNotFound(SidsNotFound):
     """
     Raised when a call to `retrieve_futures_contracts` fails to find an asset.
     """
-    @lazyval
+    # @lazyval
     def msg(self):
         if self.plural:
             return "No future contracts found for sids: {sids}."
@@ -909,5 +910,3 @@ class BadCallable(TypeError, AssertionError, ZiplineError):
     @property
     def msg(self):
         return str(self)
-
-#

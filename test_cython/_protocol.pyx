@@ -101,7 +101,7 @@ cdef class check_parameters(object):
 
             # verify type of each kwarg
             for keyword, arg in iteritems(kwargs):
-                if keyword in ('assets', 'fields') and _is_iterable(arg):
+                if keyword in ('asset', 'fields') and _is_iterable(arg):
                     if len(arg) == 0:
                         continue
                     arg = arg[0]
@@ -114,7 +114,7 @@ cdef class check_parameters(object):
                     raise TypeError("Expected %s argument to be of type %s%s" %
                                     (keyword,
                                      'or iterable of type ' if keyword in
-                                     ('assets', 'fields') else '',
+                                     ('asset', 'fields') else '',
                                      expected_type)
                     )
 
@@ -254,16 +254,16 @@ cdef class BarData:
 
         return dt
 
-    @check_parameters(('assets', 'fields'),
+    @check_parameters(('asset', 'fields'),
                       ((Asset, ContinuousFuture) + string_types, string_types))
     def current(self, assets, fields):
         """
-        Returns the "current" value of the given fields for the given assets
+        Returns the "current" value of the given fields for the given asset
         at the current simulation time.
 
         Parameters
         ----------
-        assets : zipline.assets.Asset or iterable of zipline.assets.Asset
+        assets : zipline.assets.Asset or iterable of zipline.asset.Asset
             The asset(s) for which data is requested.
         fields : str or iterable[str].
             Requested data field(s). Valid field names are: "price",
@@ -285,13 +285,13 @@ cdef class BarData:
         - If a single asset and a list of fields are requested, the returned
           value is a :class:`pd.Series` whose indices are the requested fields.
 
-        - If a list of assets and a single field are requested, the returned
-          value is a :class:`pd.Series` whose indices are the assets.
+        - If a list of asset and a single field are requested, the returned
+          value is a :class:`pd.Series` whose indices are the asset.
 
-        - If a list of assets and a list of fields are requested, the returned
+        - If a list of asset and a list of fields are requested, the returned
           value is a :class:`pd.DataFrame`.  The columns of the returned frame
           will be the requested fields, and the index of the frame will be the
-          requested assets.
+          requested asset.
 
         The values produced for ``fields`` are as follows:
 
@@ -379,7 +379,7 @@ cdef class BarData:
             if not multiple_fields:
                 field = fields
 
-                # assume assets is iterable
+                # assume asset is iterable
                 # return a Series indexed by asset
                 if not self._adjust_minutes:
                     return pd.Series(data={
@@ -404,7 +404,7 @@ cdef class BarData:
                         }, index=assets, name=fields)
 
             else:
-                # both assets and fields are iterable
+                # both asset and fields are iterable
                 data = {}
 
                 if not self._adjust_minutes:
@@ -442,10 +442,10 @@ cdef class BarData:
             continuous_future,
             self.simulation_dt_func())
 
-    @check_parameters(('assets',), (Asset,))
+    @check_parameters(('asset',), (Asset,))
     def can_trade(self, assets):
         """
-        For the given asset or iterable of assets, returns True if all of the
+        For the given asset or iterable of asset, returns True if all of the
         following are true:
 
         1. The asset is alive for the session of the current simulation time
@@ -457,7 +457,7 @@ cdef class BarData:
 
         Parameters
         ----------
-        assets: zipline.assets.Asset or iterable of zipline.assets.Asset
+        assets: zipline.assets.Asset or iterable of zipline.asset.Asset
             Asset(s) for which tradability should be determined.
 
         Notes
@@ -536,10 +536,10 @@ cdef class BarData:
             )
         )
 
-    @check_parameters(('assets',), (Asset,))
+    @check_parameters(('asset',), (Asset,))
     def is_stale(self, assets):
         """
-        For the given asset or iterable of assets, returns True if the asset
+        For the given asset or iterable of asset, returns True if the asset
         is alive and there is no trade data for the current simulation time.
 
         If the asset has never traded, returns False.
@@ -550,7 +550,7 @@ cdef class BarData:
 
         Parameters
         ----------
-        assets: zipline.assets.Asset or iterable of zipline.assets.Asset
+        assets: zipline.assets.Asset or iterable of zipline.asset.Asset
             Asset(s) for which staleness should be determined.
 
         Returns
@@ -601,7 +601,7 @@ cdef class BarData:
 
             return not (last_traded_dt is pd.NaT)
 
-    @check_parameters(('assets', 'fields', 'bar_count',
+    @check_parameters(('asset', 'fields', 'bar_count',
                        'frequency'),
                       ((Asset, ContinuousFuture) + string_types, string_types,
                        int,
@@ -609,7 +609,7 @@ cdef class BarData:
     def history(self, assets, fields, bar_count, frequency):
         """
         Returns a trailing window of length ``bar_count`` containing data for
-        the given assets, fields, and frequency.
+        the given asset, fields, and frequency.
 
         Returned data is adjusted for splits, dividends, and mergers as of the
         current simulation time.
@@ -619,7 +619,7 @@ cdef class BarData:
 
         Parameters
         ----------
-        assets: zipline.assets.Asset or iterable of zipline.assets.Asset
+        assets: zipline.assets.Asset or iterable of zipline.asset.Asset
             The asset(s) for which data is requested.
         fields: string or iterable of string.
             Requested data field(s). Valid field names are: "price",
@@ -637,7 +637,7 @@ cdef class BarData:
 
         Notes
         -----
-        The return type of this function depends on the types of ``assets`` and
+        The return type of this function depends on the types of ``asset`` and
         ``fields``:
 
         - If a single asset and a single field are requested, the returned
@@ -649,19 +649,19 @@ cdef class BarData:
           ``(bar_count, len(fields))``. The frame's index will be a
           :class:`pd.DatetimeIndex`, and its columns will be ``fields``.
 
-        - If multiple assets and a single field are requested, the returned
+        - If multiple asset and a single field are requested, the returned
           value is a :class:`pd.DataFrame` with shape
-          ``(bar_count, len(assets))``. The frame's index will be a
-          :class:`pd.DatetimeIndex`, and its columns will be ``assets``.
+          ``(bar_count, len(asset))``. The frame's index will be a
+          :class:`pd.DatetimeIndex`, and its columns will be ``asset``.
 
-        - If multiple assets and multiple fields are requested, the returned
+        - If multiple asset and multiple fields are requested, the returned
           value is a :class:`pd.Panel` with shape
-          ``(len(fields), bar_count, len(assets))``. The axes of the returned
+          ``(len(fields), bar_count, len(asset))``. The axes of the returned
           panel will be:
 
           - ``panel.items`` : ``fields``
           - ``panel.major_axis`` : :class:`pd.DatetimeIndex` of length ``bar_count``
-          - ``panel.minor_axis`` : ``assets``
+          - ``panel.minor_axis`` : ``asset``
 
         If the current simulation time is not a valid market time, we use the
         last market close instead.
@@ -697,8 +697,8 @@ cdef class BarData:
                 # single asset, single field, return a series.
                 return df[assets]
             else:
-                # multiple assets, single field, return a dataframe whose
-                # columns are the assets, indexed by dt.
+                # multiple asset, single field, return a dataframe whose
+                # columns are the asset, indexed by dt.
                 return df
         else:
             if isinstance(assets, PricingDataAssociable):
@@ -762,7 +762,7 @@ cdef class BarData:
                 # returned panel has:
                 # items: fields
                 # major axis: dt
-                # minor axis: assets
+                # minor axis: asset
                 return pd.Panel(df_dict)
 
     property current_dt:
@@ -807,7 +807,7 @@ cdef class BarData:
         return self._last_calculated_universe
 
     def __iter__(self):
-        self._warn_deprecated("Iterating over the assets in `data` is "
+        self._warn_deprecated("Iterating over the asset in `data` is "
                         "deprecated.")
         for asset in self._calculate_universe():
             yield asset
@@ -819,24 +819,24 @@ cdef class BarData:
         return asset in universe
 
     def items(self):
-        self._warn_deprecated("Iterating over the assets in `data` is "
+        self._warn_deprecated("Iterating over the asset in `data` is "
                         "deprecated.")
         return [(asset, self[asset]) for asset in self._calculate_universe()]
 
     def iteritems(self):
-        self._warn_deprecated("Iterating over the assets in `data` is "
+        self._warn_deprecated("Iterating over the asset in `data` is "
                         "deprecated.")
         for asset in self._calculate_universe():
             yield asset, self[asset]
 
     def __len__(self):
-        self._warn_deprecated("Iterating over the assets in `data` is "
+        self._warn_deprecated("Iterating over the asset in `data` is "
                         "deprecated.")
 
         return len(self._calculate_universe())
 
     def keys(self):
-        self._warn_deprecated("Iterating over the assets in `data` is "
+        self._warn_deprecated("Iterating over the asset in `data` is "
                         "deprecated.")
 
         return list(self._calculate_universe())

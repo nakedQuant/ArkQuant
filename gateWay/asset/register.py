@@ -5,7 +5,7 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-from gateWay.assets.assets import Asset, Equity, Convertible, Fund
+from gateWay.asset.assets import Asset, Equity, Convertible, Fund
 from abc import ABC
 
 

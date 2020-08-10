@@ -7,8 +7,8 @@ Created on Tue Mar 12 15:37:47 2019
 """
 from contextlib import ExitStack
 import sqlalchemy as sa
-from gateWay.assets.asset_spider import AssetSpider
-from gateWay.assets.asset_db_schema import (
+from gateWay.asset.asset_spider import AssetSpider
+from gateWay.asset.asset_db_schema import (
     metadata,
     ASSET_DB_VERSION,
     asset_db_table_names,
@@ -120,7 +120,7 @@ def write_version_info(conn, version_table, version_value):
 
 
 class AssetWriter(object):
-    """Class used to write data to an assets db.
+    """Class used to write data to an asset db.
 
     Parameters
     ----------
@@ -140,7 +140,7 @@ class AssetWriter(object):
     @staticmethod
     def _all_tables_present(txn):
         """
-        Checks if any tables are present in the current assets database.
+        Checks if any tables are present in the current asset database.
 
         Parameters
         ----------
@@ -170,7 +170,7 @@ class AssetWriter(object):
         Returns
         -------
         metadata : sa.MetaData
-            The metadata that describes the new assets db.
+            The metadata that describes the new asset db.
         """
         with ExitStack() as stack:
             if txn is None:
@@ -288,7 +288,7 @@ class AssetWriter(object):
                      fund_frame,
                      chunk_size=DEFAULT_CHUNK_SIZE):
         """Write asset metadata to a sqlite database in the format that it is
-        stored in the assets db.
+        stored in the asset db.
         """
         # raise NotImplementedError('not allowed to write metadata into db directly')
         self._read_writer(

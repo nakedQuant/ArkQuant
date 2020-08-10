@@ -2709,7 +2709,7 @@
 #
 #     def tracker_algorithm(self,metrics_tracker):
 #         unprocessed_algo = set(self.algorithm_mappings.keys()) - \
-#                            set(map(lambda x : x.reason ,metrics_tracker.positions.assets))
+#                            set(map(lambda x : x.reason ,metrics_tracker.positions.asset))
 #         return unprocessed_algo
 #
 #     def position_allocation(self):
@@ -2740,11 +2740,11 @@
 #             return cleanup_transactions,additional_commissions
 #
 #     def get_layout(self,dt,metrics_tracker):
-#         assets = self.compute_algorithm(dt,metrics_tracker)
+#         asset = self.compute_algorithm(dt,metrics_tracker)
 #         avaiable_cash = metrics_tracker.portfolio.cash
 #         [self.oms.order(asset,
 #                             self._calculate_order_amount(asset,dt,avaiable_cash))
-#                             for asset in assets]
+#                             for asset in asset]
 #         transactions,new_commissions = self.oms.get_transaction(self.data_portal)
 #         return transactions,new_commissions
 #
@@ -3449,7 +3449,7 @@
 #         workspace : dict
 #             Map from term -> output.
 #             Must contain at least entry for `self._root_mask_term` whose shape
-#             is `(len(dates), len(assets))`, but may contain additional
+#             is `(len(dates), len(asset))`, but may contain additional
 #             pre-computed terms for testing or optimization purposes.
 #         refcounts : dict[Term, int]
 #             Dictionary mapping terms to number of dependent terms. When a
@@ -3578,7 +3578,7 @@
 #
 #     See Also
 #     --------
-#     zipline.assets.AssetFinder.lifetimes
+#     zipline.asset.AssetFinder.lifetimes
 #     """
 #     dtype = bool_dtype
 #     dataset = None
@@ -3592,7 +3592,7 @@
 #
 #     graph_repr = __repr__
 #
-#     def _compute(self, today, assets, out):
+#     def _compute(self, today, asset, out):
 #         raise NotImplementedError(
 #             "AssetExists cannot be computed directly."
 #             " Check your PipelineEngine configuration."
@@ -3707,7 +3707,7 @@
 #
 # def _all_tables_present(self, txn):
 #     """
-#     Checks if any tables are present in the current assets database.
+#     Checks if any tables are present in the current asset database.
 #
 #     Parameters
 #     ----------
@@ -3738,7 +3738,7 @@
 #     Returns
 #     -------
 #     metadata : sa.MetaData
-#         The metadata that describes the new assets db.
+#         The metadata that describes the new asset db.
 #     """
 #     with ExitStack() as stack:
 #         if txn is None:
@@ -3764,9 +3764,9 @@
 #     get_loader : callable
 #         A function that is given a loadable term and returns a PipelineLoader
 #         to use to retrieve raw data for that term.
-#     asset_finder : zipline.assets.AssetFinder
+#     asset_finder : zipline.asset.AssetFinder
 #         An AssetFinder instance.  We depend on the AssetFinder to determine
-#         which assets are in the top-level universe at any point in time.
+#         which asset are in the top-level universe at any point in time.
 #     populate_initial_workspace : callable, optional
 #         A function which will be used to populate the initial workspace when
 #         computing a pipeline. See
@@ -4139,11 +4139,11 @@ import array,binascii,struct , numpy as np,sqlalchemy as sa
 #             df.loc[:,'Hcode'] = asset.sid
 #         return df
 #
-#     def load_raw_arrays(self, date, window, columns,assets):
+#     def load_raw_arrays(self, date, window, columns,asset):
 #         raw_arrays = {}
 #         _request_array = partial(self.get_value,edate = date,columns = columns,window = window)
 #         #获取数据
-#         for asset in assets:
+#         for asset in asset:
 #             raw_arrays[asset] = _request_array(asset = asset)
 #         return raw_arrays
 
@@ -4455,7 +4455,7 @@ def _dt_to_epoch_ns(dt_series):
 #
 #     if ambigious:
 #         raise ValueError(
-#             'Ambiguous ownership for %d symbol%s, multiple assets held the'
+#             'Ambiguous ownership for %d symbol%s, multiple asset held the'
 #             ' following symbols:\n%s' % (
 #                 len(ambigious),
 #                 '' if len(ambigious) == 1 else 's',
@@ -4676,7 +4676,7 @@ from six.moves.urllib_error import HTTPError
 
 # The columns provided.
 # 在ar1中但不在ar2中的已排序的唯一值
-# missing_sids = np.setdiff1d(assets, self.sids)
+# missing_sids = np.setdiff1d(asset, self.sids)
 # def compute_asset_lifetimes(frames):
 #     """
 #     Parameters
@@ -4710,10 +4710,10 @@ from six.moves.urllib_error import HTTPError
 #     return start_date_ixs, end_date_ixs
 #
 # def _make_sids():
-#     assets = np.array(assets)
-#     sid_selector = self.sids.searchsorted(assets)
+#     asset = np.array(asset)
+#     sid_selector = self.sids.searchsorted(asset)
 #     #查找相同的列，invert = True
-#     unknown = np.in1d(assets, self.sids, invert=True)
+#     unknown = np.in1d(asset, self.sids, invert=True)
 #     sid_selector[unknown] = -1
 #     return sid_selector
 #
@@ -5446,8 +5446,8 @@ from six.moves.urllib_error import HTTPError
 #         """
 #         raise NotImplementedError()
 
-# def load_data(self,dt,assets):
-#     raw = self.adjust_array.load_array_for_sids(dt,0,['open','close','volume','amount','pct'],assets)
+# def load_data(self,dt,asset):
+#     raw = self.adjust_array.load_array_for_sids(dt,0,['open','close','volume','amount','pct'],asset)
 #     volume = { k : v['volume'] for k,v in raw.items()}
 #     if raw:
 #         """说明历史回测 --- 存在数据"""
@@ -5455,8 +5455,8 @@ from six.moves.urllib_error import HTTPError
 #         open_pct = { k: v['open'] / preclose[k] for k,v in raw.items()}
 #     else:
 #         """实时回测 , 9.25之后"""
-#         raw = self.adjust_array.load_pricing_adjusted_array(dt,2,['open','close','pct'],assets)
-#         minutes = self.adjust_array.load_minutes_for_sid(assets)
+#         raw = self.adjust_array.load_pricing_adjusted_array(dt,2,['open','close','pct'],asset)
+#         minutes = self.adjust_array.load_minutes_for_sid(asset)
 #         if not minutes:
 #             raise ValueError('时间问题或者网路问题')
 #         preclose = { k : v['close'][-1]  for k,v in raw.items() }
@@ -5528,8 +5528,8 @@ from six.moves.urllib_error import HTTPError
 #         puts = self.attach_pruned_holdings(puts,holdings)
 #         self.commission._init_base_cost(dts)
 #         #获取计算订单所需数据
-#         assets = set([position.inner_position.asset for position in holdings]) | set(chain(*calls.values()))
-#         raw = self.load_data(dts,assets)
+#         asset = set([position.inner_position.asset for position in holdings]) | set(chain(*calls.values()))
+#         raw = self.load_data(dts,asset)
 #         #过滤针对标的
 #         calls = valmap(lambda x:self.execute_cancel_policy(x),calls)
 #         calls = valfilter(lambda x : x is not None,calls)
@@ -5734,15 +5734,15 @@ from six.moves.urllib_error import HTTPError
 
 # def _cleanup_expired_assets(self, dt, position_assets):
 #     """
-#     Clear out any assets that have expired before starting a new sim day.
+#     Clear out any asset that have expired before starting a new sim day.
 #
 #     Performs two functions:
 #
-#     1. Finds all assets for which we have open orders and clears any
-#        orders whose assets are on or after their auto_close_date.
+#     1. Finds all asset for which we have open orders and clears any
+#        orders whose asset are on or after their auto_close_date.
 #
-#     2. Finds all assets for which we have positions and generates
-#        close_position events for any assets that have reached their
+#     2. Finds all asset for which we have positions and generates
+#        close_position events for any asset that have reached their
 #        auto_close_date.
 #     """
 #     algo = self.algo
@@ -6809,13 +6809,13 @@ from six.moves.urllib_error import HTTPError
 #     Parameters
 #     ----------
 #     prices : pd.Series, pd.DataFrame or np.ndarray
-#         Prices of assets in wide-format, with assets as columns,
+#         Prices of asset in wide-format, with asset as columns,
 #         and indexed by datetimes.
 #
 #     Returns
 #     -------
 #     returns : array-like
-#         Returns of assets in wide-format, with assets as columns,
+#         Returns of asset in wide-format, with asset as columns,
 #         and index coerced to be tz-aware.
 #     """
 #     if isinstance(prices, (pd.DataFrame, pd.Series)):
@@ -6940,26 +6940,26 @@ from six.moves.urllib_error import HTTPError
 #         trading_calendar=self.algo.trading_calendar,
 #         restrictions=self.restrictions,
 #     )
-# if isinstance(assets, Asset):
+# if isinstance(asset, Asset):
 #     return False
-# return pd.Series(index=pd.Index(assets), data=False)
-# if isinstance(assets, Asset):
-#     return assets in self._restricted_set
+# return pd.Series(index=pd.Index(asset), data=False)
+# if isinstance(asset, Asset):
+#     return asset in self._restricted_set
 # return pd.Series(
-#     index=pd.Index(assets),
+#     index=pd.Index(asset),
 #     # list 内置的__contains__ 方法
-#     # data=vectorized_is_element(assets, self._restricted_set)
-#     data = np.vectorize(self._restricted_set.__contains__,otypes = [bool])(assets)
+#     # data=vectorized_is_element(asset, self._restricted_set)
+#     data = np.vectorize(self._restricted_set.__contains__,otypes = [bool])(asset)
 # )
-# def is_restricted(self, assets, dt):
-#     if isinstance(assets, Asset):
+# def is_restricted(self, asset, dt):
+#     if isinstance(asset, Asset):
 #         return any(
-#             r.is_restricted(assets, dt) for r in self.sub_restrictions
+#             r.is_restricted(asset, dt) for r in self.sub_restrictions
 #         )
 #
 #     return reduce(
 #         operator.or_,
-#         (r.is_restricted(assets, dt) for r in self.sub_restrictions)
+#         (r.is_restricted(asset, dt) for r in self.sub_restrictions)
 #     )
 # class LongOnly(TradingControl):
 #
@@ -6979,7 +6979,7 @@ from six.moves.urllib_error import HTTPError
 #
 #
 # class RestrictedListOrder(TradingControl):
-#     """ represents a restricted list of assets that canont be ordered by the algorithm"""
+#     """ represents a restricted list of asset that canont be ordered by the algorithm"""
 #     def __init__(self,on_error,restrictions):
 #         super(RestrictedListOrder,self).__init__(on_error)
 #         self.restrictions = restrictions
@@ -7057,25 +7057,25 @@ from six.moves.urllib_error import HTTPError
 #         self._trading_calendar = trading_calendar
 #         self._is_restricted = restrictions.is_restricted
 #
-#     def get_current_ticker(self,assets,fields):
+#     def get_current_ticker(self,asset,fields):
 #         """
-#         Returns the "current" value of the given fields for the given assets
+#         Returns the "current" value of the given fields for the given asset
 #         at the current simulation time.
-#         :param assets: asset_type
+#         :param asset: asset_type
 #         :param fields: OHLCTV
 #         :return: dict asset -> ticker
 #         intended to return current ticker
 #         """
 #         cur = {}
-#         for asset in assets:
+#         for asset in asset:
 #             ticker = self.data_portal.get_current(asset)
 #             cur[asset] = ticker.loc[:,fields]
 #         return cur
 #
-#     def history(self, assets, end_dt,bar_count, fields,frequency):
+#     def history(self, asset, end_dt,bar_count, fields,frequency):
 #         """
 #         Returns a trailing window of length ``bar_count`` containing data for
-#         the given assets, fields, and frequency.
+#         the given asset, fields, and frequency.
 #
 #         Returned data is adjusted for splits, dividends, and mergers as of the
 #         current simulation time.
@@ -7085,7 +7085,7 @@ from six.moves.urllib_error import HTTPError
 #
 #         Parameters
 #         ----------
-#         assets: zipline.assets.Asset or iterable of zipline.assets.Asset
+#         asset: zipline.asset.Asset or iterable of zipline.asset.Asset
 #             The asset(s) for which data is requested.
 #         fields: string or iterable of string.
 #             Requested data field(s). Valid field names are: "price",
@@ -7106,18 +7106,18 @@ from six.moves.urllib_error import HTTPError
 #         returned panel has:
 #         items: fields
 #         major axis: dt
-#         minor axis: assets
+#         minor axis: asset
 #         return pd.Panel(df_dict)
 #         """
-#         sliding_window = self.data_portal.get_history_window(assets,
+#         sliding_window = self.data_portal.get_history_window(asset,
 #                                                              end_dt,
 #                                                              bar_count,
 #                                                              fields,
 #                                                              frequency)
 #         return sliding_window
 #
-#     def window_data(self,assets,end_dt,bar_count,fields,frequency):
-#         window_array = self.data_portal.get_window_data(assets,
+#     def window_data(self,asset,end_dt,bar_count,fields,frequency):
+#         window_array = self.data_portal.get_window_data(asset,
 #                                                         end_dt,
 #                                                         bar_count,
 #                                                         fields,
@@ -7185,9 +7185,9 @@ from six.moves.urllib_error import HTTPError
 #         share_massive = pd.DataFrame(raw,columns = ['bid_price','discount','bid_volume','buyer','seller','cleltszb'])
 #         return share_massive
 #
-#     def load_raw_arrays(self, edate, window,assets):
+#     def load_raw_arrays(self, edate, window,asset):
 #         sdate = self._window_size_to_dt(edate,window)
-#         sids = [asset.sid for asset in assets]
+#         sids = [asset.sid for asset in asset]
 #         #获取数据
 #         table = self.metadata['massive']
 #         sql = select([table.c.trade_dt,
@@ -7224,9 +7224,9 @@ from six.moves.urllib_error import HTTPError
 #         release = pd.DataFrame(raw, columns=['release_type', 'cjeltszb'])
 #         return release
 #
-#     def load_raw_arrays(self, edate, window,assets):
+#     def load_raw_arrays(self, edate, window,asset):
 #         sdate = self._window_size_to_dt(edate,window)
-#         sids = [asset.sid for asset in assets]
+#         sids = [asset.sid for asset in asset]
 #         table = self.metadata['release']
 #         sql = select([table.c.sid,
 #                       table.c.release_date,
@@ -7264,9 +7264,9 @@ from six.moves.urllib_error import HTTPError
 #         share_tracker = pd.DataFrame(raw,columns = ['股东','方式','变动股本','总持仓','占总股本比例','总流通股','占总流通比例'])
 #         return share_tracker
 #
-#     def load_raw_arrays(self, edate, window,assets):
+#     def load_raw_arrays(self, edate, window,asset):
 #         sdate = self._window_size_to_dt(edate,window)
-#         sids = [asset.sid for asset in assets]
+#         sids = [asset.sid for asset in asset]
 #         """股东持仓变动"""
 #         table = self.metadata['shareholder']
 #         sql = select([table.c.sid,
@@ -7497,7 +7497,7 @@ from six.moves.urllib_error import HTTPError
 #
 #     Parameters
 #     ----------
-#     asset : zipline.assets.Asset
+#     asset : zipline.asset.Asset
 #         The asset that this order is for.
 #     amount : int
 #         The amount of shares to order. If ``amount`` is positive, this is
@@ -7909,7 +7909,7 @@ from itertools import product
 #         2、基于结果反向分类strategy
 #     难点：
 #         不同算法的权重分配
-#     input : stategies ,output : list or tuple of filtered assets
+#     input : stategies ,output : list or tuple of filtered asset
 #
 #             pipe of strategy to fit targeted asset
 #     Parameters
@@ -8163,7 +8163,7 @@ from itertools import product
 #
 #     def tracker_algorithm(self,metrics_tracker):
 #         unprocessed_algo = set(self.algorithm_mappings.keys()) - \
-#                            set(map(lambda x : x.reason ,metrics_tracker.positions.assets))
+#                            set(map(lambda x : x.reason ,metrics_tracker.positions.asset))
 #         return unprocessed_algo
 #
 #     def position_allocation(self):
@@ -8194,11 +8194,11 @@ from itertools import product
 #             return cleanup_transactions,additional_commissions
 #
 #     def get_layout(self,dt,metrics_tracker):
-#         assets = self.compute_algorithm(dt,metrics_tracker)
+#         asset = self.compute_algorithm(dt,metrics_tracker)
 #         avaiable_cash = metrics_tracker.portfolio.cash
 #         [self.oms.order(asset,
 #                             self._calculate_order_amount(asset,dt,avaiable_cash))
-#                             for asset in assets]
+#                             for asset in asset]
 #         transactions,new_commissions = self.oms.get_transaction(self.data_portal)
 #         return transactions,new_commissions
 #
@@ -8567,15 +8567,15 @@ from itertools import product
 #
 #     def _cleanup_expired_assets(self, dt, position_assets):
 #         """
-#         Clear out any assets that have expired before starting a new sim day.
+#         Clear out any asset that have expired before starting a new sim day.
 #
 #         Performs two functions:
 #
-#         1. Finds all assets for which we have open orders and clears any
-#            orders whose assets are on or after their auto_close_date.
+#         1. Finds all asset for which we have open orders and clears any
+#            orders whose asset are on or after their auto_close_date.
 #
-#         2. Finds all assets for which we have positions and generates
-#            close_position events for any assets that have reached their
+#         2. Finds all asset for which we have positions and generates
+#            close_position events for any asset that have reached their
 #            auto_close_date.
 #         """
 #         algo = self.algo
@@ -8911,26 +8911,26 @@ from dateutil.relativedelta import relativedelta
 
 # @preprocess(conn=coerce_string_to_conn(require_exists=True))
 
-# def _init_raw_array(self, assets, edate, window):
+# def _init_raw_array(self, asset, edate, window):
 #     if self.reader.data_frequency == 'daily':
-#         bars = self.reader.load_raw_arrays(edate, window, assets, ['close'])
+#         bars = self.reader.load_raw_arrays(edate, window, asset, ['close'])
 #     elif self.reader.data_frequency == 'minute':
-#         bars = self.reader.get_resampled(edate, window, '15:00', assets, ['close'])
+#         bars = self.reader.get_resampled(edate, window, '15:00', asset, ['close'])
 #     return bars
-# def window_arrays(self, edate, window, assets, field):
+# def window_arrays(self, edate, window, asset, field):
 #     """基于固定的fields才需要adjust"""
 #     #获取时间区间
 #     sessions = self.trading_calendar.sessions_in_range(edate, window, include=True)
 #     # # 获取原始数据
-#     # raw_arrays = self.array(sessions,assets, field)
+#     # raw_arrays = self.array(sessions,asset, field)
 #     #需要调整的
 #     adjusted_fields = set(field) & self.FIELDS
 #     if adjusted_fields:
 #         #调整系数
-#         adjustments, raw_arrays = self._adjustment.calculate_adjustments_in_sessions(edate,window,assets)
+#         adjustments, raw_arrays = self._adjustment.calculate_adjustments_in_sessions(edate,window,asset)
 #         #计算调整数据
 #         adjust_arrays = {}
-#         for asset in assets:
+#         for asset in asset:
 #             sid = asset.sid
 #             qfq = adjustments[sid]
 #             raw = raw_arrays[sid]
@@ -8946,7 +8946,7 @@ from dateutil.relativedelta import relativedelta
 #         adjust_arrays = raw_arrays
 #     return adjust_arrays
 
-# def history(self, assets, field, dts, window):
+# def history(self, asset, field, dts, window):
 #     """
 #     A window of pricing data with adjustments applied assuming that the
 #     end of the window is the day before the current simulation time.
@@ -8954,8 +8954,8 @@ from dateutil.relativedelta import relativedelta
 #
 #     Parameters
 #     ----------
-#     assets : iterable of Assets
-#         The assets in the window.
+#     asset : iterable of Assets
+#         The asset in the window.
 #     dts : iterable of datetime64-like
 #         The datetimes for which to fetch data.
 #         Makes an assumption that all dts are present and contiguous,
@@ -8966,19 +8966,19 @@ from dateutil.relativedelta import relativedelta
 #         The length of window
 #     Returns
 #     -------
-#     out : np.ndarray with shape(len(days between start, end), len(assets))
+#     out : np.ndarray with shape(len(days between start, end), len(asset))
 #     """
 #     if window != 1:
 #         block_arrays = self._ensure_sliding_windows(
 #                                         dts,
 #                                         window,
-#                                         assets,
+#                                         asset,
 #                                         field
 #                                         )
 #     else:
 #         # 获取昨天的数据
 #         pre_date = self.trading_calendar.dt_window_size(dts, 1)
-#         block_arrays = self.adjust_window.array(pre_date, assets, field)
+#         block_arrays = self.adjust_window.array(pre_date, asset, field)
 #     return block_arrays
 
 # def load_pricing_adjustments(self, date, window,
@@ -8993,20 +8993,20 @@ from dateutil.relativedelta import relativedelta
 #     return pricing_adjustments
 # sessions = self.trading_calendar.sessions_in_range(date, window, include=True)
 
-# def window_arrays(self, date, window, assets, field):
+# def window_arrays(self, date, window, asset, field):
 #     """
 #     :param date: str
 #     :param window: int
-#     :param assets: Assets list
+#     :param asset: Assets list
 #     :param field: str or list
 #     :return: arrays which is adjusted by divdends and rights
 #     """
-#     adjustments, raw_arrays, sessions = self._adjustment.calculate_adjustments_in_sessions(date, window, assets)
+#     adjustments, raw_arrays, sessions = self._adjustment.calculate_adjustments_in_sessions(date, window, asset)
 #     adjusted_fields = set(field) & self.FIELDS
 #     if adjusted_fields:
 #         #计算调整数据
 #         adjust_arrays = {}
-#         for asset in assets:
+#         for asset in asset:
 #             sid = asset.sid
 #             qfq = adjustments[sid]
 #             raw = raw_arrays[sid]
@@ -9023,7 +9023,7 @@ from dateutil.relativedelta import relativedelta
 #     return adjust_arrays
 
 
-# def calculate_adjustments_in_sessions(self, date, window, assets):
+# def calculate_adjustments_in_sessions(self, date, window, asset):
 #     #     """
 #     #     Returns
 #     #     -------
@@ -9037,11 +9037,11 @@ from dateutil.relativedelta import relativedelta
 #     #     # 基于data_frequency --- 调整adjustments
 #     #     adapted_adjustments = self.adapt_to_frequency(adjustments)
 #     #     #获取对应的收盘价数据
-#     #     history, sessions = self._load_raw_array(date, window, assets)
+#     #     history, sessions = self._load_raw_array(date, window, asset)
 #     #     close = valmap(lambda x: x['close'], history)
 #     #     #计算前复权系数
 #     #     _calculate = partial(self._calculate_adjustments_for_sid, adjustments=adapted_adjustments, close=close)
-#     #     for asset in assets:
+#     #     for asset in asset:
 #     #         adjs[asset] = _calculate(sid=asset.sid)
 #     #     return adjs, history, sessions
 
@@ -9107,3 +9107,222 @@ from dateutil.relativedelta import relativedelta
 #
 #     return slice(start_ix, end_ix)
 # ins = ins.groupby(table.c.sid)
+
+# class AssetDateBounds(TradingControl):
+#     """
+#     TradingControl representing a prohibition against ordering an asset before
+#     its start_date, or after its end_date.
+#     """
+#
+#     def __init__(self, on_error):
+#         super(AssetDateBounds, self).__init__(on_error)
+#
+#     def validate(self,
+#                  asset,
+#                  amount,
+#                  portfolio,
+#                  algo_datetime):
+#         """
+#         Fail if the algo has passed this Asset's end_date, or before the
+#         Asset's start date.
+#         """
+#         # If the order is for 0 shares, then silently pass through.
+#         if amount == 0:
+#             return
+#
+#         normalized_algo_dt = pd.Timestamp(algo_datetime).normalize()
+#
+#         # Fail if the algo is before this Asset's start_date
+#         if asset.start_date:
+#             normalized_start = pd.Timestamp(asset.start_date).normalize()
+#             if normalized_algo_dt < normalized_start:
+#                 metadata = {
+#                     'asset_start_date': normalized_start
+#                 }
+#                 self.handle_violation(
+#                     asset, amount, algo_datetime, metadata=metadata)
+#         # Fail if the algo has passed this Asset's end_date
+#         if asset.end_date:
+#             normalized_end = pd.Timestamp(asset.end_date).normalize()
+#             if normalized_algo_dt > normalized_end:
+#                 metadata = {
+#                     'asset_end_date': normalized_end
+#                 }
+#                 self.handle_violation(
+#                     asset, amount, algo_datetime, metadata=metadata)
+# class RestrictedListOrder(TradingControl):
+#     """TradingControl representing a restricted list of asset that
+#     cannot be ordered by the algorithm.
+#
+#     Parameters
+#     ----------
+#     restrictions : zipline.finance.asset_restrictions.Restrictions
+#         Object representing restrictions of a group of asset.
+#     """
+#
+#     def __init__(self, on_error, restrictions):
+#         super(RestrictedListOrder, self).__init__(on_error)
+#         self.restrictions = restrictions
+#
+#     def validate(self,
+#                  asset,
+#                  amount,
+#                  portfolio,
+#                  algo_datetime):
+#         """
+#         Fail if the asset is in the restricted_list.
+#         """
+#         if self.restrictions.is_restricted(asset, algo_datetime):
+#             self.handle_violation(asset, amount, algo_datetime)
+#
+#
+# class MaxOrderCount(TradingControl):
+#     """
+#     TradingControl representing a limit on the number of orders that can be
+#     placed in a given trading day.
+#     """
+#
+#     def __init__(self, on_error, max_count):
+#         super(MaxOrderCount, self).__init__(on_error, max_count=max_count)
+#         self.orders_placed = 0
+#         self.max_count = max_count
+#         self.current_date = None
+#
+#     def validate(self,
+#                  asset,
+#                  amount,
+#                  portfolio,
+#                  algo_datetime):
+#         """
+#         Fail if we've already placed self.max_count orders today.
+#         """
+#         algo_date = algo_datetime.date()
+#
+#         # Reset order count if it's a new day.
+#         if self.current_date and self.current_date != algo_date:
+#             self.orders_placed = 0
+#         self.current_date = algo_date
+#
+#         if self.orders_placed >= self.max_count:
+#             self.handle_violation(asset, amount, algo_datetime)
+#         self.orders_placed += 1
+#
+#
+# class AccountControl(ABC):
+#     """
+#     Abstract base class representing a fail-safe control on the behavior of any
+#     algorithm.
+#     """
+#
+#     def __init__(self, **kwargs):
+#         """
+#         Track any arguments that should be printed in the error message
+#         generated by self.fail.
+#         """
+#         self.__fail_args = kwargs
+#
+#     @abstractmethod
+#     def validate(self,
+#                  _portfolio,
+#                  _account,
+#                  _algo_datetime,
+#                  _algo_current_data):
+#         """
+#         On each call to handle data by TradingAlgorithm, this method should be
+#         called *exactly once* on each registered AccountControl object.
+#
+#         If the check does not violate this AccountControl's restraint given
+#         the information in `portfolio` and `account`, this method should
+#         return None and have no externally-visible side-effects.
+#
+#         If the desired order violates this AccountControl's contraint, this
+#         method should call self.fail().
+#         """
+#         raise NotImplementedError
+#
+#     def fail(self):
+#         """
+#         Raise an AccountControlViolation with information about the failure.
+#         """
+#         raise AccountControlViolation(constraint=repr(self))
+#
+#     def __repr__(self):
+#         return "{name}({attrs})".format(name=self.__class__.__name__,
+#                                         attrs=self.__fail_args)
+#
+#
+# class MaxLeverage(AccountControl):
+#     """
+#     AccountControl representing a limit on the maximum leverage allowed
+#     by the algorithm.
+#     """
+#
+#     def __init__(self, max_leverage):
+#         """
+#         max_leverage is the gross leverage in decimal form. For example,
+#         2, limits an algorithm to trading at most double the account value.
+#         """
+#         super(MaxLeverage, self).__init__(max_leverage=max_leverage)
+#         self.max_leverage = max_leverage
+#
+#         if max_leverage is None:
+#             raise ValueError(
+#                 "Must supply max_leverage"
+#             )
+#
+#         if max_leverage < 0:
+#             raise ValueError(
+#                 "max_leverage must be positive"
+#             )
+#
+#     def validate(self,
+#                  _portfolio,
+#                  _account,
+#                  _algo_datetime,
+#                  _algo_current_data):
+#         """
+#         Fail if the leverage is greater than the allowed leverage.
+#         """
+#         if _account.leverage > self.max_leverage:
+#             self.fail()
+#
+#
+# class MinLeverage(AccountControl):
+#     """AccountControl representing a limit on the minimum leverage allowed
+#     by the algorithm after a threshold period of time.
+#
+#     Parameters
+#     ----------
+#     min_leverage : float
+#         The gross leverage in decimal form.
+#     deadline : datetime
+#         The date the min leverage must be achieved by.
+#
+#     For example, min_leverage=2 limits an algorithm to trading at minimum
+#     double the account value by the deadline date.
+#     """
+#
+#     @expect_types(
+#         __funcname='MinLeverage',
+#         min_leverage=(int, float),
+#         deadline=datetime
+#     )
+#     @expect_bounded(__funcname='MinLeverage', min_leverage=(0, None))
+#     def __init__(self, min_leverage, deadline):
+#         super(MinLeverage, self).__init__(min_leverage=min_leverage,
+#                                           deadline=deadline)
+#         self.min_leverage = min_leverage
+#         self.deadline = deadline
+#
+#     def validate(self,
+#                  _portfolio,
+#                  account,
+#                  algo_datetime,
+#                  _algo_current_data):
+#         """
+#         Make validation checks if we are after the deadline.
+#         Fail if the leverage is less than the min leverage.
+#         """
+#         if (algo_datetime > self.deadline and
+#                 account.leverage < self.min_leverage):
+#             self.fail()

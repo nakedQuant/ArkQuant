@@ -17,7 +17,7 @@
                 --- resample.py
 
     roller_finder.py :
-    from zipline.assets import (
+    from zipline.asset import (
     Asset,
     AssetConvertible,
     Equity,
@@ -27,7 +27,7 @@
     AssertFinder
 
     bar.py --- data_frequency
-                  --- load_raw_arrays (columns, start_date, end_date, assets)
+                  --- load_raw_arrays (columns, start_date, end_date, asset)
                   --- first_trading_day
                   --- last_avaiable_dt
                   --- trading_calendar

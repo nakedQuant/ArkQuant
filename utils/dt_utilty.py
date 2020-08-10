@@ -5,10 +5,11 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-import numpy as np, datetime ,pandas as pd ,pytz
+import numpy as np, datetime, pandas as pd, pytz
 
 MAX_MONTH_RANGE = 23
 MAX_WEEK_RANGE = 5
+
 
 def locate_pos(price, minutes, direction):
     if minutes.min() <= price <= minutes.max():
@@ -16,9 +17,12 @@ def locate_pos(price, minutes, direction):
             loc = minutes.values().index(price)
         except ValueError:
             idx = np.searchsorted(minutes.values(), price)
-            # 当价格大于卖出价格才会成交，价格低于买入价格才会成交
-            loc = idx if direction == 'positive' else idx - 1
+            # 当卖出价格大于bid价格才会成交，买入价格低于bid价格才会成交
+            # 变相实现了当价格超过范围的时候默认为最高价格 length -1
+            loc = idx if direction == 'negative' else idx - 1
+            loc = min(loc, len(minutes) - 1)
         return price, minutes.index[loc]
+
 
 def parse_date_str_series(format_str, tz, date_str_series):
     tz_str = str(tz)
@@ -134,6 +138,7 @@ def _build_time(time, kwargs):
     else:
         return datetime.time(**kwargs)
 
+
 def _time_to_micros(time):
     """Convert a time into microseconds since midnight.
     Parameters
@@ -151,11 +156,13 @@ def _time_to_micros(time):
     seconds = time.hour * 60 * 60 + time.minute * 60 + time.second
     return 1000000 * seconds + time.microsecond
 
+
 def timedelta_to_integral_seconds(delta):
     """
     Convert a pd.Timedelta to a number of seconds as an int.
     """
     return int(delta.total_seconds())
+
 
 def timedelta_to_integral_minutes(delta):
     """
@@ -163,8 +170,10 @@ def timedelta_to_integral_minutes(delta):
     """
     return timedelta_to_integral_seconds(delta) // 60
 
+
 def normalize_quarters(years, quarters):
     return years * 4 + quarters - 1
+
 
 def split_normalized_quarters(normalized_quarters):
     years = normalized_quarters // 4

@@ -1931,8 +1931,8 @@ class TradingAlgorithm(object):
 
     @api_method
     def set_symbol_lookup_date(self, dt):
-        """Set the date for which symbols will be resolved to their assets
-        (symbols may map to different firms or underlying assets at
+        """Set the date for which symbols will be resolved to their asset
+        (symbols may map to different firms or underlying asset at
         different times)
 
         Parameters
@@ -2152,12 +2152,12 @@ class TradingAlgorithm(object):
 
     @api_method
     def set_do_not_order_list(self, restricted_list, on_error='fail'):
-        """Set a restriction on which assets can be ordered.
+        """Set a restriction on which asset can be ordered.
 
         Parameters
         ----------
         restricted_list : container[Asset], SecurityList
-            The assets that cannot be ordered.
+            The asset that cannot be ordered.
         """
         if isinstance(restricted_list, SecurityList):
             warnings.warn(
@@ -2172,7 +2172,7 @@ class TradingAlgorithm(object):
             warnings.warn(
                 "`set_do_not_order_list(container_of_assets)` is deprecated. "
                 "Create a zipline.finance.asset_restrictions."
-                "StaticRestrictions object with a container of assets and use "
+                "StaticRestrictions object with a container of asset and use "
                 "`set_asset_restrictions(StaticRestrictions("
                 "container_of_assets))` instead.",
                 category=ZiplineDeprecationWarning,
@@ -2188,12 +2188,12 @@ class TradingAlgorithm(object):
         on_error=str,
     )
     def set_asset_restrictions(self, restrictions, on_error='fail'):
-        """Set a restriction on which assets can be ordered.
+        """Set a restriction on which asset can be ordered.
 
         Parameters
         ----------
         restricted_list : Restrictions
-            An object providing information about restricted assets.
+            An object providing information about restricted asset.
 
         See Also
         --------

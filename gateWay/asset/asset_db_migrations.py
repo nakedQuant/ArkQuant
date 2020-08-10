@@ -27,7 +27,7 @@ def alter_columns(op, name, *columns, **kwargs):
     Notes
     -----
     The columns are passed explicitly because this should only be used in a
-    downgrade where ``zipline.assets.asset_db_schema`` could change.
+    downgrade where ``zipline.asset.asset_db_schema`` could change.
     """
     selection_string = kwargs.pop('selection_string', None)
     if kwargs:
@@ -64,14 +64,14 @@ def alter_columns(op, name, *columns, **kwargs):
 
 @preprocess(engine=coerce_string_to_eng(require_exists=True))
 def downgrade(engine, desired_version):
-    """Downgrades the assets db at the given engine to the desired version.
+    """Downgrades the asset db at the given engine to the desired version.
 
     Parameters
     ----------
     engine : Engine
-        An SQLAlchemy engine to the assets database.
+        An SQLAlchemy engine to the asset database.
     desired_version : int
-        The desired resulting version for the assets database.
+        The desired resulting version for the asset database.
     """
 
     # Check the version of the db at the engine
@@ -126,7 +126,7 @@ def _pragma_foreign_keys(connection, on):
 
 
 # This dict contains references to downgrade methods that can be applied to an
-# assets db. The resulting db's version is the key.
+# asset db. The resulting db's version is the key.
 # e.g. The method at key '0' is the downgrade method from v1 to v0
 _downgrade_methods = {}
 
@@ -162,7 +162,7 @@ def downgrades(src):
 @downgrades(1)
 def _downgrade_v1(op):
     """
-    Downgrade assets db by removing the 'tick_size' column and renaming the
+    Downgrade asset db by removing the 'tick_size' column and renaming the
     'multiplier' column.
     """
     # Drop indices before batch
@@ -193,7 +193,7 @@ def _downgrade_v1(op):
 @downgrades(2)
 def _downgrade_v2(op):
     """
-    Downgrade assets db by removing the 'auto_close_date' column.
+    Downgrade asset db by removing the 'auto_close_date' column.
     """
     # Drop indices before batch
     # This is to prevent index collision when creating the temp table
@@ -216,7 +216,7 @@ def _downgrade_v2(op):
 @downgrades(3)
 def _downgrade_v3(op):
     """
-    Downgrade assets db by adding a not null constraint on
+    Downgrade asset db by adding a not null constraint on
     ``equities.first_traded``
     """
     op.create_table(
@@ -264,7 +264,7 @@ def _downgrade_v3(op):
 @downgrades(4)
 def _downgrade_v4(op):
     """
-    Downgrades assets db by copying the `exchange_full` column to `exchange`,
+    Downgrades asset db by copying the `exchange_full` column to `exchange`,
     then dropping the `exchange_full` column.
     """
     op.drop_index('ix_equities_fuzzy_symbol')

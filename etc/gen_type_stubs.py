@@ -12,8 +12,8 @@ def main():
         # explicitly importing.
         stub.write(dedent("""\
         import collections
-        from zipline.assets import Asset, Equity, Future
-        from zipline.assets.futures import FutureChain
+        from zipline.asset import Asset, Equity, Future
+        from zipline.asset.futures import FutureChain
         from zipline.finance.asset_restrictions import Restrictions
         from zipline.finance.cancel_policy import CancelPolicy
         from zipline.pipeline import Pipeline

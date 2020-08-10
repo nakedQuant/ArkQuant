@@ -154,16 +154,16 @@ class HistoryLoader(ABC):
         """
         Ensure that there is a Float64Multiply window for each asset that can
         provide data for the given parameters.
-        If the corresponding window for the (assets, len(dts), field) does not
+        If the corresponding window for the (asset, len(dts), field) does not
         exist, then create a new one.
-        If a corresponding window does exist for (assets, len(dts), field), but
+        If a corresponding window does exist for (asset, len(dts), field), but
         can not provide data for the current dts range, then create a new
         one and replace the expired window.
 
         Parameters
         ----------
         assets : iterable of Assets
-            The assets in the window
+            The asset in the window
         dts : iterable of datetime64-like
             The datetimes for which to fetch data.
             Makes an assumption that all dts are present and contiguous,
@@ -212,7 +212,7 @@ class HistoryLoader(ABC):
         Parameters
         ----------
         assets : iterable of Assets
-            The assets in the window.
+            The asset in the window.
         dts : iterable of datetime64-like
             The datetimes for which to fetch data.
             Makes an assumption that all dts are present and contiguous,
@@ -223,7 +223,7 @@ class HistoryLoader(ABC):
             The length of window
         Returns
         -------
-        out : np.ndarray with shape(len(days between start, end), len(assets))
+        out : np.ndarray with shape(len(days between start, end), len(asset))
         """
         # 不包括当天数据
         session = self.trading_calendar.sessions_in_range(dts, window, include=False)

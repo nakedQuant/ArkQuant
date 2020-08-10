@@ -5,17 +5,20 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-from toolz import groupby,keyfilter , valmap
+from toolz import groupby, keyfilter, valmap
 from functools import partial
 from multiprocessing import Pool
 from itertools import chain
-from abc import ABC , abstractmethod
+from abc import ABC, abstractmethod
 from .loader.loader import PricingLoader
-from trade.restriction import UnionRestrictions
-from trade.cancel_policy import  ComposedCancel
+from finance.restrictions import UnionRestrictions
 
 
 class Engine(ABC):
+    """
+        set asset range which means all asset with some restrictions
+        --- engine process should be automatic without much manual interface
+    """
 
     def _init(self, pipelines, pickers):
         inner_terms = chain([pipeline.terms for pipeline in pipelines])
@@ -32,10 +35,10 @@ class Engine(ABC):
         :return:
         """
         equities = self.asset_finder.retrieve_type_assets('equity')
-        default = self._restricted_rule.is_restricted(equities,dts)
-        open_pct = self._data_portal.get_open_pct(dts,default)
+        default = self._restricted_rule.is_restricted(equities, dts)
+        open_pct = self._data_portal.get_open_pct(dts, default)
         # set pipeline metadata
-        history_metadata = self._get_loader.load_pipeline_arrays(dts,default)
+        history_metadata = self._get_loader.load_pipeline_arrays(dts, default)
         return default, history_metadata, open_pct
 
     def _prepare_for_execution(self,ledger):
@@ -68,12 +71,12 @@ class Engine(ABC):
         Parameters
         ----------
         pipeline_metadata : cache data for pipeline
-        default : pipeline --- default assets list
-        open_pct : intend to filter assets which can not be traded
+        default : pipeline --- default asset list
+        open_pct : intend to filter asset which can not be traded
         """
         _impl = partial(self._run_pipeline,
-                             metadata=pipeline_metadata,
-                             default=default)
+                        metadata=pipeline_metadata,
+                        default=default)
 
         with Pool(processes=len(self.pipelines))as pool:
             results = [pool.apply_async(_impl, pipeline)
@@ -114,7 +117,7 @@ class Engine(ABC):
     def resolve_conflicts(*args):
         """
             param args: pipeline outputs , ump outputs holdings
-            return: target assets which can be simulate into orders
+            return: target asset which can be simulate into orders
 
             instructions:
                 防止策略冲突 当pipeline的结果与ump的结果出现重叠 --- 说明存在问题，正常情况退出策略与买入策略应该不存交集
@@ -209,7 +212,7 @@ class SimplePipelineEngine(Engine):
         conflicts = [name for name in common_pipe_name if puts[name] == calls[name]]
         assert not conflicts, ValueError('name : %r have conflicts between ump and pipeline ' % conflicts)
         # pipeline_name : holding
-        holding_mappings = groupby(lambda x : x.tag,holdings)
+        holding_mappings = groupby(lambda x: x.tag,holdings)
         # 直接卖出持仓，无买入标的
         direct_negatives = set(puts) - set(common_pipe_name)
         # 卖出持仓买入对应标的

@@ -14,7 +14,7 @@ class Domain(object):
     2. fields which determines the fields of term
     --- 如果创建太多的实例会导致内存过度占用 ，在pipeline执行算法结束后，清楚所有缓存对象 --- 设立定时任务chu
     """
-    def __init__(self,fields,window = 1):
+    def __init__(self, fields, window=1):
         self._fields = fields
         self._window = window
 
@@ -29,14 +29,14 @@ class Domain(object):
     def domain_window(self):
         return self._window
 
-    def all_session(self,sdate,edate):
-        sessions = self.trading_calendar.session_in_range(sdate,edate)
+    def all_session(self, sdate, edate):
+        sessions = self.trading_calendar.session_in_range(sdate, edate)
         return sessions
 
-    def __or__(self,other):
-        if isinstance(other,Domain):
+    def __or__(self, other):
+        if isinstance(other, Domain):
             fields = set(self._fields) | set(other._fields)
-            max_window = max(self._window,other._window)
+            max_window = max(self._window, other._window)
             self.domain_field = fields
             self.domain_window = max_window
         else:

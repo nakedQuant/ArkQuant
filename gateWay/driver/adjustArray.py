@@ -30,9 +30,9 @@ class HistoryCompatibleAdjustments(object):
         return self._reader.data_frequency
 
     # @lru_cache(maxsize=8)
-    # def _load_raw_array(self, assets, date, window):
+    # def _load_raw_array(self, asset, date, window):
     #     sessions = _calendar.session_in_window(date, window, include=True)
-    #     close = self.reader.load_raw_arrays(sessions, assets, ['open', 'high', 'low', 'close', 'volume', 'amount'])
+    #     close = self.reader.load_raw_arrays(sessions, asset, ['open', 'high', 'low', 'close', 'volume', 'amount'])
     #     return close, sessions
 
     @lru_cache(maxsize=8)

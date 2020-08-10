@@ -44,11 +44,11 @@ class Order(object):
     def sid(self):
         return self.asset.sid
 
-    def _fit_slippage(self):
-        point = 1 + self.slippage_model.calculate_slippage_factor()
-        self.price = self.price * point
+    def _fit_slippage(self, alpha):
+        point = self.slippage_model.calculate_slippage_factor(alpha)
+        self.price = self.price * (point + 1)
 
-    def check_trigger(self, pre_close):
+    def check_trigger(self, order_data):
         """
         Given an order and a trade event, return a tuple of
         (stop_reached, limit_reached).
@@ -62,13 +62,22 @@ class Order(object):
         the order's current values are returned.
         --- 可以扩展为bid_mechanism
         """
+        pre_close = order_data.pre_close
         # 设定价格限制 , iterator里面的对象为第一个为price
-        self._fit_slippage()
-        bottom = pre_close * (1 - self.execution_style.get_stop_price())
-        upper = pre_close * (1 + self.execution_style.get_limit_price())
-        if bottom <= self.price <= upper:
+        if self.asset.bid_mechanism:
+            # simulate based on tickers
             return True
-        return False
+        else:
+            # simulate price to create order and ensure  order price must be available
+            bottom = pre_close * (1 - self.execution_style.get_stop_price())
+            upper = pre_close * (1 + self.execution_style.get_limit_price())
+            if bottom <= self.price <= upper:
+                # 计算滑价系数
+                avg_volume = order_data.sliding[self.sid]['volume'].mean()
+                alpha = self.amount / avg_volume
+                self._fit_slippage(alpha)
+                return True
+            return False
 
     def __eq__(self, other):
         if isinstance(other, Order) and self.__dict__ == other.__dict__:

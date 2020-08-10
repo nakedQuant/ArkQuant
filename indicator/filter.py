@@ -140,12 +140,12 @@ class Filter(RestrictedDTypeMixin, ComputableTerm):
     """
     Pipeline expression computing a boolean output.
 
-    Filters are most commonly useful for describing sets of assets to include
+    Filters are most commonly useful for describing sets of asset to include
     or exclude for some particular purpose. Many Pipeline API functions accept
     a ``mask`` argument, which can be supplied a Filter indicating that only
     values passing the Filter should be considered when performing the
     requested computation. For example, :meth:`zipline.pipeline.Factor.top`
-    accepts a mask indicating that ranks should be computed only on assets that
+    accepts a mask indicating that ranks should be computed only on asset that
     passed the specified Filter.
 
     The most common way to construct a Filter is via one of the comparison
@@ -306,7 +306,7 @@ class NotNullFilter(SingleInputMixin, Filter):
 
 class PercentileFilter(SingleInputMixin, Filter):
     """
-    A Filter representing assets falling between percentile bounds of a Factor.
+    A Filter representing asset falling between percentile bounds of a Factor.
 
     Parameters
     ----------
@@ -413,7 +413,7 @@ class CustomFilter(PositiveWindowLengthMixin, CustomTermMixin, Filter):
 
     .. code-block:: python
 
-        def compute(self, today, assets, out, *inputs):
+        def compute(self, today, asset, out, *inputs):
            ...
 
     On each simulation date, ``compute`` will be called with the current date,
@@ -424,10 +424,10 @@ class CustomFilter(PositiveWindowLengthMixin, CustomTermMixin, Filter):
 
         today : np.datetime64[ns]
             Row label for the last row of all arrays passed as `inputs`.
-        assets : np.array[int64, ndim=1]
+        asset : np.array[int64, ndim=1]
             Column labels for `out` and`inputs`.
         out : np.array[bool, ndim=1]
-            Output array of the same shape as `assets`.  `compute` should write
+            Output array of the same shape as `asset`.  `compute` should write
             its desired return values into `out`.
         *inputs : tuple of np.array
             Raw data arrays corresponding to the values of `self.inputs`.
@@ -571,16 +571,16 @@ class StaticSids(Filter):
 
 class StaticAssets(StaticSids):
     """
-    A Filter that computes True for a specific set of predetermined assets.
+    A Filter that computes True for a specific set of predetermined asset.
 
     ``StaticAssets`` is mostly useful for debugging or for interactively
-    computing pipeline terms for a fixed set of assets that are known ahead of
+    computing pipeline terms for a fixed set of asset that are known ahead of
     time.
 
     Parameters
     ----------
-    assets : iterable[Asset]
-        An iterable of assets for which to filter.
+    asset : iterable[Asset]
+        An iterable of asset for which to filter.
     """
     def __new__(cls, assets):
         sids = frozenset(asset.sid for asset in assets)

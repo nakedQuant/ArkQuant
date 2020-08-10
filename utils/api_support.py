@@ -23,6 +23,7 @@ TLS使用的缺陷是，如果你的线程都不退出，那么副本数据可�
 """
 context = threading.local()
 
+
 def get_algo_instance():
     return getattr(context, 'algorithm', None)
 

@@ -9,14 +9,15 @@ Created on Tue Mar 12 15:37:47 2019
 from abc import ABC,abstractmethod
 from functools import reduce
 import pandas as pd ,operator
-from gateWay.assets.assets import Asset
-from calendar.trading_calendar import calendar
+from gateWay.asset.assets import Asset
+from _calendar.trading_calendar import calendar
 
 
 class Restrictions(ABC):
     """
-    Abstract restricted list interface, representing a set of assets that an
+    Abstract restricted list interface, representing a set of asset that an
     algorithm is restricted from trading.
+         --- used for pipeline which filter asset list
     """
 
     @abstractmethod
@@ -26,7 +27,7 @@ class Restrictions(ABC):
 
         Parameters
         ----------
-        asset : Asset of iterable of Assets
+        assets : Asset of iterable of Assets
             The asset(s) for which we are querying a restriction
         dt : pd.Timestamp
             The timestamp of the restriction query
@@ -34,7 +35,7 @@ class Restrictions(ABC):
         Returns
         -------
         is_restricted : bool or pd.Series[bool] indexed by asset
-            Is the asset or assets restricted on this dt?
+            Is the asset or asset restricted on this dt?
 
         """
         raise NotImplementedError('is_restricted')
@@ -119,8 +120,8 @@ class StaticRestrictions(Restrictions):
 
     Parameters
     ----------
-    restricted_list : iterable of assets
-        The assets to be restricted
+    restricted_list : iterable of asset
+        The asset to be restricted
     """
 
     def __init__(self, restricted_list):
@@ -142,16 +143,16 @@ class SecurityListRestrictions(Restrictions):
     """
     def __init__(self,
                  asset_finder,
-                 window = [3*22,30]):
+                 window=[3*22, 30]):
         self.asset_finder = asset_finder
         self.window = window
 
-    def is_restricted(self,assets,dt):
-        before,after = self.window
+    def is_restricted(self, assets, dt):
+        before, after = self.window
         alive_assets = self.asset_finder.was_active(dt)
-        s_date = calendar.dt_window_size(dt,before)
+        s_date = calendar.dt_window_size(dt, before)
         e_date = calendar.dt_window_size(dt, after)
-        active_assets = self.asset_finder.lifetime([s_date,e_date])
+        active_assets = self.asset_finder.lifetime([s_date, e_date])
         ensure_assets = set(alive_assets) & set(active_assets)
         return ensure_assets
 
@@ -162,7 +163,7 @@ class TemporaryRestrictions(object):
         单次盘中临时停牌的持续时间为10分钟。每个交易日单涨跌方向只能触发两次临时停牌，最多可以触发四次共计40分钟临时停牌。
         如果跨越14:57则复盘
     """
-    def is_restricted(self,assets,dt):
+    def is_restricted(self, assets, dt):
         raise NotImplementedError()
 
 
@@ -172,5 +173,5 @@ class AfterRestrictions(object):
         若收盘价高于买入申报指令，则申报无效；若收盘价低于卖出申报指令同样无效
         原则 --- 以收盘价为成交价，按照时间优先的原则进行逐笔连续撮合
     """
-    def is_restricted(self,assets,dt):
+    def is_restricted(self, assets, dt):
         raise NotImplementedError()

@@ -5,9 +5,9 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 
-from six import with_metaclass, iteritems
+# from six import with_metaclass, iteritems
 
 # Consistent error to be thrown in various cases regarding overriding
 # `final` attributes.
@@ -37,10 +37,11 @@ def is_final(name, mro):
 
 class FinalMeta(type):
     """A metaclass template for classes the want to prevent subclassess from
-    overriding a some methods or attributes.
+    overriding some methods or attributes.
     """
     def __new__(mcls, name, bases, dict_):
-        for k, v in iteritems(dict_):
+        # for k, v in iteritems(dict_):
+        for k, v in dict_.items():
             if is_final(k, bases):
                 raise _type_error
 
@@ -69,7 +70,7 @@ class FinalMeta(type):
         super(FinalMeta, self).__setattr__(name, value)
 
 
-class final(with_metaclass(ABCMeta)):
+class final(ABC):
     """
     An attribute that cannot be overridden.
     This is like the final modifier in Java.

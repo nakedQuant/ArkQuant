@@ -1,25 +1,16 @@
-#
-# Copyright 2013 Quantopian, Inc.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# !/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Mar 12 15:37:47 2019
 
-import pytz , numbers ,heapq
+@author: python
+"""
 
+import pytz, numbers, heapq
 from hashlib import md5
 from datetime import datetime
 from zipline.protocol import DATASOURCE_TYPE
 
-from six import iteritems, b
 
 def _decorate_source(source):
     for message in source:
@@ -38,21 +29,20 @@ def date_sorted_sources(*sources):
     for _, message in sorted_stream:
         yield message
 
+
 def hash_args(*args, **kwargs):
     """Define a unique string for any set of representable args."""
     arg_string = '_'.join([str(arg) for arg in args])
     kwarg_string = '_'.join([str(key) + '=' + str(value)
-                             for key, value in iteritems(kwargs)])
+                             for key, value in kwargs.items()])
     combined = ':'.join([arg_string, kwarg_string])
-
     hasher = md5()
-    hasher.update(b(combined))
+    hasher.update(bytes(combined))
     return hasher.hexdigest()
 
 
 def assert_datasource_protocol(event):
     """Assert that an event meets the protocol for datasource outputs."""
-
     assert event.type in DATASOURCE_TYPE
 
     # Done packets have no dt.

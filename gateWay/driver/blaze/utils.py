@@ -12,7 +12,7 @@ def load_raw_data(assets,
     Parameters
     ----------
     assets : pd.int64index
-        the assets to load data for.
+        the asset to load data for.
     data_query_cutoff_times : pd.DatetimeIndex
         The datetime when data should no longer be considered available for
         a session.

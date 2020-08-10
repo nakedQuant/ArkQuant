@@ -35,3 +35,20 @@ class FixedBasisPointSlippage(SlippageModel):
 
     def calculate_slippage_factor(self):
         return self.basis_points
+
+
+class MarketImpact(SlippageModel):
+
+    def __init__(self, _func):
+        """
+        :param _func: to measure market_impact e.g. exp(alpha) - 1
+        """
+        self.func = _func
+
+    def calculate_slippage_factor(self, alpha):
+        """
+        :param alpha: float , e.g. amount / volume.mean()
+        :return:
+        """
+        slippage = self.func(alpha)
+        return slippage

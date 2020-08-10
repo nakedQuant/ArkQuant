@@ -152,7 +152,7 @@ class TradingCalendar (object):
         if '20160107' in sessions:
             idx = np.searchsorted('20160107', sessions)
             _opens[idx] = np.nan
-        return zip(opens, opens)
+        return opens, opens
 
     @staticmethod
     def execution_time_from_close(sessions):
@@ -166,13 +166,13 @@ class TradingCalendar (object):
             idx = np.searchsorted('20160107', sessions)
             closes[idx] = pd.Timestamp('20160107').timestamp() + 10 * 60 * 60
             _closes[idx] = np.nan
-        return zip(closes, _closes)
+        return closes, _closes
 
     def open_and_close_for_session(self, dts):
         # 每天开盘，休盘，开盘，收盘的时间
-        opens = self.execution_time_from_open(dts)
-        closes = self.excution_time_from_close(dts)
-        o_c = zip(opens, closes)
+        open_tuple = self.execution_time_from_open(dts)
+        close_tuple = self.excution_time_from_close(dts)
+        o_c = zip(open_tuple, close_tuple)
         return o_c
 
     def compute_range_chunks(self, start_date, end_date, chunk_size):

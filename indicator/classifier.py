@@ -121,7 +121,7 @@ class Classifier(RestrictedDTypeMixin, ComputableTerm):
     Classifiers are most commonly useful for describing grouping keys for
     complex transformations on Factor outputs. For example, Factor.demean() and
     Factor.zscore() can be passed a Classifier in their ``groupby`` argument,
-    indicating that means/standard deviations should be computed on assets for
+    indicating that means/standard deviations should be computed on asset for
     which the classifier produced the same label.
     """
     # Used by RestrictedDTypeMixin
@@ -477,7 +477,7 @@ class Classifier(RestrictedDTypeMixin, ComputableTerm):
             2015-05-08    'c'    'c'    'c'    'c'    'c'    'c'
 
         Then ``c.peer_count()`` will count, for each row, the total number
-        of assets in each classifier category produced by ``c``.  Missing
+        of asset in each classifier category produced by ``c``.  Missing
         data will be evaluated to NaN.
 
         ::
@@ -492,7 +492,7 @@ class Classifier(RestrictedDTypeMixin, ComputableTerm):
         -------
         factor : CustomFactor
             A CustomFactor that counts, for each asset, the total number
-            of assets with the same classifier category label.
+            of asset with the same classifier category label.
         """
         # Lazy import due to cyclic dependencies in factor.py, classifier.py
         from ..factors import PeerCount

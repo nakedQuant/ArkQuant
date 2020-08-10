@@ -37,7 +37,7 @@ class DBWriter(object):
         Returns
         -------
         metadata : sa.MetaData
-            The metadata that describes the new assets db.
+            The metadata that describes the new asset db.
         """
         with ExitStack() as stack:
             if txn is None:
@@ -55,7 +55,7 @@ class DBWriter(object):
 
     def _all_tables_present(self, txn):
         """
-        Checks if any tables are present in the current assets database.
+        Checks if any tables are present in the current asset database.
 
         Parameters
         ----------

@@ -40,7 +40,7 @@ class PairWise:
 
     def compute(self,dt):
         """
-            param assets: two etfs code
+            param asset: two etfs code
         """
         etf_kline = self._load_raw_array(dt)
         etf_num = len(etf_kline.columns)

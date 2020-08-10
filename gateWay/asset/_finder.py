@@ -35,7 +35,7 @@ class AssetFinder(object):
     An AssetFinder is an interface to a database of Asset metadata written by
     an ``AssetDBWriter``.
 
-    This class provides methods for looking up assets by unique integer id or
+    This class provides methods for looking up asset by unique integer id or
     by symbol.  For historical reasons, we refer to these unique ids as 'sids'.
 
     Parameters
@@ -99,7 +99,7 @@ class AssetFinder(object):
 
     def retrieve_all(self):
         """
-        Retrieve all assets in `sids`.
+        Retrieve all asset in `sids`.
 
         Parameters
         ----------
@@ -111,7 +111,7 @@ class AssetFinder(object):
 
         Returns
         -------
-        assets : list[Asset or None]
+        asset : list[Asset or None]
             A list of the same length as `sids` containing Assets (or Nones)
             corresponding to the requested sids.
 
@@ -213,7 +213,7 @@ class AssetFinder(object):
         -------
         lifetimes : pd.DataFrame
             A frame of dtype bool with `dates` as index and an Int64Index of
-            assets as columns.  The value at `lifetimes.loc[date, asset]` will
+            asset as columns.  The value at `lifetimes.loc[date, asset]` will
             be True iff `asset` existed on `date`.  If `include_start_date` is
             False, then lifetimes.loc[date, asset] will be false when date ==
             asset.start_date.

@@ -255,7 +255,7 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
 
         ``f.demean(groupby=c)`` will subtract the group-mean of AAPL/MSFT and
         MCD/BK from their respective entries.  The AAPL/MSFT are grouped
-        together because both assets always produce 1 in the output of the
+        together because both asset always produce 1 in the output of the
         classifier ``c``.  Similarly, MCD/BK are grouped together because they
         always produce 2.
 
@@ -390,7 +390,7 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
             Whether to return sorted rank in ascending or descending order.
             Default is True.
         mask : zipline.pipeline.Filter, optional
-            A Filter representing assets to consider when computing ranks.
+            A Filter representing asset to consider when computing ranks.
             If mask is supplied, ranks are computed ignoring any asset/date
             pairs for which `mask` produces a value of False.
         groupby : zipline.pipeline.Classifier, optional
@@ -447,7 +447,7 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
             Length of the lookback window over which to compute each
             correlation coefficient.
         mask : zipline.pipeline.Filter, optional
-            A Filter describing which assets should have their correlation with
+            A Filter describing which asset should have their correlation with
             the target slice computed each day.
 
         Returns
@@ -464,7 +464,7 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
         --------
         Suppose we want to create a factor that computes the correlation
         between AAPL's 10-day returns and the 10-day returns of all other
-        assets, computing each correlation over 30 days. This can be achieved
+        asset, computing each correlation over 30 days. This can be achieved
         by doing the following::
 
             returns = Returns(window_length=10)
@@ -509,7 +509,7 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
             Length of the lookback window over which to compute each
             correlation coefficient.
         mask : zipline.pipeline.Filter, optional
-            A Filter describing which assets should have their correlation with
+            A Filter describing which asset should have their correlation with
             the target slice computed each day.
 
         Returns
@@ -526,7 +526,7 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
         --------
         Suppose we want to create a factor that computes the correlation
         between AAPL's 10-day returns and the 10-day returns of all other
-        assets, computing each correlation over 30 days. This can be achieved
+        asset, computing each correlation over 30 days. This can be achieved
         by doing the following::
 
             returns = Returns(window_length=10)
@@ -569,7 +569,7 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
             Length of the lookback window over which to compute each
             regression.
         mask : zipline.pipeline.Filter, optional
-            A Filter describing which assets should be regressed with the
+            A Filter describing which asset should be regressed with the
             target slice each day.
 
         Returns
@@ -585,7 +585,7 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
         Examples
         --------
         Suppose we want to create a factor that regresses AAPL's 10-day returns
-        against the 10-day returns of all other assets, computing each
+        against the 10-day returns of all other asset, computing each
         regression over 30 days. This can be achieved by doing the following::
 
             returns = Returns(window_length=10)
@@ -819,9 +819,9 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
         Parameters
         ----------
         N : int
-            Number of assets passing the returned filter each day.
+            Number of asset passing the returned filter each day.
         mask : zipline.pipeline.Filter, optional
-            A Filter representing assets to consider when computing ranks.
+            A Filter representing asset to consider when computing ranks.
             If mask is supplied, top values are computed ignoring any
             asset/date pairs for which `mask` produces a value of False.
         groupby : zipline.pipeline.Classifier, optional
@@ -847,9 +847,9 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
         Parameters
         ----------
         N : int
-            Number of assets passing the returned filter each day.
+            Number of asset passing the returned filter each day.
         mask : zipline.pipeline.Filter, optional
-            A Filter representing assets to consider when computing ranks.
+            A Filter representing asset to consider when computing ranks.
             If mask is supplied, bottom values are computed ignoring any
             asset/date pairs for which `mask` produces a value of False.
         groupby : zipline.pipeline.Classifier, optional
@@ -875,14 +875,14 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
         Parameters
         ----------
         min_percentile : float [0.0, 100.0]
-            Return True for assets falling above this percentile in the data.
+            Return True for asset falling above this percentile in the data.
         max_percentile : float [0.0, 100.0]
-            Return True for assets falling below this percentile in the data.
+            Return True for asset falling below this percentile in the data.
         mask : zipline.pipeline.Filter, optional
-            A Filter representing assets to consider when percentile
+            A Filter representing asset to consider when percentile
             calculating thresholds.  If mask is supplied, percentile cutoffs
-            are computed each day using only assets for which ``mask`` returns
-            True.  assets for which ``mask`` produces False will produce False
+            are computed each day using only asset for which ``mask`` returns
+            True.  asset for which ``mask`` produces False will produce False
             in the output of this Factor as well.
 
         Returns
@@ -1194,7 +1194,7 @@ class Rank(SingleInputMixin, Factor):
 
 class PercentileFilter(SingleInputMixin, Filter):
     """
-    A Filter representing assets falling between percentile bounds of a Factor.
+    A Filter representing asset falling between percentile bounds of a Factor.
 
     Parameters
     ----------
@@ -1298,8 +1298,8 @@ class CustomFactor(PositiveWindowLengthMixin, CustomTermMixin, Factor):
         to the CustomFactor constructor, we look for a class-level attribute
         named `window_length`.
     mask : zipline.pipeline.Filter, optional
-        A Filter describing the assets on which we should compute each day.
-        Each call to ``CustomFactor.compute`` will only receive assets for
+        A Filter describing the asset on which we should compute each day.
+        Each call to ``CustomFactor.compute`` will only receive asset for
         which ``mask`` produced True on the day for which compute is being
         called.
 
@@ -1310,7 +1310,7 @@ class CustomFactor(PositiveWindowLengthMixin, CustomTermMixin, Factor):
 
     .. code-block:: python
 
-        def compute(self, today, assets, out, *inputs):
+        def compute(self, today, asset, out, *inputs):
            ...
 
     On each simulation date, ``compute`` will be called with the current date,
@@ -1321,10 +1321,10 @@ class CustomFactor(PositiveWindowLengthMixin, CustomTermMixin, Factor):
 
         today : np.datetime64[ns]
             Row label for the last row of all arrays passed as `inputs`.
-        assets : np.array[int64, ndim=1]
+        asset : np.array[int64, ndim=1]
             Column labels for `out` and`inputs`.
         out : np.array[self.dtype, ndim=1]
-            Output array of the same shape as `assets`.  `compute` should write
+            Output array of the same shape as `asset`.  `compute` should write
             its desired return values into `out`. If multiple outputs are
             specified, `compute` should write its desired return values into
             `out.<output_name>` for each output name in `self.outputs`.
@@ -1359,7 +1359,7 @@ class CustomFactor(PositiveWindowLengthMixin, CustomTermMixin, Factor):
             inputs = [USEquityPricing.high, USEquityPricing.low]
             window_length = 10
 
-            def compute(self, today, assets, out, highs, lows):
+            def compute(self, today, asset, out, highs, lows):
                 from numpy import nanmin, nanmax
 
                 highest_highs = nanmax(highs, axis=0)
@@ -1384,7 +1384,7 @@ class CustomFactor(PositiveWindowLengthMixin, CustomTermMixin, Factor):
             `inputs` must be passed explicitly on every construction.
             """
 
-            def compute(self, today, assets, out, data):
+            def compute(self, today, asset, out, data):
                 from numpy import nanmedian
                 out[:] = data.nanmedian(data, axis=0)
 
@@ -1402,7 +1402,7 @@ class CustomFactor(PositiveWindowLengthMixin, CustomTermMixin, Factor):
             outputs = ['alpha', 'beta']
             window_length = N
 
-            def compute(self, today, assets, out, close):
+            def compute(self, today, asset, out, close):
                 computed_alpha, computed_beta = some_function(close)
                 out.alpha[:] = computed_alpha
                 out.beta[:] = computed_beta

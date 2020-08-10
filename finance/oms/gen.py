@@ -11,13 +11,25 @@ from collections import namedtuple
 from functools import lru_cache
 from abc import ABC, abstractmethod
 from finance.oms.order import Order
+from finance.cancel_policy import ComposedCancel
 from utils.dt_utilty import locate_pos
 
-OrderData = namedtuple('OrderData', 'minutes open_pct pre_close sliding_amount restricted')
+
+OrderData = namedtuple('OrderData', 'minutes open_pct pre_close sliding restricted')
 
 
 class BaseCreated(ABC):
-
+    """
+        1 存在价格笼子
+        2 无跌停限制但是存在竞价机制（10%基准价格），以及临时停盘制度
+        有存在竞价限制，科创板2% ，或者可转债10%
+        第十八条 债券现券竞价交易不实行价格涨跌幅限制。
+　　             第十九条 债券上市首日开盘集合竞价的有效竞价范围为发行价的上下 30%，连续竞价、收盘集合竞价的有效竞价范围为最近成交价的上下 10%；
+        非上市首日开盘集合竞价的有效竞价范围为前收盘价的上下 10%，连续竞价、收盘集合竞价的有效竞价范围为最近成交价的上下 10%。
+         一、可转换公司债券竞价交易出现下列情形的，本所可以对其实施盘中临时停牌措施：
+    　　（一）盘中成交价较前收盘价首次上涨或下跌达到或超过20%的；
+    　　（二）盘中成交价较前收盘价首次上涨或下跌达到或超过30%的。
+    """
     @staticmethod
     @abstractmethod
     def yield_tickers_on_size(size):
@@ -43,8 +55,7 @@ class BaseCreated(ABC):
                 simulate price distribution to place on transactions
                 :param size: number of transactions
                 :param raw:  data for compute
-                :param multiplier: slippage base on vol_pct ,e.g. slippage = np.exp(vol_pct)
-                :return: array of simualtion price
+                :return: array of simulation price
                 :return:
         """
         raise NotImplementedError()
@@ -52,27 +63,41 @@ class BaseCreated(ABC):
 
 class OrderCreated(BaseCreated):
     """
-        1 存在价格笼子
-        2 无跌停限制但是存在竞价机制（10%基准价格），以及临时停盘制度
-        有存在竞价限制，科创板2% ，或者可转债10%
-        第十八条 债券现券竞价交易不实行价格涨跌幅限制。
-　　             第十九条 债券上市首日开盘集合竞价的有效竞价范围为发行价的上下 30%，连续竞价、收盘集合竞价的有效竞价范围为最近成交价的上下 10%；
-        非上市首日开盘集合竞价的有效竞价范围为前收盘价的上下 10%，连续竞价、收盘集合竞价的有效竞价范围为最近成交价的上下 10%。
-         一、可转换公司债券竞价交易出现下列情形的，本所可以对其实施盘中临时停牌措施：
-    　　（一）盘中成交价较前收盘价首次上涨或下跌达到或超过20%的；
-    　　（二）盘中成交价较前收盘价首次上涨或下跌达到或超过30%的。
+        capital or amount --- transform to Order object
+        a. calculate amount to determin size
+        b. create ticker_array depend on size
+        c. simulate order according to ticker_price , ticker_size , ticker_price
+            --- 存在竞价机制的情况将订单分散在不同时刻，符合最大成交原则
+            --- 无竞价机制的情况下，模拟的价格分布，将异常的价格集中以收盘价价格进行成交
+        d. principle:
+            a. 基于信号执行买入 --- 避免分段连续性买入
+            b. pipeline 买入策略信号会滞后 ， dt对象与dt + 1对象可能相同的 --- 分段加仓
+            c. 针对于卖出标的 -- 遵循最大程度卖出（当天）
+
+        logic: asset - capital - controls - orders - check_trigger - execute_cancel_policy (positive)
+               asset - amount - orders - check_trigger - execute_cancel_policy (negative)
+        执行买入算法的需要涉及比如最大持仓比例，持仓量等限制 ； 而卖出持仓比较简单以最大方式卖出标的
     """
     def __init__(self,
+                 portfolio,
                  portal,
                  slippage,
                  commission,
                  execution_style,
+                 cancel_policy,
+                 controls,
                  window=1):
-        self._portal = portal
+        # ledger --- protocol portfolio
+        self._portfolio = portfolio
+        self._data_portal = portal
         self._slippage_model = slippage
         self._execution_style = execution_style
         self._commission = commission
-        self.restricted_window = window
+        self.cancel_policy = ComposedCancel(cancel_policy)
+        # 限制条件 MaxOrderSize MaxPositionSize
+        self.trading_controls = controls
+        # 计算滑价与定义买入capital限制
+        self._window = window
         self._fraction = 0.05
 
     @property
@@ -90,16 +115,16 @@ class OrderCreated(BaseCreated):
 
     def _create_data(self, dt, asset):
         """生成OrderData"""
-        minutes = self._portal.get_spot_value(asset, dt, 'minute',
+        minutes = self._data_portal.get_spot_value(asset, dt, 'minute',
                                               ['open', 'high', 'low', 'close', 'volume'])
-        open_pct, pre_close = self._portal.get_open_pct(asset, dt)
-        windowed_amount = self._portal.get_window_data(asset, dt, self.restricted_window, ['amount'], 'daily')
+        open_pct, pre_close = self._data_portal.get_open_pct(asset, dt)
+        sliding = self._data_portal.get_window_data(asset, dt, self._window, ['amount', 'volume'], 'daily')
         restricted = asset.restricted(dt)
         return OrderData(
                         minutes=minutes,
                         open_pct=open_pct,
                         pre_close=pre_close,
-                        sliding_amount=windowed_amount[asset.sid],
+                        sliding=sliding,
                         restricted=restricted
                         )
 
@@ -109,11 +134,11 @@ class OrderCreated(BaseCreated):
         open_pct = data.open_pct
         alpha = 1 if open_pct == 0.00 else 100 * open_pct
         if size > 0:
-            #模拟价格分布
+            # 模拟价格分布
             dist = 1 + np.copysign(alpha, np.random.beta(alpha, 100, size))
         else:
             dist = [1 + alpha / 100]
-        #避免跌停或者涨停
+        # 避免跌停或者涨停
         restricted = data.restricted
         clip_pct = np.clip(dist, (1 - restricted), (1 + restricted))
         sim_prices = clip_pct * data.pre_close
@@ -121,7 +146,10 @@ class OrderCreated(BaseCreated):
 
     @staticmethod
     def yield_tickers_on_size(size):
-        """根据size生成ticker序列"""
+        """
+            a. 根据size生成ticker序列
+            b. 14:57时刻最终收盘竞价机制阶段 --- 确保收盘价纳入订单组合
+        """
         interval = 4 * 60 / size
         # 按照固定时间去执行
         upper = pd.date_range(start='09:30', end='11:30', freq='%dmin' % interval)
@@ -137,9 +165,8 @@ class OrderCreated(BaseCreated):
         order_data = self._create_data(dts, asset)
         base_capital = self._commission.gen_base_capital(dts)
         # 满足限制
-        restricted_capital = order_data.sliding_amount.mean() * self.fraction
+        restricted_capital = order_data.sliding[asset.sid]['amount'].mean() * self.fraction
         capital = capital if restricted_capital > capital else restricted_capital
-        #
         rate = self.commission.calculate_rate(asset, dts, direction)
         # 以涨停价来度量capital
         per_capital = min([asset.tick_size * order_data.pre_close * (1 + asset.restricted), base_capital])
@@ -163,12 +190,18 @@ class OrderCreated(BaseCreated):
             b. 存在竞价机制 --- 基于size设立时点order
             c. 不存在竞价机制 --- 模拟价格分布提前确定价格单，14:57集中撮合
         """
-        size, order_data = self.yield_size_on_capital(asset, dts, capital)
+        # 基于trading_controls计算capital --- 单一持仓不超过0.6
+        capital_control = [control for control in self.trading_controls if control.name == 'MaxPositionSize'][0]
+        control_capital = capital_control.validate(asset, None, self._portfolio, dts)
+        size, order_data = self.yield_size_on_capital(asset, dts, min(capital, control_capital))
+        # st股票持仓最大额有限制50万股（上海）
+        size_control = [control for control in self.trading_controls if control.name == 'MaxOrderSize'][0]
+        size = size_control.validate(asset, size, self._portfolio, dts)
         self.simulate_order(asset, size, dts, direction)
 
     def simulate_order(self, asset, amount, dts, direction):
         """
-            针对于持仓卖出生成对应的订单 --- amount
+            针对于持仓卖出生成对应的订单 ， 一般不存在什么限制
             a. 存在竞价机制 --- 通过时点设立ticker_order
             b. 无竞价机制 --- 提前设立具体的固定价格订单 -- 最后收盘的将为成交订单撮合
             c. size_array(默认将订单拆分同样大小) , np.tile([per_size],size)
@@ -179,7 +212,6 @@ class OrderCreated(BaseCreated):
             申报最小200股，递增可以以1股为单位 ；设立市价委托必须设立最高价以及最低价 ；
             而科创板前5个交易日不设立涨跌停而后20%波动但是30%，60%临时停盘10分钟，如果超过2.57(复盘)；
             科创板盘后固定价格交易 --- 以后15:00收盘价格进行交易 --- 15:00 -- 15:30(按照时间优先原则，逐步撮合成交）
-
             由于价格笼子，科创板可以参考基于时间的设置订单
         """
         size_array, order_data = self.calculate_size_arrays(asset, amount, dts)
@@ -192,15 +224,23 @@ class OrderCreated(BaseCreated):
             # simulate_dist 已经包含剔除限制
             simulate_prices = self.simulate_dist(order_data, len(size_array))
             tickers = [locate_pos(price, order_data.minutes, direction) for price in simulate_prices]
-            iterator = zip(simulate_prices, tickers)
+            # ticker_price --- filter simulate_prices
+            ticker_prices = np.clip(simulate_prices, order_data.minutes.min(), order_data.minutes.max())
+            iterator = zip(ticker_prices, tickers)
         orders = [Order(asset, amount, *args, self._execution_style,  self._slippage_model)
                   for amount, args in zip(size_array, iterator)]
-        trigger_orders = [order for order in orders if order.check_trigger(order_data.pre_close)]
-        return trigger_orders
+        # 计算滑价与触发条件
+        trigger_orders = [order for order in orders if order.check_trigger(order_data)]
+        # cancel_policy
+        final_orders = [odr for odr in trigger_orders if self.cancel_policy.should_cancel(odr)]
+        return final_orders
 
     def yield_order(self, dts, asset, price_array, size_array, ticker_array, direction):
         order_data = self._create_data(dts, asset)
         orders = [Order(asset, *args, direction, self._execution_style, self._slippage_model)
                   for args in zip(price_array, size_array, ticker_array)]
-        trigger_orders = [order for order in orders if order.check_trigger(order_data.pre_close)]
-        return trigger_orders
+        # check_trigger --- slippage base on vol_pct ,e.g. slippage = np.exp(vol_pct)
+        trigger_orders = [order for order in orders if order.check_trigger(order_data)]
+        # cancel_policy
+        final_orders = [odr for odr in trigger_orders if self.cancel_policy.should_cancel(odr)]
+        return final_orders

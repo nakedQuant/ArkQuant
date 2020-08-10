@@ -204,10 +204,10 @@ cpdef tuple get_adjustment_locs(DatetimeIndex_t dates_index,
 
     >>> from pandas import date_range, Int64Index, Timestamp
     >>> dates = date_range('2014-01-01', '2014-01-07')
-    >>> assets = Int64Index(range(10))
+    >>> asset = Int64Index(range(10))
     >>> get_adjustment_locs(
     ...     dates,
-    ...     assets,
+    ...     asset,
     ...     Timestamp('2014-01-03'),
     ...     Timestamp('2014-01-05'),
     ...     3,
@@ -240,17 +240,17 @@ cpdef _from_assets_and_dates(cls,
                              object value):
     """
     Helper for constructing an Adjustment instance from coordinates in
-    assets/dates indices.
+    asset/dates indices.
 
     Example
     -------
 
     >>> from pandas import date_range, Int64Index, Timestamp
     >>> dates = date_range('2014-01-01', '2014-01-07')
-    >>> assets = Int64Index(range(10))
+    >>> asset = Int64Index(range(10))
     >>> Float64Multiply.from_assets_and_dates(
     ...     dates,
-    ...     assets,
+    ...     asset,
     ...     Timestamp('2014-01-03'),
     ...     Timestamp('2014-01-05'),
     ...     3,

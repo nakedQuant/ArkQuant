@@ -66,7 +66,7 @@ cdef class Asset:
         Date on which the asset first traded.
     end_date : pd.Timestamp
         Last date on which the asset traded. On Quantopian, this value is set
-        to the current (real time) date for assets that are still trading.
+        to the current (real time) date for asset that are still trading.
     tick_size : float
         Minimum amount that the price can change for this asset.
     auto_close_date : pd.Timestamp

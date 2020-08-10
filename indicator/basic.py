@@ -31,7 +31,7 @@ from zipline.utils.numpy_utils import (
 )
 
 from strategies.features.factor import CustomFactor
-from test.algorithm import SingleInputMixin
+from algorithm import SingleInputMixin
 
 
 class Returns(CustomFactor):

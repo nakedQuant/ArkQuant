@@ -94,12 +94,12 @@ class Filter(object):
     """
     Pipeline expression computing a boolean output.
 
-    Filters are most commonly useful for describing sets of assets to include
+    Filters are most commonly useful for describing sets of asset to include
     or exclude for some particular purpose. Many Pipeline API functions accept
     a ``mask`` argument, which can be supplied a Filter indicating that only
     values passing the Filter should be considered when performing the
     requested computation. For example, :meth:`zipline.pipeline.Factor.top`
-    accepts a mask indicating that ranks should be computed only on assets that
+    accepts a mask indicating that ranks should be computed only on asset that
     passed the specified Filter.
 
     The most common way to construct a Filter is via one of the comparison
@@ -184,7 +184,7 @@ class NotNullFilter(Filter):
 
 class PercentileFilter(Filter):
     """
-    A Filter representing assets falling between percentile bounds of a Factor.
+    A Filter representing asset falling between percentile bounds of a Factor.
 
     Parameters
     ----------
