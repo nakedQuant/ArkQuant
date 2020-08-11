@@ -5,10 +5,9 @@ Created on Sun Feb 17 16:11:34 2019
 
 @author: python
 """
-import numpy as np ,pandas as pd,datetime
+import numpy as np, pandas as pd, datetime
 from toolz import partition_all
 from functools import partial
-from calendar import trading_calendar
 from .analyzers import (
                         sortino_ratio,
                         sharpe_ratio,
@@ -47,18 +46,13 @@ class MetricsTracker(object):
     )
 
     def __init__(self,
+                 session,
                  ledger,
                  benchmark,
-                 first_session,
-                 last_session,
                  capital_base,
                  metrics,
                  ):
-
-        self._sessions = trading_calendar.sessions_in_range(
-            first_session,
-            last_session,
-        )
+        self._session = session
         self._ledger = ledger
         self._capital_base = capital_base
         self._benchmark = benchmark
@@ -78,7 +72,7 @@ class MetricsTracker(object):
                         impl(*args, **kwargs)
 
                 return hook_implementation
-            #属性 --- 方法
+            # 属性 --- 方法
             hook_implementation = closing_over_loop_variables_is_hard()
             hook_implementation.__name__ = hook
             # 属性 --- 方法
@@ -104,12 +98,12 @@ class MetricsTracker(object):
         ledger.start_of_session(session_label)
         self.start_of_session(ledger)
 
-    def handle_market_close(self,completed_session):
+    def handle_market_close(self, completed_session):
         """Handles the close of the given day.
 
         Parameters
         ----------
-        dt : Timestamp
+        completed_session : Timestamp
             The most recently completed simulation datetime.
         data_portal : DataPortal
             The current data portal.
@@ -119,8 +113,8 @@ class MetricsTracker(object):
         A daily perf packet.
         """
         packet = {
-            'period_start': self._first_session,
-            'period_end': self._last_session,
+            'period_start': self._sessions[0],
+            'period_end': self._sessions[-1],
             'capital_base': self._capital_base,
             'daily_perf': {},
             'cumulative_perf': {},

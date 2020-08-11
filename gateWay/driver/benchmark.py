@@ -8,7 +8,7 @@ Created on Thu Nov  1 11:27:02 2018
 
 import pandas as pd, json
 from .tools import _parse_url
-from ._config import BENCHMARK_URL
+from .spider.xml import BENCHMARK_URL
 
 lookup_benchmark = {
                 '道琼斯': 'us.DJI',
@@ -52,6 +52,7 @@ def get_benchmark_returns(sid):
         kline = pd.DataFrame(raw, columns=['trade_dt', 'open', 'close', 'high', 'low',
                                            'turnover', 'volume', 'amount'])
         returns = kline['close'] / kline['close'].shift(1) - 1
+        returns.set_index('trade_dt', inplace=True)
         return returns
 
 

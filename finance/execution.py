@@ -6,7 +6,6 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 from abc import ABC, abstractmethod
-import numpy as np
 
 
 class ExecutionStyle(ABC):
@@ -36,15 +35,13 @@ class MarketOrder(ExecutionStyle):
 
     This is the default for orders placed with :func:`~zipline.api.order`.
     """
-
-    # def __init__(self, exchange=None):
-    #     self._exchange = exchange
-
     def get_limit_price_ratio(self):
-        return -np.inf
+        # return -np.inf
+        return 0.0
 
     def get_stop_price_ratio(self):
-        return np.inf
+        # return np.inf
+        return 0.0
 
 
 class LimitOrder(ExecutionStyle):
@@ -65,7 +62,8 @@ class LimitOrder(ExecutionStyle):
         return self.limit_price
 
     def get_stop_price_ratio(self):
-        return -np.inf
+        # return -np.inf
+        return 0.0
 
 
 class StopOrder(ExecutionStyle):
@@ -84,7 +82,8 @@ class StopOrder(ExecutionStyle):
         self.stop_price = stop_price
 
     def get_limit_price_ratio(self):
-        return np.inf
+        # return np.inf
+        return 0.0
 
     def get_stop_price_ratio(self,):
         return self.get_stop_price()

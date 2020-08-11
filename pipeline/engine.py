@@ -83,8 +83,8 @@ class Engine(ABC):
                        for pipeline in self.pipelines]
             outputs = chain(* results)
         # output -- element(PIPE)
-        mappings = groupby(lambda x: x.tag, outputs)
-        mappings_sorted = valmap(lambda x: x.sort(key=lambda ele: ele.priority), mappings)
+        mappings = groupby(lambda x: x.name, outputs)
+        mappings_sorted = valmap(lambda x: x.sort(key=lambda k: k.priority), mappings)
         yield self.resolve_pipeline(mappings_sorted, open_pct)
 
     def run_pickers(self, picker_metadata, holdings):
@@ -95,7 +95,7 @@ class Engine(ABC):
         hold_mappings = groupby(lambda x: x.asset.asset_type, holdings)
         outputs = []
         for asset_type, positions in hold_mappings.items():
-            result = self.ump_pickers[asset_type].evalute(positions,picker_metadata)
+            result = self.ump_pickers[asset_type].evalute(positions, picker_metadata)
             outputs.extend(result)
         dct = {{p.tag: p} for p in outputs}
         return dct
@@ -212,7 +212,7 @@ class SimplePipelineEngine(Engine):
         conflicts = [name for name in common_pipe_name if puts[name] == calls[name]]
         assert not conflicts, ValueError('name : %r have conflicts between ump and pipeline ' % conflicts)
         # pipeline_name : holding
-        holding_mappings = groupby(lambda x: x.tag,holdings)
+        holding_mappings = groupby(lambda x: x.tag, holdings)
         # 直接卖出持仓，无买入标的
         direct_negatives = set(puts) - set(common_pipe_name)
         # 卖出持仓买入对应标的

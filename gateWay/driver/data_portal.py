@@ -9,6 +9,9 @@ import pandas as pd, json
 from functools import lru_cache
 from .tools import _parse_url
 from .third_api.client import tsclient
+from .bar_reader import AssetSessionReader
+from .bcolz_reader import BcolzMinuteReader
+from .adjustment_reader import SQLiteAdjustmentReader
 from .history_loader import (
     HistoryDailyLoader,
     HistoryMinuteLoader
@@ -46,21 +49,17 @@ class DataPortal(object):
 
     OHLCV_FIELDS = frozenset(["open", "high", "low", "close", "volume"])
 
-    def __init__(self,
-                 asset_finder,
-                 _session_reader,
-                 _minute_reader,
-                 adjustment_reader):
+    def __init__(self, asset_finder):
 
         self.asset_finder = asset_finder
-
-        self._adjustment_reader = adjustment_reader
+        self._adjustment_reader = SQLiteAdjustmentReader()
+        _minute_reader = BcolzMinuteReader()
+        _session_reader = AssetSessionReader()
 
         self._pricing_reader = {
             'minute': _minute_reader,
             'daily': _session_reader,
         }
-
         _history_daily_loader = HistoryDailyLoader(
             _minute_reader,
             self._adjustment_reader,
@@ -323,6 +322,6 @@ class DataPortal(object):
         return frame
 
     @staticmethod
-    def get_equity_adjfactor(code):
+    def get_equity_factor(code):
         factor = tsclient.to_ts_adjfactor(code)
         return factor

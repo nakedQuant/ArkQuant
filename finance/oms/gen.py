@@ -18,7 +18,7 @@ from utils.dt_utilty import locate_pos
 OrderData = namedtuple('OrderData', 'minutes open_pct pre_close sliding restricted')
 
 
-class BaseCreated(ABC):
+class BaseCreator(ABC):
     """
         1 存在价格笼子
         2 无跌停限制但是存在竞价机制（10%基准价格），以及临时停盘制度
@@ -61,7 +61,7 @@ class BaseCreated(ABC):
         raise NotImplementedError()
 
 
-class OrderCreated(BaseCreated):
+class OrderCreator(BaseCreator):
     """
         capital or amount --- transform to Order object
         a. calculate amount to determin size
@@ -79,8 +79,7 @@ class OrderCreated(BaseCreated):
         执行买入算法的需要涉及比如最大持仓比例，持仓量等限制 ； 而卖出持仓比较简单以最大方式卖出标的
     """
     def __init__(self,
-                 portfolio,
-                 portal,
+                 data_portal,
                  slippage,
                  commission,
                  execution_style,
@@ -88,14 +87,13 @@ class OrderCreated(BaseCreated):
                  controls,
                  window=1):
         # ledger --- protocol portfolio
-        self._portfolio = portfolio
-        self._data_portal = portal
+        self._data_portal = data_portal
         self._slippage_model = slippage
         self._execution_style = execution_style
         self._commission = commission
         self.cancel_policy = ComposedCancel(cancel_policy)
-        # 限制条件 MaxOrderSize MaxPositionSize
-        self.trading_controls = controls
+        # 限制条件  MaxPositionSize ,MaxOrderSize
+        self.max_position_control, self.max_order_control = controls
         # 计算滑价与定义买入capital限制
         self._window = window
         self._fraction = 0.05
@@ -183,23 +181,28 @@ class OrderCreated(BaseCreated):
         size_array[np.random(int(q/per_size))] += q % per_size
         return size_array, data
 
-    def simulate(self, asset, capital, dts, direction):
+    def _finalize(self, orders, order_data):
+        # orders --- trigger_orders --- final_orders --- transactions
+        # 计算滑价与触发条件 check_trigger --- slippage base on vol_pct ,e.g. slippage = np.exp(vol_pct)
+        trigger_orders = [order for order in orders if order.check_trigger(order_data)]
+        # cancel_policy
+        final_orders = [odr for odr in trigger_orders if self.cancel_policy.should_cancel(odr)]
+        # transactions = [create_transaction(order, self.commission) for order in final_orders]
+        return final_orders
+
+    def generate(self, asset, capital, dts, direction, portfolio):
         """
             针对于买入操作
             a. 计算满足最低capital(基于手续费逻辑），同时计算size
             b. 存在竞价机制 --- 基于size设立时点order
             c. 不存在竞价机制 --- 模拟价格分布提前确定价格单，14:57集中撮合
         """
-        # 基于trading_controls计算capital --- 单一持仓不超过0.6
-        capital_control = [control for control in self.trading_controls if control.name == 'MaxPositionSize'][0]
-        control_capital = capital_control.validate(asset, None, self._portfolio, dts)
+        control_capital = self.max_position_control.validate(asset, None, portfolio, dts)
         size, order_data = self.yield_size_on_capital(asset, dts, min(capital, control_capital))
-        # st股票持仓最大额有限制50万股（上海）
-        size_control = [control for control in self.trading_controls if control.name == 'MaxOrderSize'][0]
-        size = size_control.validate(asset, size, self._portfolio, dts)
+        size = self.max_order_control.validate(asset, size, portfolio, dts)
         self.simulate_order(asset, size, dts, direction)
 
-    def simulate_order(self, asset, amount, dts, direction):
+    def generator_order(self, asset, amount, dts, direction):
         """
             针对于持仓卖出生成对应的订单 ， 一般不存在什么限制
             a. 存在竞价机制 --- 通过时点设立ticker_order
@@ -229,18 +232,19 @@ class OrderCreated(BaseCreated):
             iterator = zip(ticker_prices, tickers)
         orders = [Order(asset, amount, *args, self._execution_style,  self._slippage_model)
                   for amount, args in zip(size_array, iterator)]
-        # 计算滑价与触发条件
-        trigger_orders = [order for order in orders if order.check_trigger(order_data)]
-        # cancel_policy
-        final_orders = [odr for odr in trigger_orders if self.cancel_policy.should_cancel(odr)]
+        # simulate transactions
+        final_orders = self._finalize(orders, order_data)
         return final_orders
 
-    def yield_order(self, dts, asset, price_array, size_array, ticker_array, direction):
+    def yield_order(self, dts, asset, price_array, size_array, ticker_array, direction, portfolio):
+        # 买入订单（卖出 --- 买入）
+        size = self.max_order_control.validate(asset, sum(size_array), portfolio, dts)
+        # 按比例进行scale
+        control_size_array = map(lambda x: x * sum(size_array) / size, size_array)
         order_data = self._create_data(dts, asset)
+        # 存在controls
         orders = [Order(asset, *args, direction, self._execution_style, self._slippage_model)
-                  for args in zip(price_array, size_array, ticker_array)]
-        # check_trigger --- slippage base on vol_pct ,e.g. slippage = np.exp(vol_pct)
-        trigger_orders = [order for order in orders if order.check_trigger(order_data)]
-        # cancel_policy
-        final_orders = [odr for odr in trigger_orders if self.cancel_policy.should_cancel(odr)]
+                  for args in zip(price_array, control_size_array, ticker_array)]
+        # simulate transactions
+        final_orders = self._finalize(orders, order_data)
         return final_orders

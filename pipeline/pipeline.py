@@ -12,25 +12,23 @@ from functools import reduce
 from .term import Term, NotSpecific
 from .graph import TermGraph
 
-
-PIPE = namedtuple('pipe', 'tag priority asset')
+NamedPipe = namedtuple('pipe', 'name priority asset')
 
 
 class Pipeline(object):
     """
         拓扑执行逻辑
     """
-    __slots__ = ['_terms_store','_graph','_name','_workspace']
+    __slots__ = ['_terms_store', 'graph', '_workspace']
 
-    def __init__(self,terms):
+    def __init__(self, terms):
         self._terms_store = terms
-        self._graph = self._init_graph()
-        self._name = uuid.uuid4()
         self._workspace = OrderedDict()
+        self.graph = self._init_graph()
 
     @property
     def name(self):
-        return self._name
+        return uuid.uuid4()
 
     @property
     def terms(self):
@@ -53,8 +51,8 @@ class Pipeline(object):
         graph : zipline.pipeline.graph.TermGraph
             Graph encoding term dependencies.
         """
-        _graph = TermGraph(self._terms_store).graph
-        return _graph
+        graph = TermGraph(self._terms_store).graph
+        return graph
 
     def __add__(self, term):
         if not isinstance(term, Term):
@@ -80,7 +78,7 @@ class Pipeline(object):
     def _load_term(self, term, default):
         if term.dependencies != NotSpecific :
             # 将节点的依赖 --- 交集 作为下一个input
-            inter_inputs = keyfilter(lambda x : x in term.dependencies,
+            inter_inputs = keyfilter(lambda x: x in term.dependencies,
                                      self._workspace)
             input_of_term = reduce(lambda x, y: set(x) & set(y),
                                    inter_inputs.values())
@@ -92,12 +90,12 @@ class Pipeline(object):
         """
             internal method for decref_recursive
         """
-        decref_nodes = self._graph.decref_dependencies()
+        decref_nodes = self.graph.decref_dependencies()
         for node in decref_nodes:
-            _input = self._load_term(node,default)
-            output = node.compute(_input,metadata)
+            _input = self._load_term(node, default)
+            output = node.compute(_input, metadata)
             self._workspace[node] = output
-            self._decref_recursive(metadata,default)
+            self._decref_recursive(metadata, default)
 
     def _inner_decref_recursive(self, metadata, default):
         """
@@ -118,13 +116,13 @@ class Pipeline(object):
         return : PIPE list
         """
         self._initialize_workspace()
-        self._decref_recursive(metadata,default)
+        self._decref_recursive(metadata, default)
 
     def _fit(self, alternative):
         """将pipeline.name --- outs"""
         out = self._workspace.popitem(last=True).values()
         # transform to  pipe
-        outputs = [PIPE(property, self.name, asset) for priority, asset
+        outputs = [NamedPipe(self.name, priority, asset) for priority, asset
                    in enumerate(out[:alternative])]
         return outputs
 
@@ -132,6 +130,6 @@ class Pipeline(object):
         """
             source: accumulated data from all terms
         """
-        self._inner_decref_recursive(metadata,default)
+        self._inner_decref_recursive(metadata, default)
         result = self._fit(alternative)
         return result

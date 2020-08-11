@@ -8,35 +8,21 @@ Created on Tue Mar 12 15:37:47 2019
 from collections import namedtuple
 from abc import ABC, abstractmethod
 import struct, pandas as pd, bcolz, numpy as np, os, glob, datetime
+from ._config import TdxDir
 
 OHLC_RATIO = 100
 
 
 class BcolzWriter(ABC):
 
-    def sidpath(self, sid):
-        """
-        Parameters
-        ----------
-        sid : int
-            Asset identifier.
-
-        Returns
-        -------
-        out : string
-            Full path to the bcolz rootdir for the given sid.
-        """
-        sid_subdir = '{}.bcolz'.format(sid)
-        return os.join(self._rootdir, sid_subdir)
-
-    def _init_metadata(self,path):
-        #初始化
-        metadata = namedtuple('metadata','start_session end_session ohlc_ratio roodir')
-        #定义属性
+    def _init_metadata(self, path):
+        # 初始化
+        metadata = namedtuple('metadata', 'start_session end_session ohlc_ratio root_dir')
+        # 定义属性
         metadata.start_session = None
         metadata.end_session = self._end_session
         metadata.ohlc_ratio = self._default_ohlc_ratio
-        metadata.rootdir = path
+        metadata.root_dir = path
         return metadata
 
     def _init_ctable(self, path):
@@ -70,12 +56,34 @@ class BcolzWriter(ABC):
                 initial_array,
                 initial_array,
             ],
-            names = self.COL_NAMES,
+            names=self.COL_NAMES,
             mode='w',
         )
         table.flush()
         table.attrs['metadata'] = self._init_metadata(path)
         return table
+
+    def sid_path(self, sid):
+        """
+        Parameters
+        ----------
+        sid : int
+            Asset identifier.
+
+        Returns
+        -------
+        out : string
+            Full path to the bcolz rootdir for the given sid.
+        """
+        sid_subdir = '{}.bcolz'.format(sid)
+        return os.join(self._root_dir, sid_subdir)
+
+    def _ensure_ctable(self, sid):
+        """Ensure that a ctable exists for ``sid``, then return it."""
+        sid_path = self.sid_path(sid)
+        if not os.path.exists(sid_path):
+            return self._init_ctable(sid_path)
+        return bcolz.ctable(rootdir=sid_path, mode='a')
 
     def set_sid_attrs(self, sid, **kwargs):
         """Write all the supplied kwargs as attributes of the sid's file.
@@ -83,13 +91,6 @@ class BcolzWriter(ABC):
         table = self._ensure_ctable(sid)
         for k, v in kwargs.items():
             table.attrs[k] = v
-
-    def _ensure_ctable(self, sid):
-        """Ensure that a ctable exists for ``sid``, then return it."""
-        sidpath = self.sidpath(sid)
-        if not os.path.exists(sidpath):
-            return self._init_ctable(sidpath)
-        return bcolz.ctable(rootdir=sidpath, mode='a')
 
     @staticmethod
     def _normalize_date(raw):
@@ -109,6 +110,21 @@ class BcolzWriter(ABC):
     def retrieve_data_from_tdx(self, path):
 
         raise NotImplementedError()
+
+    def write_sid(self, sid, appendix):
+        """
+        Write a stream of minute data.
+        :param sid: asset type
+        :param appendix: .01 / .5 / .day
+        :return: dataframe
+        """
+        path = os.path.join(self._tdx_dir, sid + appendix)
+        try:
+            data = self.retrieve_data_from_tdx(path)
+        except IOError:
+            print('tdx path is not correct')
+        #
+        self._write_internal(sid, data)
 
     @abstractmethod
     def _write_internal(self, sid, data):
@@ -130,24 +146,9 @@ class BcolzWriter(ABC):
         """
         raise NotImplementedError()
 
-    def write_sid(self, sid, appendix):
-        """
-        Write a stream of minute data.
-        :param sid: asset type
-        :param appendix: .01 / .5 / .day
-        :return: dataframe
-        """
-        path = os.path.join(self._source_dir, sid + appendix)
-        try:
-            data = self.retrieve_data_from_tdx(path)
-        except IOError:
-            print('tdx path is not correct')
-        #
-        self._write_internal(sid, data)
-
     def truncate(self, size=0):
         """Truncate data when size = 0"""
-        glob_path = os.path.join(self._rootdir, "*.bcolz")
+        glob_path = os.path.join(self._root_dir, "*.bcolz")
         sid_paths = sorted(glob(glob_path))
         for sid_path in sid_paths:
             try:
@@ -182,20 +183,19 @@ class BcolzMinuteBarWriter(BcolzWriter):
 
     volume is a np.uint32 with no mutation of the tens place.
     """
-    COL_NAMES = frozenset(['ticker','open', 'high', 'low', 'close','amount','volume'])
+    COL_NAMES = frozenset(['ticker', 'open', 'high', 'low', 'close', 'amount', 'volume'])
 
     def __init__(self,
-                 rootdir,
-                 tdx_minutes_dir,
+                 minutes_dir,
                  default_ratio=OHLC_RATIO):
-
-        self._rootdir = rootdir
-        self._source_dir = tdx_minutes_dir
+        # tdx_dir --- 通达信数据所在
+        self._tdx_dir = minutes_dir
+        # 解析H5数据所在位置
+        self._root_dir = os.path.join(TdxDir, 'minute')
         self._default_ohlc_ratio = default_ratio
         self._end_session = pd.Timestamp('1990-01-01').timestamp()
 
     def __setattr__(self, key, value):
-
         raise NotImplementedError()
 
     def retrieve_data_from_tdx(self, path):
@@ -208,23 +208,23 @@ class BcolzMinuteBarWriter(BcolzWriter):
                 idx = 32 * num
                 struct_line = struct.unpack('HhIIIIfii', buf[idx:idx + 32])
                 data.append(struct_line)
-            dataframe = pd.DataFrame(data, columns=['dates', 'sub_dates', 'open',
+            frame = pd.DataFrame(data, columns=['dates', 'sub_dates', 'open',
                                                     'high', 'low', 'close', 'amount',
                                                     'volume', 'appendix'])
-            ticker = self._normalize_date(dataframe)
+            ticker = self._normalize_date(frame)
             return ticker
 
     def _write_internal(self, sid, data):
         table = self._ensure_ctable(sid)
-        #剔除重复的
+        # 剔除重复的
         metadata = table.attr['metadata']
-        dataframes = data[data['timestamp'] > metadata.end_session]
-        if dataframes:
-            table.append(dataframes)
-            #更新metadata
-            metadata.end_session = dataframes['timestamp'].max()
+        frames = data[data['timestamp'] > metadata.end_session]
+        if frames:
+            table.append(frames)
+            # 更新metadata
+            metadata.end_session = frames['timestamp'].max()
             if not metadata.start_session:
-                metadata.start_session = dataframes['timestamp'].min()
+                metadata.start_session = frames['timestamp'].min()
             table.attrs['metadata'] = metadata
             # data in memory to disk
             table.flush()
@@ -248,11 +248,9 @@ class BcolzDailyBarWriter(BcolzWriter):
     COL_NAMES = frozenset(['trade_dt', 'open', 'high', 'low', 'close', 'amount', 'volume'])
 
     def __init__(self,
-                 rootdir,
-                 txn_daily_dir):
-
-        self._rootdir = rootdir
-        self._source_dir = txn_daily_dir
+                 daily_dir):
+        self._txn_dir = daily_dir
+        self._root_dir = os.path.join(TdxDir, 'daily')
         self._end_session = '1990-01-01'
 
     def __setattr__(self, key, value):
@@ -267,21 +265,21 @@ class BcolzDailyBarWriter(BcolzWriter):
                 idx = 32 * num
                 struct_line = struct.unpack('IIIIIfII', buf[idx:idx + 32])
                 data.append(struct_line)
-            raw = pd.DataFrame(data,columns=['trade_dt', 'open', 'high', 'low',
-                                             'close', 'amount', 'volume', 'appendix'])
+            raw = pd.DataFrame(data, columns=['trade_dt', 'open', 'high', 'low',
+                                              'close', 'amount', 'volume', 'appendix'])
             return raw
 
     def _write_internal(self, sid, data):
         table = self._ensure_ctable(sid)
         #剔除重复的
         metadata = table.attr['metadata']
-        dataframes = data[data['trade_dt'] > metadata.end_session]
-        if dataframes:
-            table.append(dataframes)
+        frames = data[data['trade_dt'] > metadata.end_session]
+        if frames:
+            table.append(frames)
             #更新metadata
-            metadata.end_session = dataframes['trade_dt'].max()
+            metadata.end_session = frames['trade_dt'].max()
             if not metadata.start_session:
-                metadata.start_session = dataframes['trade_dt'].min()
+                metadata.start_session = frames['trade_dt'].min()
             table.attrs['metadata'] = metadata
             # data in memory to disk
             table.flush()

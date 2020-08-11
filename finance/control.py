@@ -121,6 +121,7 @@ class MaxPositionSize(TradingControl):
     """
     TradingControl representing a limit on the maximum position size that can
     be held by an algo for a given asset.
+    e.g 单一持仓不超过0.6
     """
     name = 'MaxPositionSize'
 

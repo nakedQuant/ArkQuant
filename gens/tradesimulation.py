@@ -60,7 +60,7 @@ class AlgorithmSimulator(object):
         self.sim_params = sim_params
         self.restrictions = restriction
 
-    def tranform(self):
+    def transform(self):
         """
         Main generator work loop.
         """

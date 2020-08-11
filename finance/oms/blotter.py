@@ -5,8 +5,7 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-import numpy as np
-import pandas as pd
+import pandas as pd, numpy as np
 from finance.transaction import create_transaction
 
 
@@ -17,30 +16,31 @@ class SimulationBlotter(object):
     """
 
     def __init__(self,
-                 gen,
+                 generator,
                  delay=1):
-        self._iterator = gen
+        self._iterator = generator
         self.delay = delay
 
     def create_bulk_transactions(self, orders):
         transactions = [create_transaction(order, self._iterator.commission) for order in orders]
         return transactions
 
-    def generate(self, asset, capital, dts, direction):
+    def simulate(self, asset, capital, dts, direction, portfolio):
         """
         :param asset: Asset
         :param capital: float
         :param dts: pd.Timestamp or str
         :param direction: positive or negative
+        :param portfolio: portfolio
         :return: list of transactions
         """
-        orders = self._iterator.simulate(asset, capital, dts, direction)
+        orders = self._iterator.simulate(asset, capital, dts, direction, portfolio)
         transactions = self.create_bulk_transactions(orders)
         # 计算效率
         utility = sum([t.amount for t in transactions]) / sum([order.amount for order in orders])
         return transactions, utility
 
-    def generate_direct(self, asset, amount, dts, direction):
+    def simulate_txn(self, asset, amount, dts, direction):
         """
         :param asset: Asset
         :param amount: order.amount ,int
@@ -54,7 +54,7 @@ class SimulationBlotter(object):
         utility = sum([txn.amount for txn in transactions]) / amount
         return transactions, utility
 
-    def yield_txn(self, p, c, dts):
+    def yield_txn(self, p, c, dts, portfolio):
         """
             holding , asset ,dts
             基于触发器构建 通道 基于策略 卖出 --- 买入
@@ -77,7 +77,7 @@ class SimulationBlotter(object):
             卖出标的 --- 对应买入标的 ，闲于的资金
         """
         # 卖出持仓
-        p_transactions, p_utility = self.generate_txn(p.asset, p.amount, dts, 'negative')
+        p_transactions, p_utility = self._iterator.yield_order(p.asset, p.amount, dts, 'negative')
         p_transaction_prices = np.array([p_txn.price for p_txn in p_transactions])
         # 执行对应的买入算法
         c_data = self._iterator._create_data(dts, c)
@@ -89,8 +89,7 @@ class SimulationBlotter(object):
         # 模拟买入订单数量
         c_sizes = [np.floor(p.amount * ratio) for p in p_transactions]
         # 生成对应的买入订单
-        # c_orders = self._iterator.simulate_order(c, c_sizes, c_data, 'positive')
-        c_orders = self._iterator.yield_order(dts, c, c_ticker_prices, c_sizes, c_tickers, 'positive')
+        c_orders = self._iterator.yield_order(dts, c, c_ticker_prices, c_sizes, c_tickers, 'positive', portfolio)
         # 订单 --- 交易
         c_transactions = self.create_bulk_transactions(c_orders)
         # 计算效率

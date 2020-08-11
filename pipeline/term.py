@@ -5,14 +5,14 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-import glob,numpy as np
+import glob, numpy as np
 from weakref import WeakValueDictionary
 
 
 class NotSpecific(Exception):
 
     def __str__(self):
-        return ('object not specific')
+        return 'object not specific'
 
     __repr__ = __str__()
 
@@ -40,35 +40,35 @@ class Term(object):
 
     namespace = dict()
 
-    __slots__ = ['domain','dtype','term_logic','_subclass_called_validate']
+    __slots__ = ['domain', 'dtype', 'term_logic', '_subclass_called_validate']
 
     def __new__(cls,
                 domain,
                 script,
                 params,
-                dtype = None
+                dtype=None
                 ):
 
         dtype = dtype if dtype else list()
 
-        script_path= glob.glob('strategy/%s.py'%script)
+        script_path= glob.glob('strategy/%s.py' % script)
         with open(script_path, 'r') as f:
             exec(f.read(), cls.namespace)
         logic_cls = cls.namespace[script]
-        identity = cls._static_identity(domain,logic_cls,params,dtype)
+        identity = cls._static_identity(domain, logic_cls, params, dtype)
 
         try:
             return cls._term_cache[identity]
         except KeyError:
             new_instance = cls._term_cache[identity] = \
-                super(Term,cls).__new__(cls)._init(domain,logic_cls,params,dtype)
+                super(Term, cls).__new__(cls)._init(domain, logic_cls, params, dtype)
             return new_instance
 
     @classmethod
-    def _static_identity(cls,domain,script_class,script_params,dtype):
-        return domain,script_class,script_params,dtype
+    def _static_identity(cls, domain, script_class, script_params, dtype):
+        return domain, script_class, script_params, dtype
 
-    def _init(self, domain,script,params,dtype):
+    def _init(self, domain, script, params, dtype):
         """
             __new__已经初始化后，不需要在__init__里面调用
             Noop constructor to play nicely with our caching __new__.  Subclasses
@@ -126,19 +126,19 @@ class Term(object):
         return self.default_input
 
     @dependencies.setter
-    def dependencies(self,terms):
+    def dependencies(self, terms):
         for item in terms:
-            if not isinstance(item,self):
+            if not isinstance(item, self):
                 raise TypeError('dependencies must be Term')
         return terms
 
-    def postprocess(self,data):
+    def postprocess(self, data):
         """
             called with an result of self ,after any user-defined screens have been applied
             this is mostly useful for transforming  the dtype of an output
         """
         if self.dtype == bool:
-            if not isinstance(data,self.dtype):
+            if not isinstance(data, self.dtype):
                 raise TypeError('style of data is not %s' % self.dtype)
             return data
         else:
@@ -148,22 +148,22 @@ class Term(object):
                 raise TypeError('cannot transform the style of data to %s due to error %s' % (self.dtype, e))
             return data
 
-    def _compute(self,inputs,data):
+    def _compute(self, inputs, data):
         """
             inner method
             1. subclass should implement when _verify_asset_finder is True
             2. self.postprocess()
         """
-        output = self.term_logic.compute(inputs,data)
+        output = self.term_logic.compute(inputs, data)
         validate_output = self.postprocess(output)
         return validate_output
 
-    def compute(self,inputs,data):
+    def compute(self, inputs, data):
         """
             1. subclass should implement when _verify_asset_finder is True
             2. self.postprocess()
         """
-        output = self._compute(inputs,data)
+        output = self._compute(inputs, data)
         return output
 
     def recursive_repr(self):

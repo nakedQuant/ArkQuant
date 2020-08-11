@@ -109,21 +109,6 @@ class Profits(object):
                        session_ix):
         packet['daily_perf']['profit'] = ledger.daily_position_stats(session_ix)
 
-# class MaxLeverage(object):
-#     """Tracks the maximum account leverage.
-#     """
-#     def start_of_simulation(self,
-#                             ledger,
-#                             benchmark,
-#                             sessions):
-#         self._max_leverage = 0.0
-#
-#     def end_of_session(self,
-#                        packet,
-#                        ledger,
-#                        session_ix):
-#         self._max_leverage = max(self._max_leverage, ledger.account.leverage)
-#         packet['cumulative_risk_metrics']['max_leverage'] = self._max_leverage
 
 class Weights(object):
 

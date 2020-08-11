@@ -8,8 +8,8 @@ Created on Tue Mar 12 15:37:47 2019
 import numpy as np
 import pandas as pd
 import sqlalchemy as sa
-from sqlalchemy import and_
-from gateWay.driver.db_schema import metadata
+from sqlalchemy import and_, MetaData
+from gateWay.driver.db_schema import engine
 from gateWay.driver.tools import unpack_df_to_component_dict
 
 
@@ -29,8 +29,9 @@ class SQLiteAdjustmentReader(object):
     """
     adjustment_tables = frozenset(['equity_divdends', 'equity_rights'])
 
-    def __init__(self, engine):
+    def __init__(self):
         self.engine = engine
+        metadata = MetaData(bind=engine)
         for tbl in self.adjustment_tables:
             setattr(self, tbl, metadata.tables[tbl])
 

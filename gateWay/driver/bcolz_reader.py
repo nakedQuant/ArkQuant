@@ -7,6 +7,7 @@ Created on Tue Mar 12 15:37:47 2019
 """
 import pandas as pd, bcolz, os
 from .bar_reader import BarReader
+from ._config import TdxDir
 from .tools import transfer_to_timestamp
 
 
@@ -18,13 +19,13 @@ class BcolzReader(BarReader):
 
     def get_sid_attr(self, sid):
         sid_path = '{}.bcolz'.format(sid)
-        root = os.path.join(self._rootdir, sid_path)
+        root = os.path.join(self._root_dir, sid_path)
         return root
 
     def _read_bcolz_data(self, sid):
         """cparams(clevel=5, shuffle=1, cname='lz4', quantize=0)"""
-        rootdir = self.get_sid_attr(sid)
-        table = bcolz.open(rootdir=rootdir, mode='r')
+        root_dir = self.get_sid_attr(sid)
+        table = bcolz.open(rootdir=root_dir, mode='r')
         return table
 
     def get_value(self, sid, sdate, edate):
@@ -67,14 +68,13 @@ class BcolzReader(BarReader):
             condition = '({0} <= timestamp) & (timestamp <= {1)'.format(start, end)
         else:
             condition = '({0} <= trade_dt) & (trade_dt <= {1)'.format(sdate, edate)
-        raw = table.fetchwhere(condition)
-        dataframe = pd.DataFrame(raw)
+        # raw = table.fetchwhere(condition)
+        # frame = pd.DataFrame(raw)
+        frame = pd.DataFrame(table.fetchwhere(condition))
         #调整系数
         inverse_ratio = 1 / meta.ohlc_ratio
-        scale = dataframe.apply(lambda x: [x[col] * inverse_ratio
-                                for col in ['open', 'high', 'low', 'close']],
-                                axis=1)
-        scale.set_index('ticker', inplace= True) if 'ticker' in scale.columns \
+        scale = frame.apply(lambda x: [x[col] * inverse_ratio for col in ['open', 'high', 'low', 'close']], axis=1)
+        scale.set_index('ticker', inplace=True) if 'ticker' in scale.columns \
             else scale.set_index('trade_dt', inplace=True)
         return scale
 
@@ -114,8 +114,8 @@ class BcolzMinuteReader(BcolzReader):
         of minutes in NYSE trading days.
 
     """
-    def __init__(self, rootdir):
-        self._rootdir = rootdir
+    def __init__(self):
+        self._root_dir = os.path.join(TdxDir, 'minute')
 
     @property
     def data_frequency(self):
@@ -154,8 +154,8 @@ class BcolzDailyReader(BcolzReader):
     - Volume is interpreted as as-traded volume.
     - Day is interpreted as seconds since midnight UTC, Jan 1, 1970.
     """
-    def __init__(self, rootdir):
-        self._rootdir = rootdir
+    def __init__(self):
+        self._root_dir = os.path.join(TdxDir, 'daily')
 
     @property
     def data_frequency(self):

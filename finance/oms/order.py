@@ -69,8 +69,8 @@ class Order(object):
             return True
         else:
             # simulate price to create order and ensure  order price must be available
-            bottom = pre_close * (1 - self.execution_style.get_stop_price())
-            upper = pre_close * (1 + self.execution_style.get_limit_price())
+            bottom = pre_close * (1 - self.execution_style.get_stop_price_ratio())
+            upper = pre_close * (1 + self.execution_style.get_limit_price_ratio())
             if bottom <= self.price <= upper:
                 # 计算滑价系数
                 avg_volume = order_data.sliding[self.sid]['volume'].mean()
