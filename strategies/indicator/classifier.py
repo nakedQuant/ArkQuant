@@ -407,10 +407,10 @@ class Classifier(RestrictedDTypeMixin, ComputableTerm):
 
     def to_workspace_value(self, result, assets):
         """
-        Called with the result of a pipeline. This needs to return an object
+        Called with the result of a pipe. This needs to return an object
         which can be put into the workspace to continue doing computations.
 
-        This is the inverse of :func:`~zipline.pipeline.term.Term.postprocess`.
+        This is the inverse of :func:`~zipline.pipe.term.Term.postprocess`.
         """
         if self.dtype == int64_dtype:
             return super(Classifier, self).to_workspace_value(result, assets)
@@ -593,8 +593,8 @@ class CustomClassifier(PositiveWindowLengthMixin,
 
     See Also
     --------
-    zipline.pipeline.CustomFactor
-    zipline.pipeline.CustomFilter
+    zipline.pipe.CustomFactor
+    zipline.pipe.CustomFilter
     """
     def _validate(self):
         try:
@@ -637,7 +637,7 @@ class Latest(LatestMixin, CustomClassifier):
 
     See Also
     --------
-    zipline.pipeline.data.dataset.BoundColumn.latest
+    zipline.pipe.data.dataset.BoundColumn.latest
     """
     pass
 

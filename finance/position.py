@@ -6,33 +6,36 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 import numpy as np
-from._protocol import InnerPosition, Position as ProtocolPosition
+from finance._protocol import InnerPosition, Position as ProtocolPosition
 
 
 class Position(object):
 
-    __slots__ = ['inner_position']
+    __slots__ = ['_event', 'inner_position']
 
     def __init__(self,
-                 asset,
+                 event,
                  amount=0,
                  cost_basis=0.0,
                  last_sync_price=0.0,
                  last_sync_date=None):
 
+        # 属性只能在inner里面进行更新 --- 变相隔离
         inner = InnerPosition(
-                asset=asset,
+                asset=event.asset,
                 amount=amount,
                 cost_basis=cost_basis,
                 last_sync_price=last_sync_price,
                 last_sync_date=last_sync_date,
         )
+        self._name = event.name
         self.inner_position = inner
         self._closed = False
 
     @property
-    def tag(self):
-        return self.asset.tag
+    def name(self):
+        # created by pipe (name) , event(name , asset)
+        return self._name
 
     @property
     def sid(self):
@@ -52,7 +55,7 @@ class Position(object):
     def __setattr__(self, key, value):
         setattr(self.inner_position, key, value)
 
-    def handle_split(self,amount_ratio, cash_ratio):
+    def handle_split(self, amount_ratio, cash_ratio):
         """
             update the postion by the split ratio and return the fractional share that will be converted into cash (除权）
             零股转为现金 ,重新计算成本,
@@ -67,7 +70,7 @@ class Position(object):
         return left_cash
 
     def update(self, txn):
-        if self.asset == txn.asset:
+        if self.asset == txn.event.asset:
             raise Exception('transaction asset must same with position asset')
         # 持仓基本净值
         base_value = self.amount * self.cost_basis
@@ -76,7 +79,7 @@ class Position(object):
         txn_cost = txn.cost
         # 根据交易对持仓进行更新
         total_amount = txn.amount + self.amount
-        if total_amount < 0 :
+        if total_amount < 0:
             raise Exception('put action is not allowed')
         else:
             total_cost = base_value + txn_value + txn_cost
@@ -110,5 +113,6 @@ class Position(object):
             'amount': self.amount,
             'origin': self.asset_type.source,
             'cost_basis': self.cost_basis,
-            'last_sale_price': self.last_sale_price
+            'last_sale_price': self.last_sale_price,
+            'created_by': self.name
             }

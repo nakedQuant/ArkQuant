@@ -13,10 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pandas as pd , numpy as np
+import pandas as pd, numpy as np
 
 ANNUALIZATION_FACTORS = {
-                        'monthly':12,
+                        'monthly': 12,
                         'weekly': 52,
                         'daily': 252,
                         }

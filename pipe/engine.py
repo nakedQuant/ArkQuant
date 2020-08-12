@@ -10,7 +10,7 @@ from functools import partial
 from multiprocessing import Pool
 from itertools import chain
 from abc import ABC, abstractmethod
-from .loader.loader import PricingLoader
+from pipe.loader.loader import PricingLoader
 from finance.restrictions import UnionRestrictions
 
 
@@ -19,60 +19,63 @@ class Engine(ABC):
         set asset range which means all asset with some restrictions
         --- engine process should be automatic without much manual interface
     """
-
-    def _init(self, pipelines, pickers):
+    def _init(self, pipelines):
         inner_terms = chain([pipeline.terms for pipeline in pipelines])
-        inner_pickers = pickers.pickers
+        inner_pickers = chain([pipeline.ump_terms for pipeline in pipelines])
         engine_terms = set(inner_terms + inner_pickers)
         # get_loader
         _get_loader = PricingLoader(engine_terms, self._data_portal)
-        return pipelines, pickers, _get_loader
+        return pipelines, _get_loader
 
-    def _compute_default(self, dts):
+    def _compute_default(self, ledger):
         """
-        Register a Pipeline default for pipeline on every day.
-        :param dts: initialize attach pipeline and cache metadata for engine
+        Register a Pipeline default for pipe on every day.
+        :param dts: initialize attach pipe and cache metadata for engine
         :return:
         """
-        equities = self.asset_finder.retrieve_type_assets('equity')
-        default = self._restricted_rule.is_restricted(equities, dts)
-        open_pct = self._data_portal.get_open_pct(dts, default)
-        # set pipeline metadata
-        history_metadata = self._get_loader.load_pipeline_arrays(dts, default)
-        return default, history_metadata, open_pct
-
-    def _prepare_for_execution(self,ledger):
-        # 判断所有仓位的更新时间 -- 保持一致
+        # ledger
+        # 判断ledger 是否update
         dts = ledger.synchronized_clock
-        capital = ledger.porfolio.cash
-        holdings = set(ledger.positions) - set(ledger.get_rights_positions(dts))
-        # default
-        default, metadata, open_pct = self._compute_default(dts)
-        return holdings, default, metadata, open_pct, capital
+        # 剔除配股的持仓
+        traded_positions = set(ledger.positions) - set(ledger.get_rights_positions(dts))
+        # default assets
+        equities = self.asset_finder.retrieve_type_assets('equity')
+        # save the high priority and asset which can be traded
+        default = self._restricted_rule.is_restricted(equities, dts)
+        # set pipe metadata
+        history_metadata = self._get_loader.load_pipeline_arrays(dts, default)
+        return default, history_metadata, traded_positions
 
     @staticmethod
-    def resolve_pipeline(pipeline_mappings, open_pct):
-        pipeline_assets = valmap(lambda x: [element.asset for element in x
-                                            if open_pct[element.asset.sid] < 9.90], pipeline_mappings)
-        selector = valmap(lambda x: x[0] if x else None, pipeline_assets)
-        return selector
+    def resolve_pipeline_final(outputs):
+        # to find out the final asset of each pipe , notice ---  NamedPipe list
+        # resample_by_pipe --- group by pipe name
+        resample_by_pipe = groupby(lambda x: x.event.name, outputs)
+        # priority 0 --- high ,diminish by increase number
+        group_sorted = valmap(lambda x: x.sort(key=lambda k: k.priority), resample_by_pipe)
+        # namedPipe --- event priority
+        finals = valmap(lambda x: x[0].event if x else None, group_sorted)
+        # return event mappings {name:event}
+        return finals
 
     def _run_pipeline(self, pipeline, metadata, default):
         """
         ----------
-        pipeline : zipline.pipeline.Pipeline
-            The pipeline to run.
+        pipe : zipline.pipe.Pipeline
+            The pipe to run.
         """
-        yield pipeline.to_execution_plan(metadata, self.alternatives, default)
+        yield pipeline.to_execution_plan(default, metadata, self.alternatives)
 
-    def run_pipelines(self, pipeline_metadata, default, open_pct):
+    def run_pipeline(self, pipeline_metadata, default):
         """
         Compute values for  pipelines on a specific date.
         Parameters
         ----------
-        pipeline_metadata : cache data for pipeline
-        default : pipeline --- default asset list
-        open_pct : intend to filter asset which can not be traded
+        pipeline_metadata : cache data for pipe
+        default : pipe --- default asset list
+        ----------
+        return --- event
+
         """
         _impl = partial(self._run_pipeline,
                         metadata=pipeline_metadata,
@@ -82,41 +85,47 @@ class Engine(ABC):
             results = [pool.apply_async(_impl, pipeline)
                        for pipeline in self.pipelines]
             outputs = chain(* results)
-        # output -- element(PIPE)
-        mappings = groupby(lambda x: x.name, outputs)
-        mappings_sorted = valmap(lambda x: x.sort(key=lambda k: k.priority), mappings)
-        yield self.resolve_pipeline(mappings_sorted, open_pct)
+        yield self.resolve_pipeline_final(outputs)
 
-    def run_pickers(self, picker_metadata, holdings):
+    @staticmethod
+    def _run_ump(ump_pipe, position, metadata):
+        output = ump_pipe.to_withdraw_plan(position, metadata)
+        return output
+
+    def run_ump(self, metadata, positions):
         """
             umps --- based on different asset type --- (symbols , etf , bond)
                     to determine withdraw strategy
+            return position list
         """
-        hold_mappings = groupby(lambda x: x.asset.asset_type, holdings)
-        outputs = []
-        for asset_type, positions in hold_mappings.items():
-            result = self.ump_pickers[asset_type].evalute(positions, picker_metadata)
-            outputs.extend(result)
-        dct = {{p.tag: p} for p in outputs}
-        return dct
+        name_proxy = {{pipe.name: pipe} for pipe in self.pipelines}
 
-    def execute_algorithm(self,ledger):
+        _impl = partial(self._run_ump, metadata=metadata)
+
+        with Pool(processes=len(positions))as pool:
+            results = [pool.apply_async(_impl, name_proxy[position.name], position)
+                       for position in positions]
+            # return mappings {name:position}
+            output = {{r.name: r} for r in results if r}
+        return output
+
+    def execute_algorithm(self, ledger):
         """
             calculate pipelines and ump
         """
-        # 计算所需要数据
-        holdings, default, meta, open_pct, capital = self._prepare_for_execution(ledger)
+        # default pipe_metadata --- pipe ; positions_not_righted pipe_metadata --- ump ;
+        default, pipe_metadata, positions_not_righted = self._compute_default(ledger)
         # 执行算法逻辑
-        pipeline_mappings = self.run_pipelines(meta, default, open_pct)
-        poll_mappings = self.run_pickers(meta, holdings)
-        # 处理冲突
-        yield self.resolve_conflicts(poll_mappings, pipeline_mappings, holdings), capital
+        event_proxy = self.run_pipeline(pipe_metadata, default)
+        ump_positions = self.run_ump(pipe_metadata, positions_not_righted)
+        # 买入的event , 卖出的ump_positions , 总持仓（剔除配股持仓）
+        yield self.resolve_conflicts(event_proxy, ump_positions, positions_not_righted)
 
     @staticmethod
     @abstractmethod
     def resolve_conflicts(*args):
         """
-            param args: pipeline outputs , ump outputs holdings
+            param args: pipe outputs , ump outputs holdings
             return: target asset which can be simulate into orders
 
             instructions:
@@ -132,7 +141,7 @@ class Engine(ABC):
                 建仓逻辑 --- 逐步建仓 1/2 原则 --- 1 优先发生信号先建仓 ，后发信号仓位变为剩下的1/2（为了提高资金利用效率）
                                                 2 如果没新的信号 --- 在已经持仓的基础加仓（不管资金是否足够或者设定一个底层资金池）
                 ---- 变相限定了单次单个标的最大持仓为1/2
-                position + pipeline - ledger ---  (当ledger为空 --- position也为空)
+                position + pipe - ledger ---  (当ledger为空 --- position也为空)
 
                 关于ump --- 只要当天不是一直在跌停价格，以全部出货为原则，涉及一个滑价问题（position的成交额 与前一周的成交额占比
                 评估滑价），如果当天没有买入，可以适当放宽（开盘的时候卖出大部分，剩下的等等） ；
@@ -151,9 +160,9 @@ class SimplePipelineEngine(Engine):
     The primary entrypoint of this file is SimplePipelineEngine.run_pipeline, which
     implements the following algorithm for executing pipelines:
 
-    1、Determine the domain of the pipeline.The domain determines the top-level
+    1、Determine the domain of the pipe.The domain determines the top-level
         set of dates and field that serves as row and column ---- data needed
-        to compute the pipeline
+        to compute the pipe
 
     2. Build a dependency graph of all terms in TernmGraph with information
      about tropological tree of terms.
@@ -182,49 +191,59 @@ class SimplePipelineEngine(Engine):
     """
     __slots__ = [
         'asset_finder'
-        '_reader',
+        '_data_portal',
         '_restricted_rule'
         'alternatives',
-        '_pipeline_cache'
         ]
 
     def __init__(self,
                  pipelines,
-                 ump_pickers,
                  asset_finder,
                  data_portal,
                  restrictions,
                  alternatives=10):
+        self.pipelines, self._get_loader = self._init(pipelines)
         self.asset_finder = asset_finder
         self._data_portal = data_portal
+        # SecurityListRestrictions  AvailableRestrictions
         self._restricted_rule = UnionRestrictions(restrictions)
         self.alternatives = alternatives
-        self.pipelines, self.ump_pickers, self._get_loader = self._init(pipelines, ump_pickers)
-        self._pipeline_cache = {}
 
     def __setattr__(self, key, value):
         raise NotImplementedError()
 
     @staticmethod
-    def resolve_conflicts(puts, calls, holdings):
-        # common pipeline name
-        common_pipe_name = set(puts) & set(calls)
-        conflicts = [name for name in common_pipe_name if puts[name] == calls[name]]
-        assert not conflicts, ValueError('name : %r have conflicts between ump and pipeline ' % conflicts)
-        # pipeline_name : holding
-        holding_mappings = groupby(lambda x: x.tag, holdings)
+    def resolve_conflicts(calls, puts, holdings):
+        """
+        :param calls: Event object --- namedtuple(asset , name) ; {name: event}
+        :param puts: Position {name : position}
+        :param holdings: ledger positions (exclude righted positions)
+        :return:
+        """
+        # pipeline_name : holding groupby 可能存在相同的持仓但是由不同的pipeline产生
+        holding_mappings = {{p.name: p} for p in holdings}
+        # common pipe name
+        common_pipe = set(puts) & set(calls)
         # 直接卖出持仓，无买入标的
-        direct_negatives = set(puts) - set(common_pipe_name)
-        # 卖出持仓买入对应标的
-        dual = [(puts[name],calls[name]) for name in common_pipe_name]
+        direct_negatives = set(puts) - set(common_pipe)
+        if common_pipe:
+            conflicts = [name for name in common_pipe if puts[name] == calls[name]]
+            assert not conflicts, ValueError('name : %r have conflicts between ump and pipe ' % conflicts)
+            # 卖出持仓买入对应标的
+            dual = [(puts[name], calls[name]) for name in common_pipe]
+        else:
+            dual = set()
         # 基于capital执行买入标的的对应的pipeline_name
         extra = set(calls) - set(holding_mappings)
-        direct_positives = keyfilter(lambda x: x in extra, calls)
+        if extra:
+            direct_positives = keyfilter(lambda x: x in extra, calls)
+        else:
+            direct_positives = dict()
         return direct_negatives, dual, direct_positives
 
 
 class NoEngineRegistered(Exception):
     """
     Raised if a user tries to call pipeline_output in an algorithm that hasn't
-    set up a pipeline engine.
+    set up a pipe engine.
     """

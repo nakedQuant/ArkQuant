@@ -473,7 +473,7 @@ AssetFinder metadata is missing a SID for identifier '{identifier}'.
 
 class NoSourceError(ZiplineError):
     """
-    Raised when no source is given to the pipeline
+    Raised when no source is given to the pipe
     """
     msg = """
 No data source given.
@@ -482,7 +482,7 @@ No data source given.
 
 class PipelineDateError(ZiplineError):
     """
-    Raised when only one date is passed to the pipeline
+    Raised when only one date is passed to the pipe
     """
     msg = """
 Only one simulation date given. Please specify both the 'start' and 'end' for
@@ -536,7 +536,7 @@ class TermInputsNotSpecified(ZiplineError):
 
 class NonPipelineInputs(ZiplineError):
     """
-    Raised when a non-pipeline object is passed as input to a ComputableTerm
+    Raised when a non-pipe object is passed as input to a ComputableTerm
     """
     def __init__(self, term, inputs):
         self.term = term
@@ -608,7 +608,7 @@ class DTypeNotSpecified(ZiplineError):
 
 class NotDType(ZiplineError):
     """
-    Raised when a pipeline Term is constructed with a dtype that isn't a numpy
+    Raised when a pipe Term is constructed with a dtype that isn't a numpy
     dtype object.
     """
     msg = (
@@ -619,7 +619,7 @@ class NotDType(ZiplineError):
 
 class UnsupportedDType(ZiplineError):
     """
-    Raised when a pipeline Term is constructed with a dtype that's not
+    Raised when a pipe Term is constructed with a dtype that's not
     supported.
     """
     msg = (
@@ -656,7 +656,7 @@ class AttachPipelineAfterInitialize(ZiplineError):
     Raised when a user tries to call add_pipeline outside of initialize.
     """
     msg = (
-        "Attempted to attach a pipeline after initialize()."
+        "Attempted to attach a pipe after initialize()."
         "attach_pipeline() can only be called during initialize."
     )
 
@@ -673,23 +673,23 @@ class PipelineOutputDuringInitialize(ZiplineError):
 
 class NoSuchPipeline(ZiplineError, KeyError):
     """
-    Raised when a user tries to access a non-existent pipeline by name.
+    Raised when a user tries to access a non-existent pipe by name.
     """
     msg = (
-        "No pipeline named '{name}' exists. Valid pipeline names are {valid}. "
+        "No pipe named '{name}' exists. Valid pipe names are {valid}. "
         "Did you forget to call attach_pipeline()?"
     )
 
 
 class DuplicatePipelineName(ZiplineError):
     """
-    Raised when a user tries to attach a pipeline with a name that already
-    exists for another attached pipeline.
+    Raised when a user tries to attach a pipe with a name that already
+    exists for another attached pipe.
     """
     msg = (
-        "Attempted to attach pipeline named {name!r}, but the name already "
-        "exists for another pipeline. Please use a different name for this "
-        "pipeline."
+        "Attempted to attach pipe named {name!r}, but the name already "
+        "exists for another pipe. Please use a different name for this "
+        "pipe."
     )
 
 
@@ -830,11 +830,11 @@ class ScheduleFunctionInvalidCalendar(ZiplineError):
 
 class UnsupportedPipelineOutput(ZiplineError):
     """
-    Raised when a 1D term is added as a column to a pipeline.
+    Raised when a 1D term is added as a column to a pipe.
     """
     msg = (
         "Cannot add column {column_name!r} with term {term}. Adding slices or "
-        "single-column-output terms as pipeline columns is not currently "
+        "single-column-output terms as pipe columns is not currently "
         "supported."
     )
 
@@ -842,7 +842,7 @@ class UnsupportedPipelineOutput(ZiplineError):
 class NonSliceableTerm(ZiplineError):
     """
     Raised when attempting to index into a non-sliceable term, e.g. instances
-    of `zipline.pipeline.term.LoadableTerm`.
+    of `zipline.pipe.term.LoadableTerm`.
     """
     msg = "Taking slices of {term} is not currently supported."
 

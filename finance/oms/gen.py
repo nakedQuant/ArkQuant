@@ -71,7 +71,7 @@ class OrderCreator(BaseCreator):
             --- 无竞价机制的情况下，模拟的价格分布，将异常的价格集中以收盘价价格进行成交
         d. principle:
             a. 基于信号执行买入 --- 避免分段连续性买入
-            b. pipeline 买入策略信号会滞后 ， dt对象与dt + 1对象可能相同的 --- 分段加仓
+            b. pipe 买入策略信号会滞后 ， dt对象与dt + 1对象可能相同的 --- 分段加仓
             c. 针对于卖出标的 -- 遵循最大程度卖出（当天）
 
         logic: asset - capital - controls - orders - check_trigger - execute_cancel_policy (positive)
@@ -120,8 +120,8 @@ class OrderCreator(BaseCreator):
         restricted = asset.restricted(dt)
         return OrderData(
                         minutes=minutes,
-                        open_pct=open_pct,
-                        pre_close=pre_close,
+                        open_pct=open_pct[asset],
+                        pre_close=pre_close[asset],
                         sliding=sliding,
                         restricted=restricted
                         )
@@ -190,19 +190,20 @@ class OrderCreator(BaseCreator):
         # transactions = [create_transaction(order, self.commission) for order in final_orders]
         return final_orders
 
-    def generate(self, asset, capital, dts, direction, portfolio):
+    def generate(self, event, capital, dts, direction, portfolio):
         """
             针对于买入操作
             a. 计算满足最低capital(基于手续费逻辑），同时计算size
             b. 存在竞价机制 --- 基于size设立时点order
             c. 不存在竞价机制 --- 模拟价格分布提前确定价格单，14:57集中撮合
         """
+        asset = event.asset
         control_capital = self.max_position_control.validate(asset, None, portfolio, dts)
         size, order_data = self.yield_size_on_capital(asset, dts, min(capital, control_capital))
         size = self.max_order_control.validate(asset, size, portfolio, dts)
-        self.simulate_order(asset, size, dts, direction)
+        self.simulate_order(event, size, dts, direction)
 
-    def generator_order(self, asset, amount, dts, direction):
+    def generator_order(self, event, amount, dts, direction):
         """
             针对于持仓卖出生成对应的订单 ， 一般不存在什么限制
             a. 存在竞价机制 --- 通过时点设立ticker_order
@@ -217,6 +218,7 @@ class OrderCreator(BaseCreator):
             科创板盘后固定价格交易 --- 以后15:00收盘价格进行交易 --- 15:00 -- 15:30(按照时间优先原则，逐步撮合成交）
             由于价格笼子，科创板可以参考基于时间的设置订单
         """
+        asset = event.asset
         size_array, order_data = self.calculate_size_arrays(asset, amount, dts)
 
         if asset.bid_mechanism:
@@ -230,20 +232,21 @@ class OrderCreator(BaseCreator):
             # ticker_price --- filter simulate_prices
             ticker_prices = np.clip(simulate_prices, order_data.minutes.min(), order_data.minutes.max())
             iterator = zip(ticker_prices, tickers)
-        orders = [Order(asset, amount, *args, self._execution_style,  self._slippage_model)
+        orders = [Order(event, amount, *args, self._execution_style,  self._slippage_model)
                   for amount, args in zip(size_array, iterator)]
         # simulate transactions
         final_orders = self._finalize(orders, order_data)
         return final_orders
 
-    def yield_order(self, dts, asset, price_array, size_array, ticker_array, direction, portfolio):
+    def yield_order(self, dts, event, price_array, size_array, ticker_array, direction, portfolio):
         # 买入订单（卖出 --- 买入）
+        asset = event.asset
         size = self.max_order_control.validate(asset, sum(size_array), portfolio, dts)
         # 按比例进行scale
         control_size_array = map(lambda x: x * sum(size_array) / size, size_array)
         order_data = self._create_data(dts, asset)
         # 存在controls
-        orders = [Order(asset, *args, direction, self._execution_style, self._slippage_model)
+        orders = [Order(event, *args, direction, self._execution_style, self._slippage_model)
                   for args in zip(price_array, control_size_array, ticker_array)]
         # simulate transactions
         final_orders = self._finalize(orders, order_data)

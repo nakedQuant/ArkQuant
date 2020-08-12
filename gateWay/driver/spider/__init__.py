@@ -7,7 +7,7 @@ Created on Tue Mar 12 15:37:47 2019
 """
 from abc import ABC, abstractmethod
 from sqlalchemy import MetaData
-from gateWay.driver.db_schema import engine
+from gateWay.driver import engine
 
 
 class Crawler(ABC):

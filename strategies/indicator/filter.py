@@ -144,18 +144,18 @@ class Filter(RestrictedDTypeMixin, ComputableTerm):
     or exclude for some particular purpose. Many Pipeline API functions accept
     a ``mask`` argument, which can be supplied a Filter indicating that only
     values passing the Filter should be considered when performing the
-    requested computation. For example, :meth:`zipline.pipeline.Factor.top`
+    requested computation. For example, :meth:`zipline.pipe.Factor.top`
     accepts a mask indicating that ranks should be computed only on asset that
     passed the specified Filter.
 
     The most common way to construct a Filter is via one of the comparison
     operators (``<``, ``<=``, ``!=``, ``eq``, ``>``, ``>=``) of
-    :class:`~zipline.pipeline.Factor`. For example, a natural way to construct
+    :class:`~zipline.pipe.Factor`. For example, a natural way to construct
     a Filter for stocks with a 10-day VWAP less than $20.0 is to first
     construct a Factor computing 10-day VWAP and compare it to the scalar value
     20.0::
 
-        >>> from zipline.pipeline.factors import VWAP
+        >>> from zipline.pipe.factors import VWAP
         >>> vwap_10 = VWAP(window_length=10)
         >>> vwaps_under_20 = (vwap_10 <= 20)
 
@@ -310,7 +310,7 @@ class PercentileFilter(SingleInputMixin, Filter):
 
     Parameters
     ----------
-    factor : zipline.pipeline.factor.Factor
+    factor : zipline.pipe.factor.Factor
         The factor over which to compute percentile bounds.
     min_percentile : float [0.0, 1.0]
         The minimum percentile rank of an asset that will pass the filter.
@@ -433,12 +433,12 @@ class CustomFilter(PositiveWindowLengthMixin, CustomTermMixin, Filter):
             Raw data arrays corresponding to the values of `self.inputs`.
 
     See the documentation for
-    :class:`~zipline.pipeline.CustomFactor` for more details on
+    :class:`~zipline.pipe.CustomFactor` for more details on
     implementing a custom ``compute`` method.
 
     See Also
     --------
-    zipline.pipeline.CustomFactor
+    zipline.pipe.CustomFactor
     """
     def _validate(self):
         try:
@@ -548,7 +548,7 @@ class StaticSids(Filter):
     A Filter that computes True for a specific set of predetermined sids.
 
     ``StaticSids`` is mostly useful for debugging or for interactively
-    computing pipeline terms for a fixed set of sids that are known ahead of
+    computing pipe terms for a fixed set of sids that are known ahead of
     time.
 
     Parameters
@@ -574,7 +574,7 @@ class StaticAssets(StaticSids):
     A Filter that computes True for a specific set of predetermined asset.
 
     ``StaticAssets`` is mostly useful for debugging or for interactively
-    computing pipeline terms for a fixed set of asset that are known ahead of
+    computing pipe terms for a fixed set of asset that are known ahead of
     time.
 
     Parameters

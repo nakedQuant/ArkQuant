@@ -6,9 +6,8 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 import pandas as pd, numpy as np, warnings
-from ._protocol import Portfolio, Account
-from .position_tracker import PositionTracker
-from ._protocol import MutableView
+from finance._protocol import Portfolio, Account, MutableView
+from finance.position_tracker import PositionTracker
 
 
 class Ledger(object):
@@ -75,6 +74,16 @@ class Ledger(object):
         left_cash = self.position_tracker.handle_spilts()
         self._cash_flow(left_cash)
 
+    def get_rights_positions(self, dts):
+        # 获取当天为配股登记日的仓位 --- 卖出 因为需要停盘产生机会成本
+        right_positions = []
+        for position in self.portfolio.positions:
+            asset = position.inner_position.asset
+            right = self.position_tracker.retrieve_right_of_equity(asset, dts)
+            if len(right):
+                right_positions.append(position)
+        return right_positions
+
     def start_of_session(self, session_ix):
         # 每天同步时间
         self.position_tracker.sync_last_date(session_ix)
@@ -115,22 +124,12 @@ class Ledger(object):
         self.portfolio.positions = self.positions
         self._dirty_portfolio = False
 
-    #计算账户当天的收益率
+    # 计算账户当天的收益率
     def end_of_session(self):
         self._calculate_portfolio_stats()
         session_ix = self.position_tracker.update_sync_date
         self.daily_returns_series[session_ix] = self.daily_returns
         self._dirty_portfolio = False
-
-    def get_rights_positions(self, dts):
-        # 获取当天为配股登记日的仓位 --- 卖出 因为需要停盘产生机会成本
-        right_positions = []
-        for position in self.portfolio.positions:
-            asset = position.inner_position.asset
-            right = self.position_tracker.retrieve_right_from_sqlite(asset.sid, dts)
-            if len(right):
-                right_positions.append(position)
-        return right_positions
 
     def get_transactions(self, dt):
         """

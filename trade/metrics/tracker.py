@@ -8,14 +8,14 @@ Created on Sun Feb 17 16:11:34 2019
 import numpy as np, pandas as pd, datetime
 from toolz import partition_all
 from functools import partial
-from .analyzers import (
+from trade.metrics.analyzers import (
                         sortino_ratio,
                         sharpe_ratio,
                         downside_risk,
                         annual_volatility,
                         max_drawdown,
                         )
-from .exposure import alpha_beta_aligned
+from trade.metrics.exposure import alpha_beta_aligned
 
 
 class MetricsTracker(object):

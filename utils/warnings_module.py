@@ -42,7 +42,7 @@ def ignore_pandas_nan_categorical_warning():
     with catch_warnings():
         # Pandas >= 0.18 doesn't like null-ish values in categories, but
         # avoiding that requires a broader change to how missing values are
-        # handled in pipeline, so for now just silence the warning.
+        # handled in pipe, so for now just silence the warning.
         filterwarnings(
             'ignore',
             category=FutureWarning,

@@ -62,7 +62,7 @@ class TermGraph(object):
 
     @property
     def screen_name(self):
-        """Name of the specially-designated ``screen`` term for the pipeline.
+        """Name of the specially-designated ``screen`` term for the pipe.
         """
         SCREEN_NAME = 'screen_' + uuid.uuid4().hex
         return SCREEN_NAME

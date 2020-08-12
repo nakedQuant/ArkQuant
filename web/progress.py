@@ -142,7 +142,7 @@ class ProgressModel(object):
         Pair of (start_date, end_date) for the entire execution.
     current_chunk_bounds : (pd.Timestamp, pd.Timestamp)
         Pair of (start_date, end_date) for the currently executing chunk.
-    current_work : [zipline.pipeline.Term]
+    current_work : [zipline.pipe.Term]
         List of terms currently being loaded or computed.
     """
 
@@ -167,7 +167,7 @@ class ProgressModel(object):
         self._completed_term_increment = None
 
         # How much should we increment progress by after completing a chunk?
-        # This is zero unless we compute a pipeline with no terms, in which
+        # This is zero unless we compute a pipe with no terms, in which
         # case it will be the full chunk percentage.
         self._completed_chunk_increment = None
 

@@ -108,7 +108,7 @@ def function_application(func):
 
         Returns
         -------
-        factor : zipline.pipeline.Factor
+        factor : zipline.pipe.Factor
         """.format(func)
     )
 
@@ -170,7 +170,7 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
     Factors can be combined, both with other Factors and with scalar values,
     via any of the builtin mathematical operators (``+``, ``-``, ``*``, etc).
 
-    Factors can also be converted into :class:`zipline.pipeline.Filter` objects
+    Factors can also be converted into :class:`zipline.pipe.Filter` objects
     via comparison operators: (``<``, ``<=``, ``!=``, ``eq``, ``>``, ``>=``).
 
     There are many natural operators defined on Factors besides the basic
@@ -198,9 +198,9 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
 
         Parameters
         ----------
-        mask : zipline.pipeline.Filter, optional
+        mask : zipline.pipe.Filter, optional
             A Filter defining values to ignore when computing means.
-        groupby : zipline.pipeline.Classifier, optional
+        groupby : zipline.pipe.Classifier, optional
             A classifier defining partitions over which to compute means.
 
         Examples
@@ -327,9 +327,9 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
 
         Parameters
         ----------
-        mask : zipline.pipeline.Filter, optional
+        mask : zipline.pipe.Filter, optional
             A Filter defining values to ignore when Z-Scoring.
-        groupby : zipline.pipeline.Classifier, optional
+        groupby : zipline.pipe.Classifier, optional
             A classifier defining partitions over which to compute Z-Scores.
 
         Returns
@@ -353,7 +353,7 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
 
         Examples
         --------
-        See :meth:`~zipline.pipeline.Factor.demean` for an in-depth
+        See :meth:`~zipline.pipe.Factor.demean` for an in-depth
         example of the semantics for ``mask`` and ``groupby``.
 
         See Also
@@ -389,11 +389,11 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
         ascending : bool, optional
             Whether to return sorted rank in ascending or descending order.
             Default is True.
-        mask : zipline.pipeline.Filter, optional
+        mask : zipline.pipe.Filter, optional
             A Filter representing asset to consider when computing ranks.
             If mask is supplied, ranks are computed ignoring any asset/date
             pairs for which `mask` produces a value of False.
-        groupby : zipline.pipeline.Classifier, optional
+        groupby : zipline.pipe.Classifier, optional
             A classifier defining partitions over which to perform ranking.
 
         Returns
@@ -446,7 +446,7 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
         correlation_length : int
             Length of the lookback window over which to compute each
             correlation coefficient.
-        mask : zipline.pipeline.Filter, optional
+        mask : zipline.pipe.Filter, optional
             A Filter describing which asset should have their correlation with
             the target slice computed each day.
 
@@ -482,7 +482,7 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
         See Also
         --------
         :func:`scipy.stats.pearsonr`
-        :class:`zipline.pipeline.factors.RollingPearsonOfReturns`
+        :class:`zipline.pipe.factors.RollingPearsonOfReturns`
         :meth:`Factor.spearmanr`
         """
         from strategies.features import RollingPearson
@@ -508,7 +508,7 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
         correlation_length : int
             Length of the lookback window over which to compute each
             correlation coefficient.
-        mask : zipline.pipeline.Filter, optional
+        mask : zipline.pipe.Filter, optional
             A Filter describing which asset should have their correlation with
             the target slice computed each day.
 
@@ -568,7 +568,7 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
         regression_length : int
             Length of the lookback window over which to compute each
             regression.
-        mask : zipline.pipeline.Filter, optional
+        mask : zipline.pipe.Filter, optional
             A Filter describing which asset should be regressed with the
             target slice each day.
 
@@ -646,9 +646,9 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
             Entries with values at or above this percentile will be replaced
             with the (len(input) * max_percentile)th lowest value. If high
             values should not be clipped, use 1.
-        mask : zipline.pipeline.Filter, optional
+        mask : zipline.pipe.Filter, optional
             A Filter defining values to ignore when winsorizing.
-        groupby : zipline.pipeline.Classifier, optional
+        groupby : zipline.pipe.Classifier, optional
             A classifier defining partitions over which to winsorize.
 
         Returns
@@ -675,7 +675,7 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
 
             }
 
-        Given a pipeline with columns, defined above, the result for a
+        Given a pipe with columns, defined above, the result for a
         given day could look like:
 
         ::
@@ -725,7 +725,7 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
         ----------
         bins : int
             Number of bins labels to compute.
-        mask : zipline.pipeline.Filter, optional
+        mask : zipline.pipe.Filter, optional
             Mask of values to ignore when computing quantiles.
 
         Returns
@@ -751,7 +751,7 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
 
         Parameters
         ----------
-        mask : zipline.pipeline.Filter, optional
+        mask : zipline.pipe.Filter, optional
             Mask of values to ignore when computing quartiles.
 
         Returns
@@ -775,7 +775,7 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
 
         Parameters
         ----------
-        mask : zipline.pipeline.Filter, optional
+        mask : zipline.pipe.Filter, optional
             Mask of values to ignore when computing quintiles.
 
         Returns
@@ -799,7 +799,7 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
 
         Parameters
         ----------
-        mask : zipline.pipeline.Filter, optional
+        mask : zipline.pipe.Filter, optional
             Mask of values to ignore when computing deciles.
 
         Returns
@@ -820,11 +820,11 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
         ----------
         N : int
             Number of asset passing the returned filter each day.
-        mask : zipline.pipeline.Filter, optional
+        mask : zipline.pipe.Filter, optional
             A Filter representing asset to consider when computing ranks.
             If mask is supplied, top values are computed ignoring any
             asset/date pairs for which `mask` produces a value of False.
-        groupby : zipline.pipeline.Classifier, optional
+        groupby : zipline.pipe.Classifier, optional
             A classifier defining partitions over which to perform ranking.
 
         Returns
@@ -848,11 +848,11 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
         ----------
         N : int
             Number of asset passing the returned filter each day.
-        mask : zipline.pipeline.Filter, optional
+        mask : zipline.pipe.Filter, optional
             A Filter representing asset to consider when computing ranks.
             If mask is supplied, bottom values are computed ignoring any
             asset/date pairs for which `mask` produces a value of False.
-        groupby : zipline.pipeline.Classifier, optional
+        groupby : zipline.pipe.Classifier, optional
             A classifier defining partitions over which to perform ranking.
 
         Returns
@@ -878,7 +878,7 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
             Return True for asset falling above this percentile in the data.
         max_percentile : float [0.0, 100.0]
             Return True for asset falling below this percentile in the data.
-        mask : zipline.pipeline.Filter, optional
+        mask : zipline.pipe.Filter, optional
             A Filter representing asset to consider when percentile
             calculating thresholds.  If mask is supplied, percentile cutoffs
             are computed each day using only asset for which ``mask`` returns
@@ -1026,9 +1026,9 @@ class GroupedRowTransform(Factor):
 
     See Also
     --------
-    zipline.pipeline.Factor.zscore
-    zipline.pipeline.Factor.demean
-    zipline.pipeline.Factor.rank
+    zipline.pipe.Factor.zscore
+    zipline.pipe.Factor.demean
+    zipline.pipe.Factor.rank
     """
     window_length = 0
 
@@ -1198,7 +1198,7 @@ class PercentileFilter(SingleInputMixin, Filter):
 
     Parameters
     ----------
-    factor : zipline.pipeline.factor.Factor
+    factor : zipline.pipe.factor.Factor
         The factor over which to compute percentile bounds.
     min_percentile : float [0.0, 1.0]
         The minimum percentile rank of an asset that will pass the filter.
@@ -1297,7 +1297,7 @@ class CustomFactor(PositiveWindowLengthMixin, CustomTermMixin, Factor):
         Number of rows to pass for each input.  If this argument is not passed
         to the CustomFactor constructor, we look for a class-level attribute
         named `window_length`.
-    mask : zipline.pipeline.Filter, optional
+    mask : zipline.pipe.Filter, optional
         A Filter describing the asset on which we should compute each day.
         Each call to ``CustomFactor.compute`` will only receive asset for
         which ``mask`` produced True on the day for which compute is being

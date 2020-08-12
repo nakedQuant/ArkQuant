@@ -1,19 +1,20 @@
 """
 Base class for Pipeline API data loaders.
 """
-from abc import ABC,abstractmethod
+from abc import ABC, abstractmethod
 
 
 class PipelineLoader(ABC):
     """Interface for PipelineLoaders.
     """
-    def _resolve_domains(self,domains,event_type = False):
+    def _resolve_domains(self, domains,event_type=False):
         pipeline_domain = self._preprocess_domains(domains)
         if event_type and self._validate_event(pipeline_domain):
             return pipeline_domain
         return pipeline_domain
 
-    def _preprocess_domains(self, domains):
+    @staticmethod
+    def _preprocess_domains(domains):
         """
         Domain has _fields and specify trading_calendar for computing term
         Verify domains and attempt to compose domains to a composite domain
@@ -27,7 +28,7 @@ class PipelineLoader(ABC):
         return pipeline_domain
 
     @classmethod
-    def _validate_event(cls,domain):
+    def _validate_event(cls, domain):
         """
         Verify that the columns of ``events`` can be used by an EventsLoader to
         serve the BoundColumns described by ``next_value_columns`` and

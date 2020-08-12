@@ -5,7 +5,6 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-
 import pandas as pd
 import warnings
 from gateWay.asset.assets import Asset
@@ -167,14 +166,14 @@ class MutableView(object):
     # ``ob``
     __slots__ = ('_mutable_view_obj')
 
-    def __init__(self,ob):
-        object.__setattr__(self,'_mutable_view_ob',ob)
+    def __init__(self, ob):
+        object.__setattr__(self, '_mutable_view_ob', ob)
 
     def __getattr__(self, item):
-        return getattr(self._mutable_view_ob,item)
+        return getattr(self._mutable_view_ob, item)
 
-    def __setattr__(self,attr,value):
-        #vars() 函数返回对象object的属性和属性值的字典对象 --- 扩展属性类型 ,不改变原来的对象属性
+    def __setattr__(self, attr, value):
+        # vars() 函数返回对象object的属性和属性值的字典对象 --- 扩展属性类型 ,不改变原来的对象属性
         vars(self._mutable_view_ob)[attr] = value
 
     def __repr__(self):
@@ -187,7 +186,7 @@ class Position(object):
     """
     __slots__ = ['_underlying_position']
 
-    def __init__(self,inner):
+    def __init__(self, inner):
         self._underlying_position = MutableView(inner)
 
     def __getattr__(self, attr):

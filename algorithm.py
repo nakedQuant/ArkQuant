@@ -13,16 +13,9 @@ from itertools import chain, repeat
 
 from .error.errors import (
     AttachPipelineAfterInitialize,
-    CannotOrderDelistedAsset,
     DuplicatePipelineName,
-    HistoryInInitialize,
     IncompatibleCommissionModel,
     IncompatibleSlippageModel,
-    NoSuchPipeline,
-    OrderDuringInitialize,
-    OrderInBeforeTradingStart,
-    PipelineOutputDuringInitialize,
-    RegisterAccountControlPostInit,
     RegisterTradingControlPostInit,
     ScheduleFunctionInvalidCalendar,
     SetBenchmarkOutsideInitialize,
@@ -31,12 +24,9 @@ from .error.errors import (
     SetSlippagePostInit,
     UnsupportedCancelPolicy,
     UnsupportedDatetimeFormat,
-    UnsupportedOrderParameters,
     ZeroCapitalError
 )
-
 from .finance.oms.blotter import SimulationBlotter
-
 from .finance.control import (
     LongOnly,
     MaxOrderSize,
@@ -60,9 +50,9 @@ from .gateWay.asset.assets import Asset, Equity, Convertible, Fund
 from gateWay.driver.data_portal import DataPortal
 from .gens.tradesimulation import AlgorithmSimulator
 from .trade.metrics.tracker import MetricsTracker
-from .pipeline.pipeline import Pipeline
-from .pipeline.domain import Domain
-from .pipeline.engine import (
+from .pipe.pipeline import Pipeline
+from .pipe.domain import Domain
+from .pipe.engine import (
     SimplePipelineEngine,
     NoEngineRegistered,
 )
@@ -83,29 +73,11 @@ from .utils.input_validation import (
     optional,
     optionally,
 )
-from .utils.numpy_utils import int64_dtype
 from .utils.pandas_utils import normalize_date
-from .utils.cache import ExpiringCache
-# from .utils.pandas_utils import clear_dataframe_indexer_caches
-
-# import zipline.utils.events
 from .utils.eventManager import EventManager
-from .utils.math_utils import (
-    tolerant_equals,
-    round_if_near_integer,
-)
 from .utils.preprocess import preprocess
 from .utils.security_list import SecurityList
 from .gens.clock import MinuteSimulationClock
-
-# import zipline.protocol
-# from zipline.sources.requests_csv import PandasRequestsCSV
-#
-# from zipline.sources.benchmark_source import BenchmarkSource
-# from zipline.zipline_warnings import ZiplineDeprecationWarning
-
-# For creating and storing Pipeline instances
-# AttachedPipeline = namedtuple('AttachedPipeline', 'pipe chunks eager')
 
 
 class TradingAlgorithm(object):
@@ -158,7 +130,7 @@ class TradingAlgorithm(object):
     identifiers : list, optional
         Any asset identifiers that are not provided in the
         equities_metadata, but will be traded by this TradingAlgorithm.
-    get_pipeline_loader : callable[BoundColumn -> pipeline], optional
+    get_pipeline_loader : callable[BoundColumn -> pipe], optional
         The function that maps Pipeline columns to their loaders.
     create_event_context : callable[BarData -> context manager], optional
         A function used to create a context mananger that wraps the
@@ -260,7 +232,7 @@ class TradingAlgorithm(object):
             self.data_portal = data_portal
 
         if creator is not None:
-            self._order_creator = creator
+            self._creator = creator
         else:
             slippage = slippage or NoSlippage()
             commission = commission or NoCommission()
@@ -273,12 +245,14 @@ class TradingAlgorithm(object):
             self.blotter = blotter_class
         else:
             blotter_class = blotter_class or SimulationBlotter
-            self.blotter = blotter_class(generator=self._order_creator)
+            self.blotter = blotter_class(generator=self._creator)
 
+        if broke is not None:
+            self.broke_class = broke
+        else:
+            self.broke_class = Broke(self.blotter,allocation_policy)
 
-
-        self.benchmark_sid = benchmark_sid
-
+        self.restrictions = NoRestrictions() or restrictions
 
 
         # Initialize pipe API data.
@@ -291,39 +265,33 @@ class TradingAlgorithm(object):
         self._symbol_lookup_date = None
 
 
-
-
-        self.restrictions = NoRestrictions() or restrictions
-
         # Prepare the algo for initialization
         self.initialized = False
 
         self.initialize_kwargs = initialize_kwargs or {}
 
-        namespace = dict()
 
         self._initialize = None
         self._analyze = None
 
         def get_pipeline(algo_filenames):
+            namespace = dict()
             pipelines = []
-            for algo_filename in algo_filenames
+            for algo_filename in algo_filenames:
                 with open(algo_filename, 'r') as f:
                     exec(f.read(), namespace)
-                    pipelines.append(namespace['pipeline'])
+                    pipelines.append(namespace['pipe'])
             return pipelines
 
-        SimplePipelineEngine(
-            pipelines,
-            ump_pickers,
-            self.asset_finder,
-            self.data_portal,
-            self.restrictions,
-            alternatives=10)
-
-        broke = Broke(self.blotter,allocation_policy)
-
+        engine = SimplePipelineEngine(
+                            pipelines,
+                            self.asset_finder,
+                            self.data_portal,
+                            self.restrictions,
+                            alternatives=10)
         # metrics
+        self.benchmark_sid = benchmark_sid
+
         self.metrics_tracker = None
         self._last_sync_time = pd.NaT
         self._metrics_set = metrics_set
@@ -720,359 +688,6 @@ class TradingAlgorithm(object):
 
         self.benchmark_sid = benchmark
 
-    @api_method
-    @preprocess(
-        symbol_str=ensure_upper_case,
-        country_code=optionally(ensure_upper_case),
-    )
-    def symbol(self, symbol_str, country_code=None):
-        """Lookup an Equity by its ticker symbol.
-
-        Parameters
-        ----------
-        symbol_str : str
-            The ticker symbol for the equity to lookup.
-        country_code : str or None, optional
-            A country to limit symbol searches to.
-
-        Returns
-        -------
-        equity : zipline.asset.Equity
-            The equity that held the ticker symbol on the current
-            symbol lookup date.
-
-        Raises
-        ------
-        SymbolNotFound
-            Raised when the symbols was not held on the current lookup date.
-
-        See Also
-        --------
-        :func:`zipline.api.set_symbol_lookup_date`
-        """
-        # If the user has not set the symbol lookup date,
-        # use the end_session as the date for symbol->sid resolution.
-        _lookup_date = self._symbol_lookup_date \
-            if self._symbol_lookup_date is not None \
-            else self.sim_params.end_session
-
-        return self.asset_finder.lookup_symbol(
-            symbol_str,
-            as_of_date=_lookup_date,
-            country_code=country_code,
-        )
-
-    @api_method
-    def symbols(self, *args, **kwargs):
-        """Lookup multuple Equities as a list.
-
-        Parameters
-        ----------
-        *args : iterable[str]
-            The ticker symbols to lookup.
-        country_code : str or None, optional
-            A country to limit symbol searches to.
-
-        Returns
-        -------
-        equities : list[zipline.asset.Equity]
-            The equities that held the given ticker symbols on the current
-            symbol lookup date.
-
-        Raises
-        ------
-        SymbolNotFound
-            Raised when one of the symbols was not held on the current
-            lookup date.
-
-        See Also
-        --------
-        :func:`zipline.api.set_symbol_lookup_date`
-        """
-        return [self.symbol(identifier, **kwargs) for identifier in args]
-
-    @api_method
-    def sid(self, sid):
-        """Lookup an Asset by its unique asset identifier.
-
-        Parameters
-        ----------
-        sid : int
-            The unique integer that identifies an asset.
-
-        Returns
-        -------
-        asset : zipline.asset.Asset
-            The asset with the given ``sid``.
-
-        Raises
-        ------
-        SidsNotFound
-            When a requested ``sid`` does not map to any asset.
-        """
-        return self.asset_finder.retrieve_asset(sid)
-
-    # def _calculate_order_value_amount(self, asset, value):
-    #     """
-    #     Calculates how many shares/contracts to order based on the type of
-    #     asset being ordered.
-    #     """
-    #     # Make sure the asset exists, and that there is a last price for it.
-    #     # FIXME: we should use BarData's can_trade logic here, but I haven't
-    #     # yet found a good way to do that.
-    #     normalized_date = normalize_date(self.datetime)
-    #
-    #     if normalized_date < asset.start_date:
-    #         raise CannotOrderDelistedAsset(
-    #             msg="Cannot order {0}, as it started trading on"
-    #                 " {1}.".format(asset.symbol, asset.start_date)
-    #         )
-    #     elif normalized_date > asset.end_date:
-    #         raise CannotOrderDelistedAsset(
-    #             msg="Cannot order {0}, as it stopped trading on"
-    #                 " {1}.".format(asset.symbol, asset.end_date)
-    #         )
-    #     else:
-    #         last_price = \
-    #             self.trading_client.current_data.current(asset, "price")
-    #
-    #         if np.isnan(last_price):
-    #             raise CannotOrderDelistedAsset(
-    #                 msg="Cannot order {0} on {1} as there is no last "
-    #                     "price for the security.".format(asset.symbol,
-    #                                                      self.datetime)
-    #             )
-    #
-    #     if tolerant_equals(last_price, 0):
-    #         zero_message = "Price of 0 for {psid}; can't infer value".format(
-    #             psid=asset
-    #         )
-    #         if self.logger:
-    #             self.logger.debug(zero_message)
-    #         # Don't place any order
-    #         return 0
-    #
-    #     value_multiplier = asset.price_multiplier
-    #
-    #     return value / (last_price * value_multiplier)
-
-    # def _can_order_asset(self, asset):
-    #     if not isinstance(asset, Asset):
-    #         raise UnsupportedOrderParameters(
-    #             msg="Passing non-Asset argument to 'order()' is not supported."
-    #                 " Use 'sid()' or 'symbol()' methods to look up an Asset."
-    #         )
-    #
-    #     if asset.auto_close_date:
-    #         day = normalize_date(self.get_datetime())
-    #
-    #         if day > min(asset.end_date, asset.auto_close_date):
-    #             # If we are after the asset's end date or auto close date, warn
-    #             # the user that they can't place an order for this asset, and
-    #             # return None.
-    #             log.warn("Cannot place order for {0}, as it has de-listed. "
-    #                      "Any existing positions for this asset will be "
-    #                      "liquidated on "
-    #                      "{1}.".format(asset.symbol, asset.auto_close_date))
-    #             return False
-    #     return True
-
-    # @api_method
-    # @disallowed_in_before_trading_start(OrderInBeforeTradingStart())
-    # def order(self,
-    #           asset,
-    #           amount,
-    #           limit_price=None,
-    #           stop_price=None,
-    #           style=None):
-    #     """Place an order for a fixed number of shares.
-    #
-    #     Parameters
-    #     ----------
-    #     asset : Asset
-    #         The asset to be ordered.
-    #     amount : int
-    #         The amount of shares to order. If ``amount`` is positive, this is
-    #         the number of shares to buy or cover. If ``amount`` is negative,
-    #         this is the number of shares to sell or short.
-    #     limit_price : float, optional
-    #         The limit price for the order.
-    #     stop_price : float, optional
-    #         The stop price for the order.
-    #     style : ExecutionStyle, optional
-    #         The execution style for the order.
-    #
-    #     Returns
-    #     -------
-    #     order_id : str or None
-    #         The unique identifier for this order, or None if no order was
-    #         placed.
-    #
-    #     Notes
-    #     -----
-    #     The ``limit_price`` and ``stop_price`` arguments provide shorthands for
-    #     passing common execution styles. Passing ``limit_price=N`` is
-    #     equivalent to ``style=LimitOrder(N)``. Similarly, passing
-    #     ``stop_price=M`` is equivalent to ``style=StopOrder(M)``, and passing
-    #     ``limit_price=N`` and ``stop_price=M`` is equivalent to
-    #     ``style=StopLimitOrder(N, M)``. It is an error to pass both a ``style``
-    #     and ``limit_price`` or ``stop_price``.
-    #
-    #     See Also
-    #     --------
-    #     :class:`zipline.finance.execution.ExecutionStyle`
-    #     :func:`zipline.api.order_value`
-    #     :func:`zipline.api.order_percent`
-    #     """
-    #     if not self._can_order_asset(asset):
-    #         return None
-    #
-    #     amount, style = self._calculate_order(asset, amount,
-    #                                           limit_price, stop_price, style)
-    #     return self.blotter.order(asset, amount, style)
-    #
-    # def _calculate_order(self, asset, amount,
-    #                      limit_price=None, stop_price=None, style=None):
-    #     amount = self.round_order(amount)
-    #
-    #     # Raises a ZiplineError if invalid parameters are detected.
-    #     self.validate_order_params(asset,
-    #                                amount,
-    #                                limit_price,
-    #                                stop_price,
-    #                                style)
-    #
-    #     # Convert deprecated limit_price and stop_price parameters to use
-    #     # ExecutionStyle objects.
-    #     style = self.__convert_order_params_for_blotter(asset,
-    #                                                     limit_price,
-    #                                                     stop_price,
-    #                                                     style)
-    #     return amount, style
-    #
-    # @staticmethod
-    # def round_order(amount):
-    #     """
-    #     Convert number of shares to an integer.
-    #
-    #     By default, truncates to the integer share count that's either within
-    #     .0001 of amount or closer to zero.
-    #
-    #     E.g. 3.9999 -> 4.0; 5.5 -> 5.0; -5.5 -> -5.0
-    #     """
-    #     return int(round_if_near_integer(amount))
-    #
-    # def validate_order_params(self,
-    #                           asset,
-    #                           amount,
-    #                           limit_price,
-    #                           stop_price,
-    #                           style):
-    #     """
-    #     Helper method for validating parameters to the order API function.
-    #
-    #     Raises an UnsupportedOrderParameters if invalid arguments are found.
-    #     """
-    #
-    #     if not self.initialized:
-    #         raise OrderDuringInitialize(
-    #             msg="order() can only be called from within handle_data()"
-    #         )
-    #
-    #     if style:
-    #         if limit_price:
-    #             raise UnsupportedOrderParameters(
-    #                 msg="Passing both limit_price and style is not supported."
-    #             )
-    #
-    #         if stop_price:
-    #             raise UnsupportedOrderParameters(
-    #                 msg="Passing both stop_price and style is not supported."
-    #             )
-    #
-    #     for control in self.trading_controls:
-    #         control.validate(asset,
-    #                          amount,
-    #                          self.portfolio,
-    #                          self.get_datetime(),
-    #                          self.trading_client.current_data)
-    #
-    # @staticmethod
-    # def __convert_order_params_for_blotter(asset,
-    #                                        limit_price,
-    #                                        stop_price,
-    #                                        style):
-    #     """
-    #     Helper method for converting deprecated limit_price and stop_price
-    #     arguments into ExecutionStyle instances.
-    #
-    #     This function assumes that either style == None or (limit_price,
-    #     stop_price) == (None, None).
-    #     """
-    #     if style:
-    #         assert (limit_price, stop_price) == (None, None)
-    #         return style
-    #     if limit_price and stop_price:
-    #         return StopLimitOrder(limit_price, stop_price, asset=asset)
-    #     if limit_price:
-    #         return LimitOrder(limit_price, asset=asset)
-    #     if stop_price:
-    #         return StopOrder(stop_price, asset=asset)
-    #     else:
-    #         return MarketOrder()
-    #
-    # @api_method
-    # @disallowed_in_before_trading_start(OrderInBeforeTradingStart())
-    # def order_value(self,
-    #                 asset,
-    #                 value,
-    #                 limit_price=None,
-    #                 stop_price=None,
-    #                 style=None):
-    #     """
-    #     Place an order for a fixed amount of money.
-    #
-    #     Equivalent to ``order(asset, value / data.current(asset, 'price'))``.
-    #
-    #     Parameters
-    #     ----------
-    #     asset : Asset
-    #         The asset to be ordered.
-    #     value : float
-    #         Amount of value of ``asset`` to be transacted. The number of shares
-    #         bought or sold will be equal to ``value / current_price``.
-    #     limit_price : float, optional
-    #         Limit price for the order.
-    #     stop_price : float, optional
-    #         Stop price for the order.
-    #     style : ExecutionStyle
-    #         The execution style for the order.
-    #
-    #     Returns
-    #     -------
-    #     order_id : str
-    #         The unique identifier for this order.
-    #
-    #     Notes
-    #     -----
-    #     See :func:`zipline.api.order` for more information about
-    #     ``limit_price``, ``stop_price``, and ``style``
-    #
-    #     See Also
-    #     --------
-    #     :class:`zipline.finance.execution.ExecutionStyle`
-    #     :func:`zipline.api.order`
-    #     :func:`zipline.api.order_percent`
-    #     """
-    #     if not self._can_order_asset(asset):
-    #         return None
-    #
-    #     amount = self._calculate_order_value_amount(asset, value)
-    #     return self.order(asset, amount,
-    #                       limit_price=limit_price,
-    #                       stop_price=stop_price,
-    #                       style=style)
-
     @property
     def recorded_vars(self):
         return copy(self._recorded_vars)
@@ -1237,490 +852,6 @@ class TradingAlgorithm(object):
 
         self.blotter.cancel_policy = cancel_policy
 
-    @api_method
-    def set_symbol_lookup_date(self, dt):
-        """Set the date for which symbols will be resolved to their asset
-        (symbols may map to different firms or underlying asset at
-        different times)
-
-        Parameters
-        ----------
-        dt : datetime
-            The new symbol lookup date.
-        """
-        try:
-            self._symbol_lookup_date = pd.Timestamp(dt, tz='UTC')
-        except ValueError:
-            raise UnsupportedDatetimeFormat(input=dt,
-                                            method='set_symbol_lookup_date')
-
-    # Remain backwards compatibility
-    @property
-    def data_frequency(self):
-        return self.sim_params.data_frequency
-
-    @data_frequency.setter
-    def data_frequency(self, value):
-        assert value in ('daily', 'minute')
-        self.sim_params.data_frequency = value
-
-    @api_method
-    @disallowed_in_before_trading_start(OrderInBeforeTradingStart())
-    def order_percent(self,
-                      asset,
-                      percent,
-                      limit_price=None,
-                      stop_price=None,
-                      style=None):
-        """Place an order in the specified asset corresponding to the given
-        percent of the current portfolio value.
-
-        Parameters
-        ----------
-        asset : Asset
-            The asset that this order is for.
-        percent : float
-            The percentage of the portfolio value to allocate to ``asset``.
-            This is specified as a decimal, for example: 0.50 means 50%.
-        limit_price : float, optional
-            The limit price for the order.
-        stop_price : float, optional
-            The stop price for the order.
-        style : ExecutionStyle
-            The execution style for the order.
-
-        Returns
-        -------
-        order_id : str
-            The unique identifier for this order.
-
-        Notes
-        -----
-        See :func:`zipline.api.order` for more information about
-        ``limit_price``, ``stop_price``, and ``style``
-
-        See Also
-        --------
-        :class:`zipline.finance.execution.ExecutionStyle`
-        :func:`zipline.api.order`
-        :func:`zipline.api.order_value`
-        """
-        if not self._can_order_asset(asset):
-            return None
-
-        amount = self._calculate_order_percent_amount(asset, percent)
-        return self.order(asset, amount,
-                          limit_price=limit_price,
-                          stop_price=stop_price,
-                          style=style)
-
-    def _calculate_order_percent_amount(self, asset, percent):
-        value = self.portfolio.portfolio_value * percent
-        return self._calculate_order_value_amount(asset, value)
-
-    @api_method
-    @disallowed_in_before_trading_start(OrderInBeforeTradingStart())
-    def order_target(self,
-                     asset,
-                     target,
-                     limit_price=None,
-                     stop_price=None,
-                     style=None):
-        """Place an order to adjust a position to a target number of shares. If
-        the position doesn't already exist, this is equivalent to placing a new
-        order. If the position does exist, this is equivalent to placing an
-        order for the difference between the target number of shares and the
-        current number of shares.
-
-        Parameters
-        ----------
-        asset : Asset
-            The asset that this order is for.
-        target : int
-            The desired number of shares of ``asset``.
-        limit_price : float, optional
-            The limit price for the order.
-        stop_price : float, optional
-            The stop price for the order.
-        style : ExecutionStyle
-            The execution style for the order.
-
-        Returns
-        -------
-        order_id : str
-            The unique identifier for this order.
-
-
-        Notes
-        -----
-        ``order_target`` does not take into account any open orders. For
-        example:
-
-        .. code-block:: python
-
-           order_target(sid(0), 10)
-           order_target(sid(0), 10)
-
-        This code will result in 20 shares of ``sid(0)`` because the first
-        call to ``order_target`` will not have been filled when the second
-        ``order_target`` call is made.
-
-        See :func:`zipline.api.order` for more information about
-        ``limit_price``, ``stop_price``, and ``style``
-
-        See Also
-        --------
-        :class:`zipline.finance.execution.ExecutionStyle`
-        :func:`zipline.api.order`
-        :func:`zipline.api.order_target_percent`
-        :func:`zipline.api.order_target_value`
-        """
-        if not self._can_order_asset(asset):
-            return None
-
-        amount = self._calculate_order_target_amount(asset, target)
-        return self.order(asset, amount,
-                          limit_price=limit_price,
-                          stop_price=stop_price,
-                          style=style)
-
-    def _calculate_order_target_amount(self, asset, target):
-        if asset in self.portfolio.positions:
-            current_position = self.portfolio.positions[asset].amount
-            target -= current_position
-
-        return target
-
-    @api_method
-    @disallowed_in_before_trading_start(OrderInBeforeTradingStart())
-    def order_target_value(self,
-                           asset,
-                           target,
-                           limit_price=None,
-                           stop_price=None,
-                           style=None):
-        """Place an order to adjust a position to a target value. If
-        the position doesn't already exist, this is equivalent to placing a new
-        order. If the position does exist, this is equivalent to placing an
-        order for the difference between the target value and the
-        current value.
-        If the Asset being ordered is a Future, the 'target value' calculated
-        is actually the target exposure, as Futures have no 'value'.
-
-        Parameters
-        ----------
-        asset : Asset
-            The asset that this order is for.
-        target : float
-            The desired total value of ``asset``.
-        limit_price : float, optional
-            The limit price for the order.
-        stop_price : float, optional
-            The stop price for the order.
-        style : ExecutionStyle
-            The execution style for the order.
-
-        Returns
-        -------
-        order_id : str
-            The unique identifier for this order.
-
-        Notes
-        -----
-        ``order_target_value`` does not take into account any open orders. For
-        example:
-
-        .. code-block:: python
-
-           order_target_value(sid(0), 10)
-           order_target_value(sid(0), 10)
-
-        This code will result in 20 dollars of ``sid(0)`` because the first
-        call to ``order_target_value`` will not have been filled when the
-        second ``order_target_value`` call is made.
-
-        See :func:`zipline.api.order` for more information about
-        ``limit_price``, ``stop_price``, and ``style``
-
-        See Also
-        --------
-        :class:`zipline.finance.execution.ExecutionStyle`
-        :func:`zipline.api.order`
-        :func:`zipline.api.order_target`
-        :func:`zipline.api.order_target_percent`
-        """
-        if not self._can_order_asset(asset):
-            return None
-
-        target_amount = self._calculate_order_value_amount(asset, target)
-        amount = self._calculate_order_target_amount(asset, target_amount)
-        return self.order(asset, amount,
-                          limit_price=limit_price,
-                          stop_price=stop_price,
-                          style=style)
-
-    @api_method
-    @disallowed_in_before_trading_start(OrderInBeforeTradingStart())
-    def order_target_percent(self, asset, target,
-                             limit_price=None, stop_price=None, style=None):
-        """Place an order to adjust a position to a target percent of the
-        current portfolio value. If the position doesn't already exist, this is
-        equivalent to placing a new order. If the position does exist, this is
-        equivalent to placing an order for the difference between the target
-        percent and the current percent.
-
-        Parameters
-        ----------
-        asset : Asset
-            The asset that this order is for.
-        target : float
-            The desired percentage of the portfolio value to allocate to
-            ``asset``. This is specified as a decimal, for example:
-            0.50 means 50%.
-        limit_price : float, optional
-            The limit price for the order.
-        stop_price : float, optional
-            The stop price for the order.
-        style : ExecutionStyle
-            The execution style for the order.
-
-        Returns
-        -------
-        order_id : str
-            The unique identifier for this order.
-
-        Notes
-        -----
-        ``order_target_value`` does not take into account any open orders. For
-        example:
-
-        .. code-block:: python
-
-           order_target_percent(sid(0), 10)
-           order_target_percent(sid(0), 10)
-
-        This code will result in 20% of the portfolio being allocated to sid(0)
-        because the first call to ``order_target_percent`` will not have been
-        filled when the second ``order_target_percent`` call is made.
-
-        See :func:`zipline.api.order` for more information about
-        ``limit_price``, ``stop_price``, and ``style``
-
-        See Also
-        --------
-        :class:`zipline.finance.execution.ExecutionStyle`
-        :func:`zipline.api.order`
-        :func:`zipline.api.order_target`
-        :func:`zipline.api.order_target_value`
-        """
-        if not self._can_order_asset(asset):
-            return None
-
-        amount = self._calculate_order_target_percent_amount(asset, target)
-        return self.order(asset, amount,
-                          limit_price=limit_price,
-                          stop_price=stop_price,
-                          style=style)
-
-    def _calculate_order_target_percent_amount(self, asset, target):
-        target_amount = self._calculate_order_percent_amount(asset, target)
-        return self._calculate_order_target_amount(asset, target_amount)
-
-    @api_method
-    @expect_types(share_counts=pd.Series)
-    @expect_dtypes(share_counts=int64_dtype)
-    def batch_market_order(self, share_counts):
-        """Place a batch market order for multiple asset.
-
-        Parameters
-        ----------
-        share_counts : pd.Series[Asset -> int]
-            Map from asset to number of shares to order for that asset.
-
-        Returns
-        -------
-        order_ids : pd.Index[str]
-            Index of ids for newly-created orders.
-        """
-        style = MarketOrder()
-        order_args = [
-            (asset, amount, style)
-            for (asset, amount) in iteritems(share_counts)
-            if amount
-        ]
-        return self.blotter.batch_order(order_args)
-
-    @error_keywords(sid='Keyword argument `sid` is no longer supported for '
-                        'get_open_orders. Use `asset` instead.')
-    @api_method
-    def get_open_orders(self, asset=None):
-        """Retrieve all of the current open orders.
-
-        Parameters
-        ----------
-        asset : Asset
-            If passed and not None, return only the open orders for the given
-            asset instead of all open orders.
-
-        Returns
-        -------
-        open_orders : dict[list[Order]] or list[Order]
-            If no asset is passed this will return a dict mapping asset
-            to a list containing all the open orders for the asset.
-            If an asset is passed then this will return a list of the open
-            orders for this asset.
-        """
-        if asset is None:
-            return {
-                key: [order.to_api_obj() for order in orders]
-                for key, orders in iteritems(self.blotter.open_orders)
-                if orders
-            }
-        if asset in self.blotter.open_orders:
-            orders = self.blotter.open_orders[asset]
-            return [order.to_api_obj() for order in orders]
-        return []
-
-    @api_method
-    def get_order(self, order_id):
-        """Lookup an order based on the order id returned from one of the
-        order functions.
-
-        Parameters
-        ----------
-        order_id : str
-            The unique identifier for the order.
-
-        Returns
-        -------
-        order : Order
-            The order object.
-        """
-        if order_id in self.blotter.orders:
-            return self.blotter.orders[order_id].to_api_obj()
-
-    @api_method
-    def cancel_order(self, order_param):
-        """Cancel an open order.
-
-        Parameters
-        ----------
-        order_param : str or Order
-            The order_id or order object to cancel.
-        """
-        order_id = order_param
-        if isinstance(order_param, zipline.protocol.Order):
-            order_id = order_param.id
-
-        self.blotter.cancel(order_id)
-
-    @api_method
-    @require_initialized(HistoryInInitialize())
-    def history(self, bar_count, frequency, field, ffill=True):
-        """DEPRECATED: use ``data.history`` instead.
-        """
-        warnings.warn(
-            "The `history` method is deprecated.  Use `data.history` instead.",
-            category=ZiplineDeprecationWarning,
-            stacklevel=4
-        )
-
-        return self.get_history_window(
-            bar_count,
-            frequency,
-            self._calculate_universe(),
-            field,
-            ffill
-        )
-
-    def get_history_window(self, bar_count, frequency, assets, field, ffill):
-        if not self._in_before_trading_start:
-            return self.data_portal.get_history_window(
-                assets,
-                self.datetime,
-                bar_count,
-                frequency,
-                field,
-                self.data_frequency,
-                ffill,
-            )
-        else:
-            # If we are in before_trading_start, we need to get the window
-            # as of the previous market minute
-            adjusted_dt = \
-                self.trading_calendar.previous_minute(
-                    self.datetime
-                )
-
-            window = self.data_portal.get_history_window(
-                assets,
-                adjusted_dt,
-                bar_count,
-                frequency,
-                field,
-                self.data_frequency,
-                ffill,
-            )
-
-            # Get the adjustments between the last market minute and the
-            # current before_trading_start dt and apply to the window
-            adjs = self.data_portal.get_adjustments(
-                assets,
-                field,
-                adjusted_dt,
-                self.datetime
-            )
-            window = window * adjs
-
-            return window
-
-    # ####################
-    # # Account Controls #
-    # ####################
-    #
-    # def register_account_control(self, control):
-    #     """
-    #     Register a new AccountControl to be checked on each bar.
-    #     """
-    #     if self.initialized:
-    #         raise RegisterAccountControlPostInit()
-    #     self.account_controls.append(control)
-    #
-    # def validate_account_controls(self):
-    #     for control in self.account_controls:
-    #         control.validate(self.portfolio,
-    #                          self.account,
-    #                          self.get_datetime(),
-    #                          self.trading_client.current_data)
-    #
-    # @api_method
-    # def set_max_leverage(self, max_leverage):
-    #     """Set a limit on the maximum leverage of the algorithm.
-    #
-    #     Parameters
-    #     ----------
-    #     max_leverage : float
-    #         The maximum leverage for the algorithm. If not provided there will
-    #         be no maximum.
-    #     """
-    #     control = MaxLeverage(max_leverage)
-    #     self.register_account_control(control)
-    #
-    # @api_method
-    # def set_min_leverage(self, min_leverage, grace_period):
-    #     """Set a limit on the minimum leverage of the algorithm.
-    #
-    #     Parameters
-    #     ----------
-    #     min_leverage : float
-    #         The minimum leverage for the algorithm.
-    #     grace_period : pd.Timedelta
-    #         The offset from the start date used to enforce a minimum leverage.
-    #     """
-    #     deadline = self.sim_params.start_session + grace_period
-    #     control = MinLeverage(min_leverage, deadline)
-    #     self.register_account_control(control)
-
     ####################
     # Trading Controls #
     ####################
@@ -1794,51 +925,6 @@ class TradingAlgorithm(object):
                                max_notional=max_notional,
                                on_error=on_error)
         self.register_trading_control(control)
-
-    # @api_method
-    # def set_max_order_count(self, max_count, on_error='fail'):
-    #     """Set a limit on the number of orders that can be placed in a single
-    #     day.
-    #
-    #     Parameters
-    #     ----------
-    #     max_count : int
-    #         The maximum number of orders that can be placed on any single day.
-    #     """
-    #     control = MaxOrderCount(on_error, max_count)
-    #     self.register_trading_control(control)
-    #
-    # @api_method
-    # def set_do_not_order_list(self, restricted_list, on_error='fail'):
-    #     """Set a restriction on which asset can be ordered.
-    #
-    #     Parameters
-    #     ----------
-    #     restricted_list : container[Asset], SecurityList
-    #         The asset that cannot be ordered.
-    #     """
-    #     if isinstance(restricted_list, SecurityList):
-    #         warnings.warn(
-    #             "`set_do_not_order_list(security_lists.leveraged_etf_list)` "
-    #             "is deprecated. Use `set_asset_restrictions("
-    #             "security_lists.restrict_leveraged_etfs)` instead.",
-    #             category=ZiplineDeprecationWarning,
-    #             stacklevel=2
-    #         )
-    #         restrictions = SecurityListRestrictions(restricted_list)
-    #     else:
-    #         warnings.warn(
-    #             "`set_do_not_order_list(container_of_assets)` is deprecated. "
-    #             "Create a zipline.finance.asset_restrictions."
-    #             "StaticRestrictions object with a container of asset and use "
-    #             "`set_asset_restrictions(StaticRestrictions("
-    #             "container_of_assets))` instead.",
-    #             category=ZiplineDeprecationWarning,
-    #             stacklevel=2
-    #         )
-    #         restrictions = StaticRestrictions(restricted_list)
-    #
-    #     self.set_asset_restrictions(restrictions, on_error)
 
     @api_method
     @expect_types(
@@ -1922,102 +1008,6 @@ class TradingAlgorithm(object):
         # p = attach_pipeline(pipe(), 'name')
         return pipeline
 
-    @api_method
-    @require_initialized(PipelineOutputDuringInitialize())
-    def pipeline_output(self, name):
-        """
-        Get results of the Pipeline attached by with name ``name``.
-
-        Parameters
-        ----------
-        name : str
-            Name of the Pipeline from which to fetch results.
-
-        Returns
-        -------
-        results : pd.DataFrame
-            DataFrame containing the results of the requested Pipeline for
-            the current simulation date.
-
-        Raises
-        ------
-        NoSuchPipeline
-            Raised when no Pipeline with the name `name` has been registered.
-
-        See Also
-        --------
-        :func:`zipline.api.attach_pipeline`
-        :meth:`zipline.Pipeline.engine.PipelineEngine.run_pipeline`
-        """
-        try:
-            pipe, chunks, _ = self._pipelines[name]
-        except KeyError:
-            raise NoSuchPipeline(
-                name=name,
-                valid=list(self._pipelines.keys()),
-            )
-        return self._pipeline_output(pipe, chunks, name)
-
-    def _pipeline_output(self, pipeline, chunks, name):
-        """
-        Internal implementation of `pipeline_output`.
-        """
-        today = normalize_date(self.get_datetime())
-        try:
-            data = self._pipeline_cache.get(name, today)
-        except KeyError:
-            # Calculate the next block.
-            data, valid_until = self.run_pipeline(
-                pipeline, today, next(chunks),
-            )
-            self._pipeline_cache.set(name, data, valid_until)
-
-        # Now that we have a cached result, try to return the data for today.
-        try:
-            return data.loc[today]
-        except KeyError:
-            # This happens if no asset passed the Pipeline screen on a given
-            # day.
-            return pd.DataFrame(index=[], columns=data.columns)
-
-    def run_pipeline(self, pipeline, start_session, chunksize):
-        """
-        Compute `Pipeline`, providing values for at least `start_date`.
-
-        Produces a DataFrame containing data for days between `start_date` and
-        `end_date`, where `end_date` is defined by:
-
-            `end_date = min(start_date + chunksize trading days,
-                            simulation_end)`
-
-        Returns
-        -------
-        (data, valid_until) : tuple (pd.DataFrame, pd.Timestamp)
-
-        See Also
-        --------
-        PipelineEngine.run_pipeline
-        """
-        sessions = self.trading_calendar.all_sessions
-
-        # Load data starting from the previous trading day...
-        start_date_loc = sessions.get_loc(start_session)
-
-        # ...continuing until either the day before the simulation end, or
-        # until chunksize days of data have been loaded.
-        sim_end_session = self.sim_params.end_session
-
-        end_loc = min(
-            start_date_loc + chunksize,
-            sessions.get_loc(sim_end_session)
-        )
-
-        end_session = sessions[end_loc]
-
-        return \
-            self.engine.run_pipeline(pipeline, start_session, end_session), \
-            end_session
-
     @staticmethod
     def default_pipeline_domain(calendar):
         """
@@ -2028,16 +1018,6 @@ class TradingAlgorithm(object):
         """
         return _DEFAULT_DOMAINS.get(calendar.name, domain.GENERIC)
 
-    @staticmethod
-    def default_fetch_csv_country_code(calendar):
-        """
-        Get a default country_code to use for fetch_csv symbol lookups.
-
-        This will be used to disambiguate symbol lookups for fetch_csv calls if
-        our asset db contains entries with the same ticker spread across
-        multiple
-        """
-        return _DEFAULT_FETCH_CSV_COUNTRY_CODES.get(calendar.name)
 
     ##################
     # End pipe API
@@ -2104,13 +1084,3 @@ class TradingAlgorithm(object):
                    commission_models=repr(self.blotter.commission_models),
                    blotter=repr(self.blotter),
                    recorded_vars=repr(self.recorded_vars))
-
-
-# # Map from _calendar name to default domain for that _calendar.
-# _DEFAULT_DOMAINS = {d.calendar_name: d for d in domain.BUILT_IN_DOMAINS}
-# # Map from _calendar name to default country code for that _calendar.
-# _DEFAULT_FETCH_CSV_COUNTRY_CODES = {
-#     d.calendar_name: d.country_code for d in domain.BUILT_IN_DOMAINS
-# }
-# # Include us_futures, which doesn't have a Pipeline domain.
-# _DEFAULT_FETCH_CSV_COUNTRY_CODES['us_futures'] = 'US'

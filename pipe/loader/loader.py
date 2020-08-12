@@ -6,32 +6,16 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 from .base import PipelineLoader
-from calendar.trading_calendar import  calendar
-from gateWay.driver.fundamental_reader import (
-                        MassiveSessionReader,
-                        ReleaseSessionReader,
-                        HolderSessionReader,
-                        StructureSessionReader,
-                        GrossSessionReader,
-                        MarginSessionReader
-                                            )
-
-EVENT = {
-        'massive': MassiveSessionReader(),
-        'release': ReleaseSessionReader(),
-        'holder': HolderSessionReader(),
-        'structure': StructureSessionReader(),
-        'gross': GrossSessionReader(),
-        'margin': MarginSessionReader()
-        }
+from _calendar.trading_calendar import calendar
+from pipe import EVENT
 
 
 class PricingLoader(PipelineLoader):
 
-    def __init__(self,terms,data_portal):
+    def __init__(self, terms, data_portal):
         """
-            A pipeline for loading daily adjusted qfq live OHLCV data.
-            terms --- pipeline terms and ump terms
+            A pipe for loading daily adjusted qfq live OHLCV data.
+            terms --- pipe terms and ump terms
         """
         domains = [term.domain for term in terms]
         self.pipeline_domain = self._resolve_domains(domains)
@@ -71,9 +55,9 @@ class EventLoader(PipelineLoader):
     """
     def __init__(self,terms):
         domains = [term.domain for term in terms]
-        self.pipeline_domain = self._resolve_domains(domains,True)
+        self.pipeline_domain = self._resolve_domains(domains, True)
 
-    def load_pipeline_arrays(self, dts, assets=None, data_frequency='daily'):
+    def load_pipeline_arrays(self, dts, assets, data_frequency='daily'):
         if data_frequency == 'minute':
             raise ValueError('event data only be daily frequency')
         event_mappings = dict()

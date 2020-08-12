@@ -17,8 +17,8 @@ import pandas as pd
 from functools import partial
 from sqlalchemy import MetaData
 from toolz import groupby
-from .db_schema import engine
-from .tools import unpack_df_to_component_dict
+from gateWay.driver import engine
+from gateWay.driver.tools import unpack_df_to_component_dict
 
 
 class BarReader(ABC):

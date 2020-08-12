@@ -16,7 +16,7 @@ def main():
         from zipline.asset.futures import FutureChain
         from zipline.finance.asset_restrictions import Restrictions
         from zipline.finance.cancel_policy import CancelPolicy
-        from zipline.pipeline import Pipeline
+        from zipline.pipe import Pipeline
         from zipline.protocol import Order
         from zipline.utils.events import EventRule
         from zipline.utils.security_list import SecurityList

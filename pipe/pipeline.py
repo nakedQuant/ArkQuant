@@ -9,22 +9,27 @@ import uuid
 from collections import OrderedDict, namedtuple
 from toolz import keyfilter
 from functools import reduce
-from .term import Term, NotSpecific
-from .graph import TermGraph
+from pipe.term import Term, NotSpecific
+from pipe.graph import TermGraph
 
-NamedPipe = namedtuple('pipe', 'name priority asset')
+Event = namedtuple('event', 'asset name')
+NamedPipe = namedtuple('pipe', 'event priority')
 
 
 class Pipeline(object):
     """
         拓扑执行逻辑
+        a. logic of pipe
+        b. withdraw logic of pipe --- instance of ump_picker
+        c. pipe --- ump_picker
     """
-    __slots__ = ['_terms_store', 'graph', '_workspace']
+    __slots__ = ['_terms_store', 'graph', '_workspace', '_ump_picker']
 
-    def __init__(self, terms):
+    def __init__(self, terms, ump_picker):
         self._terms_store = terms
         self._workspace = OrderedDict()
         self.graph = self._init_graph()
+        self._ump_picker = ump_picker
 
     @property
     def name(self):
@@ -33,6 +38,10 @@ class Pipeline(object):
     @property
     def terms(self):
         return self._terms_store
+
+    @property
+    def ump_terms(self):
+        return self._ump_picker.pickers
 
     def _initialize_workspace(self):
         self._workspace = OrderedDict
@@ -57,11 +66,11 @@ class Pipeline(object):
     def __add__(self, term):
         if not isinstance(term, Term):
             raise TypeError(
-                "{term} is not a valid pipeline column. Did you mean to "
+                "{term} is not a valid pipe column. Did you mean to "
                 "append '.latest'?".format(term=term)
             )
         if term in self._graph.nodes:
-            raise Exception('term object already exists in pipeline')
+            raise Exception('term object already exists in pipe')
         self._terms_store.append(term)
         return self
 
@@ -108,7 +117,7 @@ class Pipeline(object):
         Parameters
         ----------
         metadata : dict[Term, np.ndarray]
-            Initial state of workspace for a pipeline execution. May contain
+            Initial state of workspace for a pipe execution. May contain
             pre-computed values provided by ``populate_initial_workspace``.
         default : asset list
             Reference counts for terms to be computed. Terms with reference
@@ -118,18 +127,25 @@ class Pipeline(object):
         self._initialize_workspace()
         self._decref_recursive(metadata, default)
 
-    def _fit(self, alternative):
+    def _fit_out(self, alternative):
         """将pipeline.name --- outs"""
         out = self._workspace.popitem(last=True).values()
-        # transform to  pipe
-        outputs = [NamedPipe(self.name, priority, asset) for priority, asset
+        # transform to pipe
+        outputs = [NamedPipe(Event(asset, self.name), priority) for priority, asset
                    in enumerate(out[:alternative])]
         return outputs
 
-    def to_execution_plan(self, metadata, alternative, default):
+    def to_execution_plan(self,default, metadata, alternative):
         """
-            source: accumulated data from all terms
+            to execute pipe logic
         """
         self._inner_decref_recursive(metadata, default)
-        result = self._fit(alternative)
+        result = self._fit_out(alternative)
         return result
+
+    def to_withdraw_plan(self, position, metadata):
+        """
+            to execute ump_picker logic
+        """
+        out = self._ump_picker.evaluate(position, metadata)
+        return out

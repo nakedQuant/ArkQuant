@@ -6,9 +6,9 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 
-from abc import ABC,abstractmethod
+from abc import ABC, abstractmethod
 from functools import reduce
-import pandas as pd ,operator
+import pandas as pd, operator
 from gateWay.asset.assets import Asset
 from _calendar.trading_calendar import calendar
 
@@ -17,7 +17,7 @@ class Restrictions(ABC):
     """
     Abstract restricted list interface, representing a set of asset that an
     algorithm is restricted from trading.
-         --- used for pipeline which filter asset list
+         --- used for pipe which filter asset list
     """
 
     @abstractmethod
@@ -148,13 +148,33 @@ class SecurityListRestrictions(Restrictions):
         self.window = window
 
     def is_restricted(self, assets, dt):
-        before, after = self.window
-        alive_assets = self.asset_finder.was_active(dt)
-        s_date = calendar.dt_window_size(dt, before)
-        e_date = calendar.dt_window_size(dt, after)
-        active_assets = self.asset_finder.lifetime([s_date, e_date])
+        s_date = calendar.dt_window_size(dt, self.window[0])
+        e_date = calendar.dt_window_size(dt, self.window[-1])
+        # alive assets --- means assets on dt can be traded
+        active_assets = self.asset_finder.was_active(dt)
+        # asset ipo date after s_date and asset delist date is before edate
+        alive_assets = self.asset_finder.lifetime([s_date, e_date])
         ensure_assets = set(alive_assets) & set(active_assets)
-        return ensure_assets
+        # intersection
+        final_assets = set(assets) & set(ensure_assets)
+        return final_assets
+
+
+class AvailableRestrictions(Restrictions):
+    """
+        a. 受制于涨跌停限制
+        b. 返回非限制的标的
+    """
+    def __init__(self,
+                 data_portal,
+                 threshold=0.0990):
+        self.data_portal = data_portal
+        self.threshold = threshold
+
+    def is_restricted(self, assets, dts):
+        open_pct, pre_close = self._data_portal.get_open_pct(assets, dts)
+        final_assets = [asset for asset in assets if open_pct[asset] < self.threshold]
+        return final_assets
 
 
 class TemporaryRestrictions(object):

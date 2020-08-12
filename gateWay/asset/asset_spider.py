@@ -11,7 +11,7 @@ from itertools import chain
 from toolz import partition_all
 
 from gateWay.asset._config import ASSERT_URL_MAPPING, ASSET_SUPPLEMENT_URL
-from gateWay.driver.third_api.client import tsclient
+from gateWay.driver.api.client import tsclient
 from gateWay.driver.tools import _parse_url
 
 AssetData = namedtuple(
@@ -70,7 +70,7 @@ class AssetSpider(object):
         text = [t.get_text() for t in raw[0]]
         frame = pd.DataFrame(partition_all(14, text[18:]), columns=text[2:16])
         frame = frame.apply(lambda x: x['基金简称'][:-5])
-        # dataframe --- slice depend on symbols
+        # frame --- slice depend on symbols
         fund_frames = frame[frame['基金简称'].isin(symbols)] if symbols else frame
         fund_frames.loc[:, 'asset_type'] = 'fund'
         return fund_frames

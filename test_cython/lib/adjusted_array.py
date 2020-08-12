@@ -99,7 +99,7 @@ def _normalize_array(data, missing_value):
     Returns
     -------
     coerced, view_kwargs : (np.ndarray, np.dtype)
-        The input ``data`` array coerced to the appropriate pipeline type.
+        The input ``data`` array coerced to the appropriate pipe type.
         This may return the original array or a view over the same data.
     """
     if isinstance(data, LabelArray):

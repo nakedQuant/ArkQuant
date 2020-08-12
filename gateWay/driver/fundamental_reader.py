@@ -8,9 +8,9 @@ Created on Tue Mar 12 15:37:47 2019
 from sqlalchemy import select, cast, and_, Numeric, Integer
 import pandas as pd, datetime, sqlalchemy as sa, json
 from gateWay.driver.tools import _parse_url
-from gateWay.driver._config import ASSET_FUNDAMENTAL_URL
+from gateWay.driver.spider.xml import ASSET_FUNDAMENTAL_URL
 from gateWay.driver.bar_reader import BarReader
-from .db_schema import engine
+from gateWay.driver import engine
 
 
 class MassiveSessionReader(BarReader):
@@ -24,8 +24,8 @@ class MassiveSessionReader(BarReader):
 
     def get_spot_value(self, asset, dt, fields=None):
         table = self.metadata['massive']
-        sql = select([cast(table.c.bid_price, Numeric(10,2)),
-                      cast(table.c.discount, Numeric(10,5)),
+        sql = select([cast(table.c.bid_price, Numeric(10, 2)),
+                      cast(table.c.discount, Numeric(10, 5)),
                       cast(table.c.bid_volume, Integer),
                       table.c.buyer,
                       table.c.seller,
@@ -43,12 +43,12 @@ class MassiveSessionReader(BarReader):
         table = self.metadata['massive']
         sql = select([table.c.trade_dt,
                       table.c.sid,
-                      cast(table.c.bid_price, Numeric(10,2)),
-                      cast(table.c.discount, Numeric(10,5)),
+                      cast(table.c.bid_price, Numeric(10, 2)),
+                      cast(table.c.discount, Numeric(10, 5)),
                       cast(table.c.bid_volume, Integer),
                       table.c.buyer,
                       table.c.seller,
-                      table.c.cleltszb]).where(table.c.trade_dt.between(sdate,edate))
+                      table.c.cleltszb]).where(table.c.trade_dt.between(sdate, edate))
         raw = self.engine.execute(sql).fetchall()
         df = pd.DataFrame(raw, columns=['trade_dt', 'code', 'bid_price', 'discount',
                                         'bid_volume', 'buyer', 'seller', 'cleltszb'])
@@ -78,18 +78,18 @@ class ReleaseSessionReader(BarReader):
         return release
 
     def load_raw_arrays(self, sessions, assets, fields=None):
-        sdate , edate = sessions
+        sdate, edate = sessions
         sids = [asset.sid for asset in assets]
         table = self.metadata['release']
         sql = select([table.c.sid,
                       table.c.release_date,
                       cast(table.c.release_type, Numeric(10, 2)),
-                      cast(table.c.cjeltszb, Numeric(10, 5)), ]).where \
+                      cast(table.c.cjeltszb, Numeric(10, 5)), ]).where\
             (table.c.release_date.between(sdate, edate))
         raw = self.engine.execute(sql).fetchall()
         df = pd.DataFrame(raw, columns=['sid', 'release_date',
                                         'release_type', 'cjeltszb'])
-        df.set_index('sid',inplace= True)
+        df.set_index('sid', inplace=True)
         df = df.loc[sids]
         release = df.loc[:, fields] if fields else df
         return release
@@ -109,11 +109,11 @@ class HolderSessionReader(BarReader):
         table = self.metadata['holder']
         sql = select([table.c.股东,
                       table.c.方式,
-                      cast(table.c.变动股本, Numeric(10,2)),
+                      cast(table.c.变动股本, Numeric(10, 2)),
                       cast(table.c.总持仓, Integer),
                       cast(table.c.占总股本比例, Numeric(10, 5)),
                       cast(table.c.总流通股, Integer),
-                      cast(table.c.占总流通比例, Numeric(10, 5))]).where(and_(table.c.公告日 == dt,table.c.sid == asset.sid))
+                      cast(table.c.占总流通比例, Numeric(10, 5))]).where(and_(table.c.公告日 == dt, table.c.sid == asset.sid))
         raw = self.engine.execute(sql).fetchall()
         share_tracker = pd.DataFrame(raw, columns=['股东','方式','变动股本','总持仓',
                                                    '占总股本比例','总流通股','占总流通比例'])
@@ -129,7 +129,7 @@ class HolderSessionReader(BarReader):
                       table.c.公告日,
                       table.c.股东,
                       table.c.方式,
-                      cast(table.c.变动股本, Numeric(10,2)),
+                      cast(table.c.变动股本, Numeric(10, 2)),
                       cast(table.c.总持仓, Integer),
                       cast(table.c.占总股本比例, Numeric(10, 5)),
                       cast(table.c.总流通股, Integer),
@@ -138,7 +138,7 @@ class HolderSessionReader(BarReader):
         raw = self.engine.execute(sql).fetchall()
         df = pd.DataFrame(raw, columns=['sid', '公告日', '股东', '方式', '变动股本',
                                         '总持仓', '占总股本比例', '总流通股', '占总流通比例'])
-        df.set_index('sid',inplace= True)
+        df.set_index('sid', inplace=True)
         df = df.loc[sids]
         trackers = df.loc[:, fields] if fields else df
         return trackers
@@ -223,7 +223,7 @@ class GrossSessionReader(BarReader):
                 gross_value.drop_duplicates(inplace=True, ignore_index=True)
                 return gross_value
             page = page + 1
-        #截取时间戳
+        # 截取时间戳
         start_idx = gross_value.index(sdate)
         end_idx = gross_value.index(edate)
         gross = gross_value.iloc[start_idx:end_idx + 1, :]
@@ -249,7 +249,7 @@ class MarginSessionReader(BarReader):
         page = 1
         margin = pd.DataFrame()
         while True:
-            req_url = self._url% page
+            req_url = self._url % page
             raw = _parse_url(req_url, bs=False)
             raw = json.loads(raw)
             raw = [
@@ -265,7 +265,6 @@ class MarginSessionReader(BarReader):
             margin = margin.append(data)
             page = page + 1
         margin.set_index('trade_dt', inplace=True)
-        #
         start_idx = margin.index(sdate)
         end_idx = margin.index(edate)
         margin = margin.iloc[start_idx:end_idx + 1, :]

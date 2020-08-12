@@ -881,7 +881,7 @@ def _run(handle_data,
         if column in USEquityPricing.columns:
             return pipeline_loader
         raise ValueError(
-            "No pipeline registered for column %s." % column
+            "No pipe registered for column %s." % column
         )
 
     if isinstance(metrics_set, six.string_types):
@@ -1052,7 +1052,7 @@ class TradingAlgorithm(object):
         identifiers : list, optional
             Any asset identifiers that are not provided in the
             equities_metadata, but will be traded by this TradingAlgorithm.
-        get_pipeline_loader : callable[BoundColumn -> pipeline], optional
+        get_pipeline_loader : callable[BoundColumn -> pipe], optional
             The function that maps Pipeline columns to their loaders.
         create_event_context : callable[BarData -> context manager], optional
             A function used to create a context mananger that wraps the

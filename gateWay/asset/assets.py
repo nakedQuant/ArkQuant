@@ -7,7 +7,7 @@ Created on Tue Mar 12 15:37:47 2019
 """
 import pandas as pd, numpy as np, sqlalchemy as sa, json
 from sqlalchemy import MetaData, select
-from gateWay.driver.db_schema import engine
+from gateWay.driver import engine
 from gateWay.driver.bar_reader import AssetSessionReader
 from gateWay.driver.tools import _parse_url
 from _calendar.trading_calendar import calendar
@@ -24,13 +24,12 @@ class Asset(object):
     engine : str
         sqlalchemy engine
     """
-    __slots__ = ['sid', '_tag']
+    __slots__ = ['sid']
 
     reader = AssetSessionReader()
 
     def __init__(self, sid):
         self.sid = sid
-        self._tag = None
         self._retrieve_asset_mappings()
         self._supplementary_for_asset()
 
@@ -44,6 +43,9 @@ class Asset(object):
                                                       'last_traded', 'country_code', 'status'])
         for k, v in assets.iloc[0, :].items():
             self.__setattr__(k, v)
+
+    def _supplementary_for_asset(self):
+        raise NotImplementedError()
 
     @property
     def trading_calendar(self):
@@ -70,22 +72,11 @@ class Asset(object):
         return self.tick_size
 
     @property
-    def tag(self):
-        return self._tag
-
-    @tag.setter
-    def tag(self, name):
-        """
-        :param name: pipeline name which simulate asset
-        """
-        self._tag = name
-
-    def _supplementary_for_asset(self):
-        raise NotImplementedError()
-
-    @property
     def intraday(self):
         return False
+
+    def __setattr__(self, key, value):
+        raise NotImplementedError()
 
     def restricted(self, dt):
         raise NotImplementedError()
@@ -164,19 +155,6 @@ class Equity(Asset):
         self._retrieve_asset_mappings()
         self._supplementary_for_asset()
 
-    @property
-    def tick_size(self):
-        _tick_size = 200 if self.sid.startswith('688') else 100
-        return _tick_size
-
-    @property
-    def increment(self):
-        per = 1 if self.sid.startswith('688') else self.tick_size
-        return per
-
-    def __setattr__(self, key, value):
-        raise NotImplementedError()
-
     def _supplementary_for_asset(self):
         tbl = self.metadata.tables['equity_basics']
         ins = sa.select([tbl.c.dual,
@@ -189,7 +167,20 @@ class Equity(Asset):
                                                    'district',
                                                    'initial_price'])
         for k, v in raw.iloc[0, :].to_dict().items():
-            self.setattr(k, v)
+            self.__setattr__(k, v)
+
+    @property
+    def tick_size(self):
+        _tick_size = 200 if self.sid.startswith('688') else 100
+        return _tick_size
+
+    @property
+    def increment(self):
+        per = 1 if self.sid.startswith('688') else self.tick_size
+        return per
+
+    def __setattr__(self, key, value):
+        raise NotImplementedError()
 
     def restricted(self, dt):
 
@@ -214,8 +205,8 @@ class Equity(Asset):
         return bid_mechanism
 
     def is_active(self, session_label):
+        # between first_traded and last_traded ; is tradeable on session label
         active = self._is_active(session_label)
-        #是否停盘
         data = self.reader.load_raw_arrays([session_label, session_label], self.sid, ['close'])
         active &= (True if data else False)
         return active
@@ -277,25 +268,25 @@ class Convertible(Asset):
                                                   'put_convert_price',
                                                   'guarantor'])
         for k, v in df.iloc[0, :].to_dict():
-            setattr(k, v)
+            self.__setattr__(k, v)
 
     @property
     def intraday(self):
         return True
 
-    def restricted(self, dt):
-        return None
-
     @property
     def bid_mechanism(self):
+        return None
+
+    def __setattr__(self, key, value):
+        raise NotImplementedError()
+
+    def restricted(self, dt):
         return None
 
     def is_active(self, dt):
         active = self._is_active(dt)
         return active
-
-    def __setattr__(self, key, value):
-        raise NotImplementedError()
 
 
 class Fund(Asset):
@@ -304,27 +295,26 @@ class Fund(Asset):
     目前不是所有的ETF都是t+0的，只有跨境ETF、债券ETF、黄金ETF、货币ETF实行的是t+0，境内A股ETF暂不支持t+0
     10%
     """
-    def __init__(self,
-                 fund_id):
+    def __init__(self, fund_id):
         super(Fund, self).__init__(fund_id)
         self._retrieve_asset_mappings()
 
     def _supplementary_for_asset(self):
         raise NotImplementedError()
 
+    @property
+    def bid_mechanism(self):
+        return None
+
+    def __setattr__(self, key, value):
+        raise NotImplementedError()
+
     def restricted(self, dt):
         return 0.1
-
-    @property
-    def bid_mechansim(self):
-        return None
 
     def is_active(self, session_label):
         active = self._is_active(session_label)
         return active
-
-    def __setattr__(self, key, value):
-        raise NotImplementedError()
 
 
 __all__ = [Equity, Convertible, Fund]

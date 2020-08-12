@@ -12,14 +12,13 @@ from finance.position import Position
 
 class PositionTracker(object):
     """
-        持仓变动
-        the current state of position held
+        track the change of position
     """
     def __init__(self,
                  data_portal):
         self.data_portal = data_portal
         self.positions = OrderedDict()
-        #根据时间记录关闭的交易
+        # 根据时间记录关闭的交易
         self.record_closed_position = defaultdict(list)
         self.update_sync_date = None
         self._dirty_stats = True
@@ -39,10 +38,10 @@ class PositionTracker(object):
             根据深圳证券交易所交易规则，投资者的红股在R+3日自动到账，并可进行交易，股息在R+5日自动到账，
             持股超过1年：税负5%;持股1个月至1年：税负10%;持股1个月以内：税负20%新政实施后，上市公司会先按照5%的最低税率代缴红利税
         """
-        divdend = self.data_portal.load_divdends_for_sid(asset.sid, dt)
+        dividend = self.data_portal.load_divdends_for_sid(asset, dt)
         try:
-            amount_ratio = (divdend['sid_bonus'] + divdend['sid_transfer']) / 10
-            cash_ratio = divdend['bonus'] / 10
+            amount_ratio = (dividend['sid_bonus'] + dividend['sid_transfer']) / 10
+            cash_ratio = dividend['bonus'] / 10
         except ZeroDivisionError:
             amount_ratio = 0.0
             cash_ratio = 0.0
@@ -58,11 +57,12 @@ class PositionTracker(object):
         return total_left_cash
 
     def _handle_transaction(self, transaction):
-        asset = transaction.asset
+        event = transaction.event
+        asset = event.asset
         try:
             position = self.positions[asset]
         except KeyError:
-            position = self.positions[asset] = Position(asset)
+            position = self.positions[asset] = Position(event)
         cash_flow = position.update(transaction)
         if position.closed:
             dts = transaction.created_dt.strftime('%Y-%m-%d')
@@ -99,14 +99,10 @@ class PositionTracker(object):
 
     def get_positions(self):
         # protocol
-        protocols = []
-        for position in self.positions.values():
-            # Adds the new position if we didn't have one before, or overwrite
-            # one we have currently
-            protocols.append(position.protocol)
+        protocols = [position.protocol for position in self.positions.values()]
         return protocols
 
-    def get_equity_rights(self, asset, dt):
+    def retrieve_right_of_equity(self, asset, dt):
         """
             配股机制有点复杂 ， freeze capital
             如果不缴纳款，自动放弃到期除权相当于亏损,在股权登记日卖出，一般的配股缴款起止日为5个交易日

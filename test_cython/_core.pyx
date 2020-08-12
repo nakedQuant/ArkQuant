@@ -572,7 +572,7 @@ cdef arrays_from_rows(DatetimeIndex_t dates,
         'right',
     )
 
-    # We use searchsorted right here to align the asof_dates with what pipeline
+    # We use searchsorted right here to align the asof_dates with what pipe
     # expects. In a CustomFactor, when today = t_1, the last row of the input
     # array should be data whose asof_date is t_0.
     cdef np.ndarray[np.int64_t] asof_ixs = dates.searchsorted(
@@ -675,7 +675,7 @@ cpdef adjusted_arrays_from_rows_with_assets(DatetimeIndex_t dates,
     Parameters
     ----------
     dates : pd.DatetimeIndex
-        The trading days requested by the pipeline engine.
+        The trading days requested by the pipe engine.
     data_query_cutoff_times : pd.DatetimeIndex
         The datetime when data should no longer be considered available for
         a session.
@@ -711,7 +711,7 @@ cpdef adjusted_arrays_from_rows_without_assets(DatetimeIndex_t dates,
     Parameters
     ----------
     dates : pd.DatetimeIndex
-        The trading days requested by the pipeline engine.
+        The trading days requested by the pipe engine.
     data_query_cutoff_times : pd.DatetimeIndex
         The datetime when data should no longer be considered available for
         a session.
@@ -745,7 +745,7 @@ cpdef baseline_arrays_from_rows_with_assets(DatetimeIndex_t dates,
     Parameters
     ----------
     dates : pd.DatetimeIndex
-        The trading days requested by the pipeline engine.
+        The trading days requested by the pipe engine.
     data_query_cutoff_times : pd.DatetimeIndex
         The datetime when data should no longer be considered available for
         a session.
@@ -781,7 +781,7 @@ cpdef baseline_arrays_from_rows_without_assets(DatetimeIndex_t dates,
     Parameters
     ----------
     dates : pd.DatetimeIndex
-        The trading days requested by the pipeline engine.
+        The trading days requested by the pipe engine.
     data_query_cutoff_times : pd.DatetimeIndex
         The datetime when data should no longer be considered available for
         a session.

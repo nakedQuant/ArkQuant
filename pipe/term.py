@@ -11,7 +11,7 @@ from weakref import WeakValueDictionary
 
 class NotSpecific(Exception):
 
-    def __str__(self):
+    def __str__():
         return 'object not specific'
 
     __repr__ = __str__()
@@ -34,24 +34,27 @@ class Term(object):
             1 inputs --- asset list
             2 compute ---- algorithm list
             3 outputs --- algorithm list & asset list
+
+        term --- 不可变通过改变不同的dependence重构pipeline
     """
-    default_input = NotSpecific
+    # default_input = NotSpecific
     _term_cache = WeakValueDictionary
 
     namespace = dict()
 
-    __slots__ = ['domain', 'dtype', 'term_logic', '_subclass_called_validate']
+    __slots__ = ['domain', 'dependence', 'dtype', 'term_logic', '_subclass_called_validate']
 
     def __new__(cls,
                 domain,
                 script,
                 params,
+                dependence=NotSpecific,
                 dtype=None
                 ):
 
         dtype = dtype if dtype else list()
 
-        script_path= glob.glob('strategy/%s.py' % script)
+        script_path = glob.glob('strategy/%s.py' % script)
         with open(script_path, 'r') as f:
             exec(f.read(), cls.namespace)
         logic_cls = cls.namespace[script]
@@ -84,7 +87,7 @@ class Term(object):
             which is guaranteed to be called only once.
             Parameters
             ----------
-            domain : zipline.pipeline.domain.Domain
+            domain : zipline.pipe.domain.Domain
                 The domain of this term.
             dtype : np.dtype
                 Dtype of this term's output.
@@ -117,20 +120,23 @@ class Term(object):
         # call super().
         self._subclass_called_super_validate = True
 
-    @property
-    def dependencies(self):
-        """
-        A dictionary mapping terms that must be computed before `self` to the
-        number of extra rows needed for those terms.
-        """
-        return self.default_input
+    # @property
+    # def dependencies(self):
+    #     """
+    #     A dictionary mapping terms that must be computed before `self` to the
+    #     number of extra rows needed for those terms.
+    #     """
+    #     return self.default_input
+    #
+    # @dependencies.setter
+    # def dependencies(self, terms):
+    #     for item in terms:
+    #         if not isinstance(item, self):
+    #             raise TypeError('dependencies must be Term')
+    #     return terms
 
-    @dependencies.setter
-    def dependencies(self, terms):
-        for item in terms:
-            if not isinstance(item, self):
-                raise TypeError('dependencies must be Term')
-        return terms
+    def __setattr__(self, key, value):
+        raise NotImplementedError()
 
     def postprocess(self, data):
         """

@@ -13,7 +13,6 @@ SESSION_START = 1
 SESSION_END = 2
 MINUTE_END = 3
 BEFORE_TRADING_START_BAR = 4
-
 # before trading  , session start , session end 三个阶段
 
 

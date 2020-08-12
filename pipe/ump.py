@@ -5,10 +5,8 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-from pipeline.term import Term
-from functools import partial
+from pipe.term import Term
 import numpy as np
-from multiprocessing import Pool
 
 
 class UmpPickers(object):
@@ -39,19 +37,13 @@ class UmpPickers(object):
     def __setattr__(self, key, value):
         raise NotImplementedError
 
-    def _evaluate_for_sid(self, position, metadata):
-        votes = [_picker.compute([position.asset], metadata)
-                 for _picker in self._poll_pickers]
+    def _evaluate_for_position(self, position, metadata):
+        votes = [picker.compute([position.asset], metadata)
+                 for picker in self.pickers]
         if np.all(votes):
             return position
         return False
 
-    def evaluate(self, positions, cache):
-        _impl = partial(self._evaluate_for_sid, metadata=cache)
-        # 执行退出算法
-        with Pool(processes=len(positions))as pool:
-            picker_votes = [pool.apply_async(_impl, position)
-                            for position in positions]
-            # selector --- position or False
-            selector = [vote for vote in picker_votes if vote]
-        return selector
+    def evaluate(self, position, metadata):
+        vote = self._evaluate_for_position(position, metadata)
+        return vote

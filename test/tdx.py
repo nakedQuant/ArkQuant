@@ -153,7 +153,7 @@ print('test',test)
 
 namespace = dict()
 with open('/Users/python/Library/Mobile Documents/com~apple~CloudDocs/simulation/test/test_driver.py','r') as f:
-    exec(f.read(),namespace)
+    exec(f.read(), namespace)
 
 print(namespace.keys())
 test = namespace['UnionEngine']

@@ -3,7 +3,7 @@ from datashape import istabular
 
 
 class BlazeEventsLoader(implements(PipelineLoader)):
-    """An abstract pipeline loader for the events datasets that loads
+    """An abstract pipe loader for the events datasets that loads
     data from a blaze expression.
 
     Parameters

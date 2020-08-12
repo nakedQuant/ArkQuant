@@ -64,7 +64,8 @@ class Broker(object):
 
     def carry_out(self, engine, ledger):
         """建立执行计划"""
-        capital, negatives, dual, positives, dts = engine.execute_engine(ledger)
+        capital = ledger.porfolio.cash
+        negatives, dual, positives, dts = engine.execute_engine(ledger)
         # 直接买入
         positives, pos_utility = self.enroll_impl(positives, capital, dts)
         # 直接卖出

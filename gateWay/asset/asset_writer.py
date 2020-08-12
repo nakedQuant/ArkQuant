@@ -17,7 +17,7 @@ from gateWay.asset.asset_db_schema import (
     asset_router,
     version_info
 )
-from gateWay.driver.db_schema import engine
+from gateWay.driver import engine
 
 
 SQLITE_MAX_VARIABLE_NUMBER = 999

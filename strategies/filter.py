@@ -98,7 +98,7 @@ class Filter(object):
     or exclude for some particular purpose. Many Pipeline API functions accept
     a ``mask`` argument, which can be supplied a Filter indicating that only
     values passing the Filter should be considered when performing the
-    requested computation. For example, :meth:`zipline.pipeline.Factor.top`
+    requested computation. For example, :meth:`zipline.pipe.Factor.top`
     accepts a mask indicating that ranks should be computed only on asset that
     passed the specified Filter.
 
@@ -188,7 +188,7 @@ class PercentileFilter(Filter):
 
     Parameters
     ----------
-    factor : zipline.pipeline.factor.Factor
+    factor : zipline.pipe.factor.Factor
         The factor over which to compute percentile bounds.
     min_percentile : float [0.0, 1.0]
         The minimum percentile rank of an asset that will pass the filter.

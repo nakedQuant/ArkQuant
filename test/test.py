@@ -2230,11 +2230,11 @@
 # #     Dataset families are used to represent data where the unique identifier for
 # #     a row requires more than just asset and date coordinates. A
 # #     :class:`DataSetFamily` can also be thought of as a collection of
-# #     :class:`~zipline.pipeline.data.DataSet` objects, each of which has the same
+# #     :class:`~zipline.pipe.data.DataSet` objects, each of which has the same
 # #     columns, domain, and ndim.
 # #
 # #     :class:`DataSetFamily` objects are defined with by one or more
-# #     :class:`~zipline.pipeline.data.Column` objects, plus one additional field:
+# #     :class:`~zipline.pipe.data.Column` objects, plus one additional field:
 # #     ``extra_dims``.
 # #
 # #     The ``extra_dims`` field defines coordinates other than asset and date that
@@ -2245,9 +2245,9 @@
 # #     the dimension name, and the values are a set of unique values along that
 # #     dimension.
 # #
-# #     To work with a :class:`DataSetFamily` in a pipeline expression, one must
+# #     To work with a :class:`DataSetFamily` in a pipe expression, one must
 # #     choose a specific value for each of the extra dimensions using the
-# #     :meth:`~zipline.pipeline.data.DataSetFamily.slice` method.
+# #     :meth:`~zipline.pipe.data.DataSetFamily.slice` method.
 # #     For example, given a :class:`DataSetFamily`:
 # #
 # #     .. code-block:: python
@@ -2401,7 +2401,7 @@
 # #         Returns
 # #         -------
 # #         dataset : DataSet
-# #             A regular pipeline dataset indexed by asset and date.
+# #             A regular pipe dataset indexed by asset and date.
 # #
 # #         Notes
 # #         -----
@@ -2898,7 +2898,7 @@
 #     -----
 #     This should only be used to build the initial workspace, after that we
 #     should use:
-#     :meth:`~zipline.pipeline.graph.TermGraph.decref_dependencies`
+#     :meth:`~zipline.pipe.graph.TermGraph.decref_dependencies`
 #     """
 #     # Edges are tuple of (from, to).
 #     for parent, _ in self.graph.in_edges([term]):
@@ -2920,7 +2920,7 @@
 #     Parameters
 #     ----------
 #     workspace : dict[Term, np.ndarray]
-#         Initial state of workspace for a pipeline execution. May contain
+#         Initial state of workspace for a pipe execution. May contain
 #         pre-computed values provided by ``populate_initial_workspace``.
 #     refcounts : dict[Term, int]
 #         Reference counts for terms to be computed. Terms with reference
@@ -2949,7 +2949,7 @@
 #
 #     Parameters
 #     ----------
-#     domain : zipline.pipeline.domain.Domain
+#     domain : zipline.pipe.domain.Domain
 #         The domain of execution for which we need to build a plan.
 #     terms : dict
 #         A dict mapping names to final output terms.
@@ -3101,9 +3101,9 @@
 #
 #         See Also
 #         --------
-#         :meth:`zipline.pipeline.graph.ExecutionPlan.offset`
-#         :meth:`zipline.pipeline.engine.ExecutionPlan.mask_and_dates_for_term`
-#         :meth:`zipline.pipeline.engine.SimplePipelineEngine._inputs_for_term`
+#         :meth:`zipline.pipe.graph.ExecutionPlan.offset`
+#         :meth:`zipline.pipe.engine.ExecutionPlan.mask_and_dates_for_term`
+#         :meth:`zipline.pipe.engine.SimplePipelineEngine._inputs_for_term`
 #         """
 #         extra = self.extra_rows
 #
@@ -3153,8 +3153,8 @@
 #
 #         See Also
 #         --------
-#         :meth:`zipline.pipeline.graph.ExecutionPlan.offset`
-#         :meth:`zipline.pipeline.Term.dependencies`
+#         :meth:`zipline.pipe.graph.ExecutionPlan.offset`
+#         :meth:`zipline.pipe.Term.dependencies`
 #         """
 #         return {
 #             term: attrs['extra_rows']
@@ -3185,7 +3185,7 @@
 #         workspace : dict[Term, any]
 #             The values that have been computed for each term.
 #         all_dates : pd.DatetimeIndex
-#             All of the dates that are being computed for in the pipeline.
+#             All of the dates that are being computed for in the pipe.
 #
 #         Returns
 #         -------
@@ -3367,7 +3367,7 @@
 #         return perf_message
 #
 #
-# def run_pipeline(self, pipeline, start_session, chunksize):
+# def run_pipeline(self, pipe, start_session, chunksize):
 #     """
 #     Compute `Pipeline`, providing values for at least `start_date`.
 #
@@ -3402,7 +3402,7 @@
 #     end_session = sessions[end_loc]
 #
 #     return \
-#         self.engine.run_pipeline(pipeline, start_session, end_session), \
+#         self.engine.run_pipeline(pipe, start_session, end_session), \
 #         end_session
 #
 # @staticmethod
@@ -3436,11 +3436,11 @@
 #         Compute the Pipeline terms in the graph for the requested start and end
 #         dates.
 #
-#         This is where we do the actual work of running a pipeline.
+#         This is where we do the actual work of running a pipe.
 #
 #         Parameters
 #         ----------
-#         graph : zipline.pipeline.graph.ExecutionPlan
+#         graph : zipline.pipe.graph.ExecutionPlan
 #             Dependency graph of the terms to be executed.
 #         dates : pd.DatetimeIndex
 #             Row labels for our root mask.
@@ -3458,7 +3458,7 @@
 #         execution_order : list[Term]
 #             Order in which to execute terms.
 #         hooks : implements(PipelineHooks)
-#             Hooks to instrument pipeline execution.
+#             Hooks to instrument pipe execution.
 #
 #         Returns
 #         -------
@@ -3769,8 +3769,8 @@
 #         which asset are in the top-level universe at any point in time.
 #     populate_initial_workspace : callable, optional
 #         A function which will be used to populate the initial workspace when
-#         computing a pipeline. See
-#         :func:`zipline.pipeline.engine.default_populate_initial_workspace`
+#         computing a pipe. See
+#         :func:`zipline.pipe.engine.default_populate_initial_workspace`
 #         for more info.
 #     default_hooks : list, optional
 #         List of hooks that should be used to instrument all pipelines executed
@@ -3778,7 +3778,7 @@
 #
 #     See Also
 #     --------
-#     :func:`zipline.pipeline.engine.default_populate_initial_workspace`
+#     :func:`zipline.pipe.engine.default_populate_initial_workspace`
 #     """
 #     __slots__ = (
 #         '_get_loader',
@@ -3816,14 +3816,14 @@
 #             hooks = []
 #         return DelegatingHooks(self._default_hooks + hooks)
 #
-#     def run_pipeline(self, pipeline, start_date, end_date, hooks=None):
+#     def run_pipeline(self, pipe, start_date, end_date, hooks=None):
 #         """
-#         Compute values for ``pipeline`` from ``start_date`` to ``end_date``.
+#         Compute values for ``pipe`` from ``start_date`` to ``end_date``.
 #
 #         Parameters
 #         ----------
-#         pipeline : zipline.pipeline.Pipeline
-#             The pipeline to run.
+#         pipe : zipline.pipe.Pipeline
+#             The pipe to run.
 #         start_date : pd.Timestamp
 #             Start date of the computed matrix.
 #         end_date : pd.Timestamp
@@ -3837,24 +3837,24 @@
 #             A frame of computed results.
 #
 #             The ``result`` columns correspond to the entries of
-#             `pipeline.columns`, which should be a dictionary mapping strings to
-#             instances of :class:`zipline.pipeline.Term`.
+#             `pipe.columns`, which should be a dictionary mapping strings to
+#             instances of :class:`zipline.pipe.Term`.
 #
 #             For each date between ``start_date`` and ``end_date``, ``result``
-#             will contain a row for each asset that passed `pipeline.screen`.
+#             will contain a row for each asset that passed `pipe.screen`.
 #             A screen of ``None`` indicates that a row should be returned for
 #             each asset that existed each day.
 #         """
 #         hooks = self._resolve_hooks(hooks)
-#         with hooks.running_pipeline(pipeline, start_date, end_date):
+#         with hooks.running_pipeline(pipe, start_date, end_date):
 #             return self._run_pipeline_impl(
-#                 pipeline,
+#                 pipe,
 #                 start_date,
 #                 end_date,
 #                 hooks,
 #             )
 #
-#     def _run_pipeline_impl(self, pipeline, start_date, end_date, hooks):
+#     def _run_pipeline_impl(self, pipe, start_date, end_date, hooks):
 #         """Shared core for ``run_pipeline`` and ``run_chunked_pipeline``.
 #         """
 #         with hooks.computing_chunk(execution_order,
@@ -3881,26 +3881,26 @@
 #
 #
 #     def run_chunked_pipeline(self,
-#                              pipeline,
+#                              pipe,
 #                              start_date,
 #                              end_date,
 #                              chunksize,
 #                              hooks=None):
 #         """
-#         Compute values for ``pipeline`` from ``start_date`` to ``end_date``, in
+#         Compute values for ``pipe`` from ``start_date`` to ``end_date``, in
 #         date chunks of size ``chunksize``.
 #
 #         Chunked execution reduces memory consumption, and may reduce
-#         computation time depending on the contents of your pipeline.
+#         computation time depending on the contents of your pipe.
 #
 #         Parameters
 #         ----------
-#         pipeline : Pipeline
-#             The pipeline to run.
+#         pipe : Pipeline
+#             The pipe to run.
 #         start_date : pd.Timestamp
-#             The start date to run the pipeline for.
+#             The start date to run the pipe for.
 #         end_date : pd.Timestamp
-#             The end date to run the pipeline for.
+#             The end date to run the pipe for.
 #         chunksize : int
 #             The number of days to execute at a time.
 #         hooks : list[implements(PipelineHooks)], optional
@@ -3912,23 +3912,23 @@
 #             A frame of computed results.
 #
 #             The ``result`` columns correspond to the entries of
-#             `pipeline.columns`, which should be a dictionary mapping strings to
-#             instances of :class:`zipline.pipeline.Term`.
+#             `pipe.columns`, which should be a dictionary mapping strings to
+#             instances of :class:`zipline.pipe.Term`.
 #
 #             For each date between ``start_date`` and ``end_date``, ``result``
-#             will contain a row for each asset that passed `pipeline.screen`.
+#             will contain a row for each asset that passed `pipe.screen`.
 #             A screen of ``None`` indicates that a row should be returned for
 #             each asset that existed each day.
 #
 #         See Also
 #         --------
-#         :meth:`zipline.pipeline.engine.PipelineEngine.run_pipeline`
+#         :meth:`zipline.pipe.engine.PipelineEngine.run_pipeline`
 #         """
 #
 #         hooks = self._resolve_hooks(hooks)
 #
-#         run_pipeline = partial(self._run_pipeline_impl, pipeline, hooks=hooks)
-#         with hooks.running_pipeline(pipeline, start_date, end_date):
+#         run_pipeline = partial(self._run_pipeline_impl, pipe, hooks=hooks)
+#         with hooks.running_pipeline(pipe, start_date, end_date):
 #             chunks = [run_pipeline(s, e) for s, e in ranges]
 #
 #
@@ -4046,7 +4046,7 @@ import array,binascii,struct , numpy as np,sqlalchemy as sa
 
 # def shift_dates(dates, start_date, end_date, shift):
 #     """
-#     Shift dates of a pipeline query back by `shift` days.
+#     Shift dates of a pipe query back by `shift` days.
 #
 #     load_adjusted_array is called with dates on which the user's algo
 #     will be shown data, which means we need to return the data that would
@@ -4060,9 +4060,9 @@ import array,binascii,struct , numpy as np,sqlalchemy as sa
 #     dates : DatetimeIndex
 #         All known dates.
 #     start_date : pd.Timestamp
-#         Start date of the pipeline query.
+#         Start date of the pipe query.
 #     end_date : pd.Timestamp
-#         End date of the pipeline query.
+#         End date of the pipe query.
 #     shift : int
 #         The number of days to shift back the query dates.
 #     """
@@ -5662,7 +5662,7 @@ from six.moves.urllib_error import HTTPError
 #         建仓逻辑 --- 逐步建仓 1/2 原则 --- 1 优先发生信号先建仓 ，后发信号仓位变为剩下的1/2（为了提高资金利用效率）
 #                                         2 如果没新的信号 --- 在已经持仓的基础加仓（不管资金是否足够或者设定一个底层资金池）
 #         ---- 变相限定了单次单个标的最大持仓为1/2
-#         position + pipeline - ledger ---  (当ledger为空 --- position也为空)
+#         position + pipe - ledger ---  (当ledger为空 --- position也为空)
 #
 #         关于ump --- 只要当天不是一直在跌停价格，以全部出货为原则，涉及一个滑价问题（position的成交额 与前一周的成交额占比
 #         评估滑价），如果当天没有买入，可以适当放宽（开盘的时候卖出大部分，剩下的等等） ；
@@ -7009,7 +7009,7 @@ from six.moves.urllib_error import HTTPError
 # # print(namespace['signature'])
 #
 # import glob
-# res = glob.glob('/Users/python/Library/Mobile Documents/com~apple~CloudDocs/simulation/pipeline/strategy/*.py')
+# res = glob.glob('/Users/python/Library/Mobile Documents/com~apple~CloudDocs/simulation/pipe/strategy/*.py')
 # print(list(res))
 #
 # print(__file__)
@@ -8261,7 +8261,7 @@ from itertools import product
 #     """A PipelineHooks that defines no-op methods for all available hooks.
 #     """
 #     @contextmanager
-#     def running_pipeline(self, pipeline, start_date, end_date):
+#     def running_pipeline(self, pipe, start_date, end_date):
 #         yield
 #
 #     @contextmanager
@@ -8283,7 +8283,7 @@ from itertools import product
 #
 #     Parameters
 #     ----------
-#     terms : list[zipline.pipeline.LoadableTerm]
+#     terms : list[zipline.pipe.LoadableTerm]
 #         Terms being loaded.
 #     """
 #
@@ -8294,7 +8294,7 @@ from itertools import product
 #
 #     Parameters
 #     ----------
-#     terms : zipline.pipeline.ComputableTerm
+#     terms : zipline.pipe.ComputableTerm
 #         Terms being computed.
 #     """
 #
@@ -9417,7 +9417,96 @@ from dateutil.relativedelta import relativedelta
 #
 #     return csv_data_source
 # import glob
-# res = glob.glob('/Users/python/Library/Mobile Documents/com~apple~CloudDocs/simulation/pipeline/strategy/*.py')
+# res = glob.glob('/Users/python/Library/Mobile Documents/com~apple~CloudDocs/simulation/pipe/strategy/*.py')
 # print(list(res))
 #
 # print(__file__)
+
+# ####################
+# # Account Controls #
+# ####################
+#
+# def register_account_control(self, control):
+#     """
+#     Register a new AccountControl to be checked on each bar.
+#     """
+#     if self.initialized:
+#         raise RegisterAccountControlPostInit()
+#     self.account_controls.append(control)
+#
+# def validate_account_controls(self):
+#     for control in self.account_controls:
+#         control.validate(self.portfolio,
+#                          self.account,
+#                          self.get_datetime(),
+#                          self.trading_client.current_data)
+#
+# @api_method
+# def set_max_leverage(self, max_leverage):
+#     """Set a limit on the maximum leverage of the algorithm.
+#
+#     Parameters
+#     ----------
+#     max_leverage : float
+#         The maximum leverage for the algorithm. If not provided there will
+#         be no maximum.
+#     """
+#     control = MaxLeverage(max_leverage)
+#     self.register_account_control(control)
+#
+# @api_method
+# def set_min_leverage(self, min_leverage, grace_period):
+#     """Set a limit on the minimum leverage of the algorithm.
+#
+#     Parameters
+#     ----------
+#     min_leverage : float
+#         The minimum leverage for the algorithm.
+#     grace_period : pd.Timedelta
+#         The offset from the start date used to enforce a minimum leverage.
+#     """
+#     deadline = self.sim_params.start_session + grace_period
+#     control = MinLeverage(min_leverage, deadline)
+#     self.register_account_control(control)
+
+# def evaluate(self, positions, cache):
+#     _impl = partial(self._evaluate_for_sid, metadata=cache)
+#     # 执行退出算法
+#     with Pool(processes=len(positions))as pool:
+#         picker_votes = [pool.apply_async(_impl, position)
+#                         for position in positions]
+#         # selector --- position or False
+#         selector = [vote for vote in picker_votes if vote]
+#     return selector
+
+"""
+    trading_calendar: zipline.utils._calendar.exchange_calendar.TradingCalendar
+        The _calendar instance used to provide minute->session information.
+    first_trading_day : pd.Timestamp
+        The first trading day for the simulation.
+    equity_daily_reader : BcolzDailyBarReader, optional
+        The daily bar reader for equities. This will be used to service
+        daily data backtests or daily history calls in a minute backetest.
+        If a daily bar reader is not provided but a minute bar reader is,
+        the minutes will be rolled up to serve the daily requests.
+    equity_minute_reader : BcolzMinuteBarReader, optional
+        The minute bar reader for equities. This will be used to service
+        minute data backtests or minute history calls. This can be used
+        to serve daily calls if no daily bar reader is provided.
+    adjustment_reader : SQLiteAdjustmentWriter, optional
+        The adjustment reader. This is used to apply splits, dividends, and
+        other adjustment data to the raw data from the readers.
+"""
+
+# def _handle_transaction(self, transaction):
+#     asset = transaction.asset
+#     try:
+#         position = self.positions[asset]
+#     except KeyError:
+#         position = self.positions[asset] = Position(asset)
+#     cash_flow = position.update(transaction)
+#     if position.closed:
+#         dts = transaction.created_dt.strftime('%Y-%m-%d')
+#         self.record_closed_position[dts].append(position)
+#         del self.positions[asset]
+#     return cash_flow

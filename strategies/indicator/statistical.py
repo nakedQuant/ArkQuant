@@ -63,7 +63,7 @@ class RollingPearson(_RollingCorrelation):
     base_factor : zipline.pipeline.Factor
         The factor for which to compute correlations of each of its columns
         with `target`.
-    target : zipline.pipeline.Term with a numeric dtype
+    target : zipline.pipe.Term with a numeric dtype
         The term with which to compute correlations against each column of data
         produced by `base_factor`. This term may be a Factor, a BoundColumn or
         a Slice. If `target` is two-dimensional, correlations are computed
@@ -71,7 +71,7 @@ class RollingPearson(_RollingCorrelation):
     correlation_length : int
         Length of the lookback window over which to compute each correlation
         coefficient.
-    mask : zipline.pipeline.Filter, optional
+    mask : zipline.pipe.Filter, optional
         A Filter describing which asset (columns) of `base_factor` should have
         their correlation with `target` computed each day.
 
@@ -79,7 +79,7 @@ class RollingPearson(_RollingCorrelation):
     --------
     :func:`scipy.stats.pearsonr`
     :meth:`Factor.pearsonr`
-    :class:`zipline.pipeline.factors.RollingPearsonOfReturns`
+    :class:`zipline.pipe.factors.RollingPearsonOfReturns`
 
     Notes
     -----
@@ -109,7 +109,7 @@ class RollingSpearman(_RollingCorrelation):
     base_factor : zipline.pipeline.Factor
         The factor for which to compute correlations of each of its columns
         with `target`.
-    target : zipline.pipeline.Term with a numeric dtype
+    target : zipline.pipe.Term with a numeric dtype
         The term with which to compute correlations against each column of data
         produced by `base_factor`. This term may be a Factor, a BoundColumn or
         a Slice. If `target` is two-dimensional, correlations are computed
@@ -117,7 +117,7 @@ class RollingSpearman(_RollingCorrelation):
     correlation_length : int
         Length of the lookback window over which to compute each correlation
         coefficient.
-    mask : zipline.pipeline.Filter, optional
+    mask : zipline.pipe.Filter, optional
         A Filter describing which asset (columns) of `base_factor` should have
         their correlation with `target` computed each day.
 
@@ -125,7 +125,7 @@ class RollingSpearman(_RollingCorrelation):
     --------
     :func:`scipy.stats.spearmanr`
     :meth:`Factor.spearmanr`
-    :class:`zipline.pipeline.factors.RollingSpearmanOfReturns`
+    :class:`zipline.pipe.factors.RollingSpearmanOfReturns`
 
     Notes
     -----
@@ -155,13 +155,13 @@ class RollingLinearRegression(CustomFactor):
     dependent : zipline.pipeline.Factor
         The factor whose columns are the predicted/dependent variable of each
         regression with `independent`.
-    independent : zipline.pipeline.slice.Slice or zipline.pipeline.Factor
+    independent : zipline.pipe.slice.Slice or zipline.pipeline.Factor
         The factor/slice whose columns are the predictor/independent variable
         of each regression with `dependent`. If `independent` is a Factor,
         regressions are computed asset-wise.
     regression_length : int
         Length of the lookback window over which to compute each regression.
-    mask : zipline.pipeline.Filter, optional
+    mask : zipline.pipe.Filter, optional
         A Filter describing which asset (columns) of `dependent` should be
         regressed against `independent` each day.
 
@@ -169,7 +169,7 @@ class RollingLinearRegression(CustomFactor):
     --------
     :func:`scipy.stats.linregress`
     :meth:`Factor.linear_regression`
-    :class:`zipline.pipeline.factors.RollingLinearRegressionOfReturns`
+    :class:`zipline.pipe.factors.RollingLinearRegressionOfReturns`
 
     Notes
     -----
@@ -239,7 +239,7 @@ class RollingPearsonOfReturns(RollingPearson):
     correlation_length : int >= 1
         Length of the lookback window over which to compute each correlation
         coefficient.
-    mask : zipline.pipeline.Filter, optional
+    mask : zipline.pipe.Filter, optional
         A Filter describing which asset should have their correlation with the
         target asset computed each day.
 
@@ -291,8 +291,8 @@ class RollingPearsonOfReturns(RollingPearson):
 
     See Also
     --------
-    :class:`zipline.pipeline.factors.RollingSpearmanOfReturns`
-    :class:`zipline.pipeline.factors.RollingLinearRegressionOfReturns`
+    :class:`zipline.pipe.factors.RollingSpearmanOfReturns`
+    :class:`zipline.pipe.factors.RollingLinearRegressionOfReturns`
     """
     def __new__(cls,
                 target,
@@ -329,7 +329,7 @@ class RollingSpearmanOfReturns(RollingSpearman):
     correlation_length : int >= 1
         Length of the lookback window over which to compute each correlation
         coefficient.
-    mask : zipline.pipeline.Filter, optional
+    mask : zipline.pipe.Filter, optional
         A Filter describing which asset should have their correlation with the
         target asset computed each day.
 
@@ -341,8 +341,8 @@ class RollingSpearmanOfReturns(RollingSpearman):
 
     See Also
     --------
-    :class:`zipline.pipeline.factors.RollingPearsonOfReturns`
-    :class:`zipline.pipeline.factors.RollingLinearRegressionOfReturns`
+    :class:`zipline.pipe.factors.RollingPearsonOfReturns`
+    :class:`zipline.pipe.factors.RollingLinearRegressionOfReturns`
     """
     def __new__(cls,
                 target,
@@ -378,7 +378,7 @@ class RollingLinearRegressionOfReturns(RollingLinearRegression):
         returns require a window length of 2.
     regression_length : int >= 1
         Length of the lookback window over which to compute each regression.
-    mask : zipline.pipeline.Filter, optional
+    mask : zipline.pipe.Filter, optional
         A Filter describing which asset should be regressed against the target
         asset each day.
 
@@ -401,7 +401,7 @@ class RollingLinearRegressionOfReturns(RollingLinearRegression):
       regression.
 
     For more help on factors with multiple outputs, see
-    :class:`zipline.pipeline.CustomFactor`.
+    :class:`zipline.pipe.CustomFactor`.
 
     Examples
     --------
@@ -458,8 +458,8 @@ class RollingLinearRegressionOfReturns(RollingLinearRegression):
 
     See Also
     --------
-    :class:`zipline.pipeline.factors.RollingPearsonOfReturns`
-    :class:`zipline.pipeline.factors.RollingSpearmanOfReturns`
+    :class:`zipline.pipe.factors.RollingPearsonOfReturns`
+    :class:`zipline.pipe.factors.RollingSpearmanOfReturns`
     """
     window_safe = True
 

@@ -7,8 +7,9 @@ Created on Tue Mar 12 15:37:47 2019
 """
 import pandas as pd, json
 from functools import lru_cache
+from gateWay.asset.assets import Asset
 from .tools import _parse_url
-from .third_api.client import tsclient
+from .api.client import tsclient
 from .bar_reader import AssetSessionReader
 from .bcolz_reader import BcolzMinuteReader
 from .adjustment_reader import SQLiteAdjustmentReader
@@ -27,24 +28,8 @@ class DataPortal(object):
 
     Parameters
     ----------
-    asset_finder : zipline.assets.assets.AssetFinder
+    asset_finder : assets.assets.AssetFinder
         The AssetFinder instance used to resolve asset.
-    trading_calendar: zipline.utils._calendar.exchange_calendar.TradingCalendar
-        The _calendar instance used to provide minute->session information.
-    first_trading_day : pd.Timestamp
-        The first trading day for the simulation.
-    equity_daily_reader : BcolzDailyBarReader, optional
-        The daily bar reader for equities. This will be used to service
-        daily data backtests or daily history calls in a minute backetest.
-        If a daily bar reader is not provided but a minute bar reader is,
-        the minutes will be rolled up to serve the daily requests.
-    equity_minute_reader : BcolzMinuteBarReader, optional
-        The minute bar reader for equities. This will be used to service
-        minute data backtests or minute history calls. This can be used
-        to serve daily calls if no daily bar reader is provided.
-    adjustment_reader : SQLiteAdjustmentWriter, optional
-        The adjustment reader. This is used to apply splits, dividends, and
-        other adjustment data to the raw data from the readers.
     """
 
     OHLCV_FIELDS = frozenset(["open", "high", "low", "close", "volume"])
@@ -97,7 +82,7 @@ class DataPortal(object):
         all_assets = self.asset_finder.retrieve_all(asset_type)
         return all_assets
 
-    def get_dividends_for_sid(self, sid, trading_day):
+    def get_dividends_for_asset(self, asset, trading_day):
         """
         splits --- divdends
 
@@ -106,7 +91,7 @@ class DataPortal(object):
 
         Parameters
         ----------
-        sid: int
+        asset: Asset
             The asset whose stock dividends should be returned.
 
         trading_day: pd.DatetimeIndex
@@ -116,17 +101,17 @@ class DataPortal(object):
         -------
             equity divdends or cash divdends
         """
-        divdends = self._adjustment_reader.load_divdend_for_sid(sid, trading_day)
-        return divdends
+        dividends = self._adjustment_reader.load_divdend_for_sid(asset.sid, trading_day)
+        return dividends
 
-    def get_rights_for_sid(self, sid, trading_day):
+    def get_rights_for_asset(self, asset, trading_day):
         """
         Returns all the stock dividends for a specific sid that occur
         in the given trading range.
 
         Parameters
         ----------
-        sid: int
+        asset: Asset
             The asset whose stock dividends should be returned.
 
         trading_day: pd.DatetimeIndex
@@ -136,7 +121,7 @@ class DataPortal(object):
         -------
             equity rights
         """
-        rights = self._adjustment_reader.load_right_for_sid(sid, trading_day)
+        rights = self._adjustment_reader.load_right_for_sid(asset.sid, trading_day)
         return rights
 
     @lru_cache(maxsize=32)
@@ -144,16 +129,23 @@ class DataPortal(object):
         pct = self._pricing_reader['daily'].get_stock_pct(dts)
         return pct
 
-    def get_open_pct(self, asset, dts):
+    def get_open_pct(self, assets, dts):
+        open_pct = dict()
+        pre_close = dict()
         # 获取标的pct_change
         frame = self._retrieve_pct(dts)
-        pct = frame.loc[asset.sid, 'pct']
+        if isinstance(assets, Asset):
+            assets = [assets]
         # 获取close
-        kline = self.get_spot_value(asset, dts, 'daily', ['open', 'close'])
+        kline = self.get_window_data(assets, 1, ['open', 'close'], 'daily')
         # 计算close
-        preclose = kline['close'] / (1 + pct)
-        open_pct = kline['open'][-1] / preclose
-        return open_pct, preclose
+        for asset in assets:
+            sid = asset.sid
+            daily = kline[sid]
+            pct = frame.loc[sid, 'pct']
+            pre_close[asset] = daily['close'] / (1 + pct)
+            open_pct[asset] = daily['open'][-1] / pre_close
+        return open_pct, pre_close
 
     def get_spot_value(self, asset, dts, frequency, fields):
         spot_value = self._pricing_reader[frequency].get_spot_value(dts, asset, fields)
@@ -174,6 +166,7 @@ class DataPortal(object):
         history_arrays = history.history(assets, fields, end_dt, bar_count)
         return history_arrays
 
+    @lru_cache(maxsize=32)
     def get_history_window(self,
                            assets,
                            end_date,
@@ -226,6 +219,7 @@ class DataPortal(object):
                                                             data_frequency)
         return history_window_arrays
 
+    @lru_cache(maxsize=32)
     def get_window_data(self,
                         assets,
                         dt,

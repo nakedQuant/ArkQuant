@@ -9,8 +9,8 @@ import pandas as pd, pytz, numpy as np
 from datetime import datetime
 from dateutil import rrule
 from toolz import partition_all
-from gateWay.driver.db_schema import engine
-from ._config import autumn, spring, Holiday
+from _calendar import autumn, spring, Holiday
+from gateWay.driver.api.client import tsclient
 
 
 class TradingCalendar (object):
@@ -19,8 +19,8 @@ class TradingCalendar (object):
     """
 
     def __init__(self):
-        self.engine = engine
-        self._fixed_holiday()
+        trading_days = tsclient.to_ts_calendar('1990-01-01', '3000-01-01')
+        self.all_sessions = trading_days['trade_dt'].values
 
     @property
     def _fixed_holiday(self):
@@ -35,7 +35,7 @@ class TradingCalendar (object):
             rrule.YEARLY,
             byyearday=1,
             cache=True,
-            dstart=start,
+            dtstart=start,
             until=end
         )
         non_trading_rules.update({'new_year': new_year})
@@ -73,7 +73,7 @@ class TradingCalendar (object):
 
     def _roll_forward(self, dt, window):
         """
-        Given a date, align it to the _calendar of the pipeline's domain.
+        Given a date, align it to the _calendar of the pipe's domain.
         dt = pd.Timestamp(dt, tz='UTC')
 
         Parameters
@@ -176,14 +176,14 @@ class TradingCalendar (object):
         return o_c
 
     def compute_range_chunks(self, start_date, end_date, chunk_size):
-        """Compute the start and end dates to run a pipeline for.
+        """Compute the start and end dates to run a pipe for.
 
         Parameters
         ----------
         start_date : pd.Timestamp
-            The first date in the pipeline.
+            The first date in the pipe.
         end_date : pd.Timestamp
-            The last date in the pipeline.
+            The last date in the pipe.
         chunk_size : int or None
             The size of the chunks to run. Setting this to None returns one chunk.
         """
@@ -195,8 +195,9 @@ class TradingCalendar (object):
     def get_trading_day_near_holiday(self, holiday_name, forward=True):
         if holiday_name not in Holiday:
             raise ValueError('unidentified holiday name')
+        # holiday_days = self.non_trading_mappings[holiday_name]
         holiday_days = self._fixed_holiday[holiday_name]
-        idx_list = [ np.searchsorted(self.all_sessions, t)  for t in holiday_days]
+        idx_list = [np.searchsorted(self.all_sessions, t) for t in holiday_days]
         if forward:
             trading_list = self.all_sessions[list(map(lambda x: x - 1, idx_list))]
         else:

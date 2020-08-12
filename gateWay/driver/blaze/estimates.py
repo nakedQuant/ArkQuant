@@ -24,7 +24,7 @@ from zipline.pipeline.loaders.earnings_estimates import (
 
 
 class BlazeEstimatesLoader(implements(PipelineLoader)):
-    """An abstract pipeline loader for the estimates datasets that loads
+    """An abstract pipe loader for the estimates datasets that loads
     data from a blaze expression.
 
     Parameters

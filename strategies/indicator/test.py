@@ -123,9 +123,9 @@ class FastStochasticOscillator(CustomFactor):
     market analysis. It is recommended to use the slow stochastic oscillator
     or a moving average of the %K [%D].
 
-    **Default Inputs:** :data: `zipline.pipeline.data.EquityPricing.close`
-                        :data: `zipline.pipeline.data.EquityPricing.low`
-                        :data: `zipline.pipeline.data.EquityPricing.high`
+    **Default Inputs:** :data: `zipline.pipe.data.EquityPricing.close`
+                        :data: `zipline.pipe.data.EquityPricing.low`
+                        :data: `zipline.pipe.data.EquityPricing.high`
 
     **Default Window Length:** 14
 
@@ -165,7 +165,7 @@ class MovingAverageConvergenceDivergenceSignal(CustomFactor):
     reveals changes in the strength, direction, momentum, and duration of a
     trend in a stock's price.
 
-    **Default Inputs:** :data:`zipline.pipeline.data.EquityPricing.close`
+    **Default Inputs:** :data:`zipline.pipe.data.EquityPricing.close`
 
     Parameters
     ----------
@@ -178,7 +178,7 @@ class MovingAverageConvergenceDivergenceSignal(CustomFactor):
 
     Notes
     -----
-    Unlike most pipeline expressions, this factor does not accept a
+    Unlike most pipe expressions, this factor does not accept a
     ``window_length`` parameter. ``window_length`` is inferred from
     ``slow_period`` and ``signal_period``.
     """

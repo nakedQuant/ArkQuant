@@ -91,7 +91,7 @@ deltas applied. For example, imagine we had one data point per asset per day
 for some dataset. We could dramatically speed up our queries by pre populating
 a downsampled version which has the most recently known value at the start of
 each month. Then, when we query, we only must look back at most one month
-before the start of the pipeline query to provide enough data to forward fill
+before the start of the pipe query to provide enough data to forward fill
 correctly.
 
 Conversion from Blaze to the Pipeline API
@@ -100,7 +100,7 @@ Conversion from Blaze to the Pipeline API
 Now that our data is structured in the way that the blaze loader expects, we
 are ready to convert our blaze expressions into Pipeline API objects.
 
-This module (zipline.pipeline.loaders.blaze) exports a function called
+This module (zipline.pipe.loaders.blaze) exports a function called
 ``from_blaze`` which performs this mapping.
 
 The expression that you are trying to convert must either be tabular or
@@ -112,7 +112,7 @@ This represents an expression of dimension 1 which may be fixed or variable,
 whose measure is either some record or a scalar.
 
 The record case defines the entire table with all of the columns, this maps the
-blaze expression into a pipeline DataSet. This dataset will have a column for
+blaze expression into a pipe DataSet. This dataset will have a column for
 each field of the record. Some datashape types cannot be coerced into Pipeline
 API compatible types and in that case, a column cannot be constructed.
 Currently any numeric type that may be promoted to a float64 is compatible with
@@ -132,8 +132,8 @@ Using our Pipeline DataSets and Columns
 
 Once we have mapped our blaze expressions into Pipeline API objects, we may
 use them just like any other datasets or columns. For more information on how
-to run a pipeline or using the Pipeline API, see:
-www.quantopian.com/help#pipeline-api
+to run a pipe or using the Pipeline API, see:
+www.quantopian.com/help#pipe-api
 """
 from __future__ import division, absolute_import
 
@@ -195,7 +195,7 @@ except ImportError:
 
     def barf(*args, **kwargs):
         raise RuntimeError(
-            "zipline.pipeline.loaders.blaze._core failed to import"
+            "zipline.pipe.loaders.blaze._core failed to import"
         )
 
     adjusted_arrays_from_rows_with_assets = barf
@@ -260,7 +260,7 @@ def datashape_type_to_numpy(type_):
     """
     Given a datashape type, return the associated numpy type. Maps
     datashape's DateTime type to numpy's `datetime64[ns]` dtype, since the
-    numpy datetime returned by datashape isn't supported by pipeline.
+    numpy datetime returned by datashape isn't supported by pipe.
 
     Parameters
     ----------
@@ -299,7 +299,7 @@ def new_dataset(expr, missing_values, domain):
 
         This needs to be a frozenset rather than a dict or tuple of tuples
         because we want a collection that's unordered but still hashable.
-    domain : zipline.pipeline.domain.Domain
+    domain : zipline.pipe.domain.Domain
         Domain of the dataset to be created.
 
     Returns
@@ -316,7 +316,7 @@ def new_dataset(expr, missing_values, domain):
     class_dict = {'ndim': 2 if SID_FIELD_NAME in expr.fields else 1}
     for name, type_ in expr.dshape.measure.fields:
         # Don't generate a column for sid or timestamp, since they're
-        # implicitly the labels if the arrays that will be passed to pipeline
+        # implicitly the labels if the arrays that will be passed to pipe
         # Terms.
         if name in (SID_FIELD_NAME, TS_FIELD_NAME):
             continue
@@ -551,14 +551,14 @@ def from_blaze(expr,
         with the name of ``expr._name`` + '_checkpoints'. If None is passed,
         no checkpoints will be used.
     loader : BlazeLoader, optional
-        The blaze loader to attach this pipeline dataset to. If None is passed,
+        The blaze loader to attach this pipe dataset to. If None is passed,
         the global blaze loader is used.
     resources : dict or any, optional
         The data to execute the blaze expressions against. This is used as the
         scope for ``bz.compute``.
     odo_kwargs : dict, optional
         The keyword arguments to pass to odo when evaluating the expressions.
-    domain : zipline.pipeline.domain.Domain
+    domain : zipline.pipe.domain.Domain
         Domain of the dataset to be created.
     missing_values : dict[str -> any], optional
         A dict mapping column names to missing values for those columns.
@@ -800,7 +800,7 @@ class ExprData(object):
 
 
 class BlazeLoader(object):
-    """A pipeline for datasets constructed with ``from_blaze``.
+    """A pipe for datasets constructed with ``from_blaze``.
 
     Parameters
     ----------
@@ -868,7 +868,7 @@ class BlazeLoader(object):
         Parameters
         ----------
         dataset : DataSet
-            The pipeline dataset to map to the given expressions.
+            The pipe dataset to map to the given expressions.
         expr : Expr
             The baseline values.
         deltas : Expr, optional
@@ -880,7 +880,7 @@ class BlazeLoader(object):
 
         See Also
         --------
-        :func:`zipline.pipeline.loaders.blaze.from_blaze`
+        :func:`zipline.pipe.loaders.blaze.from_blaze`
         """
         expr_data = ExprData(
             expr,
@@ -904,7 +904,7 @@ class BlazeLoader(object):
         Parameters
         ----------
         column : BoundColumn
-            The pipeline dataset to map to the given expressions.
+            The pipe dataset to map to the given expressions.
         expr : Expr
             The baseline values.
         deltas : Expr, optional
@@ -916,7 +916,7 @@ class BlazeLoader(object):
 
         See Also
         --------
-        :func:`zipline.pipeline.loaders.blaze.from_blaze`
+        :func:`zipline.pipe.loaders.blaze.from_blaze`
         """
         self._table_expressions[column] = ExprData(
             expr,

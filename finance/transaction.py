@@ -9,10 +9,10 @@ Created on Tue Mar 12 15:37:47 2019
 
 class Transaction(object):
 
-    __slots__ = ['asset', 'amount', 'price', 'created_dt']
+    __slots__ = ['event', 'amount', 'price', 'created_dt']
 
-    def __init__(self, asset, amount, price, cost, dt):
-        self.asset = asset
+    def __init__(self, event, amount, price, cost, dt):
+        self.event = event
         self.amount = amount
         self.price = price
         self.cost = cost
@@ -21,19 +21,20 @@ class Transaction(object):
     def __repr__(self):
         template = (
             "{cls}(asset={asset}, dt={dt},"
-            " amount={amount}, direction={direction} price={price})"
+            " amount={amount},created_by={created_by}, direction={direction}, price={price}, dt={dt})"
         )
         return template.format(
             cls=type(self).__name__,
-            asset=self.asset,
+            asset=self.event.asset,
             amount=self.amount,
+            created_by=self.event.name,
             direction=self.direction,
             price=self.price,
             dt=self.created_dt,
         )
 
-    def __getitem__(self, name):
-        return self.__dict__[name]
+    def __getitem__(self, attr):
+        return self.__dict__[attr]
 
     def __setattr__(self, key, value):
         raise NotImplementedError('immutable object')
@@ -52,13 +53,13 @@ def create_transaction(order, commission):
     :param commission: Commission object used for calculating order cost
     :return: transaction
     """
-    asset = order.asset
+    event = order.event
     sign = -1 if order.direction == 'negative' else 1
     # calculate cost
     cost = commission.calculate(order)
     # create txn
     transaction = Transaction(
-        asset=asset,
+        event=event,
         amount=order.amount * sign,
         price=order.price,
         dt=order.created_dt,

@@ -25,10 +25,10 @@ class OrderType(Enum):
 
 class Order(object):
 
-    __slots__ = ['asset', 'price', 'amount', 'created_dt', 'direction', 'execution_style', 'slippage_model']
+    __slots__ = ['event', 'price', 'amount', 'created_dt', 'direction', 'execution_style', 'slippage_model']
 
-    def __init__(self, asset, price, amount, ticker, direction, style, slippage_model):
-        self.asset = asset
+    def __init__(self, event, price, amount, ticker, direction, style, slippage_model):
+        self.event = event
         self.price = price
         self.amount = amount
         self.created_dt = ticker
@@ -39,6 +39,10 @@ class Order(object):
     @staticmethod
     def make_id():
         return uuid.uuid4().hex()
+
+    @property
+    def asset(self):
+        return self.event.asset
 
     @property
     def sid(self):
@@ -88,7 +92,7 @@ class Order(object):
         return name in self.__dict__
 
     def to_dict(self):
-        dct = {name: getattr(self.name)
+        dct = {name: getattr(self, name)
                for name in self.__slots__}
         return dct
 
@@ -104,6 +108,3 @@ class Order(object):
 
     def __setattr__(self, key, value):
         raise NotImplementedError()
-
-
-__all__ = [Order]
