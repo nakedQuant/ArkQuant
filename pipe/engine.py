@@ -33,7 +33,6 @@ class Engine(ABC):
         :param dts: initialize attach pipe and cache metadata for engine
         :return:
         """
-        # ledger
         # 判断ledger 是否update
         dts = ledger.synchronized_clock
         # 剔除配股的持仓
@@ -75,7 +74,6 @@ class Engine(ABC):
         default : pipe --- default asset list
         ----------
         return --- event
-
         """
         _impl = partial(self._run_pipeline,
                         metadata=pipeline_metadata,

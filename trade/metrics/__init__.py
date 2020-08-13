@@ -7,6 +7,7 @@ Created on Sun Feb 17 16:11:34 2019
 """
 from trade.metrics.tracker import _ClassicRiskMetrics
 from trade.metrics.metric import (
+    SessionField,
     DailyLedgerField,
     PNL,
     CashFlow,
@@ -37,6 +38,7 @@ from trade.metrics.analyzers import (
 
 def default_metrics():
     return {
+        SessionField(),
         DailyLedgerField('portfolio.portfolio_value'),
         DailyLedgerField('portfolio.position_values'),
         DailyLedgerField('portfolio.start_cash', 'cash'),

@@ -30,6 +30,25 @@ class _ConstantCumulativeRiskMetric(object):
         packet['cumulative_risk_metrics'][self._field] = self._value
 
 
+class SessionField(object):
+    """Like :class:`~zipline.finance.metrics.metrics.SimpleLedgerField` but
+    also puts the current value in the ``cumulative_perf`` section.
+
+    Parameters
+    ----------
+    ledger_field : str
+        The ledger field to read.
+    packet_field : str, optional
+        The name of the field to populate in the packet. If not provided,
+        ``ledger_field`` will be used.
+    """
+    def end_of_session(self,
+                       packet,
+                       ledger,
+                       session_ix):
+        packet['daily_perf']['period_close'] = session_ix
+
+
 class DailyLedgerField(object):
     """Like :class:`~zipline.finance.metrics.metrics.SimpleLedgerField` but
     also puts the current value in the ``cumulative_perf`` section.

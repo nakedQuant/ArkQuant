@@ -14,7 +14,6 @@ class SimulationBlotter(object):
         transform orders which are simulated by gen module to transactions
         撮合成交逻辑基于时间或者价格
     """
-
     def __init__(self,
                  generator,
                  delay=1):
@@ -25,38 +24,38 @@ class SimulationBlotter(object):
         transactions = [create_transaction(order, self._iterator.commission) for order in orders]
         return transactions
 
-    def simulate(self, asset, capital, dts, direction, portfolio):
+    def simulate(self, event, capital, dts, direction, portfolio):
         """
-        :param asset: Asset
+        :param event: Event (namedtuple)
         :param capital: float
         :param dts: pd.Timestamp or str
         :param direction: positive or negative
         :param portfolio: portfolio
         :return: list of transactions
         """
-        orders = self._iterator.simulate(asset, capital, dts, direction, portfolio)
+        orders = self._iterator.simulate(event, capital, dts, direction, portfolio)
         transactions = self.create_bulk_transactions(orders)
         # 计算效率
-        utility = sum([t.amount for t in transactions]) / sum([order.amount for order in orders])
-        return transactions, utility
+        # utility = sum([t.amount for t in transactions]) / sum([order.amount for order in orders])
+        return transactions
 
-    def simulate_txn(self, asset, amount, dts, direction):
+    def simulate_txn(self, event, amount, dts, direction):
         """
-        :param asset: Asset
+        :param event: Event (namedtuple)
         :param amount: order.amount ,int
         :param dts: pd.Timestamp or str
         :param direction: positive or negative
         :return: list of transactions
         """
-        direct_orders = self._iterator.simulate_order(asset, amount, dts, direction)
+        direct_orders = self._iterator.simulate_order(event, amount, dts, direction)
         transactions = self.create_bulk_transactions(direct_orders)
-        # 计算效率
-        utility = sum([txn.amount for txn in transactions]) / amount
-        return transactions, utility
+        # # 计算效率
+        # utility = sum([txn.amount for txn in transactions]) / amount
+        return transactions
 
     def yield_txn(self, p, c, dts, portfolio):
         """
-            holding , asset ,dts
+            p -- position , c --- event , dts --- pd.Timestamp or str
             基于触发器构建 通道 基于策略 卖出 --- 买入
             principle --- 只要发出卖出信号的最大限度的卖出，如果没有完全卖出直接转入下一个交易日继续卖出
             订单 --- priceOrder TickerOrder Intime
@@ -77,7 +76,7 @@ class SimulationBlotter(object):
             卖出标的 --- 对应买入标的 ，闲于的资金
         """
         # 卖出持仓
-        p_transactions, p_utility = self._iterator.yield_order(p.asset, p.amount, dts, 'negative')
+        p_transactions = self.simulate_txn(p.event, p.amount, dts, 'negative')
         p_transaction_prices = np.array([p_txn.price for p_txn in p_transactions])
         # 执行对应的买入算法
         c_data = self._iterator._create_data(dts, c)
@@ -93,5 +92,5 @@ class SimulationBlotter(object):
         # 订单 --- 交易
         c_transactions = self.create_bulk_transactions(c_orders)
         # 计算效率
-        c_utility = sum([txn.amount for txn in c_transactions]) / sum(c_sizes)
-        return p_transactions, p_utility, c_transactions, c_utility
+        # c_utility = sum([txn.amount for txn in c_transactions]) / sum(c_sizes)
+        return p_transactions, c_transactions

@@ -21,7 +21,6 @@ from os import path
 import numpy as np
 import pandas as pd
 
-
 """暂时支持windows和mac os，不是windows就是mac os（不使用Darwin做判断），linux下没有完整测试"""
 g_is_mac_os = platform.system().lower().find("windows") < 0 and sys.platform != "win32"
 """python版本环境，是否python3"""

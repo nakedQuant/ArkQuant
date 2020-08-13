@@ -7,10 +7,10 @@ Created on Sat Feb 16 13:56:19 2019
 """
 
 import json
+import socket
 import ssl
 import sys
 import traceback
-import socket
 from datetime import datetime
 from threading import Lock, Thread
 from time import sleep

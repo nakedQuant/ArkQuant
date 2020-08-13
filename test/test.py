@@ -9516,3 +9516,154 @@ from dateutil.relativedelta import relativedelta
 # operator.attrgetter(return a callable that fetches attr from operant)
 # operate.itemgetter (return a callable that uses method __getitem__())
 # rsplit 从右往左 参数 sep(默认为所有空字符) count=count（sep）
+
+# def attach_pipeline(self, pipeline, name, chunks=None, eager=True):
+#     """Register a Pipeline to be computed at the start of each day.
+#
+#     Parameters
+#     ----------
+#     pipeline : Pipeline
+#         The Pipeline to have computed.
+#     name : str
+#         The name of the Pipeline.
+#     chunks : int or iterator, optional
+#         The number of days to compute Pipeline results for. Increasing
+#         this number will make it longer to get the first results but
+#         may improve the total runtime of the simulation. If an iterator
+#         is passed, we will run in chunks based on values of the iterator.
+#         Default is True.
+#     eager : bool, optional
+#         Whether or not to compute this Pipeline prior to
+#         before_trading_start.
+#
+#     Returns
+#     -------
+#     Pipeline : Pipeline
+#         Returns the Pipeline that was attached unchanged.
+#
+#     See Also
+#     --------
+#     :func:`zipline.api.pipeline_output`
+#     """
+#     if chunks is None:
+#         chunks = chain([5], repeat(126))
+#     elif isinstance(chunks, int):
+#         chunks = repeat(chunks)
+#
+#     if name in self._pipelines:
+#         raise DuplicatePipelineName(name=name)
+#     return pipeline
+
+# def _sync_last_sale_prices(self, dt=None):
+#     """Sync the last sale prices on the metrics tracker to a given
+#     datetime.
+#
+#     Parameters
+#     ----------
+#     dt : datetime
+#         The time to sync the prices to.
+#
+#     Notes
+#     -----
+#     This call is cached by the datetime. Repeated calls in the same bar
+#     are cheap.
+#     """
+#     if dt is None:
+#         dt = self.datetime
+#
+#     if dt != self._last_sync_time:
+#         self.metrics_tracker.sync_last_sale_prices(
+#             dt,
+#             self.data_portal,
+#         )
+#         self._last_sync_time = dt
+
+# @property
+# def portfolio(self):
+#     self._sync_last_sale_prices()
+#     return self.metrics_tracker.portfolio
+#
+# @property
+# def account(self):
+#     self._sync_last_sale_prices()
+#     return self.metrics_tracker.account
+
+# # 根据dt获取change,动态计算，更新数据
+# def calculate_capital_changes(self, dt, emission_rate, is_interday,
+#                               portfolio_value_adjustment=0.0):
+#     """
+#     If there is a capital change for a given dt, this means the the change
+#     occurs before `handle_data` on the given dt. In the case of the
+#     change being a target value, the change will be computed on the
+#     portfolio value according to prices at the given dt
+#
+#     `portfolio_value_adjustment`, if specified, will be removed from the
+#     portfolio_value of the cumulative performance when calculating deltas
+#     from target capital changes.
+#     """
+#     try:
+#         capital_change = self.capital_changes[dt]
+#     except KeyError:
+#         return
+#
+#     self._sync_last_sale_prices()
+#     if capital_change['type'] == 'target':
+#         target = capital_change['value']
+#         capital_change_amount = (
+#             target -
+#             (
+#                 self.portfolio.portfolio_value -
+#                 portfolio_value_adjustment
+#             )
+#         )
+#
+#         logging.log.info('Processing capital change to target %s at %s. Capital '
+#                  'change delta is %s' % (target, dt,
+#                                          capital_change_amount))
+#     elif capital_change['type'] == 'delta':
+#         target = None
+#         capital_change_amount = capital_change['value']
+#         logging.log.info('Processing capital change of delta %s at %s'
+#                  % (capital_change_amount, dt))
+#     else:
+#         logging.log.error("Capital change %s does not indicate a valid type "
+#                   "('target' or 'delta')" % capital_change)
+#         return
+#
+#     self.capital_change_deltas.update({dt: capital_change_amount})
+#     self.metrics_tracker.capital_change(capital_change_amount)
+#
+#     yield {
+#         'capital_change':
+#             {'date': dt,
+#              'type': 'cash',
+#              'target': target,
+#              'delta': capital_change_amount}
+#     }
+from copy import copy
+from datetime import tzinfo
+import logging
+
+# @api_method
+# @preprocess(tz=coerce_string(pytz.timezone))
+# @expect_types(tz=optional(tzinfo))
+# def get_datetime(self, tz=None):
+#     """
+#     Returns the current simulation datetime.
+#
+#     Parameters
+#     ----------
+#     tz : tzinfo or str, optional
+#         The timezone to return the datetime in. This defaults to utc.
+#
+#     Returns
+#     -------
+#     dt : datetime
+#         The current simulation datetime converted to ``tz``.
+#     """
+#     dt = self.datetime
+#     assert dt.tzinfo == pytz.utc, "algorithm should have a utc datetime"
+#     if tz is not None:
+#         dt = dt.astimezone(tz)
+#     return dt
+

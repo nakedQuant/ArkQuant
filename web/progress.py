@@ -1,10 +1,11 @@
 """Pipeline hooks for tracking and displaying progress.
 """
 import cgi
-from collections import namedtuple
 import time
+from collections import namedtuple
 
 from interface import implements
+
 
 class ProgressHooks(implements(PipelineHooks)):
     """

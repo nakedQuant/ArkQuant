@@ -92,7 +92,7 @@ class MaxOrderSize(TradingControl):
     """
     name = 'MaxOrderSize'
 
-    def __init__(self, on_error, max_shares=500000):
+    def __init__(self, max_shares=500000, on_error='fail'):
         super(MaxOrderSize, self).__init__(on_error,
                                            max_shares=max_shares)
         self.max_shares = max_shares
@@ -125,8 +125,7 @@ class MaxPositionSize(TradingControl):
     """
     name = 'MaxPositionSize'
 
-    def __init__(self, on_error,
-                 max_notional=0.6):
+    def __init__(self, max_notional=0.6, on_error='fail'):
         super(MaxPositionSize, self).__init__(on_error,
                                               max_notional=max_notional)
         self.max_notional = max_notional

@@ -72,7 +72,7 @@ class Asset(object):
         return self.tick_size
 
     @property
-    # 日内
+    # 日内交易日
     def is_interday(self):
         return False
 
@@ -272,7 +272,7 @@ class Convertible(Asset):
             self.__setattr__(k, v)
 
     @property
-    def intraday(self):
+    def is_interday(self):
         return True
 
     @property

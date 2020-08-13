@@ -46,21 +46,19 @@ class MetricsTracker(object):
     )
 
     def __init__(self,
-                 session,
                  ledger,
-                 benchmark,
-                 capital_base,
-                 metrics,
+                 sim_params,
+                 metrics_sets,
                  ):
-        self._session = session
         self._ledger = ledger
-        self._capital_base = capital_base
-        self._benchmark = benchmark
+        self._session = sim_params.session
+        self._capital_base = sim_params.capital_base
+        self._benchmark = sim_params.benchmark
 
         # bind all of the hooks from the passed metrics objects.
         for hook in self._hooks:
             registered = []
-            for metric in metrics:
+            for metric in metrics_sets:
                 try:
                     registered.append(getattr(metric, hook))
                 except AttributeError:

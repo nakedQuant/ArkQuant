@@ -28,14 +28,14 @@ class Position(object):
                 last_sync_price=last_sync_price,
                 last_sync_date=last_sync_date,
         )
-        self._name = event.name
+        self.event = event
         self.inner_position = inner
         self._closed = False
 
     @property
     def name(self):
         # created by pipe (name) , event(name , asset)
-        return self._name
+        return self.event.name
 
     @property
     def sid(self):

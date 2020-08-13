@@ -6,10 +6,13 @@ Created on Sun Feb 17 16:11:34 2019
 @author: python
 """
 
+import operator
+import os
+import pandas as pd
+import sys
 from collections import Mapping
-from functools import reduce , partial
+from functools import reduce, partial
 from itertools import product
-import operator ,os ,sys,pandas as pd
 
 # __func__ ---指向函数对象
 DEFAULT_CAPITAL_BASE = 1e5

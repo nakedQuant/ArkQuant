@@ -1,6 +1,6 @@
-from itertools import product
 import os
 import subprocess
+from itertools import product
 
 import click
 

@@ -13,12 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import pandas as pd
-# contextlib.manager 上下文管理
 from contextlib import ExitStack
 from utils.api_support import ZiplineAPI
-from .clock import ( SESSION_START,
-                     SESSION_END,
-                     BEFORE_TRADING_START_BAR)
+from gens.clock import (
+    MinuteSimulationClock,
+    SESSION_START,
+    SESSION_END,
+    BEFORE_TRADING_START_BAR
+)
 
 
 class AlgorithmSimulator(object):
@@ -44,35 +46,26 @@ class AlgorithmSimulator(object):
         'daily': 'daily_perf'
     }
 
-    def __init__(self,
-                 algorithm,
-                 sim_params,
-                 restriction):
+    def __init__(self, algorithm, sim_params):
         # ==============
         # Setup Algo
         # ==============
-        self.metrics_tracker = algorithm.metrics_tracker
         self.algorithm = algorithm
         # ==============
-        # Simulation
-        # Param Setup
+        # Setup Clock
         # ==============
-        self.sim_params = sim_params
-        self.restrictions = restriction
+        self.clock = MinuteSimulationClock(sim_params)
 
     def transform(self):
         """
         Main generator work loop.
         """
-        oms_engine = self.algorithm.broker
+        broker = self.algorithm.broke_class
+        algorithm_engine = self.algorithm.pipeline_engine
         ledger = self.algorithm.ledger
-        clock = self.algo.clock
 
         def once_a_day():
-            # 生成交易订单
-            txns, uility = oms_engine.carry_out(ledger, self.restrictions)
-            # 处理交易订单
-            ledger.process_transaction(txns)
+            broker.carry_out(algorithm_engine, ledger)
 
         def on_exit():
             # Remove references to algo, data portal, et al to break cycles
@@ -89,6 +82,7 @@ class AlgorithmSimulator(object):
             """
             stack.callback(on_exit)
             stack.enter_context(ZiplineAPI(self.algorithm))
+            clock = self.algorithm.clock
 
             self.metrics_tracker.handle_start_of_simulation()
 

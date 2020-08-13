@@ -7,6 +7,7 @@ Created on Tue Mar 12 15:37:47 2019
 """
 
 import pandas as pd
+from _calendar.trading_calendar import calendar
 
 BAR = 0
 SESSION_START = 1
@@ -18,12 +19,10 @@ BEFORE_TRADING_START_BAR = 4
 
 class MinuteSimulationClock(object):
 
-    def __init__(self,
-                 sessions,
-                 trading_calendar):
+    def __init__(self, sim_params):
 
-        self.sessions_nanos = trading_calendar.session_in_range(*sessions, include=True)
-        self.trading_o_and_c = trading_calendar.open_and_close_for_session(self.sim_params.sessions)
+        self.sessions_nanos = sim_params.sessions
+        self.trading_o_and_c = calendar.open_and_close_for_session(self.sessions_nanos)
         self.minute_emission = 'minute'
 
     def __iter__(self):

@@ -189,7 +189,7 @@ class OrderCreator(BaseCreator):
         # transactions = [create_transaction(order, self.commission) for order in final_orders]
         return final_orders
 
-    def generate(self, event, capital, dts, direction, portfolio):
+    def simulate(self, event, capital, dts, direction, portfolio):
         """
             针对于买入操作
             a. 计算满足最低capital(基于手续费逻辑），同时计算size
@@ -202,7 +202,7 @@ class OrderCreator(BaseCreator):
         size = self.max_order_control.validate(asset, size, portfolio, dts)
         self.simulate_order(event, size, dts, direction)
 
-    def generator_order(self, event, amount, dts, direction):
+    def simulate_order(self, event, amount, dts, direction):
         """
             针对于持仓卖出生成对应的订单 ， 一般不存在什么限制
             a. 存在竞价机制 --- 通过时点设立ticker_order
