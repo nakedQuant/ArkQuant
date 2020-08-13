@@ -70,7 +70,7 @@ def api_method(f):
             )
         return getattr(algo_instance, f.__name__)(*args, **kwargs)
     # Add functor to zipline.api
-    setattr(zipline.api, f.__name__, wrapped)
-    zipline.api.__all__.append(f.__name__)
-    f.is_api_method = True
+    # setattr(zipline.api, f.__name__, wrapped)
+    # zipline.api.__all__.append(f.__name__)
+    # f.is_api_method = True
     return f

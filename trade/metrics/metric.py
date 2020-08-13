@@ -5,9 +5,10 @@ Created on Sun Feb 17 16:11:34 2019
 
 @author: python
 """
-import numpy as np
+import numpy as np, operator as op
 from toolz import groupby
 from gateWay.driver.benchmark import get_benchmark_returns
+from trade.metrics.exposure import alpha_beta_aligned
 
 
 class _ConstantCumulativeRiskMetric(object):
@@ -25,8 +26,35 @@ class _ConstantCumulativeRiskMetric(object):
     def end_of_session(self, packet, *args):
         packet['cumulative_risk_metrics'][self._field] = self._value
 
-    def end_of_simulation(self,packet,*args):
+    def end_of_simulation(self,packet, *args):
         packet['cumulative_risk_metrics'][self._field] = self._value
+
+
+class DailyLedgerField(object):
+    """Like :class:`~zipline.finance.metrics.metrics.SimpleLedgerField` but
+    also puts the current value in the ``cumulative_perf`` section.
+
+    Parameters
+    ----------
+    ledger_field : str
+        The ledger field to read.
+    packet_field : str, optional
+        The name of the field to populate in the packet. If not provided,
+        ``ledger_field`` will be used.
+    """
+    def __init__(self, ledger_field, packet_field=None):
+        self._get_ledger_field = op.attrgetter(ledger_field)
+        if packet_field is None:
+            self._packet_field = ledger_field.rsplit('.', 1)[-1]
+        else:
+            self._packet_field = packet_field
+
+    def end_of_session(self,
+                       packet,
+                       ledger,
+                       session_ix):
+        field = self._packet_field
+        packet['daily_perf'][field] = self._get_ledger_field(ledger)
 
 
 class PNL(object):
@@ -46,8 +74,8 @@ class PNL(object):
 
     def _end_of_period(self, field, packet, ledger):
         pnl = ledger.portfolio.pnl
-        packet[field]['pnl'] = pnl - self._previous_pnl
         packet['cumulative_perf']['pnl'] = pnl
+        packet[field]['pnl'] = pnl - self._previous_pnl
 
     def end_of_session(self,
                        packet,
@@ -120,7 +148,7 @@ class Weights(object):
         packet['cumulative_risk_metrics']['portfolio_weights'] = weights
 
 
-class Uility(object):
+class Utility(object):
     """Tracks the capital usage
     """
     def __init__(self):
@@ -179,7 +207,7 @@ class Proportion(object):
         packet['cumulative_risk_metrics']['proportion'] = ratio
 
 
-class Hitrate(object):
+class HitRate(object):
     """
         1、度量算法触发的概率（生成transaction)
         2、算法的胜率（产生正的收益概率）--- 当仓位完全退出时
@@ -348,17 +376,15 @@ class ReturnsStatistic(object):
     """
     def __init__(self,
                  function,
-                 risk_free = 0.0,
-                 required_return = 0.0,
-                 field_name=None):
-        if field_name is None:
-            field_name = function.__name__
+                 _field_name=None,
+                 risk_free=0.0,
+                 required_return=0.0):
 
         self._function = function
         self.return_series = None
         self.risk_free = risk_free
         self.required_return = required_return
-        self._field_name = field_name
+        self._field_name = _field_name if _field_name else function.__name__
 
     def start_of_simulation(self,
                             ledger,

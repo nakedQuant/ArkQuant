@@ -6,7 +6,8 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 import pandas as pd, numpy as np, warnings
-from finance._protocol import Portfolio, Account, MutableView
+from finance.portfolio import Portfolio
+from finance._protocol import Account, MutableView
 from finance.position_tracker import PositionTracker
 
 
@@ -24,7 +25,7 @@ class Ledger(object):
         if not len(trading_sessions):
             raise Exception('calendars must not be null')
 
-        self._portfolio = Portfolio(capital_base)
+        self._portfolio = MutableView(Portfolio(capital_base))
         self._processed_transaction = []
         self._previous_total_returns = 0
         self._dirty_portfolio = True
@@ -56,7 +57,7 @@ class Ledger(object):
     def portfolio(self):
         if self._dirty_portfolio:
             raise Exception('portofilio is accurate at the end of session ')
-        return MutableView(self._portfolio)
+        return self._portfolio
 
     @property
     def account(self):
@@ -106,11 +107,14 @@ class Ledger(object):
         # 持仓组合
         portfolio = self._portfolio
         self._previous_total_returns = portfolio.returns
+        # 组合净值（持仓净值 + 现金）
         start_value = portfolio.portfolio_value
         portfolio.portfolio_value = end_value = \
             position_values + portfolio.start_cash
         # 资金使用效率
         portfolio.utility = position_values / end_value
+        # 更新持仓价值
+        portfolio.positions_values = position_values
         # 更新组合投资的收益，并计算组合的符合收益率
         pnl = end_value - start_value
         returns = pnl / start_value
@@ -120,7 +124,7 @@ class Ledger(object):
             (1+portfolio.returns) *
             (1+returns) - 1
         )
-        # 定义属性
+        # 更新组合持仓
         self.portfolio.positions = self.positions
         self._dirty_portfolio = False
 

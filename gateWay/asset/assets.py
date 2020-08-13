@@ -72,7 +72,8 @@ class Asset(object):
         return self.tick_size
 
     @property
-    def intraday(self):
+    # 日内
+    def is_interday(self):
         return False
 
     def __setattr__(self, key, value):

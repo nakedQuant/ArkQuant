@@ -7,11 +7,11 @@ Created on Tue Mar 12 15:37:47 2019
 """
 from copy import copy
 from datetime import tzinfo
-import pytz, pandas as pd, numpy as np, warnings
+import pytz, pandas as pd, warnings, numpy as np, logging
 from contextlib import ExitStack
 from itertools import chain, repeat
 
-from .error.errors import (
+from error.errors import (
     AttachPipelineAfterInitialize,
     DuplicatePipelineName,
     IncompatibleCommissionModel,
@@ -23,61 +23,51 @@ from .error.errors import (
     SetCommissionPostInit,
     SetSlippagePostInit,
     UnsupportedCancelPolicy,
-    UnsupportedDatetimeFormat,
     ZeroCapitalError
 )
-from .finance.oms.blotter import SimulationBlotter
-from .finance.control import (
-    LongOnly,
+
+from _calendar.trading_calendar import calendar
+
+from finance.commission import NoCommission
+from finance.restrictions import NoRestrictions
+from finance.slippage import NoSlippage
+from finance.execution import MarketOrder
+from finance.oms.gen import OrderCreator
+from finance.oms.blotter import SimulationBlotter
+from finance.control import (
+    # LongOnly,
     MaxOrderSize,
     MaxPositionSize,
 )
-from .finance.execution import (
-    LimitOrder,
-    MarketOrder,
-    StopLimitOrder,
-    StopOrder,
-)
-from .finance.cancel_policy import NeverCancel, CancelPolicy
-
-from .finance.restrictions import (
-    NoRestrictions,
-    StaticRestrictions,
-    SecurityListRestrictions,
-)
-
-from .gateWay.asset.assets import Asset, Equity, Convertible, Fund
+from finance.cancel_policy import NeverCancel, CancelPolicy
+from finance.ledger import Ledger
+from gateWay.asset.assets import Equity
 from gateWay.driver.data_portal import DataPortal
-from .gens.tradesimulation import AlgorithmSimulator
-from .trade.metrics.tracker import MetricsTracker
-from .pipe.pipeline import Pipeline
-from .pipe.domain import Domain
-from .pipe.engine import (
-    SimplePipelineEngine,
-    NoEngineRegistered,
+from gateWay.driver.benchmark import (
+    get_benchmark_returns,
+    get_alternative_returns
 )
-from _calendar.trading_calendar import calendar
-from .utils.api_support import (
+from trade.metrics.tracker import MetricsTracker
+from trade.broke import Broker
+from pipe.pipeline import Pipeline
+from pipe.engine import SimplePipelineEngine, NoEngineRegistered
+from risk.allocation import Equal
+from gens.tradesimulation import AlgorithmSimulator
+from gens.clock import MinuteSimulationClock
+from trade.metrics import default_metrics
+
+from utils.api_support import (
     api_method,
-    # require_initialized,
-    # require_not_initialized,
     ZiplineAPI,
-    # disallowed_in_before_trading_start)
 )
-from .utils.input_validation import (
+from utils.input_validation import (
     coerce_string,
-    ensure_upper_case,
-    # error_keywords,
-    expect_dtypes,
     expect_types,
     optional,
-    optionally,
 )
-from .utils.pandas_utils import normalize_date
-from .utils.eventManager import EventManager
-from .utils.preprocess import preprocess
-from .utils.security_list import SecurityList
-from .gens.clock import MinuteSimulationClock
+from utils.context_tricks import EventManager, Event
+from utils.event_rule import Always
+from utils.preprocess import preprocess
 
 
 class TradingAlgorithm(object):
@@ -153,61 +143,44 @@ class TradingAlgorithm(object):
         d.风险管理（最优资本配置 ， 最优赌注或者凯利准则 ， 海龟仓位管理）
     """
     def __init__(self,
-                 first_session,
-                 last_session,
-                 capital_base,
+                 sim_params,
+                 namespace=None,
+                 # dataApi --- only entrance of backtest
                  data_portal=None,
                  asset_finder=None,
+                 # finance module intended for order object
                  slippage=None,
+                 execution_style=None,
                  commission=None,
-                 blotter_class=None,
                  cancel_policy=None,
-                 # generator
-                 creator=None,
-
-                 # algorithm API
-                 namespace=None,
-                 script=None,
-                 algo_filenames=None,
+                 control=None,
                  restrictions=None,
-
-                 allocation_policy=average,
-
-                 analyze=None,
+                 # order generator
+                 generator=None,
+                 # blotter --- transform order to transaction , delay --- means transfer put to call
+                 delay=None,
+                 blotter_class=None,
+                 # pipeline API
+                 scripts=None,
+                 alternatives=None,
+                 # broker --- combine creator,blotter pipe_engine together
+                 broker_engine=None,
+                 # capital allocation and portfolio management
+                 risk_management=None,
+                 # metrics
                  metrics_set=None,
-
-                 # delay --- transfer put to call
-                 delay=1,
-                 benchmark_sid=None,
-                 # benchmark_returns=None,
-
-                 platform='zipline',
+                 metrics_tracker=None,
                  capital_changes=None,
-                 get_pipeline_loader=None,
+                 platform='px_trader',
                  create_event_context=None,
                  **initialize_kwargs):
 
-        # List of trading controls to be used to validate orders.
-        self.sessions = calendar.session_in_range(first_session, last_session , include=True)
-        self.trading_controls = []
-
-        # # List of account controls to be checked on each bar.
-        # self.account_controls = []
-
-        self._recorded_vars = {}
-        self.namespace = namespace or {}
-
-        self._platform = platform
-        self.logger = None
-
-        # XXX: This is kind of a mess.
-        # We support passing a data_portal in `run`, but we need an asset
-        # finder earlier than that to look up asset for things like
-        # set_benchmark.
-        if capital_base <= 0:
+        self.initialize_kwargs = initialize_kwargs or {}
+        # set ledger with capital base
+        if sim_params.capital_base <= 0:
             raise ZeroCapitalError()
-        self.ledger = Ledger(capital_base)
-
+        self.ledger = Ledger(sim_params.capital_base)
+        # set data_portal
         if self.data_portal is None:
             if asset_finder is None:
                 raise ValueError(
@@ -216,7 +189,6 @@ class TradingAlgorithm(object):
                 )
             self.asset_finder = asset_finder
             self.data_portal = DataPortal(asset_finder)
-
         else:
             # Raise an error if we were passed two different asset finders.
             # There's no world where that's a good idea.
@@ -228,78 +200,65 @@ class TradingAlgorithm(object):
             self.asset_finder = data_portal.asset_finder
             self.data_portal = data_portal
 
-        if creator is not None:
-            self._creator = creator
+        # order creator to create orders by capital or amount
+        if generator is not None:
+            self._generator = generator
         else:
             slippage = slippage or NoSlippage()
             commission = commission or NoCommission()
             execution_style = execution_style or MarketOrder()
             cancel_policy = cancel_policy or NeverCancel()
-            control = control or MaxOrderSize or MaxPositionSize
-            self._order_creator = OrderCreator(data_portal, slippage, commission,
-                                               execution_style, cancel_policy, control)
+            # List of trading controls to be used to validate orders.
+            trading_controls = control or [MaxOrderSize, MaxPositionSize]
+            # List of account controls to be checked on each bar.
+            # self.account_controls = []
+            self._generator = OrderCreator(data_portal, slippage, commission,
+                                           execution_style, cancel_policy, trading_controls)
+        # transform order to txn via different ways(capital , amount ,dual)
         if blotter_class is not None:
             self.blotter = blotter_class
         else:
-            blotter_class = blotter_class or SimulationBlotter
-            self.blotter = blotter_class(generator=self._creator)
-
-        if broke is not None:
-            self.broke_class = broke
-        else:
-            self.broke_class = Broke(self.blotter,allocation_policy)
-
+            self.blotter = SimulationBlotter(generator=self._generator, delay=delay)
+        # Initialize pipe_engine API
         self.restrictions = NoRestrictions() or restrictions
-
-
-        # Initialize pipe API data.
-        self.init_engine(get_pipeline_loader)
+        self.alternative = alternatives or 10
         self._pipelines = {}
-
-        self._backwards_compat_universe = None
-
-
-        self._symbol_lookup_date = None
-
-
-        # Prepare the algo for initialization
-        self.initialized = False
-
-        self.initialize_kwargs = initialize_kwargs or {}
-
-
-        self._initialize = None
+        try:
+            self.init_engine(scripts)
+            self.initialized = True
+        except Exception as e:
+            self.initialized = False
+        # capital allocation
+        risk_management = Equal or risk_management
+        # broker --- combine pipe_engine and blotter ; when live trading broker ---- xtp
+        if broker_engine is not None:
+            self.broke_class = broker_engine
+        else:
+            self.broke_class = Broker(self.blotter, risk_management)
+        # metrics
         self._analyze = None
 
-        def get_pipeline(algo_filenames):
-            namespace = dict()
-            pipelines = []
-            for algo_filename in algo_filenames:
-                with open(algo_filename, 'r') as f:
-                    exec(f.read(), namespace)
-                    pipelines.append(namespace['pipe'])
-            return pipelines
-
-        engine = SimplePipelineEngine(
-                            pipelines,
-                            self.asset_finder,
-                            self.data_portal,
-                            self.restrictions,
-                            alternatives=10)
-        # metrics
-        self.benchmark_sid = benchmark_sid
+        # def __init__(self,
+        #              session,
+        #              ledger,
+        #              benchmark,
+        #              capital_base,
+        #              metrics,
+        #              ):
 
         self.metrics_tracker = None
         self._last_sync_time = pd.NaT
         self._metrics_set = metrics_set
         if self._metrics_set is None:
-            self._metrics_set = load_metrics_set('default')
+            self._metrics_set = default_metrics()
 
+        self._platform = platform
+        self._recorded_vars = {}
+        self.namespace = namespace or {}
         self.event_manager = EventManager(create_event_context)
-
         self.event_manager.add_event(
-            zipline.utils.events.Event(
-                zipline.utils.events.Always(),
+            Event(
+                Always(),
                 # We pass handle_data.__func__ to get the unbound method.
                 # We will explicitly pass the algorithm to bind it again.
                 self.handle_data.__func__,
@@ -309,24 +268,34 @@ class TradingAlgorithm(object):
         # A dictionary of capital changes, keyed by timestamp, indicating the
         # target/delta of the capital changes, along with values
         self.capital_changes = capital_changes or {}
-
         # A dictionary of the actual capital change deltas, keyed by timestamp
         self.capital_change_deltas = {}
 
-    def init_engine(self, get_loader):
+    def init_engine(self, scripts):
         """
         Construct and store a PipelineEngine from loader.
 
         If get_loader is None, constructs an ExplodingPipelineEngine
         """
-        if get_loader is not None:
-            self.engine = SimplePipelineEngine(
-                get_loader,
-                self.asset_finder,
-                self.default_pipeline_domain(self.trading_calendar),
-            )
-        else:
-            self.engine = ExplodingPipelineEngine()
+        try:
+            engine = SimplePipelineEngine(
+                                scripts,
+                                self.asset_finder,
+                                self.data_portal,
+                                self.restrictions,
+                                self.alternatives)
+        except Exception as e:
+            raise ValueError('initialization error')
+
+    @staticmethod
+    def _get_pipelines(algo_filenames):
+        namespace = dict()
+        pipelines = []
+        for algo_filename in algo_filenames:
+            with open(algo_filename, 'r') as f:
+                exec(f.read(), namespace)
+                pipelines.append(namespace['pipe'])
+        return pipelines
 
     def initialize(self, *args, **kwargs):
         """
@@ -358,7 +327,7 @@ class TradingAlgorithm(object):
             returns = get_benchmark_returns(self.benchmark_sid)
         except Exception as e:
             returns = get_alternative_returns(self.benchmark_sid)
-         return returns.loc[self.sessions, :]
+        return returns.loc[self.sim_params.sessions, :]
 
     def _create_metrics_tracker(self):
         return MetricsTracker(
@@ -393,7 +362,7 @@ class TradingAlgorithm(object):
             universe_func=self._calculate_universe
         )
 
-        metrics_tracker.handle_start_of_simulation(benchmark_source)
+        metrics_tracker.handle_start_of_simulation()
         return self.trading_client.transform()
 
     def _calculate_universe(self):
@@ -501,16 +470,16 @@ class TradingAlgorithm(object):
                 )
             )
 
-            log.info('Processing capital change to target %s at %s. Capital '
+            logging.log.info('Processing capital change to target %s at %s. Capital '
                      'change delta is %s' % (target, dt,
                                              capital_change_amount))
         elif capital_change['type'] == 'delta':
             target = None
             capital_change_amount = capital_change['value']
-            log.info('Processing capital change of delta %s at %s'
+            logging.log.info('Processing capital change of delta %s at %s'
                      % (capital_change_amount, dt))
         else:
-            log.error("Capital change %s does not indicate a valid type "
+            logging.log.error("Capital change %s does not indicate a valid type "
                       "('target' or 'delta')" % capital_change)
             return
 
@@ -593,7 +562,7 @@ class TradingAlgorithm(object):
             The function to execute when the rule is triggered.
         """
         self.event_manager.add_event(
-            zipline.utils.events.Event(rule, callback),
+            Event(rule, callback),
         )
 
     @api_method
@@ -632,39 +601,39 @@ class TradingAlgorithm(object):
         # When the user calls schedule_function(func, <time_rule>), assume that
         # the user meant to specify a time rule but no date rule, instead of
         # a date rule and no time rule as the signature suggests
-        if isinstance(date_rule, (AfterOpen, BeforeClose)) and not time_rule:
-            warnings.warn('Got a time rule for the second positional argument '
-                          'date_rule. You should use keyword argument '
-                          'time_rule= when calling schedule_function without '
-                          'specifying a date_rule', stacklevel=3)
-
-        date_rule = date_rule or date_rules.every_day()
-        time_rule = ((time_rule or time_rules.every_minute())
-                     if self.sim_params.data_frequency == 'minute' else
-                     # If we are in daily mode the time_rule is ignored.
-                     time_rules.every_minute())
-
-        # Check the type of the algorithm's schedule before pulling _calendar
-        # Note that the ExchangeTradingSchedule is currently the only
-        # TradingSchedule class, so this is unlikely to be hit
-        if calendar is None:
-            cal = self.trading_calendar
-        elif calendar is calendars.US_EQUITIES:
-            cal = get_calendar('XNYS')
-        elif calendar is calendars.US_FUTURES:
-            cal = get_calendar('us_futures')
-        else:
-            raise ScheduleFunctionInvalidCalendar(
-                given_calendar=calendar,
-                allowed_calendars=(
-                    '[calendars.US_EQUITIES, calendars.US_FUTURES]'
-                ),
-            )
-
-        self.add_event(
-            make_eventrule(date_rule, time_rule, cal, half_days),
-            func,
-        )
+        # if isinstance(date_rule, (AfterOpen, BeforeClose)) and not time_rule:
+        #     warnings.warn('Got a time rule for the second positional argument '
+        #                   'date_rule. You should use keyword argument '
+        #                   'time_rule= when calling schedule_function without '
+        #                   'specifying a date_rule', stacklevel=3)
+        #
+        # date_rule = date_rule or date_rules.every_day()
+        # time_rule = ((time_rule or time_rules.every_minute())
+        #              if self.sim_params.data_frequency == 'minute' else
+        #              # If we are in daily mode the time_rule is ignored.
+        #              time_rules.every_minute())
+        #
+        # # Check the type of the algorithm's schedule before pulling _calendar
+        # # Note that the ExchangeTradingSchedule is currently the only
+        # # TradingSchedule class, so this is unlikely to be hit
+        # if calendar is None:
+        #     cal = self.trading_calendar
+        # elif calendar is calendars.US_EQUITIES:
+        #     cal = get_calendar('XNYS')
+        # elif calendar is calendars.US_FUTURES:
+        #     cal = get_calendar('us_futures')
+        # else:
+        #     raise ScheduleFunctionInvalidCalendar(
+        #         given_calendar=calendar,
+        #         allowed_calendars=(
+        #             '[calendars.US_EQUITIES, calendars.US_FUTURES]'
+        #         ),
+        #     )
+        #
+        # self.add_event(
+        #     make_eventrule(date_rule, time_rule, cal, half_days),
+        #     func,
+        # )
 
     @api_method
     def set_benchmark(self, benchmark):
@@ -923,26 +892,26 @@ class TradingAlgorithm(object):
                                on_error=on_error)
         self.register_trading_control(control)
 
-    @api_method
-    @expect_types(
-        restrictions=Restrictions,
-        on_error=str,
-    )
-    def set_asset_restrictions(self, restrictions, on_error='fail'):
-        """Set a restriction on which asset can be ordered.
-
-        Parameters
-        ----------
-        restricted_list : Restrictions
-            An object providing information about restricted asset.
-
-        See Also
-        --------
-        zipline.finance.asset_restrictions.Restrictions
-        """
-        control = RestrictedListOrder(on_error, restrictions)
-        self.register_trading_control(control)
-        self.restrictions |= restrictions
+    # @api_method
+    # @expect_types(
+    #     restrictions=Restrictions,
+    #     on_error=str,
+    # )
+    # def set_asset_restrictions(self, restrictions, on_error='fail'):
+    #     """Set a restriction on which asset can be ordered.
+    #
+    #     Parameters
+    #     ----------
+    #     restricted_list : Restrictions
+    #         An object providing information about restricted asset.
+    #
+    #     See Also
+    #     --------
+    #     zipline.finance.asset_restrictions.Restrictions
+    #     """
+    #     control = RestrictedListOrder(on_error, restrictions)
+    #     self.register_trading_control(control)
+    #     self.restrictions |= restrictions
 
     @api_method
     def set_long_only(self, on_error='fail'):
@@ -954,13 +923,13 @@ class TradingAlgorithm(object):
     ##############
     # pipe API
     ##############
-    @api_method
-    @require_not_initialized(AttachPipelineAfterInitialize())
-    @expect_types(
-        pipeline=Pipeline,
-        name=string_types,
-        chunks=(int, Iterable, type(None)),
-    )
+    # @api_method
+    # @require_not_initialized(AttachPipelineAfterInitialize())
+    # @expect_types(
+    #     pipeline=Pipeline,
+    #     name=np.str,
+    #     chunks=(int,np.iterable, type(None)),
+    # )
     def attach_pipeline(self, pipeline, name, chunks=None, eager=True):
         """Register a Pipeline to be computed at the start of each day.
 
@@ -999,21 +968,21 @@ class TradingAlgorithm(object):
         if name in self._pipelines:
             raise DuplicatePipelineName(name=name)
 
-        self._pipelines[name] = AttachedPipeline(pipeline, iter(chunks), eager)
+        # self._pipelines[name] = AttachedPipeline(pipeline, iter(chunks), eager)
 
         # Return the Pipeline to allow expressions like
         # p = attach_pipeline(pipe(), 'name')
         return pipeline
 
-    @staticmethod
-    def default_pipeline_domain(calendar):
-        """
-        Get a default Pipeline domain for algorithms running on ``_calendar``.
-
-        This will be used to infer a domain for pipelines that only use generic
-        datasets when running in the context of a TradingAlgorithm.
-        """
-        return _DEFAULT_DOMAINS.get(calendar.name, domain.GENERIC)
+    # @staticmethod
+    # def default_pipeline_domain(calendar):
+    #     """
+    #     Get a default Pipeline domain for algorithms running on ``_calendar``.
+    #
+    #     This will be used to infer a domain for pipelines that only use generic
+    #     datasets when running in the context of a TradingAlgorithm.
+    #     """
+    #     return _DEFAULT_DOMAINS.get(calendar.name, domain.GENERIC)
 
 
     ##################
@@ -1026,7 +995,7 @@ class TradingAlgorithm(object):
         Return a list of all the TradingAlgorithm API methods.
         """
         return [
-            fn for fn in itervalues(vars(cls))
+            fn for fn in vars(cls).items
             if getattr(fn, 'is_api_method', False)
         ]
 

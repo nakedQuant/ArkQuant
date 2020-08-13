@@ -6,7 +6,6 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 from abc import ABC, abstractmethod
-from collections import namedtuple
 
 
 class EventRule(ABC):
@@ -73,7 +72,7 @@ class ComposedRule(StatelessRule):
         """
         return first_trigger.should_trigger(dt) and second_trigger.should_trigger(dt)
 
-    @staticmethod
+    @property
     def cal(self):
         return self.first.cal
 
@@ -98,17 +97,3 @@ class Never(StatelessRule):
         return False
 
     should_trigger = never_trigger
-
-
-class Event(namedtuple('Event', ['rule', 'callback'])):
-    """
-        event consists of rule and callback
-        when rule is triggered ,then callback
-    """
-    def __new__(cls, rule, callback=None):
-        callback = callback or (lambda *args, **kwargs: None)
-        return super(cls, cls).__new__(cls, rule=rule, callback=callback)
-
-    def handle_data(self, context, data, dt):
-        if self.rule.should_trigger(dt):
-            self.callback(context, data)

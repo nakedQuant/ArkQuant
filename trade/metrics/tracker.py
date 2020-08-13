@@ -70,7 +70,6 @@ class MetricsTracker(object):
                 def hook_implementation(*args, **kwargs):
                     for impl in registered:
                         impl(*args, **kwargs)
-
                 return hook_implementation
             # 属性 --- 方法
             hook_implementation = closing_over_loop_variables_is_hard()
@@ -209,7 +208,7 @@ class _ClassicRiskMetrics(object):
         excess_period_returens = np.prod(excess_returns +1) - 1
 
         #组合胜率、超额胜率
-        absoulte_winrate = [algorithm_period_returns > 0].sum() / len(algorithm_period_returns)
+        absolute_winrate = [algorithm_period_returns > 0].sum() / len(algorithm_period_returns)
         excess_winrate = (algorithm_period_returns > benchmark_period_returns).sum() / len(algorithm_period_returns)
 
         alpha, beta = alpha_beta_aligned(
@@ -234,12 +233,11 @@ class _ClassicRiskMetrics(object):
             # 回撤
             _downside_risk = downside_risk(algorithm_returns.values),
         )
-
         rval = {
             'algorithm_period_return': algorithm_period_returns,
             'benchmark_period_return': benchmark_period_returns,
             'excess_period_return': excess_period_returens,
-            'absolute_winrate': absoulte_winrate,
+            'absolute_winrate': absolute_winrate,
             'excess_winrate': excess_winrate,
             'alpha': alpha,
             'beta': beta,
@@ -251,7 +249,6 @@ class _ClassicRiskMetrics(object):
             'benchmark_volatility': annual_volatility(benchmark_returns),
             'max_drawdown': max_drawdown(algorithm_returns.values),
         }
-
         # check if a field in rval is nan or inf, and replace it with None
         # except period_label which is always a str
         return {

@@ -5,7 +5,7 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-from abc import ABC , abstractmethod
+from abc import ABC, abstractmethod
 from multiprocessing import Pool
 import numpy as np
 

@@ -80,13 +80,12 @@ class OrderCreator(BaseCreator):
     """
     def __init__(self,
                  data_portal,
+                 controls,
                  slippage,
                  commission,
-                 execution_style,
                  cancel_policy,
-                 controls,
+                 execution_style,
                  window=1):
-        # ledger --- protocol portfolio
         self._data_portal = data_portal
         self._slippage_model = slippage
         self._execution_style = execution_style

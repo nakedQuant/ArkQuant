@@ -134,7 +134,7 @@ class Pipeline(object):
     def _finalize(self, alternative):
         """将pipeline.name --- outs"""
         final = self._workspace.popitem(last=True).values()
-        # transform to named_pipe
+        # transform to named_pipe , priority --- 0 highest
         outputs = [NamedPipe(Event(asset, self.name), priority) for priority, asset
                    in enumerate(final[:alternative])]
         return outputs

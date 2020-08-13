@@ -9511,3 +9511,8 @@ from dateutil.relativedelta import relativedelta
 #         self.record_closed_position[dts].append(position)
 #         del self.positions[asset]
 #     return cash_flow
+
+# return callable fetch attr from its operant
+# operator.attrgetter(return a callable that fetches attr from operant)
+# operate.itemgetter (return a callable that uses method __getitem__())
+# rsplit 从右往左 参数 sep(默认为所有空字符) count=count（sep）

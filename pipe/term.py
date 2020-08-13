@@ -42,13 +42,13 @@ class Term(object):
 
     namespace = dict()
 
-    __slots__ = ['domain', 'dependence', 'dtype', '_logic', '_subclass_called_validate']
+    __slots__ = ['domain', 'dependence', 'd_type', 'term_logic', '_subclass_called_validate']
 
     def __new__(cls,
                 domain,
                 script,
                 params,
-                dtype=[],
+                d_type=list,
                 dependence=NotSpecific
                 ):
         # 解析策略文件并获取对象
@@ -57,20 +57,20 @@ class Term(object):
             exec(f.read(), cls.namespace)
         logic_cls = cls.namespace[script]
         # 设立身份属性防止重复产生实例
-        identity = cls._static_identity(domain, logic_cls, params, dtype, dependence)
+        identity = cls._static_identity(domain, logic_cls, params, d_type, dependence)
         try:
             return cls._term_cache[identity]
         except KeyError:
             new_instance = cls._term_cache[identity] = \
-                super(Term, cls).__new__(cls)._init(domain, logic_cls, params, dtype, dependence)
+                super(Term, cls).__new__(cls)._init(domain, logic_cls, params, d_type, dependence)
             return new_instance
 
     @classmethod
-    def _static_identity(cls, domain, script_class, script_params, dtype, dependence):
-        return domain, script_class, script_params, dtype, dependence
+    def _static_identity(cls, domain, script_class, script_params, d_type, dependence):
+        return domain, script_class, script_params, d_type, dependence
 
-    #__new__已经初始化后，不需要在__init__里面调用
-    def _init(self, domain, script, params, dtype, dependence):
+    # __new__已经初始化后，不需要在__init__里面调用
+    def _init(self, domain, script, params, d_type, dependence):
         """
             __new__已经初始化后，不需要在__init__里面调用
             Noop constructor to play nicely with our caching __new__.  Subclasses
@@ -95,10 +95,10 @@ class Term(object):
         """
         self.domain = domain
         self.dependence = dependence
-        self.dtype = dtype
+        self.d_type = d_type
         try:
             instance = script(params)
-            self._logic = instance
+            self.term_logic = instance
             self._validate()
         except TypeError:
             self._subclass_called_validate = False
@@ -126,13 +126,13 @@ class Term(object):
             called with an result of self ,after any user-defined screens have been applied
             this is mostly useful for transforming  the dtype of an output
         """
-        if self.dtype == bool:
-            if not isinstance(data, self.dtype):
-                raise TypeError('style of data is not %s' % self.dtype)
+        if self.d_type == bool:
+            if not isinstance(data, self.d_type):
+                raise TypeError('style of data is not %r' % self.d_type)
         try:
-            data = self.dtype(data)
+            data = self.d_type(data)
         except Exception as e:
-            raise TypeError('cannot transform the style of data to %s due to error %s' % (self.dtype, e))
+            raise TypeError('cannot transform the style of data to %s due to error %s' % (self.d_type, e))
         return data
 
     def _compute(self, inputs, data):

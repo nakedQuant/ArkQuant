@@ -5,6 +5,8 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
+from collections import namedtuple
+
 
 @object.__new__
 class nop_context(object):
@@ -23,7 +25,7 @@ def _nop(args, **kwargs):
     pass
 
 
-class _ManagedcallbackContext(object):
+class _ManagedCallbackContext(object):
 
     def __init__(self, pre, post, args, kwargs):
         self._pre = pre
@@ -48,13 +50,27 @@ class CallbackManager(object):
         self.post = post if post is not None else _nop
 
     def __call__(self,*args, **kwargs):
-        return _MangedCallbackContext(self.pre, self.post, *args, **kwargs)
+        return _ManagedCallbackContext(self.pre, self.post, *args, **kwargs)
 
     def __enter__(self):
         return self.pre
 
     def __exit__(self, *exec_info):
         self.post()
+
+
+class Event(namedtuple('Event', ['rule', 'callback'])):
+    """
+        event consists of rule and callback
+        when rule is triggered ,then callback
+    """
+    def __new__(cls, rule, callback=None):
+        callback = callback or (lambda *args, **kwargs: None)
+        return super(cls, cls).__new__(cls, rule=rule, callback=callback)
+
+    def handle_data(self, context, data, dt):
+        if self.rule.should_trigger(dt):
+            self.callback(context, data)
 
 
 # 事件 rule callback  用于scedule module
