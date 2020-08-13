@@ -29,14 +29,14 @@ class Domain(object):
     def domain_window(self):
         return self._window
 
-    def all_session(self, sdate, edate):
-        sessions = self.trading_calendar.session_in_range(sdate, edate)
+    def all_session(self, s_date, e_date):
+        sessions = self.trading_calendar.session_in_range(s_date, e_date)
         return sessions
 
     def __or__(self, other):
         if isinstance(other, Domain):
-            fields = set(self._fields) | set(other._fields)
-            max_window = max(self._window, other._window)
+            fields = set(self.domain_field) | set(other.domain_field)
+            max_window = max(self.domain_window, other.domain_window)
             self.domain_field = fields
             self.domain_window = max_window
         else:

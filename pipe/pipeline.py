@@ -27,6 +27,7 @@ class Pipeline(object):
 
     def __init__(self, terms, ump_picker):
         self._terms_store = terms
+        # last item --- finalTerm
         self._workspace = OrderedDict()
         self.graph = self._init_graph()
         self._ump_picker = ump_picker
@@ -85,10 +86,11 @@ class Pipeline(object):
         raise NotImplementedError
 
     def _load_term(self, term, default):
-        if term.dependencies != NotSpecific :
-            # 将节点的依赖 --- 交集 作为下一个input
+        if term.dependencies != NotSpecific:
+            # 将节点的依赖筛选出来
             inter_inputs = keyfilter(lambda x: x in term.dependencies,
                                      self._workspace)
+            # 将依赖的交集作为节点的input
             input_of_term = reduce(lambda x, y: set(x) & set(y),
                                    inter_inputs.values())
         else:
@@ -98,13 +100,15 @@ class Pipeline(object):
     def _decref_recursive(self, metadata, default):
         """
             internal method for decref_recursive
+            decrease by layer
         """
+        # return in_degree == 0 nodes
         decref_nodes = self.graph.decref_dependencies()
         for node in decref_nodes:
             _input = self._load_term(node, default)
             output = node.compute(_input, metadata)
             self._workspace[node] = output
-            self._decref_recursive(metadata, default)
+        self._decref_recursive(metadata, default)
 
     def _inner_decref_recursive(self, metadata, default):
         """
@@ -127,20 +131,23 @@ class Pipeline(object):
         self._initialize_workspace()
         self._decref_recursive(metadata, default)
 
-    def _fit_out(self, alternative):
+    def _finalize(self, alternative):
         """将pipeline.name --- outs"""
-        out = self._workspace.popitem(last=True).values()
-        # transform to pipe
+        final = self._workspace.popitem(last=True).values()
+        # transform to named_pipe
         outputs = [NamedPipe(Event(asset, self.name), priority) for priority, asset
-                   in enumerate(out[:alternative])]
+                   in enumerate(final[:alternative])]
         return outputs
 
-    def to_execution_plan(self,default, metadata, alternative):
+    def to_execution_plan(self, default, metadata, alternative):
         """
             to execute pipe logic
         """
-        self._inner_decref_recursive(metadata, default)
-        result = self._fit_out(alternative)
+        try:
+            self._inner_decref_recursive(metadata, default)
+        except Exception as e:
+            print('error means graph decrease to top occur %s' % e)
+        result = self._finalize(alternative)
         return result
 
     def to_withdraw_plan(self, position, metadata):

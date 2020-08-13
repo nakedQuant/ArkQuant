@@ -5,7 +5,7 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-import uuid,networkx as nx
+import uuid, networkx as nx
 from toolz import valfilter
 
 
@@ -28,17 +28,13 @@ class TermGraph(object):
     def __init__(self, terms):
 
         self.graph = nx.DiGraph()
-
         self._frozen = False
-
         for term in terms:
             self._add_to_graph(term)
-
         self._outputs = terms
-
         self._frozen = True
 
-    def _add_to_graph(self,term):
+    def _add_to_graph(self, term):
         """
             先增加节点 --- 增加edge
         """
@@ -46,12 +42,10 @@ class TermGraph(object):
             raise ValueError(
                 "Can't mutate %s after construction." % type(self).__name__
             )
-
         self.graph.add_node(term)
-
         for dependency in term.dependencies:
             self._add_to_graph(dependency)
-            self.graph.add_edge(dependency,term)
+            self.graph.add_edge(dependency, term)
 
     @property
     def outputs(self):
@@ -92,7 +86,7 @@ class TermGraph(object):
         terms which need to decref
         """
         refcounts = dict(self.graph.in_degree())
-        nodes = valfilter(lambda x: x == 0,refcounts)
+        nodes = valfilter(lambda x: x == 0, refcounts)
         for node in nodes:
             self.graph.remove_node(node)
         return nodes

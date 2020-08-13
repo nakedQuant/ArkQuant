@@ -163,7 +163,6 @@ print(test)
 # print(namespace['__builtins__'])
 # print(namespace['signature'])
 
-
 # exec eval compile将字符串转化为可执行代码 , exec compile source into code or AST object ,if filename is None ,'<string>' is used
 # code = compile(self.algoscript, algo_filename, 'exec')
 # exec_(code, self.namespace)

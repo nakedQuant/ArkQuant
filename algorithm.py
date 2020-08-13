@@ -169,12 +169,9 @@ class TradingAlgorithm(object):
                  namespace=None,
                  script=None,
                  algo_filenames=None,
-                 initialize=None,
-                 handle_data=None,
-                 before_trading_start=None,
                  restrictions=None,
 
-                 allocation_policy,
+                 allocation_policy=average,
 
                  analyze=None,
                  metrics_set=None,
@@ -1056,7 +1053,7 @@ class TradingAlgorithm(object):
         # call to next on args[0] will also advance args[1], resulting in zip
         # returning (a,b) (c,d) (e,f) rather than (a,a) (b,b) (c,c) etc.
         positionals = zip(*args)
-        for name, value in chain(positionals, iteritems(kwargs)):
+        for name, value in chain(positionals, kwargs.items()):
             self._recorded_vars[name] = value
 
     def __repr__(self):

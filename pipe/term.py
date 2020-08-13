@@ -27,7 +27,7 @@ class Term(object):
             1 节点 --- 算法，基于拓扑结构 --- 实现算法逻辑 表明算法的组合方式
             2 不同的节点已经应该继承相同的接口，不需要区分pipeline还是featureUnion
             3 同一层级的不同节点相互独立，一旦有连接不同层级
-            4 同一层级节点计算的标的集合交集得出下一层级的输入，不同节点之间不考虑权重分配因为交集（存在所有节点）
+            4 同一层级节点计算的标的集合交集得出下一层级的输入，不同节点之间不考虑权重分配因为交集（存在所有节点）,也可以扩展
             5 每一个节点产生有序的股票集合，一层所有的交集按照各自节点形成综合排序
             6 最终节点 --- 返回一个有序有限的集合
         节点:
@@ -36,42 +36,41 @@ class Term(object):
             3 outputs --- algorithm list & asset list
 
         term --- 不可变通过改变不同的dependence重构pipeline
+        term --- universe
     """
-    # default_input = NotSpecific
     _term_cache = WeakValueDictionary
 
     namespace = dict()
 
-    __slots__ = ['domain', 'dependence', 'dtype', 'term_logic', '_subclass_called_validate']
+    __slots__ = ['domain', 'dependence', 'dtype', '_logic', '_subclass_called_validate']
 
     def __new__(cls,
                 domain,
                 script,
                 params,
-                dependence=NotSpecific,
-                dtype=None
+                dtype=[],
+                dependence=NotSpecific
                 ):
-
-        dtype = dtype if dtype else list()
-
+        # 解析策略文件并获取对象
         script_path = glob.glob('strategy/%s.py' % script)
         with open(script_path, 'r') as f:
             exec(f.read(), cls.namespace)
         logic_cls = cls.namespace[script]
-        identity = cls._static_identity(domain, logic_cls, params, dtype)
-
+        # 设立身份属性防止重复产生实例
+        identity = cls._static_identity(domain, logic_cls, params, dtype, dependence)
         try:
             return cls._term_cache[identity]
         except KeyError:
             new_instance = cls._term_cache[identity] = \
-                super(Term, cls).__new__(cls)._init(domain, logic_cls, params, dtype)
+                super(Term, cls).__new__(cls)._init(domain, logic_cls, params, dtype, dependence)
             return new_instance
 
     @classmethod
-    def _static_identity(cls, domain, script_class, script_params, dtype):
-        return domain, script_class, script_params, dtype
+    def _static_identity(cls, domain, script_class, script_params, dtype, dependence):
+        return domain, script_class, script_params, dtype, dependence
 
-    def _init(self, domain, script, params, dtype):
+    #__new__已经初始化后，不需要在__init__里面调用
+    def _init(self, domain, script, params, dtype, dependence):
         """
             __new__已经初始化后，不需要在__init__里面调用
             Noop constructor to play nicely with our caching __new__.  Subclasses
@@ -95,20 +94,20 @@ class Term(object):
                 Tuple of key/value pairs of additional parameters.
         """
         self.domain = domain
+        self.dependence = dependence
         self.dtype = dtype
         try:
             instance = script(params)
-            self.term_logic = instance
+            self._logic = instance
             self._validate()
         except TypeError:
             self._subclass_called_validate = False
 
-        assert self._subclass_called_super_validate, (
+        assert self._subclass_called_validate, (
             "Term._validate() was not called.\n"
             "This probably means that logic cannot be initialized."
         )
-        del self._subclass_called_super_validate
-
+        del self._subclass_called_validate
         return self
 
     def _validate(self):
@@ -117,23 +116,7 @@ class Term(object):
         once, at the end of Term._init().
         """
         # mark that we got here to enforce that subclasses overriding _validate
-        # call super().
-        self._subclass_called_super_validate = True
-
-    # @property
-    # def dependencies(self):
-    #     """
-    #     A dictionary mapping terms that must be computed before `self` to the
-    #     number of extra rows needed for those terms.
-    #     """
-    #     return self.default_input
-    #
-    # @dependencies.setter
-    # def dependencies(self, terms):
-    #     for item in terms:
-    #         if not isinstance(item, self):
-    #             raise TypeError('dependencies must be Term')
-    #     return terms
+        self._subclass_called_validate = True
 
     def __setattr__(self, key, value):
         raise NotImplementedError()
@@ -146,13 +129,11 @@ class Term(object):
         if self.dtype == bool:
             if not isinstance(data, self.dtype):
                 raise TypeError('style of data is not %s' % self.dtype)
-            return data
-        else:
-            try:
-                data = self.dtype(data)
-            except Exception as e:
-                raise TypeError('cannot transform the style of data to %s due to error %s' % (self.dtype, e))
-            return data
+        try:
+            data = self.dtype(data)
+        except Exception as e:
+            raise TypeError('cannot transform the style of data to %s due to error %s' % (self.dtype, e))
+        return data
 
     def _compute(self, inputs, data):
         """

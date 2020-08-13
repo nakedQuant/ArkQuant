@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 class PipelineLoader(ABC):
     """Interface for PipelineLoaders.
     """
-    def _resolve_domains(self, domains,event_type=False):
+    def _resolve_domains(self, domains, event_type=False):
         pipeline_domain = self._preprocess_domains(domains)
         if event_type and self._validate_event(pipeline_domain):
             return pipeline_domain

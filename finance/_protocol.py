@@ -78,10 +78,10 @@ class Portfolio(object):
         return capital
 
     def __getattr__(self, item):
-        return self.__dict__[item]
+        return self.__slots__[item]
 
     def __repr__(self):
-        return "Portfolio({0})".format(self.__dict__)
+        return "Portfolio({0})".format(self.__slots__)
 
     # If you are adding new attributes, don't update this set. This method
     # is deprecated to normal attribute access so we don't want to encourage
@@ -164,7 +164,7 @@ class MutableView(object):
     """
     # add slots so we don't accidentally add attributes to the view instead of
     # ``ob``
-    __slots__ = ('_mutable_view_obj')
+    __slots__ = ['_mutable_view_obj']
 
     def __init__(self, ob):
         object.__setattr__(self, '_mutable_view_ob', ob)
@@ -177,7 +177,7 @@ class MutableView(object):
         vars(self._mutable_view_ob)[attr] = value
 
     def __repr__(self):
-        return '%s(%r)'%(type(self).__name__,self._mutable_view_ob)
+        return '%s(%r)' % (type(self).__name__, self._mutable_view_ob)
 
 
 class Position(object):
@@ -190,7 +190,8 @@ class Position(object):
         self._underlying_position = MutableView(inner)
 
     def __getattr__(self, attr):
-        return self.__dict__[attr]
+        # return self.__dict__[attr]
+        return self._underlying_position[attr]
 
     def __setattr__(self, attr, value):
         raise AttributeError('cannot mutate Position objects')
@@ -253,9 +254,6 @@ class Account(object):
 
     def __setattr__(self, attr, value):
         raise AttributeError('cannot mutate Portfolio objects')
-
-    def __getattr__(self, item):
-        return self.__dict__[item]
 
     # If you are adding new attributes, don't update this set. This method
     # is deprecated to normal attribute access so we don't want to encourage
