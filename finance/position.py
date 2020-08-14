@@ -46,6 +46,11 @@ class Position(object):
         return self._closed
 
     @property
+    # 当天买入仓位不能卖出 --- 需改整个运行逻辑
+    def is_freeze(self):
+        return False
+
+    @property
     def protocol(self):
         return ProtocolPosition(self.inner_position)
 

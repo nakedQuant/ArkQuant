@@ -6,14 +6,12 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 import uuid
-from collections import OrderedDict, namedtuple
+from collections import OrderedDict
 from toolz import keyfilter
 from functools import reduce
 from pipe.term import Term, NotSpecific
 from pipe.graph import TermGraph
-
-Event = namedtuple('event', 'asset name')
-NamedPipe = namedtuple('pipe', 'event priority')
+from pipe import Event, NamedPipe
 
 
 class Pipeline(object):

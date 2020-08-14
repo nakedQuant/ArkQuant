@@ -2,7 +2,7 @@
 
 import pandas as pd, numpy as np
 
-from gateWay import Event,GateReq,Quandle
+from gateway import Event,GateReq,Quandle
 from strategies.features import BaseFeature,EMA,remove_na
 
 class MarketWidth(BaseFeature):

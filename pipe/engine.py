@@ -13,6 +13,11 @@ from abc import ABC, abstractmethod
 from pipe.loader.loader import PricingLoader
 from finance.restrictions import UnionRestrictions
 
+__all__ = [
+    'SimplePipelineEngine',
+    'NoEngineRegistered',
+]
+
 
 class Engine(ABC):
     """
@@ -24,7 +29,7 @@ class Engine(ABC):
         inner_pickers = chain([pipeline.ump_terms for pipeline in pipelines])
         engine_terms = set(inner_terms + inner_pickers)
         # get_loader
-        _get_loader = PricingLoader(engine_terms, self._data_portal)
+        _get_loader = PricingLoader(engine_terms, self.data_portal)
         return pipelines, _get_loader
 
     def _compute_default(self, ledger):
@@ -40,7 +45,7 @@ class Engine(ABC):
         # default assets
         equities = self.asset_finder.retrieve_type_assets('equity')
         # save the high priority and asset which can be traded
-        default = self._restricted_rule.is_restricted(equities, dts)
+        default = self.restricted_rules.is_restricted(equities, dts)
         # set pipe metadata
         history_metadata = self._get_loader.load_pipeline_arrays(dts, default)
         return default, history_metadata, traded_positions
@@ -201,14 +206,11 @@ class SimplePipelineEngine(Engine):
                  restrictions,
                  alternatives=10):
         self.pipelines, self._get_loader = self._init(pipelines)
+        self.data_portal = data_portal
         self.asset_finder = asset_finder
-        self._data_portal = data_portal
         # SecurityListRestrictions  AvailableRestrictions
-        self._restricted_rule = UnionRestrictions(restrictions)
+        self.restricted_rules = UnionRestrictions(restrictions)
         self.alternatives = alternatives
-
-    def __setattr__(self, key, value):
-        raise NotImplementedError()
 
     @staticmethod
     def resolve_conflicts(calls, puts, holdings):

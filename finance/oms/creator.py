@@ -39,7 +39,7 @@ class BaseCreator(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def yield_size_on_capital(self, asset, dts, capital):
+    def yield_size_on_capital(self, asset, dts, capital, direction):
         """
             基于资金限制以及preclose计算隐藏的订单个数
         """
@@ -86,20 +86,16 @@ class OrderCreator(BaseCreator):
                  cancel_policy,
                  execution_style,
                  window=1):
-        self._data_portal = data_portal
-        self._slippage_model = slippage
-        self._execution_style = execution_style
-        self._commission = commission
+        self.data_portal = data_portal
+        self.commission_model = commission
+        self.slippage_model = slippage
+        self.execution_style = execution_style
         self.cancel_policy = ComposedCancel(cancel_policy)
         # 限制条件  MaxPositionSize ,MaxOrderSize
         self.max_position_control, self.max_order_control = controls
         # 计算滑价与定义买入capital限制
         self._window = window
         self._fraction = 0.05
-
-    @property
-    def commission(self):
-        return self._commission
 
     @property
     def fraction(self):
@@ -112,10 +108,10 @@ class OrderCreator(BaseCreator):
 
     def _create_data(self, dt, asset):
         """生成OrderData"""
-        minutes = self._data_portal.get_spot_value(asset, dt, 'minute',
-                                              ['open', 'high', 'low', 'close', 'volume'])
-        open_pct, pre_close = self._data_portal.get_open_pct(asset, dt)
-        sliding = self._data_portal.get_window_data(asset, dt, self._window, ['amount', 'volume'], 'daily')
+        minutes = self.data_portal.get_spot_value(asset, dt, 'minute',
+                                                   ['open', 'high', 'low', 'close', 'volume'])
+        open_pct, pre_close = self.data_portal.get_open_pct(asset, dt)
+        sliding = self.data_portal.get_window_data(asset, dt, self._window, ['amount', 'volume'], 'daily')
         restricted = asset.restricted(dt)
         return OrderData(
                         minutes=minutes,
@@ -160,11 +156,11 @@ class OrderCreator(BaseCreator):
     def yield_size_on_capital(self, asset, dts, capital, direction):
         """根据capital 生成资金订单"""
         order_data = self._create_data(dts, asset)
-        base_capital = self._commission.gen_base_capital(dts)
+        base_capital = self.commission_model.gen_base_capital(dts)
         # 满足限制
         restricted_capital = order_data.sliding[asset.sid]['amount'].mean() * self.fraction
         capital = capital if restricted_capital > capital else restricted_capital
-        rate = self.commission.calculate_rate(asset, dts, direction)
+        rate = self.commission_model.calculate_rate(asset, dts, direction)
         # 以涨停价来度量capital
         per_capital = min([asset.tick_size * order_data.pre_close * (1 + asset.restricted), base_capital])
         assert capital < per_capital, ValueError('capital must satisfy the base tick size')
@@ -174,10 +170,10 @@ class OrderCreator(BaseCreator):
     def calculate_size_arrays(self, asset, q, dts):
         """根据目标q --- 生成size序列拆分订单数量"""
         data = self._create_data(dts, asset)
-        per_capital = self._commission.gen_base_capital(dts)
+        per_capital = self.commission_model.gen_base_capital(dts)
         per_size = min([int(per_capital / data.pre_close), q])
         size_array = np.tile([per_size], int(q/per_size))
-        size_array[np.random(int(q/per_size))] += q % per_size
+        size_array[np.random.random(int(q/per_size))] += q % per_size
         return size_array, data
 
     def _finalize(self, orders, order_data):
@@ -231,7 +227,7 @@ class OrderCreator(BaseCreator):
             # ticker_price --- filter simulate_prices
             ticker_prices = np.clip(simulate_prices, order_data.minutes.min(), order_data.minutes.max())
             iterator = zip(ticker_prices, tickers)
-        orders = [Order(event, amount, *args, self._execution_style,  self._slippage_model)
+        orders = [Order(event, amount, *args, self.execution_style,  self.slippage_model)
                   for amount, args in zip(size_array, iterator)]
         # simulate transactions
         final_orders = self._finalize(orders, order_data)
@@ -245,7 +241,7 @@ class OrderCreator(BaseCreator):
         control_size_array = map(lambda x: x * sum(size_array) / size, size_array)
         order_data = self._create_data(dts, asset)
         # 存在controls
-        orders = [Order(event, *args, direction, self._execution_style, self._slippage_model)
+        orders = [Order(event, *args, direction, self.execution_style, self.slippage_model)
                   for args in zip(price_array, control_size_array, ticker_array)]
         # simulate transactions
         final_orders = self._finalize(orders, order_data)

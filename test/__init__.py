@@ -5,7 +5,7 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 import json
-from gateWay import Feed,GateReq,Event
+from gateway import Feed,GateReq,Event
 
 feed = Feed()
 

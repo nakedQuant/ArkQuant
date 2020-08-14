@@ -5,8 +5,7 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-from itertools import chain
-import pandas as pd
+import pandas as pd, warnings
 from error.errors import (
     IncompatibleCommissionModel,
     IncompatibleSlippageModel,
@@ -31,25 +30,24 @@ from finance.oms.blotter import SimulationBlotter
 from finance.oms.creator import OrderCreator
 from finance.restrictions import NoRestrictions
 from finance.slippage import NoSlippage
-from gateWay.asset.assets import Equity
-from gateWay.driver.benchmark import (
+from gateway.asset.assets import Equity
+from gateway.driver.benchmark import (
     get_benchmark_returns,
     get_alternative_returns
 )
-from gateWay.driver.data_portal import DataPortal
+from gateway.driver.data_portal import DataPortal
 from gens.clock import MinuteSimulationClock
 from gens.tradesimulation import AlgorithmSimulator
 from pipe.engine import SimplePipelineEngine
 from risk.allocation import Equal
 from trade.broke import Broker
-from trade.metrics import default_metrics
-from trade.metrics.tracker import MetricsTracker
+from risk.metrics import default_metrics
+from risk.metrics.tracker import MetricsTracker
 from utils.api_support import (
     api_method,
     ZiplineAPI,
 )
-from utils.context_tricks import EventManager, Event
-from utils.event_rule import Always
+from utils.events import EventManager, Event, Always
 
 
 class TradingAlgorithm(object):
@@ -150,6 +148,7 @@ class TradingAlgorithm(object):
                  # capital allocation and portfolio management
                  risk_management=None,
                  # metrics
+                 _analyze=None,
                  metrics_set=None,
                  metrics_tracker=None,
                  # os property
@@ -186,6 +185,8 @@ class TradingAlgorithm(object):
             self.data_portal = data_portal
 
         # order creator to create orders by capital or amount
+        self.trading_controls = control or [MaxOrderSize, MaxPositionSize]
+
         if creator is not None:
             self._creator = creator
         else:
@@ -194,7 +195,7 @@ class TradingAlgorithm(object):
             execution_style = execution_style or MarketOrder()
             cancel_policy = cancel_policy or NeverCancel()
             # List of trading controls to be used to validate orders.
-            trading_controls = control or [MaxOrderSize, MaxPositionSize]
+            # trading_controls = control or [MaxOrderSize, MaxPositionSize]
             # List of account controls to be checked on each bar.
             # self.account_controls = []
             self._creator = OrderCreator(data_portal,
@@ -202,7 +203,7 @@ class TradingAlgorithm(object):
                                          commission,
                                          execution_style,
                                          cancel_policy,
-                                         trading_controls)
+                                         self.trading_controls)
 
         # simulation blotter
         self.blotter = self._create_blotter(delay)
@@ -211,7 +212,8 @@ class TradingAlgorithm(object):
         self.alternative = alternatives or 10
         # Initialize pipe_engine API
         self.pipeline_engine = self.init_engine(scripts)
-        self.initialized = True
+        # create generator --- initialized = True
+        self.initialized = False
 
         # capital allocation
         risk_management = Equal or risk_management
@@ -227,6 +229,9 @@ class TradingAlgorithm(object):
             self.metrics_tracker = metrics_tracker
         else:
             self.metrics_tracker = self._create_metrics_tracker()
+        # analyze the metrics
+        self._analyze = _analyze
+
         # set event manager
         self.event_manager = EventManager(create_event_context)
         self.event_manager.add_event(
@@ -239,8 +244,6 @@ class TradingAlgorithm(object):
         self.initialize_kwargs = initialize_kwargs or {}
         self._recorded_vars = {}
         self.namespace = namespace or {}
-        # A dictionary of the actual capital change deltas, keyed by timestamp
-        self.capital_changes = {}
 
     def _calculate_universe(self):
         # this exists to provide backwards compatibility for older,
@@ -279,12 +282,12 @@ class TradingAlgorithm(object):
 
         If get_loader is None, constructs an ExplodingPipelineEngine
         """
-        namespace = dict()
         pipelines = []
         for script_file in scripts:
+            name = script_file.rsplit('.')[-2]
             with open(script_file, 'r') as f:
-                exec(f.read(), namespace)
-                pipelines.append(namespace['pipe'])
+                exec(f.read(), self.namespace)
+                pipelines.append(self.namespace[name])
         try:
             engine = SimplePipelineEngine(
                                 pipelines,
@@ -305,10 +308,12 @@ class TradingAlgorithm(object):
         )
 
     def _calculate_benchmark_returns(self):
-        try:
-            returns = get_benchmark_returns(self.sim_params.benchmark)
-        except Exception as e:
-            returns = get_alternative_returns(self.sim_params.benchmark)
+        benchmark = self.sim_params.benchmark
+        benchmark_symbols = self.asset_finder.retrieve_index_symbols()
+        if benchmark in benchmark_symbols:
+            returns = get_benchmark_returns(benchmark)
+        else:
+            returns = get_alternative_returns(benchmark)
         return returns.loc[self.sim_params.sessions, :]
 
     def _create_clock(self):
@@ -316,9 +321,8 @@ class TradingAlgorithm(object):
         If the clock property is not set, then create one based on frequency.
         """
         return MinuteSimulationClock(
-            self.sim_params.sessions,
-            self.trading_calendar
-            )
+                        self.sim_params
+                        )
 
     def _create_generator(self, sim_params):
         """
@@ -352,6 +356,23 @@ class TradingAlgorithm(object):
         with ZiplineAPI(self):
             self._initialize(self, *args, **kwargs)
 
+    def run(self):
+        """Run the algorithm.
+        """
+        # Create px_trade and loop through simulated_trading.
+        # Each iteration returns a perf dictionary
+        try:
+            perfs = []
+            for perf in self.get_generator():
+                perfs.append(perf)
+            # convert perf dict to pandas frame
+            daily_stats = self._create_daily_stats(perfs)
+            self.analyze(daily_stats)
+        finally:
+            self.data_portal = None
+            self.metrics_tracker = None
+        return daily_stats
+
     @staticmethod
     def _create_daily_stats(perfs):
         daily_perfs = []
@@ -373,23 +394,6 @@ class TradingAlgorithm(object):
 
         with ZiplineAPI(self):
             self._analyze(self, perf)
-
-    def run(self):
-        """Run the algorithm.
-        """
-        # Create px_trade and loop through simulated_trading.
-        # Each iteration returns a perf dictionary
-        try:
-            perfs = []
-            for perf in self.get_generator():
-                perfs.append(perf)
-            # convert perf dict to pandas frame
-            daily_stats = self._create_daily_stats(perfs)
-            self.analyze(daily_stats)
-        finally:
-            self.data_portal = None
-            self.metrics_tracker = None
-        return daily_stats
 
     @api_method
     def get_environment(self, field='platform'):
@@ -419,7 +423,6 @@ class TradingAlgorithm(object):
                   know if they are running on the Quantopian platform instead.
               * : dict[str -> any]
                   Returns all of the fields in a dictionary.
-
         Returns
         -------
         val : any
@@ -431,7 +434,7 @@ class TradingAlgorithm(object):
             Raised when ``field`` is not a valid option.
         """
         env = {
-            # 'arena': self.sim_params.arena,
+            'arena': 'china',
             # 'data_frequency': self.sim_params.data_frequency,
             'start': self.sim_params.sessions[0],
             'end': self.sim_params.sessions[-1],
@@ -586,12 +589,12 @@ class TradingAlgorithm(object):
             self.blotter.slippage_models[Equity] = us_equities
 
     @api_method
-    def set_commission(self, us_equities=None):
+    def set_commission(self, commission_class):
         """Sets the commission models for the simulation.
 
         Parameters
         ----------
-        us_equities : EquityCommissionModel
+        commission_class : CommissionModel instance
             The commission model to use for trading US equities.
 
         Notes
@@ -608,14 +611,7 @@ class TradingAlgorithm(object):
         if self.initialized:
             raise SetCommissionPostInit()
 
-        if us_equities is not None:
-            if Equity not in us_equities.allowed_asset_types:
-                raise IncompatibleCommissionModel(
-                    asset_type='equities',
-                    given_model=us_equities,
-                    supported_asset_types=us_equities.allowed_asset_types,
-                )
-            self.blotter.commission_models[Equity] = us_equities
+        self.blotter.commission_model = commission_class
 
     @api_method
     def set_cancel_policy(self, cancel_policy):
@@ -639,11 +635,6 @@ class TradingAlgorithm(object):
 
         self.blotter.cancel_policy = cancel_policy
 
-    # @api_method
-    # @expect_types(
-    #     restrictions=Restrictions,
-    #     on_error=str,
-    # )
     def set_restrictions(self, restricted_list):
         """Set a restriction on which asset can be ordered.
 
@@ -654,11 +645,12 @@ class TradingAlgorithm(object):
 
         See Also
         --------
-        zipline.finance.asset_restrictions.Restrictions
+        zipline.finance.restrictions.Restrictions
         """
-        # control = RestrictedListOrder(on_error, restrictions)
-        # self.register_trading_control(control)
-        # self.restrictions |= restrictions
+        if self.initialized:
+            raise SetCancelPolicyPostInit()
+
+        self.pipeline_engine.restricted_rules = restricted_list
 
     ####################
     # Trading Controls #
@@ -763,5 +755,6 @@ class TradingAlgorithm(object):
                    initialized=self.initialized,
                    slippage_models=repr(self.blotter.slippage_models),
                    commission_models=repr(self.blotter.commission_models),
-                   blotter=repr(self.blotter),
-                   recorded_vars=repr(self.recorded_vars))
+                   blotter=repr(self.blotter)
+                   # recorded_vars=repr(self.recorded_vars))
+                   )

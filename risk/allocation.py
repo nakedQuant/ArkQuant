@@ -9,6 +9,12 @@ from abc import ABC, abstractmethod
 from multiprocessing import Pool
 import numpy as np
 
+__all__ = [
+    'Equal',
+    'Delta',
+    'Kelly',
+]
+
 
 class CapitalManagement(ABC):
     """

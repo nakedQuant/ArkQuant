@@ -5,11 +5,43 @@ Created on Sat Feb 16 13:56:19 2019
 
 @author: python
 """
-
-import functools,logging,pdb,time
+import functools, logging, pdb, time
 import warnings
 from functools import wraps
 from contextlib import contextmanager
+
+
+def _deprecated_getitem_method(name, attrs):
+    """Create a deprecated ``__getitem__`` method that tells users to use
+    getattr instead.
+
+    Parameters
+    ----------
+    name : str
+        The name of the object in the warning message.
+    attrs : iterable[str]
+        The set of allowed attributes.
+
+    Returns
+    -------
+    __getitem__ : callable[any, str]
+        The ``__getitem__`` method to put in the class dict.
+    """
+    attrs = frozenset(attrs)
+    msg = (
+        "'{name}[{attr!r}]' is deprecated, please use"
+        " '{name}.{attr}' instead"
+    )
+
+    def __getitem__(self, key):
+        """``__getitem__`` is deprecated, please use attribute access instead.
+        """
+        warnings.warn(msg.format(name=name, attr=key), DeprecationWarning, stacklevel=2)
+        if key in attrs:
+            return getattr(self, key)
+        raise KeyError(key)
+
+    return __getitem__
 
 
 class Deprecated(object):

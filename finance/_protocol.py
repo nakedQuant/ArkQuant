@@ -5,8 +5,42 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-from gateWay.asset.assets import Asset
-from finance.portfolio import _deprecated_getitem_method
+from gateway.asset.assets import Asset
+from utils.wrapper import _deprecated_getitem_method
+
+__all__ = [
+    'MutableView',
+    'InnerPosition',
+    'Position',
+    'Positions',
+    'Account'
+]
+
+
+class MutableView(object):
+    """A mutable view over an "immutable" object.
+
+    Parameters
+    ----------
+    ob : any
+        The object to take a view over.
+    """
+    # add slots so we don't accidentally add attributes to the view instead of
+    # ``ob``
+    __slots__ = ['_mutable_view_obj']
+
+    def __init__(self, ob):
+        object.__setattr__(self, '_mutable_view_ob', ob)
+
+    def __getattr__(self, item):
+        return getattr(self._mutable_view_ob, item)
+
+    def __setattr__(self, attr, value):
+        # vars() 函数返回对象object的属性和属性值的字典对象 --- 扩展属性类型 ,不改变原来的对象属性
+        vars(self._mutable_view_ob)[attr] = value
+
+    def __repr__(self):
+        return '%s(%r)' % (type(self).__name__, self._mutable_view_ob)
 
 
 class InnerPosition:
@@ -42,32 +76,6 @@ class InnerPosition:
                     self.last_sync_date,
                 )
         )
-
-
-class MutableView(object):
-    """A mutable view over an "immutable" object.
-
-    Parameters
-    ----------
-    ob : any
-        The object to take a view over.
-    """
-    # add slots so we don't accidentally add attributes to the view instead of
-    # ``ob``
-    __slots__ = ['_mutable_view_obj']
-
-    def __init__(self, ob):
-        object.__setattr__(self, '_mutable_view_ob', ob)
-
-    def __getattr__(self, item):
-        return getattr(self._mutable_view_ob, item)
-
-    def __setattr__(self, attr, value):
-        # vars() 函数返回对象object的属性和属性值的字典对象 --- 扩展属性类型 ,不改变原来的对象属性
-        vars(self._mutable_view_ob)[attr] = value
-
-    def __repr__(self):
-        return '%s(%r)' % (type(self).__name__, self._mutable_view_ob)
 
 
 class Position(object):

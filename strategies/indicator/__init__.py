@@ -4,7 +4,7 @@ from abc import ABC ,abstractmethod
 from functools import reduce ,wraps
 import pandas as pd,numpy as np
 
-from gateWay import Event,GateReq,Quandle
+from gateway import Event,GateReq,Quandle
 
 def remove_na(f):
     @wraps(f)

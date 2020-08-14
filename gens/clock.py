@@ -8,16 +8,16 @@ Created on Tue Mar 12 15:37:47 2019
 
 import pandas as pd
 from _calendar.trading_calendar import calendar
-
-BAR = 0
-SESSION_START = 1
-SESSION_END = 2
-MINUTE_END = 3
-BEFORE_TRADING_START_BAR = 4
-# before trading  , session start , session end 三个阶段
+from gens import (
+    SESSION_START,
+    SESSION_END,
+    BEFORE_TRADING_START_BAR
+)
 
 
 class MinuteSimulationClock(object):
+
+    # before trading  , session start , session end 三个阶段
 
     def __init__(self, sim_params):
 

@@ -78,4 +78,3 @@ class Broker(object):
         transactions = chain([negatives, positives, p_transactions, c_transactions])
         # 执行成交
         ledger.process_transaction(transactions)
-

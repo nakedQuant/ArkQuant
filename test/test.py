@@ -9667,3 +9667,7 @@ import logging
 #         dt = dt.astimezone(tz)
 #     return dt
 
+# control = RestrictedListOrder(on_error, restrictions)
+# self.register_trading_control(control)
+# self.restrictions |= restrictions
+

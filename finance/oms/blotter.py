@@ -17,11 +17,11 @@ class SimulationBlotter(object):
     def __init__(self,
                  generator,
                  delay=1):
-        self._iterator = generator
+        self._creator = generator
         self.delay = delay
 
     def create_bulk_transactions(self, orders):
-        transactions = [create_transaction(order, self._iterator.commission) for order in orders]
+        transactions = [create_transaction(order, self._creator.commission) for order in orders]
         return transactions
 
     def simulate(self, event, capital, dts, direction, portfolio):
@@ -33,7 +33,7 @@ class SimulationBlotter(object):
         :param portfolio: portfolio
         :return: list of transactions
         """
-        orders = self._iterator.simulate(event, capital, dts, direction, portfolio)
+        orders = self._creator.simulate(event, capital, dts, direction, portfolio)
         transactions = self.create_bulk_transactions(orders)
         # 计算效率
         # utility = sum([t.amount for t in transactions]) / sum([order.amount for order in orders])
@@ -47,7 +47,7 @@ class SimulationBlotter(object):
         :param direction: positive or negative
         :return: list of transactions
         """
-        direct_orders = self._iterator.simulate_order(event, amount, dts, direction)
+        direct_orders = self._creator.simulate_order(event, amount, dts, direction)
         transactions = self.create_bulk_transactions(direct_orders)
         # # 计算效率
         # utility = sum([txn.amount for txn in transactions]) / amount
@@ -79,7 +79,7 @@ class SimulationBlotter(object):
         p_transactions = self.simulate_txn(p.event, p.amount, dts, 'negative')
         p_transaction_prices = np.array([p_txn.price for p_txn in p_transactions])
         # 执行对应的买入算法
-        c_data = self._iterator._create_data(dts, c)
+        c_data = self._creator._create_data(dts, c)
         # 切换之间存在时间差，默认以minutes为单位
         c_tickers = [pd.Timedelta(minutes='%dminutes' % self.delay) + txn.created_dt for txn in p_transactions]
         # 根据ticker价格比值
@@ -88,7 +88,7 @@ class SimulationBlotter(object):
         # 模拟买入订单数量
         c_sizes = [np.floor(p.amount * ratio) for p in p_transactions]
         # 生成对应的买入订单
-        c_orders = self._iterator.yield_order(dts, c, c_ticker_prices, c_sizes, c_tickers, 'positive', portfolio)
+        c_orders = self._creator.yield_order(dts, c, c_ticker_prices, c_sizes, c_tickers, 'positive', portfolio)
         # 订单 --- 交易
         c_transactions = self.create_bulk_transactions(c_orders)
         # 计算效率

@@ -7,7 +7,7 @@ Created on Tue Mar 12 15:37:47 2019
 """
 from .base import PipelineLoader
 from _calendar.trading_calendar import calendar
-from pipe import EVENT
+from pipe.loader import EVENT
 
 
 class PricingLoader(PipelineLoader):

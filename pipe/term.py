@@ -11,10 +11,8 @@ from weakref import WeakValueDictionary
 
 class NotSpecific(Exception):
 
-    def __str__():
+    def __repr__(self):
         return 'object not specific'
-
-    __repr__ = __str__()
 
 
 class Term(object):

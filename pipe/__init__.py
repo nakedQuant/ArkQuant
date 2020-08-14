@@ -5,19 +5,7 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-from gateWay.driver.fundamental_reader import (
-                        MassiveSessionReader,
-                        ReleaseSessionReader,
-                        HolderSessionReader,
-                        StructureSessionReader,
-                        GrossSessionReader,
-                        MarginSessionReader
-                                            )
-EVENT = {
-        'massive': MassiveSessionReader(),
-        'release': ReleaseSessionReader(),
-        'holder': HolderSessionReader(),
-        'structure': StructureSessionReader(),
-        'gross': GrossSessionReader(),
-        'margin': MarginSessionReader()
-        }
+from collections import namedtuple
+
+Event = namedtuple('event', 'asset name')
+NamedPipe = namedtuple('pipe', 'event priority')

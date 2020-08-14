@@ -3,7 +3,7 @@
 import pandas as pd ,numpy as np
 from functools import partial
 
-from gateWay import Event,GateReq,Quandle
+from gateway import Event,GateReq,Quandle
 from strategies.features import BaseFeature,EMA,remove_na
 from algorithm import zoom,coef2deg
 from utils.linear_tool import _fit_poly

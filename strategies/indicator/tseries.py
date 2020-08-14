@@ -4,7 +4,7 @@ from statsmodels.tsa.stattools import adfuller,coint,pacf,acf
 import numpy as np ,pandas as pd
 
 from strategies.features import BaseFeature
-from gateWay import Event,GateReq,Quandle
+from gateway import Event,GateReq,Quandle
 
 class ADF(BaseFeature):
     """

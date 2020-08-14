@@ -1,7 +1,7 @@
 # -*- coding : utf-8 -*-
 import numpy as np,pandas as pd
 
-from gateWay import Event,GateReq,Quandle
+from gateway import Event,GateReq,Quandle
 from algorithm import BaseFeature
 from algorithm import zoom
 

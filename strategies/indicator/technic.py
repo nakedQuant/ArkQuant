@@ -6,7 +6,7 @@ Created on Tue Mar 12 15:37:47 2019
 """
 import pandas as pd,numpy as np
 
-from gateWay import Event,GateReq,Quandle
+from gateway import Event,GateReq,Quandle
 from strategies.features import BaseFeature,MA,XEMA,SMA,remove_na,EMA,AEMA
 
 class TEMA(BaseFeature):

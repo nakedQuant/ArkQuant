@@ -10,7 +10,7 @@ from datetime import datetime
 from dateutil import rrule
 from toolz import partition_all
 from _calendar import autumn, spring, Holiday
-from gateWay.driver.api.client import tsclient
+from gateway.driver.api.client import tsclient
 
 
 class TradingCalendar (object):

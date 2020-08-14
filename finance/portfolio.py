@@ -6,40 +6,7 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 import pandas as pd
-import warnings
-
-
-def _deprecated_getitem_method(name, attrs):
-    """Create a deprecated ``__getitem__`` method that tells users to use
-    getattr instead.
-
-    Parameters
-    ----------
-    name : str
-        The name of the object in the warning message.
-    attrs : iterable[str]
-        The set of allowed attributes.
-
-    Returns
-    -------
-    __getitem__ : callable[any, str]
-        The ``__getitem__`` method to put in the class dict.
-    """
-    attrs = frozenset(attrs)
-    msg = (
-        "'{name}[{attr!r}]' is deprecated, please use"
-        " '{name}.{attr}' instead"
-    )
-
-    def __getitem__(self, key):
-        """``__getitem__`` is deprecated, please use attribute access instead.
-        """
-        warnings(msg.format(name=name, attr=key), DeprecationWarning, stacklevel=2)
-        if key in attrs:
-            return getattr(self, key)
-        raise KeyError(key)
-
-    return __getitem__
+from utils.wrapper import _deprecated_getitem_method
 
 
 class Portfolio(object):

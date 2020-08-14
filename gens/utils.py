@@ -5,7 +5,6 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-
 import pytz, numbers, heapq
 from hashlib import md5
 from datetime import datetime

@@ -18,6 +18,7 @@
 # b.flush()
 # print('-----------b',b)
 
+
 def to_timestamp(df):
     df['year'] = df['dates'] // 2048 + 2004
     df['month'] = (df['dates'] % 2048) // 100
@@ -41,6 +42,7 @@ def to_timestamp(df):
     cols = ['timestamp','open','high','low','close','amount','volume','appendix']
     return df.loc[:,cols]
 
+
 ticker_file_min = '/Users/python/Library/Mobile Documents/com~apple~CloudDocs/行情数据/tdx_data/sz5fz/sz300554.5'
 with open(ticker_file_min,'rb') as f:
     buf = f.read()
@@ -59,7 +61,8 @@ b = bcolz.ctable.fromdataframe(ticker_df)
 b.flush()
 print('-----------b',b)
 
-#bcolz 操作
+
+# bcolz 操作
 initial_array = np.empty(0, np.uint32)
 bcolz_path = '/Users/python/Library/Mobile Documents/com~apple~CloudDocs/bcolz/test.bcolz'
 init = bcolz.ctable(
@@ -96,8 +99,9 @@ print('init apppend',init)
 # # filter = init.fetchwhere('100000 <= volume')
 # filter = init.fetchwhere("({0} <= ticker) & (ticker < {1})".format(s.timestamp(),e.timestamp()))
 # print('filter',filter)
-#eval
-day_seconds =  24 * 60 * 60
+# eval
+
+day_seconds = 24 * 60 * 60
 ticker = 9 * 60 * 60 + 30 * 60
 print('init',init)
 print(init.names)
