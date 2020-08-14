@@ -9,8 +9,7 @@ from collections import namedtuple
 import json, pandas as pd
 from itertools import chain
 from toolz import partition_all
-
-from gateway.asset._config import ASSERT_URL_MAPPING, ASSET_SUPPLEMENT_URL
+from gateway.spider.xml import ASSERT_URL_MAPPING, ASSET_SUPPLEMENT_URL
 from gateway.driver.api.client import tsclient
 from gateway.driver.tools import _parse_url
 

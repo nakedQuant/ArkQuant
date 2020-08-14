@@ -8,9 +8,8 @@ Created on Tue Mar 12 15:37:47 2019
 import json, pandas as pd
 from multiprocessing import Pool
 from sqlalchemy import select
-from gateway.driver.tools import _parse_url
 from gateway.driver.db_writer import db
-from gateway.driver.spider import Crawler
+from gateway.spider.base import Crawler
 from.xml import ASSETS_BUNDLES_URL
 
 
@@ -39,7 +38,7 @@ class BundlesWriter(Crawler):
 
     def _crawler(self, mapping, tbl, pct=False):
         url = ASSETS_BUNDLES_URL[tbl].format(mapping['request_sid'], self.lmt)
-        obj = _parse_url(url, bs=False)
+        obj = self.tool(url, bs=False)
         kline = json.loads(obj)['data']
         cols = self.default + ['pct'] if pct else self.default
         if kline and len(kline['klines']):

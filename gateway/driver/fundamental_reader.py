@@ -8,9 +8,9 @@ Created on Tue Mar 12 15:37:47 2019
 from sqlalchemy import select, cast, and_, Numeric, Integer
 import pandas as pd, datetime, sqlalchemy as sa, json
 from gateway.driver.tools import _parse_url
-from gateway.driver.spider.xml import ASSET_FUNDAMENTAL_URL
+from gateway.spider.xml import ASSET_FUNDAMENTAL_URL
 from gateway.driver.bar_reader import BarReader
-from gateway.driver import engine
+from gateway.database import engine
 
 __all__ = [
     'MassiveSessionReader',

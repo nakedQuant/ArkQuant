@@ -17,7 +17,7 @@ import pandas as pd
 from functools import partial
 from sqlalchemy import MetaData
 from toolz import groupby
-from gateway.driver import engine
+from gateway.database import engine
 from gateway.driver.tools import unpack_df_to_component_dict
 
 

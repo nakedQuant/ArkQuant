@@ -6,16 +6,14 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 import json, pandas as pd
-from gateway.driver.tools import _parse_url
 from gateway.driver.db_writer import db
-from gateway.driver.spider.xml import ASSET_FUNDAMENTAL_URL
-from gateway.driver.spider import Crawler
+from gateway.spider.xml import ASSET_FUNDAMENTAL_URL
+from gateway.spider.base import Crawler
 
 
 class ReleaseWriter(Crawler):
 
-    @classmethod
-    def writer(cls, s_date, e_date):
+    def writer(self, s_date, e_date):
         """
             获取A股解禁数据
         """
@@ -24,7 +22,7 @@ class ReleaseWriter(Crawler):
                  '&js={"data":(x)}'
         while True:
             url = ASSET_FUNDAMENTAL_URL['release'] % count + prefix
-            text = _parse_url(url, encoding=None,bs=False)
+            text = self.tool(url, encoding=None,bs=False)
             text = json.loads(text)
             if text['data'] and len(text['data']):
                 info = text['data']

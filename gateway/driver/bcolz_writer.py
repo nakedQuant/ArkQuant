@@ -8,9 +8,8 @@ Created on Tue Mar 12 15:37:47 2019
 from collections import namedtuple
 from abc import ABC, abstractmethod
 import struct, pandas as pd, bcolz, numpy as np, os, glob, datetime
-from gateway.driver import TdxDir
+from gateway.driver import TdxDir, OHLC_RATIO
 
-OHLC_RATIO = 100
 
 __all__ = [
     'BcolzDailyBarWriter',

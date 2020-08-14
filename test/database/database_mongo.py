@@ -5,7 +5,6 @@ Created on Sun Feb 17 16:11:34 2019
 
 @author: python
 """
-
 from datetime import datetime
 from enum import Enum
 from typing import Optional, Sequence, List

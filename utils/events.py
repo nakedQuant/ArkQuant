@@ -47,7 +47,6 @@ __all__ = [
     # Factory API
     'date_rules',
     'time_rules',
-    'calendars',
     'make_eventrule',
 ]
 

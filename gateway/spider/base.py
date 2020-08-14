@@ -8,13 +8,18 @@ Created on Tue Mar 12 15:37:47 2019
 from abc import ABC, abstractmethod
 from sqlalchemy import MetaData
 from gateway.driver import engine
+from gateway.driver.tools import _parse_url
+
+__all__ = ['Crawler']
 
 
 class Crawler(ABC):
 
+    engine = engine
+
     @property
-    def engine(self):
-        return engine
+    def tool(self):
+        return _parse_url
 
     @property
     def metadata(self):
@@ -29,4 +34,3 @@ class Crawler(ABC):
         raise NotImplementedError()
 
 
-__all__ = [Crawler]

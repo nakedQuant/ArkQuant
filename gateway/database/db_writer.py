@@ -9,8 +9,8 @@ import pandas as pd,sqlalchemy as sa, numpy as np
 from sqlalchemy import inspect, create_engine
 from contextlib import ExitStack
 from weakref import WeakValueDictionary
-from gateway.driver.db_schema import asset_db_table_names
-from gateway.driver import metadata, engine_path
+from gateway.database.db_schema import asset_db_table_names
+from gateway.database import metadata, engine_path
 
 __all__ = ['db']
 
@@ -24,38 +24,10 @@ class DBWriter(object):
             return cls._cache[root_path]
         except KeyError:
             engine = create_engine(root_path)
-            txn = engine.connect()
-            instance = object().__new__(cls)._init_db(txn)
+            instance = object().__new__(cls)
+            instance._init_db(engine)
             cls._cache[engine] = instance
             return cls._cache[engine]
-
-    def _init_db(self, txn=None):
-        """Connect to database and create tables.
-
-        Parameters
-        ----------
-        txn : sa.engine.Connection, optional
-            The transaction to execute in. If this is not provided, a new
-            transaction will be started with the engine provided.
-
-        Returns
-        -------
-        metadata : sa.MetaData
-            The metadata that describes the new asset db.
-        """
-        with ExitStack() as stack:
-            if txn is None:
-                txn = stack.enter_context(self.engine.begin())
-
-            tables_already_exist = self._all_tables_present(txn)
-
-            # Create the SQL tables if they do not already exist.
-            if not tables_already_exist:
-                metadata.create_all(txn, checkfirst=True)
-            # 将table
-            metadata.reflect(only=asset_db_table_names)
-            for table_name in asset_db_table_names:
-                setattr(self, table_name, metadata.tables[table_name])
 
     @staticmethod
     def _all_tables_present(txn):
@@ -73,12 +45,35 @@ class DBWriter(object):
             True if any tables are present, otherwise False.
         """
         conn = txn.connect()
-        # for table_name in asset_db_table_names:
-        #     if txn.dialect.has_table(conn, table_name):
-        #         return True
-        # return False
-        update = np.all([txn.dialect.has_table(conn, t) for t in asset_db_table_names])
-        return update
+        present = np.all([txn.dialect.has_table(conn, t)
+                         for t in asset_db_table_names])
+        return present
+
+    def _init_db(self, engine):
+        """Connect to database and create tables.
+
+        Parameters
+        ----------
+        txn : sa.engine.Connection, optional
+            The transaction to execute in. If this is not provided, a new
+            transaction will be started with the engine provided.
+
+        Returns
+        -------
+        metadata : sa.MetaData
+            The metadata that describes the new asset db.
+        """
+        with ExitStack() as stack:
+            # if txn is None:
+            txn = stack.enter_context(engine.connect())
+            tables_already_exist = self._all_tables_present(txn)
+            # Create the SQL tables if they do not already exist.
+            if not tables_already_exist:
+                metadata.create_all(txn, checkfirst=True)
+            # 将table
+            metadata.reflect(only=asset_db_table_names)
+            for table_name in asset_db_table_names:
+                setattr(self, table_name, metadata.tables[table_name])
 
     def __enter__(self):
         return self
@@ -122,8 +117,8 @@ class DBWriter(object):
             raise ValueError('must be frame or series')
         conn.execute(ins, formatted)
 
-    def writer(self, tbl, df, direct = True):
-        with open('db_schema.py','r') as f:
+    def writer(self, tbl, df, direct=True):
+        with open('db_schema.py', 'r') as f:
             string_obj = f.read()
         exec(string_obj)
 

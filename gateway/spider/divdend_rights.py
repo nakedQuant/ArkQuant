@@ -7,10 +7,9 @@ Created on Tue Mar 12 15:37:47 2019
 """
 from sqlalchemy import select, func
 import pandas as pd, time, numpy as np
-from gateway.driver.spider import Crawler
-from gateway.driver.db_writer import db
-from gateway.driver.tools import _parse_url
-from gateway.driver.spider.xml import DIVDEND
+from gateway.spider.base import Crawler
+from gateway.database.db_writer import db
+from gateway.spider.xml import DIVDEND
 
 
 class AdjustmentsWriter(Crawler):
@@ -81,11 +80,11 @@ class AdjustmentsWriter(Crawler):
 
     def writer(self, sid):
         try:
-            contents = _parse_url(DIVDEND % sid)
+            contents = self.tool(DIVDEND % sid)
         except Exception as e:
             print('%s occur due to high prequency', e)
             time.sleep(np.random.randint(0, 1))
-            contents = _parse_url(DIVDEND % sid)
+            contents = self.tool(DIVDEND % sid)
         #获取数据库的最新时点
         self._record_deadlines()
         #解析网页内容

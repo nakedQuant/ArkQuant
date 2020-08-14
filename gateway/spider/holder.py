@@ -7,10 +7,10 @@ Created on Tue Mar 12 15:37:47 2019
 """
 from sqlalchemy import select, func
 import json, re, pandas as pd
-from gateway.driver.tools import _parse_url
-from gateway.driver.spider import Crawler
-from gateway.driver.db_writer import db
-from gateway.driver.spider.xml import HolderFields, ASSET_FUNDAMENTAL_URL
+from gateway.spider.base import Crawler
+from gateway.database.db_writer import db
+from gateway.spider import HolderFields
+from gateway.spider.xml import ASSET_FUNDAMENTAL_URL
 
 
 class HolderWriter(Crawler):
@@ -29,7 +29,7 @@ class HolderWriter(Crawler):
         page = 1
         while True:
             url = ASSET_FUNDAMENTAL_URL['shareholder'] % page
-            raw = _parse_url(url, bs=False)
+            raw = self.tool(url, bs=False)
             match = re.search('\[(.*.)\]', raw)
             data = json.loads(match.group())
             data = [item.split(',')[:-1] for item in data]

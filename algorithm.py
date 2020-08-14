@@ -7,7 +7,6 @@ Created on Tue Mar 12 15:37:47 2019
 """
 import pandas as pd, warnings
 from error.errors import (
-    IncompatibleCommissionModel,
     IncompatibleSlippageModel,
     RegisterTradingControlPostInit,
     SetBenchmarkOutsideInitialize,

@@ -7,9 +7,10 @@ Created on Tue Mar 12 15:37:47 2019
 """
 import pandas as pd
 from sqlalchemy import select, func
-from gateway.driver.spider import Crawler
-from gateway.driver.spider.xml import COLUMNS, OWNERSHIP
-from gateway.driver.tools import _parse_url, parse_content_from_header
+from gateway.spider.base import Crawler
+from gateway.spider.xml import OWNERSHIP
+from gateway.spider import COLUMNS
+from gateway.driver.tools import parse_content_from_header
 from gateway.driver.db_writer import db
 
 
@@ -56,5 +57,5 @@ class OwnershipWriter(Crawler):
         # obtain asset
         assets = self._retrieve_equities_from_sqlite()
         for asset in assets:
-            content = _parse_url(OWNERSHIP % asset)
+            content = self.tool(OWNERSHIP % asset)
             self._parse_equity_ownership(content, asset, deadline)

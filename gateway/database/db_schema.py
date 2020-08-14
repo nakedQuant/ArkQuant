@@ -6,23 +6,174 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 import sqlalchemy as sa
-from gateway.driver import metadata
-# from gateway.asset.asset_db_schema import equity_basics, convertible_basics
+from gateway.database import metadata
+
 
 __all__ = [
-    'asset_db_table_names',
-    'equity_price',
-    'convertible_price',
-    'fund_price',
-    'equity_splits',
-    'equity_rights',
-    'ownership',
-    'holder',
-    'release',
-    'massive',
-    'mcap',
-    'version_info'
+           'mcap',
+           'holder',
+           'release',
+           'massive',
+           'ownership',
+           'fund_price',
+           'version_info',
+           'asset_router',
+           'equity_basics',
+           'equity_price',
+           'equity_splits',
+           'equity_rights',
+           'convertible_basics',
+           'convertible_price',
+           'asset_db_table_names'
 ]
+
+
+asset_router = sa.Table(
+    'asset_router',
+    metadata,
+    sa.Column(
+        'id',
+        sa.Integer,
+        autoincrement=True
+    ),
+    sa.Column(
+        'sid',
+        sa.Integer,
+        unique=True,
+        nullable=False,
+        primary_key=True,
+        index=True
+    ),
+    # asset_name --- 公司名称
+    sa.Column(
+        'asset_name',
+        sa.Text,
+        # unique=True,
+        nullable=False
+    ),
+    sa.Column(
+        'asset_type',
+        sa.String(10),
+        nullable=False
+    ),
+    sa.Column(
+        'exchange',
+        sa.String(6)
+    ),
+    sa.Column(
+        'first_traded',
+        sa.String(10),
+        # nullable=False
+    ),
+    sa.Column(
+        'last_traded',
+        sa.String(10),
+        default='null'
+    ),
+    # null / d / p / st  --- null(normal)
+    sa.Column(
+        'status',
+        sa.String(6),
+        default='null'
+    ),
+    sa.Column(
+        'country_code',
+        sa.String(6),
+        default='ch'
+    ),
+
+)
+
+equity_basics = sa.Table(
+    'equity_basics',
+    metadata,
+    sa.Column(
+        'sid',
+        sa.Integer,
+        # 一对一 或者一对多， 索引一种
+        sa.ForeignKey(asset_router.c.sid),
+        index=True,
+        nullable=False,
+        primary_key=True
+    ),
+    sa.Column(
+        'dual',
+        sa.String(8),
+        default='null'
+    ),
+    sa.Column(
+        'broker',
+        sa.Text,
+        nullable=False
+    ),
+    # district code
+    sa.Column(
+        'district',
+        sa.String(8),
+        nullable=False
+    ),
+    sa.Column(
+        'initial_price',
+        sa.Numeric(10, 2),
+        nullable=False
+    ),
+    sa.Column(
+        'business_scope',
+        sa.Text,
+        nullable=False
+    ),
+)
+
+convertible_basics = sa.Table(
+    'convertible_basics',
+    metadata,
+    sa.Column(
+        'sid',
+        sa.Integer,
+        sa.ForeignKey(asset_router.c.sid),
+        unique=True,
+        nullable=False,
+        primary_key=True,
+        index=True
+    ),
+    sa.Column(
+        # 股票可以发行不止一个可转债
+        'swap_code',
+        sa.String(6),
+        nullable=False,
+        primary_key=True
+    ),
+    sa.Column(
+        'put_price',
+        sa.Numeric(10, 3),
+        nullable=False
+    ),
+    sa.Column(
+        'redeem_price',
+        sa.Numeric(10, 2),
+        nullable=False
+    ),
+    sa.Column(
+        'convert_price',
+        sa.Numeric(10, 2),
+        nullable=False
+    ),
+    sa.Column(
+        'convert_dt',
+        sa.String(10),
+        nullable=False
+    ),
+    sa.Column(
+        'put_convert_price',
+        sa.Numeric(10, 2),
+        nullable=False
+    ),
+    sa.Column(
+        'guarantor',
+        sa.Text,
+        nullable=False
+    ),
+)
 
 
 equity_price = sa.Table(
@@ -39,16 +190,20 @@ equity_price = sa.Table(
     sa.Column(
         'sid',
         sa.String(10),
-        # sa.ForeignKey(equity_basics.c.sid),
         nullable=False,
         primary_key=True,
     ),
-    sa.Column('trade_dt', sa.String(10), nullable=False),
+    sa.Column(
+        'trade_dt',
+        sa.String(10),
+        nullable=False,
+        primary_key=True,
+    ),
     sa.Column('open', sa.Numeric(10, 2), nullable=False),
     sa.Column('high', sa.Numeric(10, 2), nullable=False),
     sa.Column('low', sa.Numeric(10, 2), nullable=False),
     sa.Column('close', sa.Numeric(10, 2), nullable=False),
-    sa.Column('volume', sa.Numeric(10, 2), nullable = False),
+    sa.Column('volume', sa.Numeric(10, 2), nullable=False),
     sa.Column('amount', sa.Numeric(20, 0), nullable=False),
     sa.Column('pct', sa.Numeric(20, 2), nullable=False),
 
@@ -68,16 +223,20 @@ convertible_price = sa.Table(
     sa.Column(
         'sid',
         sa.String(10),
-        # sa.ForeignKey(convertible_basics.c.sid),
         nullable=False,
+        primary_key=True,
     ),
     sa.Column(
         'swap_code',
         sa.String(10),
-        # sa.ForeignKey(convertible_basics.c.swap_code),
         nullable=False
     ),
-    sa.Column('trade_dt', sa.String(10), primary_key=True, nullable=False),
+    sa.Column(
+        'trade_dt',
+        sa.String(10),
+        nullable=False,
+        primary_key=True
+    ),
     sa.Column('open', sa.Numeric(10, 2), nullable=False),
     sa.Column('high', sa.Numeric(10, 2), nullable=False),
     sa.Column('low', sa.Numeric(10, 2), nullable=False),
@@ -100,9 +259,14 @@ fund_price = sa.Table(
     sa.Column('sid',
               sa.String(10),
               nullable=False,
-              index=True
+              primary_key=True,
               ),
-    sa.Column('trade_dt', sa.String(10), primary_key=True, nullable=False),
+    sa.Column(
+        'trade_dt',
+        sa.String(10),
+        nullable=False,
+        primary_key=True
+    ),
     sa.Column('open', sa.Numeric(10, 2), nullable=False),
     sa.Column('high', sa.Numeric(10, 2), nullable=False),
     sa.Column('low', sa.Numeric(10, 2), nullable=False),
@@ -130,10 +294,14 @@ equity_splits = sa.Table(
     sa.Column(
         'sid',
         sa.String(10),
-        # sa.ForeignKey(equity_price.c.sid),
         nullable=False,
+        primary_key=True,
     ),
-    sa.Column('declared_date', sa.String(10)),
+    sa.Column(
+        'declared_date',
+        sa.String(10),
+        primary_key = True,
+    ),
     sa.Column('ex_date', sa.String(10)),
     sa.Column('pay_date', sa.String(10)),
     sa.Column('effective_date', sa.String(10)),
@@ -158,10 +326,15 @@ equity_rights = sa.Table(
     sa.Column(
         'sid',
         sa.Integer,
-        # sa.ForeignKey(equity_price.c.sid),
         nullable=False,
+        primary_key=True,
+
     ),
-    sa.Column('declared_date', sa.String(10)),
+    sa.Column(
+        'declared_date',
+        sa.String(10),
+        primary_key=True
+    ),
     sa.Column('ex_date', sa.String(10)),
     sa.Column('pay_date', sa.String(10)),
     sa.Column('effective_date', sa.String(10)),
@@ -188,10 +361,14 @@ ownership = sa.Table(
     sa.Column(
         'sid',
         sa.String(10),
-        # sa.ForeignKey(equity_price.c.sid),
         nullable=False,
+        primary_key=True,
     ),
-    sa.Column('declared_date', sa.String(10)),
+    sa.Column(
+        'declared_date',
+        sa.String(10),
+        primary_key=True
+    ),
     sa.Column('ex_date', sa.String(10)),
     sa.Column('general', sa.Numeric(15, 5)),
     sa.Column('float', sa.Numeric(15, 5)),
@@ -216,9 +393,13 @@ holder = sa.Table(
     sa.Column(
         'sid',
         sa.Integer,
-        # sa.ForeignKey(equity_price.c.sid),
         nullable=False,
         primary_key=True,
+    ),
+    sa.Column(
+        'declared_date',
+        sa.String(10),
+        primary_key=True
     ),
     sa.Column('股东', sa.Text),
     sa.Column('方式', sa.String(20)),
@@ -226,8 +407,7 @@ holder = sa.Table(
     sa.Column('总持仓', sa.Numeric(10, 5), nullable=False),
     sa.Column('占总股本比', sa.Numeric(10, 5), nullable=False),
     sa.Column('总流通股', sa.Numeric(10, 5), nullable=False),
-    sa.Column('占流通比', sa.Numeric(10, 5), nullable=False),
-    sa.Column('declared_date', sa.String(10))
+    sa.Column('占流通比', sa.Numeric(10, 5), nullable=False)
 )
 
 # 解禁数据
@@ -245,12 +425,16 @@ release = sa.Table(
     sa.Column(
         'sid',
         sa.Integer,
-        # sa.ForeignKey(equity_price.c.sid),
         nullable=False,
         primary_key=True,
     ),
     # sa.Column('release_date', sa.String(10), nullable=False),
-    sa.Column('declared_date', sa.String(10), nullable=False),
+    sa.Column(
+        'declared_date',
+        sa.String(10),
+        nullable=False,
+        primary_key=True
+    ),
     sa.Column('release_type', sa.Text, nullable=False),
     sa.Column('cjeltszb', sa.Numeric(10, 5), nullable=False)
 )
@@ -270,10 +454,16 @@ massive = sa.Table(
     sa.Column(
         'sid',
         sa.Integer,
-        # sa.ForeignKey(equity_price.c.sid),
         nullable=False,
+        primary_key=True,
+
     ),
-    sa.Column('declared_date', sa.String(10), nullable=False),
+    sa.Column(
+        'declared_date',
+        sa.String(10),
+        nullable=False,
+        primary_key=True
+    ),
     sa.Column('bid_price', sa.Text, nullable=False),
     sa.Column('discount', sa.Text, nullable=False),
     sa.Column('bid_volume', sa.Numeric(10, 5), nullable=False),
@@ -289,12 +479,15 @@ mcap = sa.Table(
     sa.Column(
         'sid',
         sa.Integer,
-        # sa.ForeignKey(equity_price.c.sid),
         unique=True,
         nullable=False,
         primary_key=True,
     ),
-    sa.Column('trade_dt', sa.String(10), nullable=False),
+    sa.Column(
+        'trade_dt',
+        sa.String(10),
+        nullable=False,
+        primary_key=True),
     sa.Column('mkv', sa.Numeric(15,5), nullable=False),
     sa.Column('mkv_cap', sa.Numeric(15, 5), nullable=False),
     sa.Column('mkv_strict', sa.Numeric(15, 5), nullable=False),
@@ -322,7 +515,6 @@ version_info = sa.Table(
     sa.CheckConstraint('id <= 1')
 )
 
-
-asset_db_table_names = frozenset(['equity_price', 'convertible_price', 'fund_price', 'equity_splits',
-                                  'equity_rights', 'ownership', 'holder', 'release', 'massive', 'mcap'])
-
+asset_db_table_names = frozenset(['asset_router',  'equity_basics', 'convertible_basics', 'equity_price',
+                                  'convertible_price', 'fund_price', 'equity_splits', 'equity_rights',
+                                  'ownership', 'holder', 'release', 'massive', 'mcap', 'version_info'])

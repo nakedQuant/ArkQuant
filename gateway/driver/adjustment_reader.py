@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import sqlalchemy as sa
 from sqlalchemy import and_, MetaData
-from gateway.driver import engine
+from gateway.database import engine
 from gateway.driver.tools import unpack_df_to_component_dict
 
 

@@ -12,8 +12,6 @@ import os
 from bs4 import BeautifulSoup
 from collections import defaultdict
 
-ONE_HOUR = pd.Timedelta(hours=1)
-
 
 def _parse_url(url, encoding='gbk', bs=True):
     Header = {

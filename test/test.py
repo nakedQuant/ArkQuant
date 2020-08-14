@@ -9671,3 +9671,4 @@ import logging
 # self.register_trading_control(control)
 # self.restrictions |= restrictions
 
+# sa.ForeignKey(equity_basics.c.sid),

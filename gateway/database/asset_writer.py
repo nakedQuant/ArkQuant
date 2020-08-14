@@ -5,22 +5,22 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
+import sqlalchemy as sa, numpy as np
 from contextlib import ExitStack
-import sqlalchemy as sa
+from sqlalchemy import create_engine
 from gateway.asset.asset_spider import AssetSpider
-from gateway.asset.asset_db_schema import (
+from gateway.database import (
+    engine,
     metadata,
     ASSET_DB_VERSION,
+    SQLITE_MAX_VARIABLE_NUMBER
+)
+from gateway.database.db_schema import (
     asset_db_table_names,
     equity_basics,
     convertible_basics,
     asset_router,
-    version_info
 )
-from gateway.driver import engine
-
-
-SQLITE_MAX_VARIABLE_NUMBER = 999
 
 _rename_router_cols = frozenset(['sid',
                                  'asset_name',
@@ -130,12 +130,10 @@ class AssetWriter(object):
     DEFAULT_CHUNK_SIZE = SQLITE_MAX_VARIABLE_NUMBER
 
     # @preprocess(engine=coerce_string_to_eng(require_exists=False))
-    def __init__(self):
+    def __init__(self, engine_path=None):
+        self.engine = create_engine(engine_path) if engine_path else engine
+        self._init_db()
         self._asset_spider = AssetSpider()
-
-    @property
-    def engine(self):
-        return engine
 
     @staticmethod
     def _all_tables_present(txn):
@@ -153,12 +151,15 @@ class AssetWriter(object):
             True if any tables are present, otherwise False.
         """
         conn = txn.connect()
-        for table_name in asset_db_table_names:
-            if txn.dialect.has_table(conn, table_name):
-                return True
-        return False
+        # for table_name in asset_db_table_names:
+        #     if txn.dialect.has_table(conn, table_name):
+        #         return True
+        # return False
+        present = np.all([txn.dialect.has_table(conn, t)
+                         for t in asset_db_table_names])
+        return present
 
-    def init_db(self, txn=None):
+    def _init_db(self, txn=None):
         """Connect to database and create tables.
 
         Parameters
@@ -215,7 +216,7 @@ class AssetWriter(object):
                      chunk_size=DEFAULT_CHUNK_SIZE):
         with self.engine.begin() as conn:
             # Create SQL tables if they do not exist.
-            self.init_db(conn)
+            self._init_db(conn)
 
             if equity_frame is not None:
                 self._write_df_to_table(
@@ -297,3 +298,6 @@ class AssetWriter(object):
             fund_mappings=fund_frame,
             chunk_size=chunk_size,
         )
+
+
+assetDb = AssetWriter()
