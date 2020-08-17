@@ -7,6 +7,7 @@ Created on Tue Mar 12 15:37:47 2019
 """
 import pandas as pd
 from utils.wrapper import _deprecated_getitem_method
+from _calendar.trading_calendar import calendar
 
 
 class Portfolio(object):
@@ -22,18 +23,20 @@ class Portfolio(object):
         Dict-like object containing information about currently-held positions.
 
     """
-    __slots__ = ['start_cash', 'portfolio_value', '_cash_flow',
-                 'pnl', 'returns', 'utility', 'positions']
+    __slots__ = ['start_cash', 'portfolio_value', '_cash_flow', 'pnl', 'returns',
+                 'utility', 'positions', 'portfolio_daily_returns']
 
     def __init__(self, capital_base=0.0):
         self.portfolio_value = capital_base
         self.positions_values = 0.0
         self.pnl = 0.0
+        # cum_return
         self.returns = 0.0
         self.utility = 0.0
         self.positions = None
         self._cash_flow = 0.0
         self.start_cash = capital_base - self.cash_flow
+        self.portfolio_daily_value = pd.Series([], index=calendar.all_sessions)
 
     @property
     def cash_flow(self):
@@ -83,3 +86,6 @@ class Portfolio(object):
                 for p in self.positions
             })
             return position_values / self.portfolio_value
+
+    def record_value(self, session_ix):
+        self.portfolio_daily_value[session_ix] = self.portfolio_value

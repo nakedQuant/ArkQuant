@@ -1,19 +1,9 @@
 """
 Module for building a complete dataset from local directory with csv files.
 """
-import os , sys
-from logbook import Logger, StreamHandler
+import os
 from numpy import empty
 from pandas import DataFrame, read_csv, Index, Timedelta, NaT
-from trading_calendars import register_calendar_alias
-
-from zipline.utils.cli import maybe_show_progress
-
-from . import core as bundles
-
-handler = StreamHandler(sys.stdout, format_string=" | {record.message}")
-logger = Logger(__name__)
-logger.handlers.append(handler)
 
 
 def csvdir_equities(tframes=None, csvdir=None):

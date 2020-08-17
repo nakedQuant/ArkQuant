@@ -5,13 +5,14 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-import numpy as np
+import numpy as np, pandas as pd
 from finance._protocol import InnerPosition, Position as ProtocolPosition
+from _calendar.trading_calendar import calendar
 
 
 class Position(object):
 
-    __slots__ = ['_event', 'inner_position']
+    __slots__ = ['inner_position', 'event', 'position_returns', '_closed']
 
     def __init__(self,
                  event,
@@ -28,8 +29,9 @@ class Position(object):
                 last_sync_price=last_sync_price,
                 last_sync_date=last_sync_date,
         )
-        self.event = event
         self.inner_position = inner
+        self.event = event
+        self.position_returns = pd.Series([], index=calendar.all_sessions)
         self._closed = False
 
     @property
@@ -99,6 +101,9 @@ class Position(object):
                 self._closed = True
             txn_capital = txn_value - txn_cost
         return txn_capital
+
+    def calculate_returns(self):
+        self.position_returns[self.last_sync_date] = self.last_sync_price / self.cost_basis - 1.0
 
     def __repr__(self):
         template = "asset :{asset} , amount:{amount},cost_basis:{cost_basis}"

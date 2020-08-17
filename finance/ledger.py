@@ -16,11 +16,15 @@ class Ledger(object):
         the ledger tracks all orders and transactions as well as the current state of the portfolio and positions
         逻辑 --- 核心position_tracker （ process_execution ,handle_splits , handle_divdend) --- 生成position_stats
         更新portfolio --- 基于portfolio更新account
+        --- 简化 在交易开始之前决定是否退出position 由于risk management
     """
-    __slots__ = ['_portfolio', 'position_tracker', '_processed_transaction',
-                 '_previous_total_returns', '_dirty_portfolio', 'daily_returns_series']
+    __slots__ = ['_portfolio', 'position_tracker', '_processed_transaction', '_previous_total_returns',
+                 '_dirty_portfolio', '_synchronized', 'daily_returns_series']
 
-    def __init__(self, trading_sessions, capital_base):
+    def __init__(self,
+                 trading_sessions,
+                 capital_base,
+                 risk_model):
         """构建可变、不可变的组合、账户"""
         if not len(trading_sessions):
             raise Exception('calendars must not be null')
@@ -28,15 +32,16 @@ class Ledger(object):
         self._portfolio = MutableView(Portfolio(capital_base))
         self._processed_transaction = []
         self._previous_total_returns = 0
-        self._dirty_portfolio = True
         self.daily_returns_series = pd.Series(np.nan, index=trading_sessions)
         self.position_tracker = PositionTracker()
+        self._dirty_portfolio = True
+        self._synchronized = False
 
     @property
     def synchronized_clock(self):
+        assert self._synchronized, 'must synchronize dts for positions first '
         dts = set([p.last_sync_date
                    for p in self.positions.values()])
-        assert len(dts) == 1, Exception('positions must sync at the same time')
         return dts
 
     @property
@@ -77,13 +82,25 @@ class Ledger(object):
 
     def get_rights_positions(self, dts):
         # 获取当天为配股登记日的仓位 --- 卖出 因为需要停盘产生机会成本
+        assert self._synchronized, 'must synchronize dts for positions first '
         right_positions = []
         for position in self.portfolio.positions:
             asset = position.inner_position.asset
             right = self.position_tracker.retrieve_right_of_equity(asset, dts)
             if len(right):
-                right_positions.append(position)
+                right_positions.append(position.protocol)
         return right_positions
+
+    def get_violate_risk_positions(self):
+        # 获取违反风控管理的仓位
+        assert self._synchronized, 'must synchronize dts for positions first '
+        violate_positions = []
+        for position in self.portfolio.positions:
+            cost_basis = position.inner_position.cost_basis
+            last_price = position.inner_position.last_sync_price
+            (last_price - cost_basis) / cost_basis
+            violate_positions.append(position.protocol)
+        return violate_positions
 
     def start_of_session(self, session_ix):
         # 每天同步时间
@@ -91,6 +108,7 @@ class Ledger(object):
         self._process_dividends()
         self._previous_total_returns = self._portfolio.returns
         self._dirty_portfolio = True
+        self._synchronized = True
 
     def process_transaction(self, transactions):
         """每天不断产生的transactions，进行处理 """
@@ -132,8 +150,11 @@ class Ledger(object):
     def end_of_session(self):
         self._calculate_portfolio_stats()
         session_ix = self.position_tracker.update_sync_date
+        self.position_tracker.sync_position_returns()
         self.daily_returns_series[session_ix] = self.daily_returns
+        self.portfolio.record_returns(session_ix)
         self._dirty_portfolio = False
+        self._synchronized = False
 
     def get_transactions(self, dt):
         """

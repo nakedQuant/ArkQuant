@@ -78,6 +78,7 @@ class AlgorithmSimulator(object):
             clock = self.algorithm.clock
 
             self.metrics_tracker.handle_start_of_simulation()
+            # 涉及 minutes metrics
 
             for session_label, action in clock:
                 if action == BEFORE_TRADING_START_BAR:

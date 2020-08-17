@@ -97,8 +97,12 @@ class PositionTracker(object):
             assert asset == inner_position.asset, ValueError('unmatched position')
             inner_position.last_sync_price = last_sync_prices[asset]
 
+    def sync_position_returns(self):
+        for p in self.positions.values():
+            p.calculate_returns()
+
     def get_positions(self):
-        # protocol
+        # protocol list
         protocols = [position.protocol for position in self.positions.values()]
         return protocols
 

@@ -36,30 +36,32 @@ class Engine(ABC):
         """
         Register a Pipeline default for pipe on every day.
         :param dts: initialize attach pipe and cache metadata for engine
-        :return:
+        9:25 --- 9:30
         """
         # 判断ledger 是否update
         dts = ledger.synchronized_clock
+        # capital
+        capital = ledger.porfolio.cash
+        righted_positions = ledger.get_rights_positions(dts)
         # 剔除配股的持仓
-        traded_positions = set(ledger.positions) - set(ledger.get_rights_positions(dts))
+        traded_positions = set(ledger.positions) - set(righted_positions)
         # default assets
         equities = self.asset_finder.retrieve_type_assets('equity')
         # save the high priority and asset which can be traded
         default = self.restricted_rules.is_restricted(equities, dts)
         # set pipe metadata
         history_metadata = self._get_loader.load_pipeline_arrays(dts, default)
-        return default, history_metadata, traded_positions
+        return default, history_metadata, traded_positions, righted_positions, dts, capital
 
     @staticmethod
     def resolve_pipeline_final(outputs):
         # to find out the final asset of each pipe , notice ---  NamedPipe list
-        # resample_by_pipe --- group by pipe name
-        resample_by_pipe = groupby(lambda x: x.event.name, outputs)
+        # group by pipe name
+        sample_by_pipe = groupby(lambda x: x.event.name, outputs)
         # priority 0 --- high ,diminish by increase number
-        group_sorted = valmap(lambda x: x.sort(key=lambda k: k.priority), resample_by_pipe)
+        group_sorted = valmap(lambda x: x.sort(key=lambda k: k.priority), sample_by_pipe)
         # namedPipe --- event priority
-        finals = valmap(lambda x: x[0].event if x else None, group_sorted)
-        # return event mappings {name:event}
+        finals = valmap(lambda x: x[0].event.asset if x else None, group_sorted)
         return finals
 
     def _run_pipeline(self, pipeline, metadata, default):
@@ -88,6 +90,7 @@ class Engine(ABC):
             results = [pool.apply_async(_impl, pipeline)
                        for pipeline in self.pipelines]
             outputs = chain(* results)
+        # return pipe_name : asset
         yield self.resolve_pipeline_final(outputs)
 
     @staticmethod
@@ -101,15 +104,14 @@ class Engine(ABC):
                     to determine withdraw strategy
             return position list
         """
-        name_proxy = {{pipe.name: pipe} for pipe in self.pipelines}
+        proxy = {{pipe.name: pipe} for pipe in self.pipelines}
 
         _impl = partial(self._run_ump, metadata=metadata)
 
         with Pool(processes=len(positions))as pool:
-            results = [pool.apply_async(_impl, name_proxy[position.name], position)
+            results = [pool.apply_async(_impl, proxy[position.name], position)
                        for position in positions]
-            # return mappings {name:position}
-            output = {{r.name: r} for r in results if r}
+        output = [r for r in results if r]
         return output
 
     def execute_algorithm(self, ledger):
@@ -117,12 +119,13 @@ class Engine(ABC):
             calculate pipelines and ump
         """
         # default pipe_metadata --- pipe ; positions_not_righted pipe_metadata --- ump ;
-        default, pipe_metadata, positions_not_righted = self._compute_default(ledger)
+        default, pipe_metadata, positions_not_righted, righted_positions, dts, capital = self._compute_default(ledger)
         # 执行算法逻辑
-        event_proxy = self.run_pipeline(pipe_metadata, default)
-        ump_positions = self.run_ump(pipe_metadata, positions_not_righted)
+        pipe_proxy = self.run_pipeline(pipe_metadata, default)
+        # 退出算法包含righted position
+        ump_positions = self.run_ump(pipe_metadata, positions_not_righted) + righted_positions
         # 买入的event , 卖出的ump_positions , 总持仓（剔除配股持仓）
-        yield self.resolve_conflicts(event_proxy, ump_positions, positions_not_righted)
+        yield dts, capital, self.resolve_conflicts(pipe_proxy, ump_positions, positions_not_righted)
 
     @staticmethod
     @abstractmethod
@@ -215,30 +218,36 @@ class SimplePipelineEngine(Engine):
     @staticmethod
     def resolve_conflicts(calls, puts, holdings):
         """
-        :param calls: Event object --- namedtuple(asset , name) ; {name: event}
-        :param puts: Position {name : position}
+        :param calls: dict --- pipe_name : asset
+        :param puts: Position list (ump position + righted position
         :param holdings: ledger positions (exclude righted positions)
-        :return:
+        不同的pipeline 可以相同持仓，但是不一定同一时间卖出
+        其他的pipeline产生相同的持仓，持仓动态变动，所以只能做收盘的分析 或者每个minute产生一个account view
         """
-        # pipeline_name : holding groupby 可能存在相同的持仓但是由不同的pipeline产生
-        holding_mappings = {{p.name: p} for p in holdings}
+        # return mappings {name:position}
+        put_proxy = {{r.name: r} for r in puts}
         # common pipe name
-        common_pipe = set(puts) & set(calls)
+        common_pipe = set(put_proxy) & set(calls)
         # 直接卖出持仓，无买入标的
-        direct_negatives = set(puts) - set(common_pipe)
+        direct_negatives = set(put_proxy) - set(common_pipe)
         if common_pipe:
-            conflicts = [name for name in common_pipe if puts[name] == calls[name]]
+            conflicts = [name for name in common_pipe if put_proxy[name].asset == calls[name]]
             assert not conflicts, ValueError('name : %r have conflicts between ump and pipe ' % conflicts)
-            # 卖出持仓买入对应标的
-            dual = [(puts[name], calls[name]) for name in common_pipe]
+            # 卖出持仓买入对应标的 --- element (position, asset)
+            dual = [(put_proxy[name], calls[name]) for name in common_pipe]
         else:
             dual = set()
+        # pipeline_name : holding groupby 可能存在相同的持仓但是由不同的pipeline产生
+        hold_proxy = {{p.name: p} for p in holdings}
         # 基于capital执行买入标的的对应的pipeline_name
-        extra = set(calls) - set(holding_mappings)
+        extra = set(calls) - set(hold_proxy)
         if extra:
             direct_positives = keyfilter(lambda x: x in extra, calls)
         else:
             direct_positives = dict()
+        # unchanged positions
+        # unchanged_pipe = set(hold_proxy) - set(put_proxy)
+        # unchanged_positions = keyfilter(lambda x: x in unchanged_pipe, hold_proxy)
         return direct_negatives, dual, direct_positives
 
 

@@ -14,8 +14,7 @@ from finance.oms.order import Order
 from finance.cancel_policy import ComposedCancel
 from utils.dt_utilty import locate_pos
 
-
-OrderData = namedtuple('OrderData', 'minutes open_pct pre_close sliding restricted')
+OrderData = namedtuple('OrderData', 'minutes open_pct pre_close window restricted')
 
 
 class BaseCreator(ABC):
@@ -111,13 +110,13 @@ class OrderCreator(BaseCreator):
         minutes = self.data_portal.get_spot_value(asset, dt, 'minute',
                                                    ['open', 'high', 'low', 'close', 'volume'])
         open_pct, pre_close = self.data_portal.get_open_pct(asset, dt)
-        sliding = self.data_portal.get_window_data(asset, dt, self._window, ['amount', 'volume'], 'daily')
+        window = self.data_portal.get_window_data(asset, dt, self._window, ['amount', 'volume'], 'daily')
         restricted = asset.restricted(dt)
         return OrderData(
                         minutes=minutes,
                         open_pct=open_pct[asset],
                         pre_close=pre_close[asset],
-                        sliding=sliding,
+                        window=window,
                         restricted=restricted
                         )
 
@@ -158,7 +157,7 @@ class OrderCreator(BaseCreator):
         order_data = self._create_data(dts, asset)
         base_capital = self.commission_model.gen_base_capital(dts)
         # 满足限制
-        restricted_capital = order_data.sliding[asset.sid]['amount'].mean() * self.fraction
+        restricted_capital = order_data.window[asset.sid]['amount'].mean() * self.fraction
         capital = capital if restricted_capital > capital else restricted_capital
         rate = self.commission_model.calculate_rate(asset, dts, direction)
         # 以涨停价来度量capital

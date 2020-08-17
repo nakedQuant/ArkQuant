@@ -12,6 +12,7 @@ from .tools import _parse_url
 from .api.client import tsclient
 from .bar_reader import AssetSessionReader
 from .bcolz_reader import BcolzMinuteReader
+from .resample import TradingDayRule
 from .adjustment_reader import SQLiteAdjustmentReader
 from .history_loader import (
     HistoryDailyLoader,
@@ -34,10 +35,14 @@ class DataPortal(object):
 
     OHLCV_FIELDS = frozenset(["open", "high", "low", "close", "volume"])
 
-    def __init__(self, asset_finder):
+    def __init__(self,
+                 asset_finder,
+                 sessions):
 
         self.asset_finder = asset_finder
         self._adjustment_reader = SQLiteAdjustmentReader()
+        # resample module
+        self.resample_rule = TradingDayRule(sessions)
         _minute_reader = BcolzMinuteReader()
         _session_reader = AssetSessionReader()
 
@@ -257,31 +262,29 @@ class DataPortal(object):
         window_array = _reader.load_raw_arrays(sessions, assets, field)
         return window_array
 
-    def get_resize_data(self,dt,window,freq,assets,field):
+    def fetch_minute_freq(self, kwargs):
         """
-            return resample daily kline --- Year Month Day
+        :param kwargs: hour,minute
+        :return: minute ticker list
         """
-        resample_data = self._history_loader['daily'].get_resampled(
-                                                                dt,
-                                                                window,
-                                                                freq,
-                                                                assets,
-                                                                field
-                                                                    )
-        return resample_data
+        minutes = self.resample_rule.minute_rule(kwargs)
+        return minutes
 
-    def get_specific_ticker_data(self, dt, window, ticker, assets, field):
+    def fetch_week_freq(self, delta):
         """
-            eg --- 9:30 or 11:20
+        :param delta: int , the number day of week (1-7) which is trading_day
+        :return: trading list
         """
-        resample_tickers = self._history_loader['minute'].get_resampled(
-                                                                dt,
-                                                                window,
-                                                                ticker,
-                                                                assets,
-                                                                field
-                                                                    )
-        return resample_tickers
+        week_days = self.resample_rule.week_rules(delta)
+        return week_days
+
+    def fetch_month_freq(self, delta):
+        """
+        :param delta: int ,the number day of month (max -- 31) which is trading_day
+        :return: trading list
+        """
+        month_days = self.resample_rule.month_rules(delta)
+        return month_days
 
     @staticmethod
     def get_current(sid):
@@ -299,16 +302,6 @@ class DataPortal(object):
         minutes = pd.DataFrame(raw_array, columns=['ticker', 'open', 'close', 'high',
                                                    'low', 'volume', 'turnover', 'avg'])
         return minutes
-
-    def handle_extra_source(self, source_df):
-        """
-            Internal method that determines if this asset/field combination
-            represents a fetcher value or a regular OHLCVP lookup.
-            Extra sources always have a sid column.
-            We expand the given data (by forward filling) to the full range of
-            the simulation dates, so that lookup is fast during simulation.
-        """
-        raise NotImplementedError()
 
     @staticmethod
     def get_equities_pledge(symbol):

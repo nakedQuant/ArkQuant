@@ -18,11 +18,12 @@ class Broker(object):
     """
     def __init__(self,
                  simulation_blotter,
+                 risk_model,
                  allocation_model):
         self.blotter = simulation_blotter
         self.allocation = allocation_model
 
-    def enroll_impl(self, calls, capital, dts):
+    def enroll_implement(self, calls, capital, dts):
         """基于资金买入对应仓位"""
         # 资金分配
         risk_manage = self.allocation.compute(calls.values(), capital)
@@ -40,7 +41,7 @@ class Broker(object):
         transactions = chain(*result)
         return transactions
 
-    def withdraw_impl(self, puts, dts):
+    def withdraw_implement(self, puts, dts):
         """单独的卖出仓位"""
         p_func = partial(self.blotter.simulate_txn,
                          direction='negative',
@@ -51,7 +52,7 @@ class Broker(object):
             transactions = chain(*results)
         return transactions
 
-    def interactive_impl(self, duals, dts):
+    def interactive_implement(self, duals, dts):
         """
             针对一个pipeline算法，卖出 -- 买入
         """
@@ -64,14 +65,15 @@ class Broker(object):
 
     def carry_out(self, engine, ledger):
         """建立执行计划"""
-        capital = ledger.porfolio.cash
-        negatives, dual, positives, dts = engine.execute_engine(ledger)
+        dts, capital, negatives, dual, positives = engine.execute_algorithm(ledger)
         # 直接买入
-        positives = self.enroll_impl(positives, capital, dts)
+        positives = self.enroll_implement(positives, capital, dts)
         # 直接卖出
-        negatives = self.withdraw_impl(negatives, dts)
+        negatives = self.withdraw_implement(negatives, dts)
         # 卖出 --- 买入
-        p_transactions, c_transactions = self.interactive_impl(dual, dts)
+        p_transactions, c_transactions = self.interactive_implement(dual, dts)
+        # monitor --- risk module to left
+        # unchanged_positions
         # 根据标的追踪 --- 具体卖入订单根据volume计算成交率，买入订单根据成交额来计算资金利用率 --- 评估撮合引擎撮合的的效率
         # --- 通过portfolio的资金使用效率来度量算法的效率
         # utility_ratio = np.mean(neg_utility + p_utility + c_utility + pos_utility)

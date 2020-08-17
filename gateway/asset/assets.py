@@ -7,7 +7,7 @@ Created on Tue Mar 12 15:37:47 2019
 """
 import pandas as pd, numpy as np, sqlalchemy as sa, json
 from sqlalchemy import MetaData, select
-from gateway.driver import engine
+from gateway.database import engine
 from gateway.driver.bar_reader import AssetSessionReader
 from gateway.driver.tools import _parse_url
 from _calendar.trading_calendar import calendar

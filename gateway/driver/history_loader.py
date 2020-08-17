@@ -7,13 +7,12 @@ Created on Tue Mar 12 15:37:47 2019
 """
 from collections import defaultdict
 from abc import ABC, abstractmethod
-import pandas as pd
+import numpy as np
 from _calendar.trading_calendar import calendar
 from gateway.driver.adjustArray import (
                         AdjustedDailyWindow,
                         AdjustedMinuteWindow
                                         )
-from gateway.driver import Seconds_Per_Day
 
 __all__ = [
     'HistoryMinuteLoader',
@@ -35,7 +34,7 @@ class CachedObject(object):
     ----------
     value : object
         The object to cache.
-    expires : datetime-like
+    expires : datetime-like []
         Expiration date of `value`. The cache is considered invalid for dates
         **strictly greater** than `expires`.
     """
@@ -46,6 +45,8 @@ class CachedObject(object):
     def unwrap(self, dts):
         """
         Get the cached value.
+        dts: sessions
+        dts : [start_date, end_date]
 
         Returns
         -------
@@ -58,7 +59,8 @@ class CachedObject(object):
             Raised when `dt` is greater than self.expires.
         """
         expires = self._expires
-        if not set(dts).issubset(set(expires)):
+        #
+        if dts[0] < expires[0] or dts[0] > expires[-1]:
             raise Expired(self._expired)
         return self._value
 
@@ -242,10 +244,6 @@ class HistoryLoader(ABC):
                                             )
         return block_arrays
 
-    @abstractmethod
-    def get_resample(self, dts, window, freq, assets, field):
-        raise NotImplementedError()
-
 
 class HistoryDailyLoader(HistoryLoader):
     """
@@ -266,22 +264,10 @@ class HistoryDailyLoader(HistoryLoader):
     def frequency(self):
         return 'daily'
 
-    def _compute_slice_window(self, _window, sessions):
+    def _compute_slice_window(self, _window, dts):
+        sessions = calendar.session_in_range(*dts, include=True)
         slice_window = _window.reindex(sessions)
         return slice_window
-
-    @abstractmethod
-    def get_resample(self, dts, window, freq, assets, field):
-        """
-            select specific dts  Year Month Day
-        """
-        groups = dict()
-        his = self.history(dts, window, assets, field)
-        init_date = self.trading_calendar.dt_window_size(dts, window)
-        pds = [dt.strftime('%Y%m%d') for dt in pd.date_range(init_date, dts, freq=freq)]
-        for sid,raw in his.items():
-            groups[sid] = raw.reindex(pds)
-        return groups
 
 
 class HistoryMinuteLoader(HistoryLoader):
@@ -299,20 +285,6 @@ class HistoryMinuteLoader(HistoryLoader):
         return 'minute'
 
     def _compute_slice_window(self, _window, dts):
-        # 时间区间为子集，需要过滤
-        dts_minutes = self._trading_calendar.sessions_in_minutes(dts)
-        _slice_window = _window.reindex(dts_minutes)
+        ticker = np.clip(np.array(_window.index), *dts)
+        _slice_window = _window.reindex(ticker)
         return _slice_window
-
-    @abstractmethod
-    def get_resample(self, dts, window, freq, assets, field):
-        """
-            select specific dts minutes ,e,g --- 9:30,10:30
-        """
-        _groups = dict()
-        his = self.history(dts, window, assets, field)
-        for sid,raw in his.items():
-            seconds = dts.split(':')[0] * 60 * 60 + dts.split(':')[-1] * 60
-            ticker_index = map(lambda x: (x - seconds) / Seconds_Per_Day == 0, raw.index)
-            _groups[sid] = raw.reindex(ticker_index)
-        return _groups

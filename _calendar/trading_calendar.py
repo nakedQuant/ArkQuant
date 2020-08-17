@@ -86,11 +86,11 @@ class TradingCalendar (object):
         """
         if window == 0:
             return dt
-        pos = self.all_sessions.searchsorted(dt)
+        pos = self.all_sessions.searchsorted(dt.strftime('%Y-%m-%d'))
         try:
             loc = pos if self.all_sessions[pos] == dt else pos - 1
             forward = self.all_sessions[loc + 1 - window]
-            return self.all_sessions[forward]
+            return pd.Timestamp(self.all_sessions[forward])
         except IndexError:
             raise ValueError(
                 "Date {} was past the last session for domain {}. "
@@ -102,8 +102,38 @@ class TradingCalendar (object):
             )
 
     def dt_window_size(self, dt, window):
-        dt = self._roll_forward(dt, window)
-        return dt
+        if isinstance(dt, pd.Timestamp):
+            before = self._roll_forward(dt, window)
+        return before
+
+    def session_in_range(self, start_date, end_date, include):
+        """
+        :param start_date: pd.Timestamp
+        :param end_date: pd.Timestamp
+        :param include: bool --- whether include end_date
+        :return: sessions
+        """
+        if end_date < start_date:
+            raise ValueError("End date %s cannot precede start date %s." %
+                             (end_date.strftime("%Y-%m-%d"),
+                              start_date.strftime("%Y-%m-%d")))
+        idx_s = np.searchsorted(self.all_sessions, start_date.strftime('%Y-%m-%'))
+        idx_e = np.searchsorted(self.all_sessions, end_date.strftime('%Y-%m-%'))
+        sessions = self.all_sessions[idx_s, idx_e + 1] if include \
+            else self.all_sessions[idx_s, idx_e]
+        return sessions
+
+    @staticmethod
+    def sessions_in_minutes(dt):
+        # return day minutes
+        morning_session = pd.date_range(dt + pd.Timedelta(hours=9, minutes=30),
+                                        dt+pd.Timedelta(hours=11, minutes=30),
+                                        freq='%dminute' % 1)
+        after_session = pd.date_range(dt + pd.Timedelta(hours=13, minutes=00),
+                                      dt+pd.Timedelta(hours=15, minutes=00),
+                                      freq='%dminute' % 1)
+        minutes_session = [morning_session] + [after_session]
+        return minutes_session
 
     def session_in_window(self, end_date, window, include):
         """
@@ -119,35 +149,10 @@ class TradingCalendar (object):
         session_labels = self.session_in_range(start_date, end_date, include)
         return session_labels
 
-    def session_in_range(self, start_date, end_date, include):
-        """
-        :param start_date: '%Y-%m-%d'
-        :param end_date: '%Y-%m-%d'
-        :param include: bool --- determin whether include end_date
-        :return: sessions
-        """
-        if end_date < start_date:
-            raise ValueError("End date %s cannot precede start date %s." %
-                             (end_date.strftime("%Y-%m-%d"),
-                              start_date.strftime("%Y-%m-%d")))
-        idx_s = np.searchsorted(self.all_sessions, start_date)
-        idx_e = np.searchsorted(self.all_sessions, end_date)
-        sessions = np.array(self.all_sessions[idx_s, idx_e + 1])
-        flag = sessions <= end_date if include else sessions < end_date
-        return sessions[flag]
-
-    @staticmethod
-    def sessions_in_minutes(dts):
-        minutes_session = map(lambda x: list(range(int(pd.Timestamp(x).timestamp() + 9 * 60 * 60 + 30 * 60),
-                                                   int(pd.Timestamp(x).timestamp() + 15 * 60 * 60 + 1))), dts)
-        # int --- float
-        minutes_session = map(lambda x: float(x), minutes_session)
-        return minutes_session
-
     @staticmethod
     def execution_time_from_open(sessions):
-        opens = [ pd.Timestamp(dt) + 9 * 60 * 60 + 30 * 60 for dt in sessions]
-        _opens = [ pd.Timestamp(dt) + 13 * 60 * 60 for dt in sessions]
+        opens = [dt + pd.Timedelta(hours=9, minutes=30) for dt in sessions]
+        _opens = [dt + pd.Timedelta(hours=13) for dt in sessions]
         # 熔断期间 --- 2次提前收市
         if '20160107' in sessions:
             idx = np.searchsorted('20160107', sessions)
@@ -156,15 +161,15 @@ class TradingCalendar (object):
 
     @staticmethod
     def execution_time_from_close(sessions):
-        closes = [pd.Timestamp(dt).timestamp() + 11 * 60 * 60 + 30 * 60 for dt in sessions]
-        _closes = [pd.Timestamp(dt).timestamp() + 15 * 60 * 60 for dt in sessions]
+        closes = [dt + pd.Timedelta(hours=11, minutes=30) for dt in sessions]
+        _closes = [dt + pd.Timedelta(hours=15) for dt in sessions]
         # 熔断期间 --- 2次提前收市
         if '20160104' in sessions:
             idx = np.searchsorted('20160104', sessions)
-            _closes[idx] = pd.Timestamp('20160104').timestamp() + 13 * 60 * 60 + 34 * 60
+            _closes[idx] = pd.Timestamp('20160104') + pd.Timedelta(hours=13, minutes=34)
         elif '20160107' in sessions:
             idx = np.searchsorted('20160107', sessions)
-            closes[idx] = pd.Timestamp('20160107').timestamp() + 10 * 60 * 60
+            closes[idx] = pd.Timestamp('20160107') + pd.Timedelta(hours=10)
             _closes[idx] = np.nan
         return closes, _closes
 
@@ -193,9 +198,9 @@ class TradingCalendar (object):
         )
 
     def get_trading_day_near_holiday(self, holiday_name, forward=True):
+        # forward --- 节日之前 ， 节日之后
         if holiday_name not in Holiday:
             raise ValueError('unidentified holiday name')
-        # holiday_days = self.non_trading_mappings[holiday_name]
         holiday_days = self._fixed_holiday[holiday_name]
         idx_list = [np.searchsorted(self.all_sessions, t) for t in holiday_days]
         if forward:
@@ -237,6 +242,13 @@ class TradingCalendar (object):
         """
         early_close_days = self.session_in_range('2016-01-01', '2016-01-07')
         return early_close_days
+
+# if calendar is None:
+#     cal = self.trading_calendar
+# elif calendar is calendars.US_EQUITIES:
+#     cal = get_calendar('XNYS')
+# elif calendar is calendars.US_FUTURES:
+#     cal = get_calendar('us_futures')
 
 
 calendar = TradingCalendar()
