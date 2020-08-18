@@ -5,13 +5,12 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-
 import pandas as pd
 from _calendar.trading_calendar import calendar
 from gens import (
     SESSION_START,
     SESSION_END,
-    BEFORE_TRADING_START_BAR
+    BEFORE_TRADING_START
 )
 
 
@@ -31,7 +30,7 @@ class MinuteSimulationClock(object):
             session_minutes --- list , length --- 4
         """
         for session_label, session_minutes in zip(self.sessions_nanos, self.trading_o_and_c):
-            yield session_label, BEFORE_TRADING_START_BAR
+            yield session_label, BEFORE_TRADING_START
             bts_minute = pd.Timestamp(session_label) + 9 * 60 * 60 + 30 * 60
             if bts_minute == session_minutes[0]:
                 yield bts_minute, SESSION_START

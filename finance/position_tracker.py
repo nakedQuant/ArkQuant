@@ -113,7 +113,3 @@ class PositionTracker(object):
         """
         rights = self.data_portal.load_rights_for_sid(asset.sid, dt)
         return rights
-
-    def maybe_create_close_position_transaction(self, asset):
-        """强制平仓机制 --- 持仓特定标的的仓位"""
-        raise NotImplementedError('automatic operation')

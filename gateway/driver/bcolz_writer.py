@@ -45,9 +45,9 @@ class BcolzWriter(ABC):
         path : string
             The path to rootdir of the new ctable.
         """
-        sid_dirname = os.path.dirname(path)
-        if not os.path.exists(sid_dirname):
-            os.makedirs(sid_dirname)
+        bcolz_dir = os.path.dirname(path)
+        if not os.path.exists(bcolz_dir):
+            os.makedirs(bcolz_dir)
         initial_array = np.empty(0, np.uint32)
         table = bcolz.ctable(
             rootdir=path,

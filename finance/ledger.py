@@ -9,6 +9,7 @@ import pandas as pd, numpy as np, warnings
 from finance.portfolio import Portfolio
 from finance._protocol import Account, MutableView
 from finance.position_tracker import PositionTracker
+from risk.alert import UnionRisk, PortfolioRisk
 
 
 class Ledger(object):
@@ -19,21 +20,18 @@ class Ledger(object):
         --- 简化 在交易开始之前决定是否退出position 由于risk management
     """
     __slots__ = ['_portfolio', 'position_tracker', '_processed_transaction', '_previous_total_returns',
-                 '_dirty_portfolio', '_synchronized', 'daily_returns_series']
+                 '_dirty_portfolio', '_synchronized', 'daily_returns_series', 'risk_alert']
 
     def __init__(self,
-                 trading_sessions,
-                 capital_base,
-                 risk_model):
+                 sim_params,
+                 risk_models):
         """构建可变、不可变的组合、账户"""
-        if not len(trading_sessions):
-            raise Exception('calendars must not be null')
-
-        self._portfolio = MutableView(Portfolio(capital_base))
+        self._portfolio = MutableView(Portfolio(sim_params.capital_base))
+        self.daily_returns_series = pd.Series(np.nan, index=sim_params.sessions)
+        self.position_tracker = PositionTracker()
+        self.risk_alert = UnionRisk(risk_models)
         self._processed_transaction = []
         self._previous_total_returns = 0
-        self.daily_returns_series = pd.Series(np.nan, index=trading_sessions)
-        self.position_tracker = PositionTracker()
         self._dirty_portfolio = True
         self._synchronized = False
 
@@ -79,28 +77,6 @@ class Ledger(object):
         """ splits and divdend"""
         left_cash = self.position_tracker.handle_spilts()
         self._cash_flow(left_cash)
-
-    def get_rights_positions(self, dts):
-        # 获取当天为配股登记日的仓位 --- 卖出 因为需要停盘产生机会成本
-        assert self._synchronized, 'must synchronize dts for positions first '
-        right_positions = []
-        for position in self.portfolio.positions:
-            asset = position.inner_position.asset
-            right = self.position_tracker.retrieve_right_of_equity(asset, dts)
-            if len(right):
-                right_positions.append(position.protocol)
-        return right_positions
-
-    def get_violate_risk_positions(self):
-        # 获取违反风控管理的仓位
-        assert self._synchronized, 'must synchronize dts for positions first '
-        violate_positions = []
-        for position in self.portfolio.positions:
-            cost_basis = position.inner_position.cost_basis
-            last_price = position.inner_position.last_sync_price
-            (last_price - cost_basis) / cost_basis
-            violate_positions.append(position.protocol)
-        return violate_positions
 
     def start_of_session(self, session_ix):
         # 每天同步时间
@@ -181,10 +157,40 @@ class Ledger(object):
             stats[p.asset] = p.amount * (p.last_sync_price - p.cost_basis)
         return stats
 
-    def manual_withdraw_operation(self, assets):
+    def get_rights_positions(self, dts):
+        # 获取当天为配股登记日的仓位 --- 卖出 因为需要停盘产生机会成本
+        assert self._synchronized, 'must synchronize dts for positions first '
+        right_positions = []
+        for position in self.positions:
+            asset = position.asset
+            right = self.position_tracker.retrieve_right_of_equity(asset, dts)
+            if len(right):
+                right_positions.append(position.protocol)
+        return right_positions
+
+    def get_violate_risk_positions(self):
+        # 获取违反风控管理的仓位
+        violate_positions = [p.protocol for p in self.positions
+                             if self.risk_alert.should_trigger(p)]
+        return violate_positions
+
+    def _cleanup_expired_assets(self, dt):
         """
-            self.position_tracker.maybe_create_close_position_transaction
-            self.process_transaction(txn)
+        Clear out any assets that have expired before starting a new sim day.
+
+        Finds all assets for which we have positions and generates
+        close_position events for any assets that have reached their
+        close_date.
         """
-        warnings.warn('avoid interupt automatic process')
-        self.position_tracker.maybe_create_close_position_transaction(assets)
+        def past_close_date(asset):
+            acd = asset.last_traded_date
+            return acd is not None and acd <= dt
+
+        # Remove positions in any sids that have reached their auto_close date.
+        positions_to_clear = \
+            [p for p in self.positions if past_close_date(p.asset)]
+        return positions_to_clear
+
+    def get_expired_positions(self, dts):
+        expires = self._cleanup_expired_assets(dts)
+        return expires

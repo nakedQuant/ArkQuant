@@ -9778,3 +9778,24 @@ def _invert(d):
 handler = StreamHandler(sys.stdout, format_string=" | {record.message}")
 logger = Logger(__name__)
 logger.handlers.append(handler)
+
+if not csvdir:
+    csvdir = environ.get('CSVDIR')
+    if not csvdir:
+        raise ValueError("CSVDIR environment variable is not set")
+
+if not os.path.isdir(csvdir):
+    raise ValueError("%s is not a directory" % csvdir)
+
+
+# def maybe_create_close_position_transaction(self, asset):
+#     """强制平仓机制 --- 持仓特定标的的仓位"""
+#     raise NotImplementedError('automatic operation')
+
+# def manual_withdraw_operation(self, assets):
+#     """
+#         self.position_tracker.maybe_create_close_position_transaction
+#         self.process_transaction(txn)
+#     """
+#     warnings.warn('avoid interupt automatic process')
+#     self.position_tracker.maybe_create_close_position_transaction(assets)

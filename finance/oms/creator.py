@@ -7,14 +7,12 @@ Created on Tue Mar 12 15:37:47 2019
 """
 from itertools import chain
 import numpy as np, pandas as pd
-from collections import namedtuple
 from functools import lru_cache
 from abc import ABC, abstractmethod
 from finance.oms.order import Order
+from finance.oms import OrderData
 from finance.cancel_policy import ComposedCancel
 from utils.dt_utilty import locate_pos
-
-OrderData = namedtuple('OrderData', 'minutes open_pct pre_close window restricted')
 
 
 class BaseCreator(ABC):
@@ -85,9 +83,9 @@ class OrderCreator(BaseCreator):
                  cancel_policy,
                  execution_style,
                  window=1):
+        self.slippage_model = slippage
         self.data_portal = data_portal
         self.commission_model = commission
-        self.slippage_model = slippage
         self.execution_style = execution_style
         self.cancel_policy = ComposedCancel(cancel_policy)
         # 限制条件  MaxPositionSize ,MaxOrderSize
@@ -108,7 +106,7 @@ class OrderCreator(BaseCreator):
     def _create_data(self, dt, asset):
         """生成OrderData"""
         minutes = self.data_portal.get_spot_value(asset, dt, 'minute',
-                                                   ['open', 'high', 'low', 'close', 'volume'])
+                                                  ['open', 'high', 'low', 'close', 'volume'])
         open_pct, pre_close = self.data_portal.get_open_pct(asset, dt)
         window = self.data_portal.get_window_data(asset, dt, self._window, ['amount', 'volume'], 'daily')
         restricted = asset.restricted(dt)

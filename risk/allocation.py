@@ -21,14 +21,14 @@ class CapitalManagement(ABC):
         distribution base class
     """
     @abstractmethod
-    def compute(self,assets,cash):
+    def compute(self, assets, cash):
         raise NotImplementedError
 
 
 class Equal(CapitalManagement):
 
-    def compute(self,assets,cash):
-        mappings = {asset:cash / len(assets) for asset in assets}
+    def compute(self, assets, cash):
+        mappings = {{asset: cash / len(assets)} for asset in assets}
         return mappings
 
 
@@ -51,7 +51,7 @@ class Delta(CapitalManagement):
     def window(self):
         return self._window
 
-    def handle_data(self,assets,dt):
+    def handle_data(self, assets, dt):
         his = self.data_portal.get_history_window(
                                assets,
                                dt,
@@ -61,23 +61,23 @@ class Delta(CapitalManagement):
                                                             )
         return his
 
-    def compute(self,assets,cash,dts):
+    def compute(self, assets, cash, dts):
         """
             基于数据的波动性以及均值
-            e.g. [5,4,8,3,6]  --- [6,5,3,4]
+            e.g. [5,4,8,3,6]  --- [5,6,3,8,4]
         """
-        datas = self.handle_data(assets,dts)
-        with Pool(processes = len(assets)) as pool:
-            result = [pool.apply_async(self._func(datas[asset])) for asset in assets]
-            assets,values = list(zip(result))
+        window = self.handle_data(assets, dts)
+        with Pool(processes=len(assets)) as pool:
+            result = [pool.apply_async(self._func(window[asset])) for asset in assets]
+            assets, values = list(zip(result))
             reverse_idx = len(values) - np.argsort(values) - 1
             reverse_values = values[reverse_idx]
-            capital = list(zip(assets,reverse_values))
+            capital = list(zip(assets, reverse_values))
             return capital
 
 
 class Kelly(CapitalManagement):
 
-    def compute(self,assets,cash):
+    def compute(self, assets, cash):
 
         raise NotImplementedError('kelly 基于策略的胜率进行分配')

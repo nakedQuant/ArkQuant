@@ -77,7 +77,7 @@ class Order(object):
             upper = pre_close * (1 + self.execution_style.get_limit_price_ratio())
             if bottom <= self.price <= upper:
                 # 计算滑价系数
-                avg_volume = order_data.sliding[self.sid]['volume'].mean()
+                avg_volume = order_data.window[self.sid]['volume'].mean()
                 alpha = self.amount / avg_volume
                 self._fit_slippage(alpha)
                 return True

@@ -42,16 +42,30 @@ class Engine(ABC):
         dts = ledger.synchronized_clock
         # capital
         capital = ledger.porfolio.cash
+        # 配股持仓
         righted_positions = ledger.get_rights_positions(dts)
+        # violate risk management
+        violate_positions = ledger.get_violate_risk_positions()
+        # expires positions
+        expired_positions = ledger.get_expired_positions(dts)
+        # 剔除的持仓
+        if self.allowed_righted and self.allowed_violation:
+            remove_positions = set(righted_positions) | set(violate_positions)
+        elif self.allowed_violation:
+            remove_positions = violate_positions
+        elif self.allowed_righted:
+            remove_positions = righted_positions
+        else:
+            remove_positions = set()
         # 剔除配股的持仓
-        traded_positions = set(ledger.positions) - set(righted_positions)
+        traded_positions = set(expired_positions) + set(ledger.positions) - set(remove_positions)
         # default assets
         equities = self.asset_finder.retrieve_type_assets('equity')
         # save the high priority and asset which can be traded
         default = self.restricted_rules.is_restricted(equities, dts)
         # set pipe metadata
         history_metadata = self._get_loader.load_pipeline_arrays(dts, default)
-        return default, history_metadata, traded_positions, righted_positions, dts, capital
+        return default, history_metadata, traded_positions, remove_positions, dts, capital
 
     @staticmethod
     def resolve_pipeline_final(outputs):
@@ -119,13 +133,13 @@ class Engine(ABC):
             calculate pipelines and ump
         """
         # default pipe_metadata --- pipe ; positions_not_righted pipe_metadata --- ump ;
-        default, pipe_metadata, positions_not_righted, righted_positions, dts, capital = self._compute_default(ledger)
+        default, pipe_metadata, traded_positions, removed_positions, dts, capital = self._compute_default(ledger)
         # 执行算法逻辑
         pipe_proxy = self.run_pipeline(pipe_metadata, default)
         # 退出算法包含righted position
-        ump_positions = self.run_ump(pipe_metadata, positions_not_righted) + righted_positions
+        ump_positions = self.run_ump(pipe_metadata, traded_positions) + removed_positions
         # 买入的event , 卖出的ump_positions , 总持仓（剔除配股持仓）
-        yield dts, capital, self.resolve_conflicts(pipe_proxy, ump_positions, positions_not_righted)
+        yield dts, capital, self.resolve_conflicts(pipe_proxy, ump_positions, traded_positions)
 
     @staticmethod
     @abstractmethod
@@ -189,6 +203,7 @@ class SimplePipelineEngine(Engine):
     5. a. 不同的pipeline --- 各自执行算法，不干涉 ，就算标的重合（但是不同时间的买入），但是会在同一时间退出
        b. 每个Pipeline 存在一个alternatives(确保最大限度可以成交）,默认为最大持仓个数 --- len(self.pipelines)
           如果alternatives 太大 --- 降低标的准备行影响收益 ，如果太小 --- 到时空仓的概率变大影响收益（由于国内涨跌停制度）
+       c. 考虑需要剔除的持仓（配股持仓 或者 risk management)
 
     Parameter:
 
@@ -200,6 +215,8 @@ class SimplePipelineEngine(Engine):
         '_data_portal',
         '_restricted_rule'
         'alternatives',
+        'allowed_righted',
+        'allowed_violation'
         ]
 
     def __init__(self,
@@ -207,13 +224,17 @@ class SimplePipelineEngine(Engine):
                  asset_finder,
                  data_portal,
                  restrictions,
-                 alternatives=10):
-        self.pipelines, self._get_loader = self._init(pipelines)
+                 alternatives=10,
+                 allow_righted=False,
+                 allowed_violation=True):
         self.data_portal = data_portal
         self.asset_finder = asset_finder
         # SecurityListRestrictions  AvailableRestrictions
         self.restricted_rules = UnionRestrictions(restrictions)
         self.alternatives = alternatives
+        self.allowed_righted = allow_righted
+        self.allowed_violation = allowed_violation
+        self.pipelines, self._get_loader = self._init(pipelines)
 
     @staticmethod
     def resolve_conflicts(calls, puts, holdings):
@@ -247,7 +268,6 @@ class SimplePipelineEngine(Engine):
             direct_positives = dict()
         # unchanged positions
         # unchanged_pipe = set(hold_proxy) - set(put_proxy)
-        # unchanged_positions = keyfilter(lambda x: x in unchanged_pipe, hold_proxy)
         return direct_negatives, dual, direct_positives
 
 

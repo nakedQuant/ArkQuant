@@ -9,9 +9,10 @@ from abc import ABC, abstractmethod
 import numpy as np
 
 _all__ = [
+    'NoRisk',
     'PositionLossRisk',
     'PositionDrawRisk',
-    'Portfolio'
+    'PortfolioRisk'
 ]
 
 
@@ -22,6 +23,13 @@ class Risk(ABC):
     @abstractmethod
     def should_trigger(self, p):
         raise NotImplementedError()
+
+
+class NoRisk(Risk):
+
+    @staticmethod
+    def should_trigger(p):
+        return False
 
 
 class PositionLossRisk(Risk):
@@ -35,7 +43,7 @@ class PositionLossRisk(Risk):
     def should_trigger(self, position):
         returns = position.position_returns.copy()
         returns.dropna(inplace=True)
-        trigger = True if returns[-1] < -abs(self._risk) else False
+        trigger = returns[-1] < -abs(self._risk)
         return trigger
 
 
@@ -50,25 +58,15 @@ class PositionDrawRisk(Risk):
         returns = position.position_returns.copy()
         returns.dropna(inplace=True)
         top = max(np.cumprod(returns.values()))
-        trigger = True if (returns[-1] - top) / top > self.threshold else False
+        trigger = (returns[-1] - top) / top > self.threshold
         return trigger
 
 
-class Portfolio(Risk):
-    """
-        当持仓组合在一定时间均值低于限制，则提示或者执行manual
-    """
-    def __init__(self,
-                 window,
-                 max_limit,
-                 base_capital
-                 ):
-        self.limit = max_limit
-        self.measure_window = window
-        self.base_capital = base_capital
+class UnionRisk(Risk):
 
-    def should_trigger(self, portfolio):
-        net_value = portfolio.portfolio_daily_value
-        net_value.dropna(inplace=True)
-        trigger = True if net_value[-self.measure_window:].mean() / self.base_capital < 1 - self.limit else False
+    def __init__(self, risk_models):
+        self.models = risk_models
+
+    def should_trigger(self, p):
+        trigger = np.any([risk.should_trigger(p) for risk in self.models])
         return trigger

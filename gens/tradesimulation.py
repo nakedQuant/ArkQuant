@@ -12,7 +12,7 @@ from gens.clock import MinuteSimulationClock
 from gens import (
     SESSION_START,
     SESSION_END,
-    BEFORE_TRADING_START_BAR
+    BEFORE_TRADING_START
 )
 
 
@@ -39,7 +39,9 @@ class AlgorithmSimulator(object):
         'daily': 'daily_perf'
     }
 
-    def __init__(self, algorithm, sim_params):
+    def __init__(self,
+                 algorithm,
+                 sim_params):
         # ==============
         # Setup Algo
         # ==============
@@ -56,6 +58,7 @@ class AlgorithmSimulator(object):
         broker = self.algorithm.broke_class
         algorithm_engine = self.algorithm.pipeline_engine
         ledger = self.algorithm.ledger
+        manual_control = self.algorithm.manual_controls
 
         def once_a_day():
             broker.carry_out(algorithm_engine, ledger)
@@ -78,10 +81,15 @@ class AlgorithmSimulator(object):
             clock = self.algorithm.clock
 
             self.metrics_tracker.handle_start_of_simulation()
-            # 涉及 minutes metrics
 
+            # 生成器yield方法 ，返回yield 生成的数据，next 执行yield 之后的方法
             for session_label, action in clock:
-                if action == BEFORE_TRADING_START_BAR:
+                # 如果执行manual --- 直接return退出函数
+                if manual_control.execute_manual_process(ledger, broker, session_label):
+                    perf = self._get_daily_message()
+                    return perf
+                # normal action
+                if action == BEFORE_TRADING_START:
                     self.metrics_tracker.handle_market_open(session_label)
                 elif action == SESSION_START:
                     once_a_day()

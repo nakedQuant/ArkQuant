@@ -16,9 +16,9 @@ class SimulationBlotter(object):
     """
     def __init__(self,
                  generator,
-                 delay=1):
+                 sim_delay=1):
         self._creator = generator
-        self.delay = delay
+        self.delay = sim_delay
 
     def create_bulk_transactions(self, orders):
         transactions = [create_transaction(order, self._creator.commission) for order in orders]

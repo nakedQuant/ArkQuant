@@ -17,10 +17,9 @@ class Broker(object):
         订单 --- 引擎生成交易 --- 执行计划式的
     """
     def __init__(self,
-                 simulation_blotter,
-                 risk_model,
+                 blotter,
                  allocation_model):
-        self.blotter = simulation_blotter
+        self.blotter = blotter
         self.allocation = allocation_model
 
     def enroll_implement(self, calls, capital, dts):

@@ -27,7 +27,7 @@ from finance.execution import MarketOrder
 from finance.ledger import Ledger
 from finance.oms.blotter import SimulationBlotter
 from finance.oms.creator import OrderCreator
-from finance.restrictions import NoRestrictions
+from finance.restrictions import NoRestrictions, UnionRestrictions
 from finance.slippage import NoSlippage
 from gateway.asset.assets import Equity
 from gateway.driver.benchmark import (
@@ -42,6 +42,8 @@ from risk.allocation import Equal
 from trade.broke import Broker
 from risk.metrics import default_metrics
 from risk.metrics.tracker import MetricsTracker
+from risk.alert import UnionRisk, NoRisk
+from risk.manual import PortfolioRisk, Manual
 from utils.api_support import (
     api_method,
     ZiplineAPI,
@@ -122,18 +124,19 @@ class TradingAlgorithm(object):
         d.风险管理（最优资本配置 ， 最优赌注或者凯利准则 ， 海龟仓位管理）
     """
     def __init__(self,
+                 # set ledger
                  sim_params,
-                 namespace=None,
+                 position_risk_models=None,
                  # dataApi --- only entrance of backtest
                  data_portal=None,
                  asset_finder=None,
                  # finance module intended for order object
                  slippage=None,
-                 execution_style=None,
                  commission=None,
-                 cancel_policy=None,
                  control=None,
                  restrictions=None,
+                 cancel_policy=None,
+                 execution_style=None,
                  # order generator
                  creator=None,
                  # blotter --- transform order to transaction , delay --- means transfer put to call
@@ -141,26 +144,28 @@ class TradingAlgorithm(object):
                  blotter_class=None,
                  # pipeline API
                  scripts=None,
-                 alternatives=None,
+                 alternatives=10,
+                 allow_righted=False,
+                 allowed_violation=True,
                  # broker --- combine creator,blotter pipe_engine together
                  broker_engine=None,
                  # capital allocation and portfolio management
-                 risk_management=None,
+                 risk_capital_controls=None,
+                 risk_manual=None,
                  # metrics
                  _analyze=None,
                  metrics_set=None,
                  metrics_tracker=None,
                  # os property
+                 namespace=None,
                  platform='px_trader',
                  create_event_context=None,
                  logger=None,
                  **initialize_kwargs):
 
         self.sim_params = sim_params
-        # set ledger with capital base
         if sim_params.capital_base <= 0:
             raise ZeroCapitalError()
-        self.ledger = Ledger(sim_params.capital_base)
         # set benchmark returns
         self.benchmark_returns = self._calculate_benchmark_returns()
         # set data_portal
@@ -182,6 +187,11 @@ class TradingAlgorithm(object):
                 )
             self.asset_finder = data_portal.asset_finder
             self.data_portal = data_portal
+
+        # set ledger with capital base
+        # risk_models = position_risk_models or [PositionLossRisk, PositionDrawRisk]
+        risk_models = position_risk_models or [NoRisk]
+        self.ledger = Ledger(sim_params, risk_models)
 
         # order creator to create orders by capital or amount
         self.trading_controls = control or [MaxOrderSize, MaxPositionSize]
@@ -205,20 +215,23 @@ class TradingAlgorithm(object):
                                          self.trading_controls)
 
         # simulation blotter
-        self.blotter = self._create_blotter(delay)
+        self.blotter = blotter_class if blotter_class else SimulationBlotter(self._creator, delay)
         # restrictions , alternative
         self.restrictions = NoRestrictions() or restrictions
-        self.alternative = alternatives or 10
         # Initialize pipe_engine API
-        self.pipeline_engine = self.init_engine(scripts)
+        self.pipeline_engine = self.init_engine(scripts,
+                                                alternatives,
+                                                allow_righted,
+                                                allowed_violation)
         # create generator --- initialized = True
         self.initialized = False
-
         # capital allocation
-        risk_management = Equal or risk_management
+        capital_control = Equal or risk_capital_controls
         # broker --- combine pipe_engine and blotter ; when live trading broker ---- xtp
-        self.broke_class = self._create_broker(broker_engine, risk_management)
-
+        self.broke_class = self._create_broker(broker_engine, capital_control)
+        # set manual risk management --- manual close positions
+        risk_manual = risk_manual or PortfolioRisk
+        self.manual_controls = Manual(risk_manual)
         # metrics_set and initialize metrics tracker
         if metrics_set is not None:
             self._metrics_set = metrics_set
@@ -230,7 +243,6 @@ class TradingAlgorithm(object):
             self.metrics_tracker = self._create_metrics_tracker()
         # analyze the metrics
         self._analyze = _analyze
-
         # set event manager
         self.event_manager = EventManager(create_event_context)
         self.event_manager.add_event(
@@ -265,17 +277,21 @@ class TradingAlgorithm(object):
             simulation_blotter = SimulationBlotter(self._creator, delay)
         return simulation_blotter
 
-    def _create_broker(self, broker, risk):
+    def _create_broker(self, broker, control):
         """
             broker --- xtp
         """
         if broker is not None:
             broke_class = broker
         else:
-            broke_class = Broker(self.blotter, risk)
+            broke_class = Broker(self.blotter, control)
         return broke_class
 
-    def init_engine(self, scripts):
+    def init_engine(self,
+                    scripts,
+                    alternatives,
+                    allow_righted,
+                    allowed_violation):
         """
         Construct and store a PipelineEngine from loader.
 
@@ -293,7 +309,9 @@ class TradingAlgorithm(object):
                                 self.asset_finder,
                                 self.data_portal,
                                 self.restrictions,
-                                self.alternatives
+                                alternatives,
+                                allow_righted,
+                                allowed_violation
                                         )
             return engine
         except Exception as e:
@@ -464,58 +482,6 @@ class TradingAlgorithm(object):
             Event(rule, callback),
         )
 
-    @api_method
-    def schedule_function(self,
-                          func,
-                          date_rule=None,
-                          time_rule=None,
-                          half_days=True,
-                          calendar=None):
-        """
-        Schedule a function to be called repeatedly in the future.
-
-        Parameters
-        ----------
-        func : callable
-            The function to execute when the rule is triggered. ``func`` should
-            have the same signature as ``handle_data``.
-        date_rule : zipline.utils.events.EventRule, optional
-            Rule for the dates on which to execute ``func``. If not
-            passed, the function will run every trading day.
-        time_rule : zipline.utils.events.EventRule, optional
-            Rule for the time at which to execute ``func``. If not passed, the
-            function will execute at the end of the first market minute of the
-            day.
-        half_days : bool, optional
-            Should this rule fire on half days? Default is True.
-        calendar : Sentinel, optional
-            Calendar used to compute rules that depend on the trading _calendar.
-        9:25 -- 9:30属于engine --- execution plan include unchange positions
-        """
-        # When the user calls schedule_function(func, <time_rule>), assume that
-        # the user meant to specify a time rule but no date rule, instead of
-        # a date rule and no time rule as the signature suggests5
-        # if isinstance(date_rule, (AfterOpen, BeforeClose)) and not time_rule:
-        #     warnings.warn('Got a time rule for the second positional argument '
-        #                   'date_rule. You should use keyword argument '
-        #                   'time_rule= when calling schedule_function without '
-        #                   'specifying a date_rule', stacklevel=3)
-        #
-        # date_rule = date_rule or date_rules.every_day()
-        # time_rule = ((time_rule or time_rules.every_minute())
-        #              if self.sim_params.data_frequency == 'minute' else
-        #              # If we are in daily mode the time_rule is ignored.
-        #              time_rules.every_minute())
-        #
-        # # Check the type of the algorithm's schedule before pulling _calendar
-        # # Note that the ExchangeTradingSchedule is currently the only
-        # # TradingSchedule class, so this is unlikely to be hit
-        #
-        # self.add_event(
-        #     make_eventrule(date_rule, time_rule, cal, half_days),
-        #     func,
-        # )
-
     def set_logger(self, logger):
         self.logger = logger
 
@@ -632,7 +598,22 @@ class TradingAlgorithm(object):
         if self.initialized:
             raise SetCancelPolicyPostInit()
 
-        self.pipeline_engine.restricted_rules = restricted_list
+        self.pipeline_engine.restricted_rules = UnionRestrictions(restricted_list
+                                                                  if isinstance(restricted_list, list)
+                                                                  else [restricted_list])
+
+    def set_capital_control(self, capital_control):
+        self.broke_class.allocation = capital_control
+
+    def set_risk_controls(self, risk_models):
+        self.ledger.risk_alert = UnionRisk(risk_models if isinstance(risk_models, list)
+                                           else [risk_models])
+
+    def set_manual_controls(self, manual_controls):
+        """
+        :param manual_controls:  if ledger violate manual_controls then close positions
+        """
+        self.manual_controls.trigger = manual_controls
 
     ####################
     # Trading Controls #
@@ -713,6 +694,35 @@ class TradingAlgorithm(object):
             fn for fn in vars(cls).items
             if getattr(fn, 'is_api_method', False)
         ]
+
+    @api_method
+    def schedule_function(self,
+                          func,
+                          date_rule=None,
+                          time_rule=None,
+                          half_days=True,
+                          calendar=None):
+        """
+        Schedule a function to be called repeatedly in the future.
+
+        Parameters
+        ----------
+        func : callable
+            The function to execute when the rule is triggered. ``func`` should
+            have the same signature as ``handle_data``.
+        date_rule : zipline.utils.events.EventRule, optional
+            Rule for the dates on which to execute ``func``. If not
+            passed, the function will run every trading day.
+        time_rule : zipline.utils.events.EventRule, optional
+            Rule for the time at which to execute ``func``. If not passed, the
+            function will execute at the end of the first market minute of the
+            day.
+        half_days : bool, optional
+            Should this rule fire on half days? Default is True.
+        calendar : Sentinel, optional
+            Calendar used to compute rules that depend on the trading _calendar.
+        """
+        raise NotImplementedError()
 
     def __repr__(self):
         """
