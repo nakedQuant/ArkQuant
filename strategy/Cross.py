@@ -18,24 +18,10 @@ class CrossReverse:
             1、周期 --- 存在实效性 ，如果周期太大序列不平稳，而且容易发生异常事件到时价格偏离不会反转；当
             短周期的价格反弹的概率变大（由于行业的急剧效应，滞后的股票上涨）
             2、计算行业的强度
-    """
-    def __init__(self,window):
-        self.period = window
-
-    def _construct_power(self,dt):
-        """
+        power:
             1、基于Composite.IndusComposite.Initialize模块对应的时间点行业权重
             2、构建不同行业的指数强度，并筛选出最强的行业
-        """
-        pass
-
-    def _cross_ret(self,dt):
-        """
+        cross ret:
             1、对应的行业的过去每天收益率均值以及相对于最低的超额收益率序列
             2、计算当前时点数据的zscore
-        """
-        pass
-
-    def compute(self,dt):
-        self._cross_ret(dt)
-
+    """

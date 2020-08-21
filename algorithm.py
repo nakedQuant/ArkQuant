@@ -5,7 +5,7 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-import pandas as pd, warnings
+import pandas as pd
 from error.errors import (
     IncompatibleSlippageModel,
     RegisterTradingControlPostInit,
@@ -35,6 +35,7 @@ from gateway.driver.benchmark import (
     get_alternative_returns
 )
 from gateway.driver.data_portal import DataPortal
+from gateway.driver.resample import TradingDayRule
 from gens.clock import MinuteSimulationClock
 from gens.tradesimulation import AlgorithmSimulator
 from pipe.engine import SimplePipelineEngine
@@ -129,6 +130,7 @@ class TradingAlgorithm(object):
                  position_risk_models=None,
                  # dataApi --- only entrance of backtest
                  data_portal=None,
+                 resample_rule=None,
                  asset_finder=None,
                  # finance module intended for order object
                  slippage=None,
@@ -168,6 +170,8 @@ class TradingAlgorithm(object):
             raise ZeroCapitalError()
         # set benchmark returns
         self.benchmark_returns = self._calculate_benchmark_returns()
+        # set resample rule
+        self.resample_rule = resample_rule or TradingDayRule(sim_params.sessions)
         # set data_portal
         if self.data_portal is None:
             if asset_finder is None:
@@ -176,7 +180,7 @@ class TradingAlgorithm(object):
                     "to TradingAlgorithm()"
                 )
             self.asset_finder = asset_finder
-            self.data_portal = DataPortal(asset_finder)
+            self.data_portal = DataPortal(resample_rule, asset_finder)
         else:
             # Raise an error if we were passed two different asset finders.
             # There's no world where that's a good idea.

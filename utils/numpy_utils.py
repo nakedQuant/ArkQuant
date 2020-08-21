@@ -352,36 +352,6 @@ def is_missing(data, missing_value):
     return (data == missing_value)
 
 
-def busday_count_mask_NaT(begindates, enddates, out=None):
-    """
-    Simple of numpy.busday_count that returns `float` arrays rather than int
-    arrays, and handles `NaT`s by returning `NaN`s where the inputs were `NaT`.
-
-    Doesn't support custom weekdays or calendars, but probably should in the
-    future.
-
-    See Also
-    --------
-    np.busday_count
-    """
-    if out is None:
-        out = empty(broadcast(begindates, enddates).shape, dtype=float)
-
-    beginmask = isnat(begindates)
-    endmask = isnat(enddates)
-
-    out = busday_count(
-        # Temporarily fill in non-NaT values.
-        where(beginmask, _notNaT, begindates),
-        where(endmask, _notNaT, enddates),
-        out=out,
-    )
-
-    # Fill in entries where either comparison was NaT with nan in the output.
-    out[beginmask | endmask] = nan
-    return out
-
-
 class WarningContext(object):
     """
     Re-usable contextmanager for contextually managing warnings.

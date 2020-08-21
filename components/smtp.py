@@ -55,7 +55,7 @@ msg['Subject']=Header('smtp','utf-8')
 msg['From']=from_addr
 msg['To']=to_addr
 # SSL port=994
-server=smtplib.SMTP_SSL(smtp_server,994)
+server=smtplib.SMTP_SSL(smtp_server, 994)
 server.set_debuglevel(2)
 # identify yourself to esmtp using ehlo
 server.ehlo()

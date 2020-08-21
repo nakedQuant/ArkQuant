@@ -7,7 +7,6 @@ Created on Sat Feb 16 13:56:19 2019
 """
 
 class RpcGateway:
-# class RpcGateway(BaseGateway):
     """
     VN Trader Gateway for RPC service.
     """
@@ -16,7 +15,6 @@ class RpcGateway:
         "主动请求地址": "tcp://127.0.0.1:2014",
         "推送订阅地址": "tcp://127.0.0.1:4102"
     }
-
 
     def __init__(self, event_engine):
         """Constructor"""

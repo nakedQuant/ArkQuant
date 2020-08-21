@@ -205,6 +205,7 @@ def alpha(returns,
         _beta=_beta
     )
 
+
 def beta_aligned(returns, factor_returns, risk_free=0.0, out=None):
     """Calculates beta.
 
@@ -267,7 +268,6 @@ def beta_aligned(returns, factor_returns, risk_free=0.0, out=None):
         nan,
         factor_returns,
     )
-
     # 计算序列协方差的公式
     ind_residual = independent - np.nanmean(independent, axis=0)
     # mean((X - mean(X)) * (Y - mean(Y))) --- X_res = (X - mean(X)) ， mean(X_res * Y)
@@ -466,6 +466,7 @@ def alpha_beta(returns,
 #         **kwargs
 #     )
 
+
 def beta_fragility_heuristic(returns, factor_returns):
     """Estimate fragility to drops in beta.
 
@@ -574,6 +575,7 @@ Tail Risks: Application to Stress Testing`
         (end_returns_weight*end_returns) - mid_returns
 
     return heuristic
+
 
 def perf_attrib(returns,
                 positions,
@@ -785,6 +787,7 @@ def down(returns, factor_returns, **kwargs):
     factor_returns = factor_returns[factor_returns < 0]
     return func(returns, factor_returns, **kwargs)
 
+
 def capture(returns, factor_returns, period='daily'):
     """Compute capture ratio.
 
@@ -817,6 +820,7 @@ def capture(returns, factor_returns, period='daily'):
     """
     return (annual_return(returns, period=period) /
             annual_return(factor_returns, period=period))
+
 
 def up_capture(returns, factor_returns, **kwargs):
     """

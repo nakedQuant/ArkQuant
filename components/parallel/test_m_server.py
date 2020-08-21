@@ -5,19 +5,18 @@ Created on Sat Feb 16 14:00:14 2019
 
 @author: python
 """
-
-# serve
-
 from multiprocessing.managers import BaseManager
 from multiprocessing import Queue
 
 queue = Queue()
+
 
 class QManager(BaseManager):
     """
         抽象方法register
     """
     pass
+
 
 def func(x,y):
     z = x + y
@@ -39,7 +38,9 @@ class CManager(BaseManager):
 
     pass
 
+
 CManager.register('add')
+
 
 if __name__ == '__main__':
     m = CManager(address=('192.168.0.103', 50000), authkey=b'test')

@@ -9,15 +9,15 @@ import pandas as pd, json
 from functools import lru_cache
 from gateway.asset.assets import Asset
 from .tools import _parse_url
-from .api.client import tsclient
+from .client import tsclient
 from .bar_reader import AssetSessionReader
 from .bcolz_reader import BcolzMinuteReader
-from .resample import TradingDayRule
 from .adjustment_reader import SQLiteAdjustmentReader
 from .history_loader import (
     HistoryDailyLoader,
     HistoryMinuteLoader
 )
+from _calendar.trading_calendar import calendar
 
 
 class DataPortal(object):
@@ -36,13 +36,13 @@ class DataPortal(object):
     OHLCV_FIELDS = frozenset(["open", "high", "low", "close", "volume"])
 
     def __init__(self,
-                 asset_finder,
-                 sessions):
+                 rule,
+                 asset_finder):
 
         self.asset_finder = asset_finder
         self._adjustment_reader = SQLiteAdjustmentReader()
         # resample module
-        self.resample_rule = TradingDayRule(sessions)
+        self.resize_rule = rule
         _minute_reader = BcolzMinuteReader()
         _session_reader = AssetSessionReader()
 
@@ -106,7 +106,7 @@ class DataPortal(object):
         -------
             equity divdends or cash divdends
         """
-        dividends = self._adjustment_reader.load_divdend_for_sid(asset.sid, trading_day)
+        dividends = self._adjustment_reader.load_divdends_for_sid(asset.sid, trading_day)
         return dividends
 
     def get_rights_for_asset(self, asset, trading_day):
@@ -126,12 +126,12 @@ class DataPortal(object):
         -------
             equity rights
         """
-        rights = self._adjustment_reader.load_right_for_sid(asset.sid, trading_day)
+        rights = self._adjustment_reader.load_rights_for_sid(asset.sid, trading_day)
         return rights
 
     @lru_cache(maxsize=32)
     def _retrieve_pct(self, dts):
-        pct = self._pricing_reader['daily'].get_stock_pct(dts)
+        pct = self._pricing_reader['daily'].get_equity_pct(dts)
         return pct
 
     def get_open_pct(self, assets, dts):
@@ -258,7 +258,7 @@ class DataPortal(object):
         nan.
         """
         _reader = self._pricing_reader[data_frequency]
-        sessions = self.trading_calendar.session_in_window(dt, days_in_window, False)
+        sessions = calendar.session_in_window(dt, days_in_window, False)
         window_array = _reader.load_raw_arrays(sessions, assets, field)
         return window_array
 
@@ -267,7 +267,7 @@ class DataPortal(object):
         :param kwargs: hour,minute
         :return: minute ticker list
         """
-        minutes = self.resample_rule.minute_rule(kwargs)
+        minutes = self.resize_rule.minute_rule(kwargs)
         return minutes
 
     def fetch_week_freq(self, delta):
@@ -275,7 +275,7 @@ class DataPortal(object):
         :param delta: int , the number day of week (1-7) which is trading_day
         :return: trading list
         """
-        week_days = self.resample_rule.week_rules(delta)
+        week_days = self.resize_rule.week_rules(delta)
         return week_days
 
     def fetch_month_freq(self, delta):
@@ -283,7 +283,7 @@ class DataPortal(object):
         :param delta: int ,the number day of month (max -- 31) which is trading_day
         :return: trading list
         """
-        month_days = self.resample_rule.month_rules(delta)
+        month_days = self.resize_rule.month_rules(delta)
         return month_days
 
     @staticmethod

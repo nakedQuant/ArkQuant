@@ -27,13 +27,13 @@ class AbstractStatistics(ABC):
     all inherited statistic classes (live, historic, custom, etc).
 
     The goal of a Statistics object is to keep a record of useful
-    information about one or many trading strategies as the strategy
+    information about one or many trading strategy as the strategy
     is running. This is done by hooking into the main event loop and
     essentially updating the object according to portfolio performance
     over time.
 
-    Ideally, Statistics should be subclassed according to the strategies
-    and timeframes-traded by the user. Different trading strategies
+    Ideally, Statistics should be subclassed according to the strategy
+    and timeframes-traded by the user. Different trading strategy
     may require different metrics or frequencies-of-metrics to be updated,
     however the example given is suitable for longer timeframes.
     """

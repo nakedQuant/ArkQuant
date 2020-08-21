@@ -111,7 +111,7 @@ class SQLiteAdjustmentReader(object):
                                       self.equity_divdends.c.pay_date == date))
         rp = self.conn.execute(sql_dialect)
         dividends = pd.DataFrame(rp.fetchall(), columns=['ex_date', 'sid_bonus',
-                                                        'sid_transfer', 'bonus'])
+                                                         'sid_transfer', 'bonus'])
         return dividends
 
     def load_rights_for_sid(self, sid, date):

@@ -9,6 +9,7 @@ import functools, logging, pdb, time
 import warnings
 from functools import wraps
 from contextlib import contextmanager
+import sys,weakref
 
 
 def _deprecated_getitem_method(name, attrs):
@@ -168,6 +169,7 @@ def params_to_pandas(func):
 
     return wrapper
 
+
 def params_to_numpy(func):
     """
         函数装饰器：不定参数装饰器，定参数转换使用ABuScalerUtil中的装饰器arr_to_numpy(func)
@@ -183,7 +185,6 @@ def params_to_numpy(func):
         return func(*arg_list, **arg_dict)
 
     return wrapper
-
 
 
 def catch_error(return_val=None, log=True):
@@ -215,7 +216,6 @@ def catch_error(return_val=None, log=True):
     return decorate
 
 
-
 def consume_time(func):
     """
     作用范围：函数装饰器 (模块函数或者类函数)
@@ -232,7 +232,6 @@ def consume_time(func):
     return wrapper
 
 
-
 def empty_wrapper(func):
     """
     作用范围：函数装饰器 (模块函数或者类函数)
@@ -244,7 +243,6 @@ def empty_wrapper(func):
         return func(*args, **kwargs)
 
     return wrapper
-
 
 
 # noinspection PyUnusedLocal
@@ -283,7 +281,6 @@ def except_debug(func):
 
     return wrapper
 
-import sys,weakref
 
 class LazyFunc(object):
     """
@@ -347,7 +344,6 @@ class LazyFunc(object):
         del self.cache[instance]
 
 
-
 class LazyClsFunc(LazyFunc):
     """
         描述器类：
@@ -360,11 +356,9 @@ class LazyClsFunc(LazyFunc):
         return super(LazyClsFunc, self).__get__(owner, owner)
 
 
-
 def add_doc(func, doc):
     """Lazy add doc"""
     func.__doc__ = doc
-
 
 
 def import_module(name):
@@ -386,7 +380,8 @@ def valid_check(func):
 
     return wrapper
 
-#单例模式
+
+# 单例模式
 def singleton(cls):
 
     instance = {}
@@ -439,6 +434,7 @@ def deprecated(msg=None, stacklevel=2):
         return wrapper
     return deprecated_dec
 
+
 def require_not_initialized(exception):
     """
     Decorator for API methods that should only be called during or before
@@ -482,6 +478,7 @@ def require_initialized(exception):
         return wrapped_method
     return decorator
 
+
 def disallowed_in_before_trading_start(exception):
     """
     Decorator for API methods that cannot be called from within
@@ -502,6 +499,7 @@ def disallowed_in_before_trading_start(exception):
             return method(self, *args, **kwargs)
         return wrapped_method
     return decorator
+
 
 def _make_unsupported_method(name):
     def method(*args, **kwargs):
@@ -524,3 +522,37 @@ def ignore_pandas_nan_categorical_warning():
             category=FutureWarning,
         )
         yield
+
+
+def remove_na(f):
+    @wraps(f)
+    def wrapper(*args):
+        result = f(*args)
+        if isinstance(result, (pd.DataFrame, pd.Series)):
+            result.dropna(inplace=True)
+        return result
+    return wrapper
+
+
+def coerce_numbers_to_my_dtype(f):
+    """
+    A decorator for methods whose signature is f(self, other) that coerces
+    ``other`` to ``self.dtype``.
+
+    This is used to make comparison operations between numbers and `Factor`
+    instances work independently of whether the user supplies a float or
+    integer literal.
+
+    For example, if I write::
+
+        my_filter = my_factor > 3
+
+    my_factor probably has dtype float64, but 3 is an int, so we want to coerce
+    to float64 before doing the comparison.
+    """
+    @wraps(f)
+    def method(self, other):
+        if isinstance(other, Number):
+            other = coerce_to_dtype(self.dtype, other)
+        return f(self, other)
+    return method

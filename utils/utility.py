@@ -202,3 +202,19 @@ def get_utc_timestamp(dt):
     except TypeError:
         dt = dt.tz_convert('UTC')
     return dt
+
+
+# if not os.path.exists(g_project_kl_df_data_example):
+#     # 如果还没有进行解压，开始解压df_kl.h5.zip
+#     data_example_zip = os.path.join(_p_dir, 'RomDataBu/df_kl.h5.zip')
+#     try:
+#         from zipfile import ZipFile
+#         zip_h5 = ZipFile(data_example_zip, 'r')
+#         unzip_dir = os.path.join(_p_dir, 'RomDataBu/')
+#         for h5 in zip_h5.namelist():
+#             zip_h5.extract(h5, unzip_dir)
+#         zip_h5.close()
+#     except Exception as e:
+#         # 解压测试数据zip失败，就不开启测试数据模式了
+#         print('example env failed! e={}'.format(e))
+#     return

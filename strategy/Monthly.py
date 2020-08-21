@@ -5,7 +5,6 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 
-import datetime as dt
 
 class Cycle:
     """
@@ -16,5 +15,3 @@ class Cycle:
         3、计算每个月的sharp ratio 平稳性
         4、筛选出平稳性最大的月份作为该行业的周期性代表
     """
-    _field = ['close']
-    pass

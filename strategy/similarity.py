@@ -8,6 +8,13 @@ Created on Sun Feb 17 16:11:34 2019
 from contextlib import contextmanager
 from enum import Enum
 import pandas as pd
+# 按照行数，列数以及元素个数
+from numpy import broadcast_arrays
+from scipy.stats import (
+    linregress,
+    pearsonr,
+    spearmanr,
+)
 
 
 class TradeSimilarity(object):

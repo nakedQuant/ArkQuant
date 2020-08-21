@@ -36,8 +36,12 @@ class Term(object):
         term --- 不可变通过改变不同的dependence重构pipeline
         term --- universe
     """
+    inputs = NotSpecified
+    outputs = NotSpecified
+    window_length = NotSpecified
+    mask = NotSpecified
+    domain = NotSpecified
     _term_cache = WeakValueDictionary
-
     namespace = dict()
 
     __slots__ = ['domain', 'dependence', 'd_type', 'term_logic', '_subclass_called_validate']
@@ -121,6 +125,11 @@ class Term(object):
 
     def postprocess(self, data):
         """
+            Called with an result of ``self``, unravelled (i.e. 1-dimensional)
+            after any user-defined screens have been applied.
+            This is mostly useful for transforming the dtype of an output, e.g., to
+            convert a LabelArray into a pandas Categorical.
+            The default implementation is to just return data unchanged.
             called with an result of self ,after any user-defined screens have been applied
             this is mostly useful for transforming  the dtype of an output
         """
@@ -135,7 +144,10 @@ class Term(object):
 
     def _compute(self, inputs, data):
         """
-            inner method
+            Subclasses should implement this to perform actual computation.
+            This is named ``_compute`` rather than just ``compute`` because
+            ``compute`` is reserved for user-supplied functions in
+            CustomFilter/CustomFactor/CustomClassifier.
             1. subclass should implement when _verify_asset_finder is True
             2. self.postprocess()
         """
@@ -150,6 +162,119 @@ class Term(object):
         """
         output = self._compute(inputs, data)
         return output
+
+    @lazyval
+    def windowed(self):
+        """
+        Whether or not this term represents a trailing window computation.
+
+        If term.windowed is truthy, its compute_from_windows method will be
+        called with instances of AdjustedArray as inputs.
+
+        If term.windowed is falsey, its compute_from_baseline will be called
+        with instances of np.ndarray as inputs.
+        """
+        return (
+            self.window_length is not NotSpecified
+            and self.window_length > 0
+        )
+
+    @lazyval
+    def dependencies(self):
+        """
+        The number of extra rows needed for each of our inputs to compute this
+        term.
+        """
+        extra_input_rows = max(0, self.window_length - 1)
+        out = {}
+        for term in self.inputs:
+            out[term] = extra_input_rows
+        out[self.mask] = 0
+        return out
+
+    def to_workspace_value(self, result, assets):
+        """
+        Called with a column of the result of a pipeline. This needs to put
+        the data into a format that can be used in a workspace to continue
+        doing computations.
+
+        Parameters
+        ----------
+        result : pd.Series
+            A multiindexed series with (dates, assets) whose values are the
+            results of running this pipeline term over the dates.
+        assets : pd.Index
+            All of the assets being requested. This allows us to correctly
+            shape the workspace value.
+
+        Returns
+        -------
+        workspace_value : array-like
+            An array like value that the engine can consume.
+        """
+        return result.unstack().fillna(self.missing_value).reindex(
+            columns=assets,
+            fill_value=self.missing_value,
+        ).values
+
+    def _downsampled_type(self, *args, **kwargs):
+        """
+        The expression type to return from self.downsample().
+        """
+        raise NotImplementedError(
+            "downsampling is not yet implemented "
+            "for instances of %s." % type(self).__name__
+        )
+
+    @expect_downsample_frequency
+    @templated_docstring(frequency=PIPELINE_DOWNSAMPLING_FREQUENCY_DOC)
+    def downsample(self, frequency):
+        """
+        Make a term that computes from ``self`` at lower-than-daily frequency.
+
+        Parameters
+        ----------
+        {frequency}
+        """
+        return self._downsampled_type(term=self, frequency=frequency)
+
+    def _aliased_type(self, *args, **kwargs):
+        """
+        The expression type to return from self.alias().
+        """
+        raise NotImplementedError(
+            "alias is not yet implemented "
+            "for instances of %s." % type(self).__name__
+        )
+
+    @templated_docstring(name=PIPELINE_ALIAS_NAME_DOC)
+    def alias(self, name):
+        """
+        Make a term from ``self`` that names the expression.
+
+        Parameters
+        ----------
+        {name}
+
+        Returns
+        -------
+        aliased : Aliased
+            ``self`` with a name.
+
+        Notes
+        -----
+        This is useful for giving a name to a numerical or boolean expression.
+        """
+        return self._aliased_type(term=self, name=name)
+
+    def __repr__(self):
+        return (
+            "{type}([{inputs}], {window_length})"
+        ).format(
+            type=type(self).__name__,
+            inputs=', '.join(i.recursive_repr() for i in self.inputs),
+            window_length=self.window_length,
+        )
 
     def recursive_repr(self):
         """A short repr to use when recursively rendering terms with inputs.

@@ -1,10 +1,14 @@
-# -*- coding : utf-8 -*-
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Feb 16 14:00:14 2019
 
-from statsmodels.tsa.stattools import adfuller,coint,pacf,acf
-import numpy as np ,pandas as pd
+@author: python
+"""
+from statsmodels.tsa.stattools import adfuller, coint, pacf, acf
+import numpy as np, pandas as pd
+from strategy.indicator import BaseFeature
 
-from strategies.features import BaseFeature
-from gateway import Event,GateReq,Quandle
 
 class ADF(BaseFeature):
     """
@@ -28,13 +32,12 @@ class ADF(BaseFeature):
             1、价格序列
             2、对数序列
     """
-    _mode = 'ct'
-
     @classmethod
-    def calc_feature(cls,feed):
-        raw = feed.copy()
-        adf,p_adf,lag,nobs,critical_dict,ic_best = adfuller(np.array(raw),regression = cls._mode)
-        return adf,critical_dict
+    def _calc_feature(cls, feed, kwargs):
+        frame = feed.copy()
+        adf, p_adf, lag, nobs, critical_dict, ic_best = adfuller(np.array(frame), regression=kwargs['mode'])
+        return adf, critical_dict
+
 
 class Coint(BaseFeature):
     """
@@ -50,11 +53,12 @@ class Coint(BaseFeature):
         Coint 参数：
             statsmodels.tsa.stattools.coint(y0，y1，trend ='c'，method ='aeg'，maxlag = None，autolag ='aic'，
     """
-
     @classmethod
-    def calc_feature(cls,raw_x,raw_y):
-        result = coint(raw_y,raw_x)
-        return result[0],result[-1]
+    def _calc_feature(cls, feeds, kwargs):
+        x, y = feeds
+        result = coint(y, x)
+        return result[0], result[-1]
+
 
 class ACF(BaseFeature):
     """
@@ -62,14 +66,14 @@ class ACF(BaseFeature):
         qstat --- If True, returns the Ljung-Box q statistic for each autocorrelation coefficient.
         qstat ---表示序列之间的相关性是否显著（自回归）
     """
-    _nlags = 10
-
     @classmethod
-    def calc_feature(cls,feed):
-        raw = feed.copy()
-        correlation = acf(raw,nlags = cls._nlags,fft = True)
-        acf_corrleation = pd.Series(correlation,index = raw.index[:cls._nlags +1])
+    def _calc_feature(cls, feed, kwargs):
+        frame = feed.copy()
+        lag = kwargs['lag']
+        correlation = acf(frame, nlags=lag, fft=kwargs['fft'])
+        acf_corrleation = pd.Series(correlation, index=frame.index[: lag + 1])
         return acf_corrleation
+
 
 class PACF(BaseFeature):
     """
@@ -80,13 +84,14 @@ class PACF(BaseFeature):
             confint :array, optional Confidence intervals for the PACF. Returned if confint is not None.
     """
     _n_lags = 10
-
     @classmethod
-    def calc_feature(cls,feed):
+    def _calc_feature(cls, feed, kwargs):
         raw = feed.copy()
-        coef = pacf(raw,nlags = cls._n_lags)
-        pacf_coef = pd.Series(coef,index = raw.index[:cls._n_lags + 1])
+        n_lags = kwargs['lag']
+        coef = pacf(raw, nlags=n_lags)
+        pacf_coef = pd.Series(coef, index=frame.index[: n_lags + 1])
         return pacf_coef
+
 
 class VRT(BaseFeature):
     """
@@ -98,19 +103,18 @@ class VRT(BaseFeature):
         与adf搭配使用，基于adf中的滞后项
     """
     @classmethod
-    def calc_feature(cls,feed,window):
-        raw = feed.copy()
-        adjust_x = pd.Series(np.log(raw))
-        print('adjust_x',adjust_x)
+    def _calc_feature(cls, feed, kwargs):
+        frame = feed.copy()
+        window = kwargs['window']
+        adjust_x = pd.Series(np.log(frame))
         var_shift = adjust_x / adjust_x.shift(window)
-        print('var_shfit',var_shift)
         var_per = adjust_x / adjust_x.shift(1)
-        print('var_',var_per)
         vrt = var_shift.var() / (window * var_per.var())
         return vrt
 
+
 class FRAMA(BaseFeature):
-    '''
+    """
         多重分形理论一个重要的应用就是Hurst指数，Hurst指数和相应的时间序列分为3种类型：当H=0.5时，时间序列是随机游走的，序列中不同时间的
         值是随机的和不相关的，即现在不会影响将来；当0≤H≤0.5时，这是一种反持久性的时间序列，常被称为“均值回复”。如果一个序列在前个一时期是
         向上走的，那么它在下一个时期多半是向下走，反之亦然。这种反持久性的强度依赖于H离零有多近，越接近于零，这种时间序列就具有比随机序列更
@@ -125,44 +129,42 @@ class FRAMA(BaseFeature):
             6、用第五步值对第4步值进行标准化
             7、增大长度并重复前六步，得出6的序列
             8、将7步的序列对数与长度的对数进行回归，斜率Hurst指数
+    """
+    @classmethod
+    def _calc_feature(cls, feed, kwargs):
+        raise NotImplementedError()
+
+
+class PCA(BaseFeature):
     '''
+    主成分分析法理论：选择原始数据中方差最大的方向，选择与其正交而且方差最大的方向，不断重复这个过程
+    pca.fit_transform()
+    具体的算法：
+    PCA算法：
+    1）将原始数据按列组成n行m列矩阵X
+
+    2）将X的每一行（代表一个属性字段）进行零均值化，即减去这一行的均值
+
+    3）求出协方差矩阵C=X * XT
+
+    4）求出协方差矩阵的特征值及对应的特征向量
+
+    5）将特征向量按对应特征值大小从上到下按行排列成矩阵，取前k行组成矩阵P
+
+    6）Y=PX  即为降维到k维后的数据
+    '''
+    _topNfeat = 2
 
     @classmethod
-    def calc_feature(cls,raw,window):
-        pass
-
-
-if __name__ == '__main__':
-
-    date = '2019-06-01'
-    edate = '2020-02-20'
-    asset = '000001'
-    window = 100
-
-    fields = ['close']
-    event = Event(date,asset)
-    req = GateReq(event,fields,window)
-    quandle = Quandle()
-    feed = quandle.query_ashare_kline(req)
-    feed.index = pd.DatetimeIndex(feed.index)
-
-    # adf = ADF.calc_feature(feed)
-    # print('adf',adf)
-
-    # acf = ACF.calc_feature(feed)
-    # print('acf',acf)
-    #
-    # pacf = PACF.calc_feature(feed)
-    # print('pacf',pacf)
-    #
-    # vrt = VRT.calc_feature(feed,5)
-    # print('vrt',vrt)
-    #
-    # req = GateReq(event, ['open'], window)
-    # quandle = Quandle()
-    # y = quandle.query_ashare_kline(req)
-    # coint = Coint.calc_feature(feed,y)
-    # print('coint',coint)
-
-    # frama = FRAMA.calc_feature(feed)
-    # print('frama',frama)
+    def _calc_feature(cls, feed, kwargs):
+        datamat = feed.copy()
+        meanval = np.mean(datamat, axis=0)
+        meanremoved = datamat - meanval
+        print('mean',meanremoved)
+        covmat = np.cov(meanremoved, rowvar=0)
+        eigval, eigvect = np.linalg.eig(np.mat(covmat))
+        eigvalind = np.argsort(eigval)
+        eigvalind = eigvalind[-cls._topNfeat :]
+        redeigvect = eigvect[:, eigvalind]
+        reconmat = meanremoved * redeigvect * redeigvect.T + meanval
+        return reconmat

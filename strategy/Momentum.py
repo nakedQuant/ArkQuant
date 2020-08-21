@@ -5,6 +5,7 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 
+
 class Momentum:
     """
         动量策略 --- 基于价格、成交量 -- DPower 度量动量
@@ -24,41 +25,5 @@ class Momentum:
         3、监控事件的长期影响（心理上投资偏差）
 
         --- 大市值的标的单日涨幅超过一定程度，后期存在接力的可能行（买入）
-
+        分析全A股票进行统计分析，火种取栗 --- 在动量到达高点，介入等到动量下降一定到比例的阈值，卖出 --- 由于时间差
     """
-    _n_fields = ['close','high','volume']
-
-    def __init__(self,window):
-        self.window = window
-
-    def _load_raw(self,dt,asset):
-        event =Event(dt,asset)
-        req = GateReq(event,self._n_fields,self.window)
-        raw = quandle.query_ashare_kline(req)
-        return raw
-
-    def _measure_shift(self,momentum,close):
-        loc1 = momentum.idxmax()
-        loc2 = (close / close.iloc[0]).idxmax()
-        shift = loc2 - loc1
-        shift_ret = close[loc2] / close[loc1] -1
-        return shift,shift_ret
-
-    def calculate_power(self,dt,asset):
-        raw = self._load_raw(dt,asset)
-        momentum = DPower.calc_feature(raw)
-        delta,delta_ret = self._measure_shift(momentum,raw['close'])
-        return {asset:{'delta':delta,'ret':delta_ret}}
-
-    def _analyse(self):
-        """
-            分析全A股票进行统计分析，火种取栗 --- 在动量到达高点，介入等到动量下降一定到比例的阈值，卖出 --- 由于时间差
-        """
-        pass
-
-    def compute(self,dt):
-        assets = quandle.query_basics()
-        output_dict = {}
-        for asset in assets:
-            output_dict.update(self.calculate_power(dt,asset))
-        self._analyse(output_dict)

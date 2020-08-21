@@ -18,7 +18,7 @@ def _ensure_index(x):
 
 class RollingPanel(object):
     """
-    Preallocation strategies for rolling window over expanding data set
+    Preallocation strategy for rolling window over expanding data set
 
     Restrictions: major_axis can only be a DatetimeIndex for now
     """
