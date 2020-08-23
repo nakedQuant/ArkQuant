@@ -1,10 +1,12 @@
+# -*- coding : utf-8 -*-
+"""
+Created on Tue Mar 12 15:37:47 2019
+
+@author: python
+"""
 from typing import Callable, Dict
 from pathlib import Path
-
 from PyQt5 import QtWidgets, Qsci, QtGui
-
-from vnpy.event import EventEngine
-from simulation.xtp.trader.engine import MainEngine
 
 
 class CodeEditor(QtWidgets.QMainWindow):

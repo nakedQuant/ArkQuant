@@ -68,7 +68,7 @@ about:
     \ into a textual output file as easily as it runs them\n  directly to a database. Care must be taken in this mode to not invoke other\n  operations that rely upon in-memory SELECTs of rows - Alembic\
     \ tries to\n  provide helper constructs like bulk_insert() to help with data-oriented\n  operations that are compatible with script-based DDL.\n* Non-linear, dependency-graph versioning.   Scripts are\
     \ given UUID\n  identifiers similarly to a DVCS, and the linkage of one script to the next\n  is achieved via human-editable markers within the scripts themselves.\n  The structure of a set of migration\
-    \ files is considered as a\n  directed-acyclic graph, meaning any migration file can be dependent\n  on any other arbitrary set of migration files, or none at\n  all.  Through this open-ended system,\
+    \ files is considered as a\n  directed-acyclic graph, meaning any migration file can be dependent\n  on any other trend set of migration files, or none at\n  all.  Through this open-ended system,\
     \ migration files can be organized\n  into branches, multiple roots, and mergepoints, without restriction.\n  Commands are provided to produce new branches, roots, and merges of\n  branches automatically.\n\
     * Provide a library of ALTER constructs that can be used by any SQLAlchemy\n  application. The DDL constructs build upon SQLAlchemy's own DDLElement base\n  and can be used standalone by any application\
     \ or script.\n* At long last, bring SQLite and its inablity to ALTER things into the fold,\n  but in such a way that SQLite's very special workflow needs are accommodated\n  in an explicit way that\

@@ -9983,43 +9983,299 @@ class PeerCount(SingleInputMixin, CustomFactor):
 #         wgt = (window - 1)/window
 #         smma = raw * (1-wgt) + init_smma * wgt
 #         return smma
+# uint8_dtype = dtype('uint8')
 
-class FastStochasticOscillator(CustomFactor):
-    """
-    Fast Stochastic Oscillator Indicator [%K, Momentum Indicator]
-    https://wiki.timetotrade.eu/Stochastic
+# uint32_dtype = dtype('uint32')
+# uint64_dtype = dtype('uint64')
+# int64_dtype = dtype('int64')
+#
+# float32_dtype = dtype('float32')
+# float64_dtype = dtype('float64')
+#
+# complex128_dtype = dtype('complex128')
+#
+# datetime64D_dtype = dtype('datetime64[D]')
+# datetime64ns_dtype = dtype('datetime64[ns]')
+#
+# object_dtype = dtype('O')
+# # We use object arrays for strings.
+# categorical_dtype = object_dtype
+#
+# make_datetime64ns = flip(datetime64, 'ns')
+# make_datetime64D = flip(datetime64, 'D')
 
-    This stochastic is considered volatile, and varies a lot when used in
-    market analysis. It is recommended to use the slow stochastic oscillator
-    or a moving average of the %K [%D].
+# CLASSIFIER_DTYPES = frozenset({object_dtype, int64_dtype})
+# FACTOR_DTYPES = frozenset({datetime64ns_dtype, float64_dtype, int64_dtype})
 
-    **Default Inputs:** :data: `zipline.pipe.data.EquityPricing.close`
-                        :data: `zipline.pipe.data.EquityPricing.low`
-                        :data: `zipline.pipe.data.EquityPricing.high`
 
-    **Default Window Length:** 14
+# class FastStochasticOscillator(CustomFactor):
+#     """
+#     Fast Stochastic Oscillator Indicator [%K, Momentum Indicator]
+#     https://wiki.timetotrade.eu/Stochastic
+#
+#     This stochastic is considered volatile, and varies a lot when used in
+#     market analysis. It is recommended to use the slow stochastic oscillator
+#     or a moving average of the %K [%D].
+#
+#     **Default Inputs:** :data: `zipline.pipe.data.EquityPricing.close`
+#                         :data: `zipline.pipe.data.EquityPricing.low`
+#                         :data: `zipline.pipe.data.EquityPricing.high`
+#
+#     **Default Window Length:** 14
+#
+#     Returns
+#     -------
+#     out: %K oscillator
+#     """
+#     inputs = (EquityPricing.close, EquityPricing.low, EquityPricing.high)
+#     window_safe = True
+#     window_length = 14
+#
+#     def compute(self, today, assets, out, closes, lows, highs):
+#
+#         highest_highs = nanmax(highs, axis=0)
+#         lowest_lows = nanmin(lows, axis=0)
+#         today_closes = closes[-1]
+#
+#         evaluate(
+#             '((tc - ll) / (hh - ll)) * 100',
+#             local_dict={
+#                 'tc': today_closes,
+#                 'll': lowest_lows,
+#                 'hh': highest_highs,
+#             },
+#             global_dict={},
+#             out=out,
+#         )
+#
+# @singleton
+# class Ignore(object):
+#     def __str__(self):
+#         return 'Argument.ignore'
+#     __repr__ = __str__
+#
+#
+# class Expired(Exception):
+#     """Marks that a :class:`CachedObject` has expired.
+#     """
+# >>> from scipy.stats import rankdata
+# >>> rankdata([0, 2, 3, 2])
+# array([ 1. ,  2.5,  4. ,  2.5])
+# >>> rankdata([0, 2, 3, 2], method='min')
+# array([ 1,  2,  4,  2])
+# >>> rankdata([0, 2, 3, 2], method='max')
+# array([ 1,  3,  4,  3])
+# >>> rankdata([0, 2, 3, 2], method='dense')
+# array([ 1,  2,  3,  2])
+# >>> rankdata([0, 2, 3, 2], method='ordinal')
+# array([ 1,  2,  4,  3])
 
-    Returns
-    -------
-    out: %K oscillator
-    """
-    inputs = (EquityPricing.close, EquityPricing.low, EquityPricing.high)
-    window_safe = True
-    window_length = 14
+# if g_is_ipython and not g_is_py3:
+#     """ipython在python2的一些版本需要reload logging模块，否则不显示log信息"""
+#     # noinspection PyUnresolvedReferences, PyCompatibility
+#     reload(logging)
+#     # pass
+from distutils.version import StrictVersion
 
-    def compute(self, today, assets, out, closes, lows, highs):
 
-        highest_highs = nanmax(highs, axis=0)
-        lowest_lows = nanmin(lows, axis=0)
-        today_closes = closes[-1]
+pandas_version = StrictVersion(pd.__version__)
+new_pandas = pandas_version >= StrictVersion('0.19')
+if pandas_version >= StrictVersion('0.20'):
+    def normalize_date(dt):
+        """
+        Normalize datetime.datetime value to midnight. Returns datetime.date as
+        a datetime.datetime at midnight
 
-        evaluate(
-            '((tc - ll) / (hh - ll)) * 100',
-            local_dict={
-                'tc': today_closes,
-                'll': lowest_lows,
-                'hh': highest_highs,
-            },
-            global_dict={},
-            out=out,
-        )
+        Returns
+        -------
+        normalized : datetime.datetime or Timestamp
+        """
+        return dt.normalize()
+else:
+    from pandas.tseries.tools import normalize_date
+
+from numpy.lib.stride_tricks import as_strided
+# def repeat_first_axis(array, count):
+#     """
+#     Restride `array` to repeat `count` times along the first axis.
+#
+#     Parameters
+#     ----------
+#     array : np.array
+#         The array to restride.
+#     count : int
+#         Number of times to repeat `array`.
+#
+#     Returns
+#     -------
+#     result : array
+#         Array of shape (count,) + array.shape, composed of `array` repeated
+#         `count` times along the first axis.
+#
+#     Example
+#     -------
+#     >>> from numpy import arange
+#     >>> a = arange(3); a
+#     array([0, 1, 2])
+#     >>> repeat_first_axis(a, 2)
+#     array([[0, 1, 2],
+#            [0, 1, 2]])
+#     >>> repeat_first_axis(a, 4)
+#     array([[0, 1, 2],
+#            [0, 1, 2],
+#            [0, 1, 2],
+#            [0, 1, 2]])
+#
+#     Notes
+#     ----
+#     The resulting array will share memory with `array`.  If you need to assign
+#     to the input or output, you should probably make a copy first.
+#
+#     See Also
+#     --------
+#     repeat_last_axis
+#     """
+#     return as_strided(array, (count,) + array.shape, (0,) + array.strides)
+#
+#
+# def repeat_last_axis(array, count):
+#     """
+#     Restride `array` to repeat `count` times along the last axis.
+#
+#     Parameters
+#     ----------
+#     array : np.array
+#         The array to restride.
+#     count : int
+#         Number of times to repeat `array`.
+#
+#     Returns
+#     -------
+#     result : array
+#         Array of shape array.shape + (count,) composed of `array` repeated
+#         `count` times along the last axis.
+#
+#     Example
+#     -------
+#     >>> from numpy import arange
+#     >>> a = arange(3); a
+#     array([0, 1, 2])
+#     >>> repeat_last_axis(a, 2)
+#     array([[0, 0],
+#            [1, 1],
+#            [2, 2]])
+#     >>> repeat_last_axis(a, 4)
+#     array([[0, 0, 0, 0],
+#            [1, 1, 1, 1],
+#            [2, 2, 2, 2]])
+#
+#     Notes
+#     ----
+#     The resulting array will share memory with `array`.  If you need to assign
+#     to the input or output, you should probably make a copy first.
+#
+#     See Also
+#     --------
+#     repeat_last_axis
+#     """
+#     return as_strided(array, array.shape + (count,), array.strides + (0,))
+#
+#
+# def rolling_window(array, length):
+#     """
+#     Restride an array of shape
+#
+#         (X_0, ... X_N)
+#
+#     into an array of shape
+#
+#         (length, X_0 - length + 1, ... X_N)
+#
+#     where each slice at index i along the first axis is equivalent to
+#
+#         result[i] = array[length * i:length * (i + 1)]
+#
+#     Parameters
+#     ----------
+#     array : np.ndarray
+#         The base array.
+#     length : int
+#         Length of the synthetic first axis to generate.
+#
+#     Returns
+#     -------
+#     out : np.ndarray
+#
+#     Example
+#     -------
+#     >>> from numpy import arange
+#     >>> a = arange(25).reshape(5, 5)
+#     >>> a
+#     array([[ 0,  1,  2,  3,  4],
+#            [ 5,  6,  7,  8,  9],
+#            [10, 11, 12, 13, 14],
+#            [15, 16, 17, 18, 19],
+#            [20, 21, 22, 23, 24]])
+#
+#     >>> rolling_window(a, 2)
+#     array([[[ 0,  1,  2,  3,  4],
+#             [ 5,  6,  7,  8,  9]],
+#     <BLANKLINE>
+#            [[ 5,  6,  7,  8,  9],
+#             [10, 11, 12, 13, 14]],
+#     <BLANKLINE>
+#            [[10, 11, 12, 13, 14],
+#             [15, 16, 17, 18, 19]],
+#     <BLANKLINE>
+#            [[15, 16, 17, 18, 19],
+#             [20, 21, 22, 23, 24]]])
+#     """
+#     orig_shape = array.shape
+#     if not orig_shape:
+#         raise IndexError("Can't restride a scalar.")
+#     elif orig_shape[0] <= length:
+#         raise IndexError(
+#             "Can't restride array of shape {shape} with"
+#             " a window length of {len}".format(
+#                 shape=orig_shape,
+#                 len=length,
+#             )
+#         )
+#
+#     num_windows = (orig_shape[0] - length + 1)
+#     new_shape = (num_windows, length) + orig_shape[1:]
+#
+#     new_strides = (array.strides[0],) + array.strides
+#
+#     return as_strided(array, new_shape, new_strides)
+# Sentinel value that isn't NaT.
+# _notNaT = make_datetime64D(0)
+
+# out = np.full((len(all_dates), len(all_sids)), -1, dtype=np.int64)
+#
+# sid_ixs = all_sids.searchsorted(event_sids)
+# # side='right' here ensures that we include the event date itself
+# # if it's in all_dates.
+# dt_ixs = all_dates.searchsorted(event_dates, side='right')
+# ts_ixs = data_query_cutoff.searchsorted(event_timestamps, side='right')
+
+# class Event(object):
+#
+#     def __init__(self, initial_values=None):
+#         if initial_values:
+#             self.__dict__.update(initial_values)
+#
+#     def keys(self):
+#         return self.__dict__.keys()
+#
+#     def __eq__(self, other):
+#         return hasattr(other, '__dict__') and self.__dict__ == other.__dict__
+#
+#     def __contains__(self, name):
+#         return name in self.__dict__
+#
+#     def __repr__(self):
+#         return "Event({0})".format(self.__dict__)
+#
+#     def to_series(self, index=None):
+#         return pd.Series(self.__dict__, index=index)

@@ -4,7 +4,7 @@ Blaze integration with the Pipeline API.
 For an overview of the blaze project, see blaze.pydata.org
 
 The blaze loader for the Pipeline API is designed to allow us to load
-data from arbitrary sources as long as we can execute the needed expressions
+data from trend sources as long as we can execute the needed expressions
 against the data with blaze.
 
 Data Format

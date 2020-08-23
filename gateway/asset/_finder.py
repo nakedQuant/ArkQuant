@@ -62,6 +62,10 @@ class AssetFinder(object):
                 for sid in sids:
                     self._asset_type_cache[sid] = AssetTypeMappings[asset_type](sid, engine)
 
+    # current mappings   data: a nested dictionary: knowledge_date -> lookup_date ->
+    # {add: [symbol list], 'delete': []}, delete: [symbol list]}
+    #     def update_current(self, effective_date, symbols, change_func):
+
     def retrieve_asset(self, sids):
         """
         Retrieve asset types for a list of sids.

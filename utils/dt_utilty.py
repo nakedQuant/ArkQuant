@@ -199,15 +199,14 @@ def aggregate_returns(returns, convert_to):
     """
 
     def cumulate_returns(x):
-        # return cum_returns(x).iloc[-1]
-        raise NotImplementedError()
+        return cum_returns(x).iloc[-1]
 
     if convert_to == 'weekly':
         grouping = [lambda x: x.year, lambda x: x.isocalendar()[1]]
     elif convert_to == 'monthly':
         grouping = [lambda x: x.year, lambda x: x.month]
     elif convert_to == 'quarterly':
-        grouping = [lambda x: x.year, lambda x: int(math.ceil(x.month/3.))]
+        grouping = [lambda x: x.year, lambda x: int(np.math.ceil(x.month/3.))]
     elif convert_to == 'yearly':
         grouping = [lambda x: x.year]
     else:

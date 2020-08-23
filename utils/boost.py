@@ -1,5 +1,13 @@
-# # -*- coding: utf-8  -*-
-import multiprocessing,time,os
+# -*- coding : utf-8 -*-
+"""
+Created on Tue Mar 12 15:37:47 2019
+
+@author: python
+"""
+from concurrent.futures import ProcessPoolExecutor
+from multiprocessing import Pool
+from toolz import compose, identity
+import multiprocessing, os, math, sys, time
 
 
 def clock(interval):
@@ -26,20 +34,20 @@ class ClockProcess(multiprocessing.Process):
             print('the time is %s' % time.ctime())
             time.sleep(self.interval)
 
+
 ClockProcess(5).start()
 
-
-# start 4 worker processes
-from multiprocessing import Pool
 
 def f(x):
     return x*x
 
+
+# start 4 worker processes
 with Pool(processes=4) as pool:
     # print "[0, 1, 4,..., 81]" block
     print(pool.map(f, range(10)))
 
-    # print same numbers in arbitrary order orderly return
+    # print same numbers in trend order orderly return
     for i in pool.imap_unordered(f, range(10)):
         print(i)
 
@@ -58,7 +66,6 @@ with Pool(processes=4) as pool:
 # exiting the 'with'-block has stopped the pool
 print("Now the pool is closed and no longer available")
 
-from concurrent.futures import ProcessPoolExecutor
 
 class Parallel(object):
     """
@@ -102,8 +109,9 @@ class Parallel(object):
         return result
 
     def run_in_thread(func, *args, **kwargs):
-        '''
-           多线程工具函数，不涉及返回值等'''
+        """
+            多线程工具函数，不涉及返回值
+        """
         from threading import Thread
         thread = Thread(target=func, args=args, kwargs=kwargs)
         # 随着主线程一块结束
@@ -117,11 +125,6 @@ class Parallel(object):
     #     process.daemon = True
     #     process.start()
     #     return process
-
-from six.moves import map as imap
-# Functions are applied from right to left so that compose(f, g, h)(x, y) is the same as f(g(h(x, y)))
-# Identity function. Return x
-from toolz import compose, identity
 
 
 class ApplyAsyncResult(object):
@@ -265,9 +268,6 @@ class SequentialPool(object):
     def join():
         pass
 
-#pp
-import math, sys, time
-import pp
 
 def isprime(n):
     """Returns True if n is prime and False otherwise"""
@@ -285,9 +285,11 @@ def isprime(n):
         i = 1
     return True
 
+
 def sum_primes(n):
     """Calculates sum of all primes below given integer n"""
-    return sum([x for x in range(2,n) if isprime(x)])
+    return sum([x for x in range(2, n) if isprime(x)])
+
 
 print("""Usage: python sum_primes.py [ncpus]
     [ncpus] - the number of workers to run in parallel,
@@ -330,11 +332,10 @@ start_time = time.time()
 # The following submits 8 jobs and then retrieves the results
 inputs = (100000, 100100, 100200, 100300, 100400, 100500, 100600, 100700)
 jobs = [(input, job_server.submit(sum_primes,(input,), (isprime,), ("math",))) for input in inputs]
-for input, job in jobs:
+for job in jobs:
     print("Sum of primes below", input, "is", job())
 
 print("Time elapsed: ", time.time() - start_time, "s")
 job_server.print_stats()
 
-
-#joblib memory parallel
+# joblib memory parallel

@@ -46,10 +46,12 @@ from risk.metrics.tracker import MetricsTracker
 from risk.alert import UnionRisk, NoRisk
 from risk.manual import PortfolioRisk, Manual
 from utils.api_support import (
-    api_method,
     ZiplineAPI,
 )
 from utils.events import EventManager, Event, Always
+from utils.wrapper import  api_method
+
+__all__ = ['TradingAlgorithm']
 
 
 class TradingAlgorithm(object):

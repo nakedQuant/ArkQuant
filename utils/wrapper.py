@@ -9,7 +9,7 @@ import functools, logging, pdb, time
 import warnings
 from functools import wraps
 from contextlib import contextmanager
-import sys,weakref
+import sys, weakref
 
 
 def _deprecated_getitem_method(name, attrs):
@@ -131,7 +131,6 @@ def warnings_filter(func):
             # 如果env中的设置不是忽略所有才恢复
             warnings.simplefilter('default')
         return ret
-
     return wrapper
 
 
@@ -140,16 +139,13 @@ def singleton(cls):
         作用范围：类装饰器
         功能：被装饰后类变成单例类
     """
-
     instances = {}
-
     @functools.wraps(cls)
     def get_instance(*args, **kw):
         if cls not in instances:
             # 不存在实例instances才进行构造
             instances[cls] = cls(*args, **kw)
         return instances[cls]
-
     return get_instance
 
 
@@ -158,7 +154,6 @@ def params_to_pandas(func):
         函数装饰器：不定参数装饰器，定参数转换使用ABuScalerUtil中的装饰器arr_to_pandas(func)
         将被装饰函数中的参数中所有可以迭代的序列转换为pd.DataFrame或者pd.Series
     """
-
     @functools.wraps(func)
     def wrapper(*arg, **kwargs):
         # 把arg中的可迭代序列转换为pd.DataFrame或者pd.Series
@@ -175,7 +170,6 @@ def params_to_numpy(func):
         函数装饰器：不定参数装饰器，定参数转换使用ABuScalerUtil中的装饰器arr_to_numpy(func)
         将被装饰函数中的参数中所有可以迭代的序列转换为np.array
     """
-
     @functools.wraps(func)
     def wrapper(*arg, **kwargs):
         # 把arg中的可迭代序列转换为np.array
@@ -256,11 +250,9 @@ def empty_wrapper_with_params(*p_args, **p_kwargs):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             return func(*args, **kwargs)
-
         return wrapper
 
     return decorate
-
 
 
 def except_debug(func):
@@ -556,3 +548,24 @@ def coerce_numbers_to_my_dtype(f):
             other = coerce_to_dtype(self.dtype, other)
         return f(self, other)
     return method
+
+
+# 基于api_method 将方法注册到api
+def api_method(f):
+    # Decorator that adds the decorated class method as a callable
+    # function (wrapped) to zipline.api
+    @wraps(f)
+    def wrapped(*args, **kwargs):
+        # Get the instance and call the method
+        algo_instance = get_algo_instance()
+        if algo_instance is None:
+            raise RuntimeError(
+                'zipline api method %s must be called during a simulation.'
+                % f.__name__
+            )
+        return getattr(algo_instance, f.__name__)(*args, **kwargs)
+    # Add functor to zipline.api
+    # setattr(zipline.api, f.__name__, wrapped)
+    # zipline.api.__all__.append(f.__name__)
+    # f.is_api_method = True
+    return f

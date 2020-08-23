@@ -908,7 +908,7 @@ cdef class Datetime64Overwrite(Datetime64Adjustment):
 
 cdef class _ObjectAdjustment(Adjustment):
     """
-    Base class for adjustments that operate on arbitrary objects.
+    Base class for adjustments that operate on trend objects.
 
     We use only this for categorical data, where our data buffer is an array of
     indices into an array of unique Python string objects.

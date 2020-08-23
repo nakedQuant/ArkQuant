@@ -1,20 +1,12 @@
-#
-# Copyright 2014 Quantopian, Inc.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# -*- coding : utf-8 -*-
+"""
+Created on Tue Mar 12 15:37:47 2019
 
+@author: python
+"""
 from functools import wraps
 import threading
+
 """
 多线程编程中的对同一变量的访问冲突的一种技术，TLS会为每一个线程维护一个和该线程绑定的变量的副本。而不是无止尽的传递局部参数的方式编程
 每一个线程都拥有自己的变量副本，并不意味着就一定不会对TLS变量中某些操作枷锁了。
@@ -53,24 +45,3 @@ class ZiplineAPI(object):
         Restore the algo instance stored in __enter__.
         """
         set_algo_instance(self.old_algo_instance)
-
-
-#基于api_method 将方法注册到api
-def api_method(f):
-    # Decorator that adds the decorated class method as a callable
-    # function (wrapped) to zipline.api
-    @wraps(f)
-    def wrapped(*args, **kwargs):
-        # Get the instance and call the method
-        algo_instance = get_algo_instance()
-        if algo_instance is None:
-            raise RuntimeError(
-                'zipline api method %s must be called during a simulation.'
-                % f.__name__
-            )
-        return getattr(algo_instance, f.__name__)(*args, **kwargs)
-    # Add functor to zipline.api
-    # setattr(zipline.api, f.__name__, wrapped)
-    # zipline.api.__all__.append(f.__name__)
-    # f.is_api_method = True
-    return f

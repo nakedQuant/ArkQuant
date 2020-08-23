@@ -1,3 +1,12 @@
+# -*- coding : utf-8 -*-
+"""
+Created on Tue Mar 12 15:37:47 2019
+
+@author: python
+"""
+import warnings, numpy as np
+from .paths import default_extension, ensure_file
+
 _loaded_extensions = set()
 
 
@@ -22,11 +31,11 @@ def load_extensions(default, extensions, strict, environ, reload=False):
         Reload any extensions that have already been loaded.
     """
     if default:
-        default_extension_path = pth.default_extension(environ=environ)
-        pth.ensure_file(default_extension_path)
+        default_extension_path = default_extension(environ=environ)
+        ensure_file(default_extension_path)
         # put the default extension first so other extensions can depend on
         # the order they are loaded
-        extensions = concatv([default_extension_path], extensions)
+        extensions = np.concatv([default_extension_path], extensions)
 
     for ext in extensions:
         if ext in _loaded_extensions and not reload:

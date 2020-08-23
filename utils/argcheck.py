@@ -1,34 +1,14 @@
-#
-# Copyright 2014 Quantopian, Inc.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-from collections import namedtuple
-from itertools import chain
-from six.moves import map, zip_longest
-import argparse ,re
+# -*- coding : utf-8 -*-
+"""
+Created on Tue Mar 12 15:37:47 2019
 
-from uility import getargspec
+@author: python
+"""
+from collections import namedtuple
+import argparse, re
 
 Argspec = namedtuple('Argspec', ['args', 'starargs', 'kwargs'])
 
-
-def singleton(cls):
-    instances = {}
-    def getinstance():
-        if cls not in instances:
-            instances[cls] = cls()
-        return instances[cls]
-    return getinstance
 
 def parse_argspec(callable_):
     """
@@ -53,10 +33,12 @@ def parse_argspec(callable_):
         keywords,
     )
 
+
 class Namespace(object):
     """
     A placeholder object representing a namespace level
     """
+
 
 def create_args(args, root):
     """
@@ -139,13 +121,14 @@ def update_namespace(namespace, path, name):
 
 
 def commandParse():
-    default={'color':'red','user':'guest'}
-    #创建参数实例
-    parser=argparse.ArgumentParser()
-    #添加
-    parser.add_argument('-u','--user')
-    parser.add_argument('-c','--color')
-    #解析参数
-    namespace=parser.parse_args()
-    command_line_args={k:v for k,v in vars(namespace).items() if v}
+    default={'color': 'red', 'user': 'guest'}
+    # 创建参数实例
+    parser = argparse.ArgumentParser()
+    # 添加
+    parser.add_argument('-u', '--user')
+    parser.add_argument('-c', '--color')
+    # 解析参数
+    namespace = parser.parse_args()
+    command_line_args={k: v for k, v in vars(namespace).items() if v}
+    return command_line_args
 

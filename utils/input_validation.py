@@ -1,25 +1,20 @@
-# Copyright 2015 Quantopian, Inc.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# -*- coding : utf-8 -*-
+"""
+Created on Tue Mar 12 15:37:47 2019
+
+@author: python
+"""
 from datetime import tzinfo
 from functools import partial
 from operator import attrgetter
-
+import toolz.curried.operator as op
+from functools import wraps
 from numpy import dtype
 import pandas as pd
 from pytz import timezone
 from six import iteritems, string_types
 from toolz import valmap, complement, compose
+
 """ 
 toolz.functoolz.complement(func)[source]
 Convert a predicate function to its logical complement.
@@ -33,10 +28,6 @@ True
 >>> isodd(2)
 False
 """
-import toolz.curried.operator as op
-
-from functools import wraps
-from .preprocess import preprocess,call
 
 _qualified_name = attrgetter('__qualname__')
 
@@ -195,7 +186,7 @@ def restrict_to_dtype(dtype, message_template):
     return preprocess(self=processor)
 
 
-#扩展 --- 通过字典对不同的参数进行函数限制，即为每一个参数调用preprocess
+# 扩展 --- 通过字典对不同的参数进行函数限制，即为每一个参数调用preprocess
 def expect_dtypes(__funcname=_qualified_name, **named):
     """
     Preprocessing decorator that verifies inputs have expected numpy dtypes.

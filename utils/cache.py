@@ -1,196 +1,36 @@
+# -*- coding : utf-8 -*-
 """
-Caching utilities for zipline
+Created on Tue Mar 12 15:37:47 2019
+
+@author: python
 """
-# Mapping MutableMapping 
-# hash __hash__ __eq__ or __cmp__
 from collections import MutableMapping
-import errno
 from functools import partial
-import os
-import pickle
 from distutils import dir_util
 from shutil import rmtree, move
 from tempfile import mkdtemp, NamedTemporaryFile
+import os, pickle, errno, pandas as pd
 
-import pandas as pd
-
-from .context_tricks import nop_context
-from .paths import ensure_directory
-from test.sentinel import sentinel
 
 def singleton(cls):
     instances = {}
+
     def getinstance():
         if cls not in instances:
             instances[cls] = cls()
         return instances[cls]
     return getinstance
 
-@singleton
-class Ignore(object):
-    def __str__(self):
-        return 'Argument.ignore'
-    __repr__ = __str__
 
-
-class Expired(Exception):
-    """Marks that a :class:`CachedObject` has expired.
+class DummyMapping(object):
     """
-
-
-ExpiredCachedObject = sentinel('ExpiredCachedObject')
-AlwaysExpired = sentinel('AlwaysExpired')
-
-
-class Expired(Exception):
+    Dummy object used to provide a mapping interface for singular values.
     """
-        mark a cacheobject has expired
-    """
-
-
-class CachedObject(object):
-    """
-    A simple struct for maintaining a cached object with an expiration date.
-
-    Parameters
-    ----------
-    value : object
-        The object to cache.
-    expires : datetime-like
-        Expiration date of `value`. The cache is considered invalid for dates
-        **strictly greater** than `expires`.
-
-    Examples
-    --------
-    >>> from pandas import Timestamp, Timedelta
-    >>> expires = Timestamp('2014', tz='UTC')
-    >>> obj = CachedObject(1, expires)
-    >>> obj.unwrap(expires - Timedelta('1 minute'))
-    1
-    >>> obj.unwrap(expires)
-    1
-    >>> obj.unwrap(expires + Timedelta('1 minute'))
-    ... # doctest: +IGNORE_EXCEPTION_DETAIL
-    Traceback (most recent call last):
-        ...
-    Expired: 2014-01-01 00:00:00+00:00
-    """
-    def __init__(self, value, expires):
+    def __init__(self, value):
         self._value = value
-        self._expires = expires
 
-    @classmethod
-    def expired(cls):
-        """Construct a CachedObject that's expired at any time.
-        """
-        return cls(ExpiredCachedObject, expires=AlwaysExpired)
-
-    def unwrap(self, dt):
-        """
-        Get the cached value.
-
-        Returns
-        -------
-        value : object
-            The cached value.
-
-        Raises
-        ------
-        Expired
-            Raised when `dt` is greater than self.expires.
-        """
-        expires = self._expires
-        if expires is AlwaysExpired or expires < dt:
-            raise Expired(self._expires)
+    def __getitem__(self, key):
         return self._value
-
-    def _unsafe_get_value(self):
-        """You almost certainly shouldn't use this."""
-        return self._value
-
-
-class ExpiringCache(object):
-    """
-    A cache of multiple CachedObjects, which returns the wrapped the value
-    or raises and deletes the CachedObject if the value has expired.
-
-    Parameters
-    ----------
-    cache : dict-like, optional
-        An instance of a dict-like object which needs to support at least:
-        `__del__`, `__getitem__`, `__setitem__`
-        If `None`, than a dict is used as a default.
-
-    cleanup : callable, optional
-        A method that takes a single argument, a cached object, and is called
-        upon expiry of the cached object, prior to deleting the object. If not
-        provided, defaults to a no-op.
-
-    Examples
-    --------
-    >>> from pandas import Timestamp, Timedelta
-    >>> expires = Timestamp('2014', tz='UTC')
-    >>> value = 1
-    >>> cache = ExpiringCache()
-    >>> cache.set('foo', value, expires)
-    >>> cache.get('foo', expires - Timedelta('1 minute'))
-    1
-    >>> cache.get('foo', expires + Timedelta('1 minute'))
-    Traceback (most recent call last):
-        ...
-    KeyError: 'foo'
-    """
-
-    def __init__(self, cache=None, cleanup=lambda value_to_clean: None):
-        if cache is not None:
-            self._cache = cache
-        else:
-            self._cache = {}
-
-        self.cleanup = cleanup
-
-    def get(self, key, dt):
-        """Get the value of a cached object.
-
-        Parameters
-        ----------
-        key : any
-            The key to lookup.
-        dt : datetime
-            The time of the lookup.
-
-        Returns
-        -------
-        result : any
-            The value for ``key``.
-
-        Raises
-        ------
-        KeyError
-            Raised if the key is not in the cache or the value for the key
-            has expired.
-        """
-        try:
-            return self._cache[key].unwrap(dt)
-        except Expired:
-            self.cleanup(self._cache[key]._unsafe_get_value())
-            del self._cache[key]
-            raise KeyError(key)
-
-    def set(self, key, value, expiration_dt):
-        """Adds a new key value pair to the cache.
-
-        Parameters
-        ----------
-        key : any
-            The key to use for the pair.
-        value : any
-            The value to store under the name ``key``.
-        expiration_dt : datetime
-            When should this mapping expire? The cache is considered invalid
-            for dates **strictly greater** than ``expiration_dt``.
-        """
-        self._cache[key] = CachedObject(value, expiration_dt)
 
 
 class dataframe_cache(MutableMapping):
@@ -334,7 +174,6 @@ class working_file(object):
     meaning it has as strong of guarantees as :func:`shutil.move`.
     """
     def __init__(self, final_path, *args, **kwargs):
-    	# NamedTemporaryFile has a visble name in file system can be retrieved from the name attribute , delete --- True means delete as file closed
         self._tmpfile = NamedTemporaryFile(delete=False, *args, **kwargs)
         self._final_path = final_path
 
@@ -416,6 +255,7 @@ class working_dir(object):
             self._commit()
         rmtree(self.path)
 
+
 # @deprecated(msg=DATAREADER_DEPRECATION_WARNING)
 def get_returns_cached(filepath, update_func, latest_dt, **kwargs):
     """
@@ -480,5 +320,4 @@ def get_returns_cached(filepath, update_func, latest_dt, **kwargs):
                 ),
                 UserWarning,
             )
-
     return returns

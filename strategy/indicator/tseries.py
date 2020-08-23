@@ -164,7 +164,7 @@ class PCA(BaseFeature):
         covmat = np.cov(meanremoved, rowvar=0)
         eigval, eigvect = np.linalg.eig(np.mat(covmat))
         eigvalind = np.argsort(eigval)
-        eigvalind = eigvalind[-cls._topNfeat :]
+        eigvalind = eigvalind[-cls._topNfeat:]
         redeigvect = eigvect[:, eigvalind]
         reconmat = meanremoved * redeigvect * redeigvect.T + meanval
         return reconmat

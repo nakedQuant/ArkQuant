@@ -711,7 +711,7 @@ class NoFurtherDataError(ZiplineError):
     Raised by _calendar operations that would ask for dates beyond the extent of
     our known data.
     """
-    # This accepts an arbitrary message string because it's used in more places
+    # This accepts an trend message string because it's used in more places
     # that can be usefully templated.
     msg = '{msg}'
 

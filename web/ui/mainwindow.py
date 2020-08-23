@@ -1,7 +1,9 @@
+# -*- coding : utf-8 -*-
 """
-Implements main window of VN Trader.
-"""
+Created on Tue Mar 12 15:37:47 2019
 
+@author: python
+"""
 import webbrowser
 from functools import partial
 from importlib import import_module

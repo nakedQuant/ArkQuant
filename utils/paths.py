@@ -1,8 +1,8 @@
+# -*- coding : utf-8 -*-
 """
-Canonical path locations for zipline data.
+Created on Tue Mar 12 15:37:47 2019
 
-Paths are rooted at $ZIPLINE_ROOT if that environment variable is set.
-Otherwise default to expanduser(~/.zipline)
+@author: python
 """
 from errno import EEXIST
 import os, pandas as pd

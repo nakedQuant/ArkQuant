@@ -1,7 +1,9 @@
+# -*- coding : utf-8 -*-
 """
-Basic widgets for VN Trader.
-"""
+Created on Tue Mar 12 15:37:47 2019
 
+@author: python
+"""
 import csv
 import platform
 from enum import Enum

@@ -1,7 +1,13 @@
+# -*- coding : utf-8 -*-
+"""
+Created on Tue Mar 12 15:37:47 2019
+
+@author: python
+"""
 import re
 from six import iteritems
-from textwrap import dedent
 from toolz import curry
+
 
 def bulleted_list(items, max_count=None, indent=2):
     """Format a bulleted list of values.
@@ -14,6 +20,7 @@ def bulleted_list(items, max_count=None, indent=2):
 
     line_template = (" " * indent) + "- {}"
     return "\n".join(map(line_template.format, items))
+
 
 def s(word, seq, suffix='s'):
     """Adds a suffix to ``word`` if some sequence has anything other than
@@ -81,6 +88,7 @@ def bulleted_list(items, indent=0, bullet_type='-'):
     """
     format_string = ' ' * indent + bullet_type + ' {}'
     return "\n".join(map(format_string.format, items))
+
 
 @curry
 def copydoc(from_, to):

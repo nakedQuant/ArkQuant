@@ -370,5 +370,27 @@ mysql --- between and (include edge)
         Market If Touched Orders (MIT)
         Limit If Touched Orders (LIT)
         One Cancels the Other (OCO)
+
+
+# Mapping MutableMapping
+# hash __hash__ __eq__ or __cmp__
+# Functions are applied from right to left so that compose(f, g, h)(x, y) is the same as f(g(h(x, y)))
+# Identity function. Return x
+# NamedTemporaryFile has a visble name in file system can be retrieved from the name attribute , delete ---
+  True means delete as file closed
+
+default_extension : bool, optional
+    Should the default zipline extension be loaded. This is found at
+    ``$ZIPLINE_ROOT/extension.py``
+extensions : iterable[str], optional
+    The names of any other extensions to load. Each element may either be
+    a dotted module path like ``a.b.c`` or a path to a python file ending
+    in ``.py`` like ``a/b/c.py``.
+strict_extensions : bool, optional
+    Should the run fail if any extensions fail to load. If this is false,
+    a warning will be raised instead.
+environ : mapping[str -> str], optional
+    The os environment to use. Many extensions use this to get parameters.
+    This defaults to ``os.environ``.
 '''
 

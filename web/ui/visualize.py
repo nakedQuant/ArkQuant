@@ -1,3 +1,9 @@
+# -*- coding : utf-8 -*-
+"""
+Created on Tue Mar 12 15:37:47 2019
+
+@author: python
+"""
 from __future__ import unicode_literals
 
 from contextlib import contextmanager
@@ -7,6 +13,7 @@ from io import BytesIO
 from subprocess import Popen, PIPE
 
 from six import iteritems
+
 
 class NoIPython(Exception):
     pass

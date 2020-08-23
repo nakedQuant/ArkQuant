@@ -1,7 +1,14 @@
+# -*- coding : utf-8 -*-
+"""
+Created on Tue Mar 12 15:37:47 2019
+
+@author: python
+"""
 from toolz import curry
 
 # A global dictionary for storing instances of Registry:
 custom_types = {}
+
 
 class Registry(object):
     """
@@ -175,5 +182,6 @@ def create_registry(interface):
                          'for the specified type')
     custom_types[interface] = Registry(interface)
     return interface
+
 
 extensible = create_registry

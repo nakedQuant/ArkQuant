@@ -5,9 +5,9 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-
-import cgi,time
+import cgi, time
 from collections import namedtuple
+from contextlib import contextmanager
 
 
 class ProgressHooks(object):
@@ -51,7 +51,6 @@ class ProgressHooks(object):
     def running_pipeline(self, pipeline, start_date, end_date):
         self._start_date = start_date
         self._end_date = end_date
-
         try:
             yield
         except Exception:

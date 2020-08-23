@@ -1,12 +1,23 @@
+# -*- coding : utf-8 -*-
 """
-Utilities for validating inputs to user-facing API functions.
+Created on Tue Mar 12 15:37:47 2019
+
+@author: python
 """
 from textwrap import dedent
-from types import CodeType
+# from types import CodeType
 from uuid import uuid4
 from six import  exec_
 from functools import wraps
 import inspect
+from numpy import dtype
+import pandas as pd
+from operator import attrgetter
+from datetime import tzinfo
+from pytz import timezone
+
+_qualified_name = attrgetter('__qualname__')
+
 
 def getargspec(f):
     full_argspec = inspect.getfullargspec(f)
@@ -19,6 +30,7 @@ def getargspec(f):
 
 
 NO_DEFAULT = object()
+
 
 def preprocess(*_unused,** processors):
     """
@@ -79,7 +91,7 @@ def _build_preprocessed_function(func,
         varkw: '**',
     }
 
-    #核心部分 --- 对参数进行预处理
+    # 核心部分 --- 对参数进行预处理
     def make_processor_assignment(args,process_name):
         template = "{args} = {processor}({func},'args',{args})"
         return template.format(
@@ -105,10 +117,10 @@ def _build_preprocessed_function(func,
             exec_globals[procname] = processors[arg]
             assignments.append(make_processor_assignment(arg,procname))
 
-        #包含位置参数以及关键字参数
+        # 包含位置参数以及关键字参数
         call_args.append(arg)
 
-    #主要执行语句
+    # 主要执行语句
     exec_str = dedent(
         """
         @wraps({wrapped_funcname})
@@ -126,7 +138,7 @@ def _build_preprocessed_function(func,
         #call_args --- 全部转化为位置参数
         call_args = ','.join(call_args)
     )
-    #将string compile to pyobj
+    # 将string compile to pyobj
     compiled = compile(
         exec_str,
         func.__code__.co_filename,
@@ -137,6 +149,7 @@ def _build_preprocessed_function(func,
     exec_(compiled, exec_globals, exec_locals)
     new_func = exec_locals[func.__name__]
     return new_func
+
 
 def call(f):
     """
@@ -192,11 +205,6 @@ def ensure_upper_case(func, argname, arg):
             ),
         )
 
-from numpy import dtype
-import pandas as pd , numpy as np
-from operator import attrgetter
-
-_qualified_name = attrgetter('__qualname__')
 
 def ensure_dtype(func, argname, arg):
     """
@@ -214,8 +222,6 @@ def ensure_dtype(func, argname, arg):
             ),
         )
 
-from datetime import tzinfo
-from pytz import timezone
 
 def ensure_timezone(func, argname, arg):
     """Argument preprocessor that converts the input into a tzinfo object.
@@ -255,33 +261,34 @@ def ensure_timestamp(func, argname, arg):
             ),
         )
 
-if __name__ == '__main__':
 
-    @preprocess(arg=_ensure_tuple)
-    def foo(arg, kwargs=4):
-        return arg, kwargs
-    print(foo([1,2,3]))
-
-    @preprocess(arg=ensure_upper_case)
-    def foo(arg, kwargs=4):
-        return arg, kwargs
-
-    print(foo('abc'))
-
-    @preprocess(arg=ensure_dtype)
-    def foo(arg, kwargs=4):
-        return arg, kwargs
-
-    print(foo('a'))
-
-
-    @preprocess(arg=ensure_timezone)
-    def foo(arg, kwargs=4):
-        return arg, kwargs
-    print(foo('utc'))
-
-
-    @preprocess(arg=ensure_timestamp)
-    def foo(arg, kwargs=4):
-        return arg, kwargs
-    print(foo('2010-01-01'))
+# if __name__ == '__main__':
+#
+#     @preprocess(arg=_ensure_tuple)
+#     def foo(arg, kwargs=4):
+#         return arg, kwargs
+#     print(foo([1,2,3]))
+#
+#     @preprocess(arg=ensure_upper_case)
+#     def foo(arg, kwargs=4):
+#         return arg, kwargs
+#
+#     print(foo('abc'))
+#
+#     @preprocess(arg=ensure_dtype)
+#     def foo(arg, kwargs=4):
+#         return arg, kwargs
+#
+#     print(foo('a'))
+#
+#
+#     @preprocess(arg=ensure_timezone)
+#     def foo(arg, kwargs=4):
+#         return arg, kwargs
+#     print(foo('utc'))
+#
+#
+#     @preprocess(arg=ensure_timestamp)
+#     def foo(arg, kwargs=4):
+#         return arg, kwargs
+#     print(foo('2010-01-01'))
