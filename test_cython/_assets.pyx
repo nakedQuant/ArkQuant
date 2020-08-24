@@ -71,7 +71,7 @@ cdef class Asset:
         Minimum amount that the price can change for this asset.
     auto_close_date : pd.Timestamp
         Date on which positions in this asset will be automatically liquidated
-        to cash during a simulation. By default, this is three days after
+        to cash during a nakedquant. By default, this is three days after
         ``end_date``.
     """
 

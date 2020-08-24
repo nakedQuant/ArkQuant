@@ -63,7 +63,7 @@ class TradingAlgorithm(object):
     *args, **kwargs
         Forwarded to ``initialize`` unless listed below.
     initialize : callable[context -> None], optional
-        Function that is called at the start of the simulation to
+        Function that is called at the start of the nakedquant to
         setup the initial context.
     handle_data : callable[(context, data) -> None], optional
         Function called on every bar. This is where most logic should be
@@ -114,8 +114,8 @@ class TradingAlgorithm(object):
     history_container_class : type, optional
         The type of history container to use. default: HistoryContainer
     platform : str, optional
-        The platform the simulation is running on. This can be queried for
-        in the simulation with ``get_environment``. This allows algorithms
+        The platform the nakedquant is running on. This can be queried for
+        in the nakedquant with ``get_environment``. This allows algorithms
         to conditionally execute code based on platform it is running on.
         default: 'zipline'
     adjustment_reader : AdjustmentReader
@@ -220,7 +220,7 @@ class TradingAlgorithm(object):
                                          cancel_policy,
                                          self.trading_controls)
 
-        # simulation blotter
+        # nakedquant blotter
         self.blotter = blotter_class if blotter_class else SimulationBlotter(self._creator, delay)
         # restrictions , alternative
         self.restrictions = NoRestrictions() or restrictions
@@ -274,7 +274,7 @@ class TradingAlgorithm(object):
 
     def _create_blotter(self, blotter_class, delay):
         """
-            simulation blotter
+            nakedquant blotter
             function --- transform order to txn via different ways(capital , amount ,dual)
         """
         if blotter_class is not None:
@@ -428,18 +428,18 @@ class TradingAlgorithm(object):
                  'start', 'end', 'capital_base', 'platform', '*'}
             The field to query. The options have the following meanings:
               arena : str
-                  The arena from the simulation parameters. This will normally
+                  The arena from the nakedquant parameters. This will normally
                   be ``'backtest'`` but some systems may use this distinguish
                   live trading from backtesting.
               data_frequency : {'daily', 'minute'}
                   data_frequency tells the algorithm if it is running with
                   daily data or minute data.
               start : datetime
-                  The start date for the simulation.
+                  The start date for the nakedquant.
               end : datetime
-                  The end date for the simulation.
+                  The end date for the nakedquant.
               capital_base : float
-                  The starting capital for the simulation.
+                  The starting capital for the nakedquant.
               platform : str
                   The platform that the code is running on. By default this
                   will be the string 'zipline'. This can allow algorithms to
@@ -512,7 +512,7 @@ class TradingAlgorithm(object):
     @api_method
     def set_slippage(self, us_equities=None):
         """
-        Set the slippage models for the simulation.
+        Set the slippage models for the nakedquant.
 
         Parameters
         ----------
@@ -544,7 +544,7 @@ class TradingAlgorithm(object):
 
     @api_method
     def set_commission(self, commission_class):
-        """Sets the commission models for the simulation.
+        """Sets the commission models for the nakedquant.
 
         Parameters
         ----------
@@ -569,7 +569,7 @@ class TradingAlgorithm(object):
 
     @api_method
     def set_cancel_policy(self, cancel_policy):
-        """Sets the order cancellation policy for the simulation.
+        """Sets the order cancellation policy for the nakedquant.
 
         Parameters
         ----------

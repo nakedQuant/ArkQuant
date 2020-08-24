@@ -21,9 +21,9 @@ from _calendar.trading_calendar import calendar
 
 
 class DataPortal(object):
-    """Interface to all of the data that a simulation needs.
+    """Interface to all of the data that a nakedquant needs.
 
-    This is used by the simulation runner to answer questions about the data,
+    This is used by the nakedquant runner to answer questions about the data,
     like getting the prices of asset on a given day or to service history
     calls.
 

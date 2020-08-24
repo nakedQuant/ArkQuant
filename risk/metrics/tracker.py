@@ -26,13 +26,13 @@ class MetricsTracker(object):
     Parameters
     ----------
     trading_calendar : TrandingCalendar
-        The trading _calendar used in the simulation.
+        The trading _calendar used in the nakedquant.
     first_session : pd.Timestamp
-        The label of the first trading session in the simulation.
+        The label of the first trading session in the nakedquant.
     last_session : pd.Timestamp
-        The label of the last trading session in the simulation.
+        The label of the last trading session in the nakedquant.
     capital_base : float
-        The starting capital for the simulation.
+        The starting capital for the nakedquant.
     metrics : list[Metric]
         The metrics to track.
     emission_rate : {'daily', 'minute'}
@@ -101,7 +101,7 @@ class MetricsTracker(object):
         Parameters
         ----------
         completed_session : Timestamp
-            The most recently completed simulation datetime.
+            The most recently completed nakedquant datetime.
         data_portal : DataPortal
             The current data portal.
 
@@ -128,7 +128,7 @@ class MetricsTracker(object):
 
     def handle_simulation_end(self):
         """
-        When the simulation is complete, run the full period risk report
+        When the nakedquant is complete, run the full period risk report
         and send it out on the results socket.
         """
         packet = {}

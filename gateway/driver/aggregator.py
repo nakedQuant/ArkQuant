@@ -53,7 +53,7 @@ class DailyHistoryAggregator(object):
 
     This summary is the same as a daily bar rollup of minute data, with the
     distinction that the summary is truncated to the `dt` requested.
-    i.e. the aggregation slides forward during a the course of simulation day.
+    i.e. the aggregation slides forward during a the course of nakedquant day.
 
     Provides aggregation for `open`, `high`, `low`, `close`, and `volume`.
     The aggregation rules for each price type is documented in their respective

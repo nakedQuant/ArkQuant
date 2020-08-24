@@ -18,7 +18,7 @@ from gens import (
 
 class AlgorithmSimulator(object):
     """
-        simulation start:
+        nakedquant start:
                         a.初始化相关模块以及参数
         before trading:
                         a. 针对ledger预处理
@@ -66,7 +66,7 @@ class AlgorithmSimulator(object):
         def on_exit():
             # Remove references to algo, data portal, et al to break cycles
             # and ensure deterministic cleanup of these objects when the
-            # simulation finishes.
+            # nakedquant finishes.
             self.algorithm = None
 
         with ExitStack() as stack:

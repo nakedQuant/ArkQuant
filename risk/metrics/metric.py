@@ -330,7 +330,7 @@ class BenchmarkReturnsAndVolatility(object):
 
 
 class AlphaBeta(object):
-    """End of simulation alpha and beta to the benchmark.
+    """End of nakedquant alpha and beta to the benchmark.
     """
     def __init__(self):
         self.return_series  = None
@@ -362,7 +362,7 @@ class AlphaBeta(object):
 
 
 class ReturnsStatistic(object):
-    """A metrics that reports an end of simulation scalar or time series
+    """A metrics that reports an end of nakedquant scalar or time series
     computed from the algorithm returns.
 
     Parameters

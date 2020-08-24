@@ -485,8 +485,8 @@ class PipelineDateError(ZiplineError):
     Raised when only one date is passed to the pipe
     """
     msg = """
-Only one simulation date given. Please specify both the 'start' and 'end' for
-the simulation, or neither. If neither is given, the start and end of the
+Only one nakedquant date given. Please specify both the 'start' and 'end' for
+the nakedquant, or neither. If neither is given, the start and end of the
 DataSource will be used. Given start = '{start}', end = '{end}'
 """.strip()
 

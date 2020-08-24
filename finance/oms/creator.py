@@ -52,7 +52,7 @@ class BaseCreator(ABC):
                 simulate price distribution to place on transactions
                 :param size: number of transactions
                 :param raw:  data for compute
-                :return: array of simulation price
+                :return: array of nakedquant price
                 :return:
         """
         raise NotImplementedError()

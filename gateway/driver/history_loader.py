@@ -212,7 +212,7 @@ class HistoryLoader(ABC):
     def history(self, assets, field, dts, window):
         """
         A window of pricing data with adjustments applied assuming that the
-        end of the window is the day before the current simulation time.
+        end of the window is the day before the current nakedquant time.
         default fields --- OHLCV
 
         Parameters

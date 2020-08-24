@@ -19,7 +19,7 @@ __all__ = [
 class TradingControlViolation(ZiplineError):
     """
     Raised if an order would violate a constraint set by a TradingControl.
-    --- used for blotter which in simulation transaction module
+    --- used for blotter which in nakedquant transaction module
     """
     msg = """
             Order for {amount} shares of {asset} at {datetime} violates trading constraint

@@ -9,9 +9,6 @@ Created on Tue Mar 12 15:37:47 2019
 #
 #
 # class Discretizer(Strategy):
-#     """
-#         通用模块 close - pre_high
-#     """
 #
 #     def __init__(self, params):
 #         self.params = params
