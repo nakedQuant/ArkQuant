@@ -219,9 +219,9 @@ class Jump(BaseFeature):
     """
     @staticmethod
     def _cal_jump(raw, window):
-        pct = raw['close'] / raw['close'].shift(1) -1
-        pct_thres = pct.rolling(window=window).mean()
-        jump_diff = pct_thres * raw['close'].shift(1)
+        pct = raw['close'] / raw['close'].shift(1) - 1
+        pct_mean = pct.rolling(window=window).mean()
+        jump_diff = pct_mean * raw['close'].shift(1)
         jump_up = raw['low'] - raw['close'].shift(1)
         jump_down = raw['close'].shift(1) - raw['high']
         power_up = np.sum(jump_up > jump_diff) / window
@@ -239,13 +239,21 @@ class Jump(BaseFeature):
 
 class Gap(BaseFeature):
     """
-        gap : 低开上破昨日收盘价（preclose < open and close > preclose）
-              高开高走 (open > preclose and close > open9
-        gap power :delta vol * (close - open) / (preclose - open)
+        gap : 低开上破昨日收盘价（preclose > open and close > preclose）
+              高开高走 (open > preclose and close > open)
+        gap power :delta vol * gap
         逻辑:
         1、统计出现次数
         2、计算跳空能量
     """
+
+    def _calc_feature(self, feed, kwargs):
+        frame = feed.copy()
+        frame['pre_close'] = frame['close'].shift(1)
+        frame['delta_vol'] = frame['volume'] - frame['volume'].shift(1)
+        frame['gap'] = (frame['close'] - frame['pre_close']) / (frame['open'] - frame['pre_close']) - 1
+        gap_power = frame['gap'] * frame['delta_vol'] * np.sign(frame['close'] - frame['pre_close'])
+        return gap_power
 
 
 class Power(BaseFeature):
@@ -258,6 +266,20 @@ class Power(BaseFeature):
                           —- stability （市值大，惯性越强；反之小市值的标的，波动性较大）
         剥离stability属性得出能量 ， amount / mkv
     """
+    def _calc_feature(self, feed, kwargs):
+        frame = feed.copy()
+        power = frame['volume'] * (frame['close'] - frame['vwap']) / frame['amount']
+        return power
+
+
+class BreakPower(BaseFeature):
+    """
+        close -- pre_high
+    """
+    def _calc_feature(self, feed, kwargs):
+        frame = feed.copy()
+        power = frame['volume'] * (frame['close'] - frame['high'].shift(1)) / frame['close'].shift(1)
+        return power
 
 
 class Speed(BaseFeature):
@@ -504,9 +526,9 @@ class WAD(BaseFeature):
     def _calc_feature(cls, feed, kwargs):
         frame = feed.copy()
         window = kwargs['window']
-        frame['preclose'] = frame['close'].shift(1)
-        trh = frame['close'] - frame.loc[:, ['preclose', 'high']].max(axis=1)
-        trl = frame['close'] - frame.loc[:, ['preclose', 'low']].min(axis=1)
+        frame['pre_close'] = frame['close'].shift(1)
+        trh = frame['close'] - frame.loc[:, ['pre_close', 'high']].max(axis=1)
+        trl = frame['close'] - frame.loc[:, ['pre_close', 'low']].min(axis=1)
         wad = frame['close'].diff()
         wad[wad > 0] = trh
         wad[wad < 0] = trl

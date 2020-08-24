@@ -4,9 +4,10 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
+from strategy import Strategy
 
 
-class CrossReverse:
+class CrossReverse(Strategy):
     """
         跨行业（横截面）均值回归 ---- 相对收益率的反转，即为回归
         具体逻辑实现：
@@ -24,13 +25,7 @@ class CrossReverse:
         cross ret:
             1、对应的行业的过去每天收益率均值以及相对于最低的超额收益率序列
             2、计算当前时点数据的zscore
-    """
 
+        --- 缺少行业分类数据（一级行业数据）
 
-
-class Proba:
-    """
-        1、序列中基于中位数的性质更加能代表趋势动向
-        2、预警指标的出现股票集中，容易出现后期的大黑马，由此推导出异动逻辑以及在持续性
-        3、统计套利:(pt > pt-1) / (pt-1 > m) 概率为75% 引发的思考
     """

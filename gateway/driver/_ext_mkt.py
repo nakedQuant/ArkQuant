@@ -7,6 +7,8 @@ Created on Sun Feb 17 16:39:46 2019
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+# market value and vwap
+
 
 class MarketValue:
 

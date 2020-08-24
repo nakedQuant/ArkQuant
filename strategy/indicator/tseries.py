@@ -36,7 +36,9 @@ class ADF(BaseFeature):
     def _calc_feature(cls, feed, kwargs):
         frame = feed.copy()
         adf, p_adf, lag, nobs, critical_dict, ic_best = adfuller(np.array(frame), regression=kwargs['mode'])
-        return adf, critical_dict
+        # 判断是否平稳 返回p_adf ， lag --- number of lags used
+        status = True if p_adf >= kwargs['p_value'] else False
+        return status, lag
 
 
 class Coint(BaseFeature):
@@ -55,7 +57,7 @@ class Coint(BaseFeature):
     """
     @classmethod
     def _calc_feature(cls, feeds, kwargs):
-        x, y = feeds
+        y, x = feeds.values()
         result = coint(y, x)
         return result[0], result[-1]
 
@@ -71,8 +73,8 @@ class ACF(BaseFeature):
         frame = feed.copy()
         lag = kwargs['lag']
         correlation = acf(frame, nlags=lag, fft=kwargs['fft'])
-        acf_corrleation = pd.Series(correlation, index=frame.index[: lag + 1])
-        return acf_corrleation
+        _acf= pd.Series(correlation, index=frame.index[: lag + 1])
+        return _acf
 
 
 class PACF(BaseFeature):
@@ -86,9 +88,9 @@ class PACF(BaseFeature):
     _n_lags = 10
     @classmethod
     def _calc_feature(cls, feed, kwargs):
-        raw = feed.copy()
+        frame = feed.copy()
         n_lags = kwargs['lag']
-        coef = pacf(raw, nlags=n_lags)
+        coef = pacf(frame, nlags=n_lags)
         pacf_coef = pd.Series(coef, index=frame.index[: n_lags + 1])
         return pacf_coef
 
@@ -160,7 +162,7 @@ class PCA(BaseFeature):
         datamat = feed.copy()
         meanval = np.mean(datamat, axis=0)
         meanremoved = datamat - meanval
-        print('mean',meanremoved)
+        print('mean', meanremoved)
         covmat = np.cov(meanremoved, rowvar=0)
         eigval, eigvect = np.linalg.eig(np.mat(covmat))
         eigvalind = np.argsort(eigval)

@@ -5,7 +5,7 @@ Created on Sat Feb 16 14:00:14 2019
 
 @author: python
 """
-import pandas as pd ,numpy as np
+import pandas as pd, numpy as np
 from functools import partial
 from strategy.indicator import (
     BaseFeature,
@@ -28,8 +28,8 @@ class MedianFilter(BaseFeature):
     def _calc_feature(cls, feed, kwargs):
         frame = feed.copy()
         window = kwargs['window']
-        medianFilter = frame.rolling(window=window).median()
-        return medianFilter
+        median= frame.rolling(window=window).median()
+        return median
 
 
 class MMedianFilter(BaseFeature):
@@ -45,10 +45,7 @@ class MMedianFilter(BaseFeature):
     """
     @staticmethod
     def _init_mmedian(data):
-        if isinstance(data, (pd.Series, pd.DataFrame)):
-            data.sort_values(ascending=True, inplace=True)
-        elif isinstance(data, (list, tuple)):
-            data.sort(reversed=False)
+        data.sort_values(ascending=True, inplace=True)
         mmedian = data[1:-1].mean()
         return mmedian
 
@@ -56,8 +53,8 @@ class MMedianFilter(BaseFeature):
     def _calc_feature(cls, feed, kwargs):
         frame = feed.copy()
         window = kwargs['window']
-        mmedianFilter = frame.rolling(window=window).apply(cls._init_mmedian)
-        return mmedianFilter
+        mmedian = frame.rolling(window=window).apply(cls._init_mmedian)
+        return mmedian
 
 
 class AmplitudeFilter(BaseFeature):
@@ -104,9 +101,9 @@ class GaussianFilter(BaseFeature):
     """
 
     @staticmethod
-    def _init_guassian(x,theta = None):
-         guassian = np.exp( - x ** 2 /(2 * theta ** 2)) / (np.sqrt(2 * np.math.pi) * theta)
-         return guassian
+    def _init_guassian(x, theta):
+        guassian = np.exp(- x ** 2 / (2 * theta ** 2)) / (np.sqrt(2 * np.math.pi) * theta)
+        return guassian
 
     @classmethod
     def _calc_feature(cls, feed, kwargs):
@@ -127,9 +124,8 @@ class Detrend(BaseFeature):
     def _calc_feature(cls, feed, kwargs):
         frame = feed.copy()
         _coef = _fit_poly(range(1, len(frame) + 1), frame, degree=kwargs['degree'])
-        print('coef',_coef)
-        detrend = frame - _coef * np.array(range(1, len(frame) +1))
-        return detrend
+        de_trend = frame - _coef * np.array(range(1, len(frame) + 1))
+        return de_trend
 
 
 class RegRatio(BaseFeature):

@@ -10279,3 +10279,151 @@ from numpy.lib.stride_tricks import as_strided
 #
 #     def to_series(self, index=None):
 #         return pd.Series(self.__dict__, index=index)
+
+# # shape: (N, M)
+# ind_residual = independent - nanmean(independent, axis=0)
+#
+# # shape: (M,)
+# covariances = nanmean(ind_residual * dependents, axis=0)
+#
+# # We end up with different variances in each column here because each
+# # column may have a different subset of the data dropped due to missing
+# # data in the corresponding dependent column.
+# # shape: (M,)
+# independent_variances = nanmean(ind_residual ** 2, axis=0)
+#
+# # shape: (M,)
+# np.divide(covariances, independent_variances, out=out)
+#
+# # Write nans back to locations where we have more then allowed number of
+# # missing entries.
+# nanlocs = isnan(independent).sum(axis=0) > allowed_missing
+# out[nanlocs] = nan
+
+# # class ExponentialWeightedMovingStdDev(_ExponentialWeightedFactor):
+# def compute(self, today, assets, out, data, decay_rate):
+#     weights = exponential_weights(len(data), decay_rate)
+#
+#     mean = average(data, axis=0, weights=weights)
+#     variance = average((data - mean) ** 2, axis=0, weights=weights)
+#
+#     squared_weight_sum = (np_sum(weights) ** 2)
+#     bias_correction = (
+#         squared_weight_sum / (squared_weight_sum - np_sum(weights ** 2))
+#     )
+#     out[:] = sqrt(variance * bias_correction)
+#
+#
+# # class LinearWeightedMovingAverage(SingleInputMixin, CustomFactor):
+# def compute(self, today, assets, out, data):
+#     ndays = data.shape[0]
+#
+#     # Initialize weights array
+#     weights = arange(1, ndays + 1, dtype=float64_dtype).reshape(ndays, 1)
+#
+#     # Compute normalizer
+#     normalizer = (ndays * (ndays + 1)) / 2
+#
+#     # Weight the data
+#     weighted_data = data * weights
+#
+#     # Compute weighted averages
+#     out[:] = nansum(weighted_data, axis=0) / normalizer
+#
+#
+# # class AnnualizedVolatility(CustomFactor):
+# def compute(self, today, assets, out, returns, annualization_factor):
+#     out[:] = nanstd(returns, axis=0) * (annualization_factor ** .5)
+
+# def __hash__(self):
+#     return id(self)
+#
+#
+# def __contains__(self, column):
+#     return column in self._table_expressions
+#
+#
+# def __getitem__(self, column):
+#     return self._table_expressions[column]
+#
+#
+# def __iter__(self):
+#     return iter(self._table_expressions)
+#
+#
+# def __len__(self):
+#     return len(self._table_expressions)
+#
+#
+# def __call__(self, column):
+#     if column in self:
+#         return self
+#     raise KeyError(column)
+
+# getmtime --- 生成文件的时间
+
+# def get_returns_cached(filepath, update_func, latest_dt, **kwargs):
+#     """
+#     Get returns from a cached file if the cache is recent enough,
+#     otherwise, try to retrieve via a provided update function and
+#     update the cache file.
+#     Parameters
+#     ----------
+#     filepath : str
+#         Path to cached csv file
+#     update_func : function
+#         Function to call in case cache is not up-to-date.
+#     latest_dt : pd.Timestamp (tz=UTC)
+#         Latest datetime required in csv file.
+#     **kwargs : Keyword arguments
+#         Optional keyword arguments will be passed to update_func()
+#     Returns
+#     -------
+#     pandas.DataFrame
+#         DataFrame containing returns
+#     """
+#
+#     update_cache = False
+#
+#     try:
+#         mtime = getmtime(filepath)
+#     except OSError as e:
+#         if e.errno != errno.ENOENT:
+#             raise
+#         update_cache = True
+#     else:
+#
+#         file_dt = pd.Timestamp(mtime, unit='s')
+#
+#         if latest_dt.tzinfo:
+#             file_dt = file_dt.tz_localize('utc')
+#
+#         if file_dt < latest_dt:
+#             update_cache = True
+#         else:
+#             returns = pd.read_csv(filepath, index_col=0, parse_dates=True)
+#             returns.index = returns.index.tz_localize("UTC")
+#
+#     if update_cache:
+#         returns = update_func(**kwargs)
+#         try:
+#             ensure_directory(cache_dir())
+#         except OSError as e:
+#             warnings.warn(
+#                 'could not update cache: {}. {}: {}'.format(
+#                     filepath, type(e).__name__, e,
+#                 ),
+#                 UserWarning,
+#             )
+#
+#         try:
+#             returns.to_csv(filepath)
+#         except OSError as e:
+#             warnings.warn(
+#                 'could not update cache {}. {}: {}'.format(
+#                     filepath, type(e).__name__, e,
+#                 ),
+#                 UserWarning,
+#             )
+#     return returns
+# mtime = getmtime(filepath)

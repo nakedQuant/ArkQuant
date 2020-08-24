@@ -7,13 +7,6 @@ Created on Tue Mar 12 15:37:47 2019
 from sklearn.linear_model import LinearRegression
 import statsmodels.api as sm, numpy as np
 from scipy import integrate
-# from numpy import empty_like, inf, isnan, nan, where
-# from numpy import broadcast_arrays
-# from scipy.stats import (
-#     linregress,
-#     pearsonr,
-#     spearmanr,
-# )
 
 
 def Euclidean(x, y):
@@ -206,59 +199,3 @@ def naive_grouped_rowwise_apply(data,
             locs = (label_row == label)
             out_row[locs] = func(row[locs], *func_args)
     return out
-
-
-# # shape: (N, M)
-# ind_residual = independent - nanmean(independent, axis=0)
-#
-# # shape: (M,)
-# covariances = nanmean(ind_residual * dependents, axis=0)
-#
-# # We end up with different variances in each column here because each
-# # column may have a different subset of the data dropped due to missing
-# # data in the corresponding dependent column.
-# # shape: (M,)
-# independent_variances = nanmean(ind_residual ** 2, axis=0)
-#
-# # shape: (M,)
-# np.divide(covariances, independent_variances, out=out)
-#
-# # Write nans back to locations where we have more then allowed number of
-# # missing entries.
-# nanlocs = isnan(independent).sum(axis=0) > allowed_missing
-# out[nanlocs] = nan
-
-# # class ExponentialWeightedMovingStdDev(_ExponentialWeightedFactor):
-# def compute(self, today, assets, out, data, decay_rate):
-#     weights = exponential_weights(len(data), decay_rate)
-#
-#     mean = average(data, axis=0, weights=weights)
-#     variance = average((data - mean) ** 2, axis=0, weights=weights)
-#
-#     squared_weight_sum = (np_sum(weights) ** 2)
-#     bias_correction = (
-#         squared_weight_sum / (squared_weight_sum - np_sum(weights ** 2))
-#     )
-#     out[:] = sqrt(variance * bias_correction)
-#
-#
-# # class LinearWeightedMovingAverage(SingleInputMixin, CustomFactor):
-# def compute(self, today, assets, out, data):
-#     ndays = data.shape[0]
-#
-#     # Initialize weights array
-#     weights = arange(1, ndays + 1, dtype=float64_dtype).reshape(ndays, 1)
-#
-#     # Compute normalizer
-#     normalizer = (ndays * (ndays + 1)) / 2
-#
-#     # Weight the data
-#     weighted_data = data * weights
-#
-#     # Compute weighted averages
-#     out[:] = nansum(weighted_data, axis=0) / normalizer
-#
-#
-# # class AnnualizedVolatility(CustomFactor):
-# def compute(self, today, assets, out, returns, annualization_factor):
-#     out[:] = nanstd(returns, axis=0) * (annualization_factor ** .5)
