@@ -10,7 +10,7 @@ import json, pandas as pd
 from itertools import chain
 from toolz import partition_all
 from gateway.spider.xml import ASSERT_URL_MAPPING, ASSET_SUPPLEMENT_URL
-from gateway.driver.api.client import tsclient
+from gateway.driver.client import tsclient
 from gateway.driver.tools import _parse_url
 
 AssetData = namedtuple(
@@ -20,6 +20,8 @@ AssetData = namedtuple(
         'funds',
     ),
 )
+
+__all__ = ['AssetSpider']
 
 
 class AssetSpider(object):
@@ -55,7 +57,8 @@ class AssetSpider(object):
             else:
                 break
         # 过滤未上市的可转债
-        bond_mappings = {bond['BONDCODE']: bond for bond in bonds if bond['LISTDATE'] != '-'}
+        # print('bond', bonds[0][0])
+        bond_mappings = {bond[0]['BONDCODE']: bond[0] for bond in bonds if bond[0]['LISTDATE'] != '-'}
         # bond_id : bond_basics
         return bond_mappings
 
@@ -68,7 +71,8 @@ class AssetSpider(object):
         raw = [data.find_all('td') for data in obj.find_all(id='tableDiv')]
         text = [t.get_text() for t in raw[0]]
         frame = pd.DataFrame(partition_all(14, text[18:]), columns=text[2:16])
-        frame = frame.apply(lambda x: x['基金简称'][:-5])
+        print('columns', frame.columns)
+        frame = frame.apply(lambda x: x['基金简称'][:-5], axis=1)
         # frame --- slice depend on symbols
         fund_frames = frame[frame['基金简称'].isin(symbols)] if symbols else frame
         fund_frames.loc[:, 'asset_type'] = 'fund'
@@ -93,25 +97,25 @@ class AssetSpider(object):
                 break
         return dual_mappings
 
-    def _update_cache(self):
+    def _update_assets(self):
         # 将新上市的标的 --- equity etf convertible --- request_cache
         request_cache = {}
         # update equity
-        equities = self._request_equity_basics()
-        request_cache['equity'] = set(equities) - set(self._assets_cache.get('equity', []))
-        self._assets_cache['equity'] = equities
+        equities = self._request_equities()
+        request_cache['equity'] = set(equities) - set(self._asset_caches.get('equity', []))
+        self._asset_caches['equity'] = equities
         # update convertible
-        convertibles = self._request_convertible_basics()
-        request_cache['convertible'] = set(convertibles) - set(self._assets_cache.get('convertible', {}))
-        self._assets_cache['convertible'] = convertibles
+        convertibles = self._request_convertibles()
+        request_cache['convertible'] = set(convertibles) - set(self._asset_caches.get('convertible', {}))
+        self._asset_caches['convertible'] = convertibles
         # update funds
         funds = self._request_funds()
-        request_cache['fund'] = set(funds['基金代码'].values) - set(self._assets_cache.get('fund', []))
-        self._assets_cache['fund'] = funds
+        request_cache['fund'] = set(funds['基金代码'].values) - set(self._asset_caches.get('fund', []))
+        self._asset_caches['fund'] = funds
         # update duals
         duals = self._request_duals()
-        request_cache['dual'] = set(duals) - set(self._assets_cache.get('dual', {}))
-        self._assets_cache['dual'] = duals
+        request_cache['dual'] = set(duals) - set(self._asset_caches.get('dual', {}))
+        self._asset_caches['dual'] = duals
         return request_cache
 
     @staticmethod
@@ -166,13 +170,13 @@ class AssetSpider(object):
         basics_frame.loc[:, 'asset_type'] = 'convertible'
         return basics_frame
 
-    def _accumulate(self):
+    def _load_data(self):
         """
             inner method
             accumulate equities , convertibles, etfs
             :return: AssetData
         """
-        to_be_updated = self._update_cache()
+        to_be_updated = self._update_assets()
         equity_frames = self._request_equity_basics(to_be_updated)
         convertible_frames = self._request_convertible_basics(to_be_updated)
         fund_frames = self._request_funds(to_be_updated)
@@ -187,5 +191,5 @@ class AssetSpider(object):
             equities, futures, exchanges, root_symbols
             Returns a standard set of pandas.DataFrames:
         """
-        asset_data = self._accumulate()
+        asset_data = self._load_data()
         return asset_data

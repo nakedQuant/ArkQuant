@@ -11,7 +11,7 @@ from gateway.spider.base import Crawler
 from gateway.spider.xml import OWNERSHIP
 from gateway.spider import COLUMNS
 from gateway.driver.tools import parse_content_from_header
-from gateway.driver.db_writer import db
+from gateway.database.db_writer import db
 
 
 class OwnershipWriter(Crawler):

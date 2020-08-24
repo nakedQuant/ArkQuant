@@ -7,7 +7,7 @@ Created on Tue Mar 12 15:37:47 2019
 """
 from abc import ABC, abstractmethod
 from sqlalchemy import MetaData
-from gateway.driver import engine
+from gateway.database import engine
 from gateway.driver.tools import _parse_url
 
 __all__ = ['Crawler']

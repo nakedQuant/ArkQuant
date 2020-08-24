@@ -11,6 +11,7 @@ import sqlalchemy as sa
 from toolz.curried import do, operator
 from functools import wraps
 
+
 def alter_columns(op, name, *columns, **kwargs):
     """Alter columns from a table.
 

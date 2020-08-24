@@ -6,7 +6,7 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 import sqlalchemy as sa
-from gateway.driver import engine
+from gateway.database import engine
 
 ASSET_DB_VERSION = 8
 

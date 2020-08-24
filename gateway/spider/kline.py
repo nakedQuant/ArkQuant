@@ -8,7 +8,7 @@ Created on Tue Mar 12 15:37:47 2019
 import json, pandas as pd
 from multiprocessing import Pool
 from sqlalchemy import select
-from gateway.driver.db_writer import db
+from gateway.database.db_writer import db
 from gateway.spider.base import Crawler
 from.xml import ASSETS_BUNDLES_URL
 
@@ -29,7 +29,7 @@ class BundlesWriter(Crawler):
 
     def _retrieve_assets_from_sqlite(self):
         table = self.metadata.tables['asset_router']
-        ins = select([table.c.sid,table.c.asset_type])
+        ins = select([table.c.sid, table.c.asset_type])
         rp = self.engine.execute(ins)
         assets = pd.DataFrame(rp.fetchall(), columns=['sid', 'asset_type'])
         assets.set_index('sid', inplace=True)

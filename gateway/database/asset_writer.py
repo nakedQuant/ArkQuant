@@ -8,7 +8,7 @@ Created on Tue Mar 12 15:37:47 2019
 import sqlalchemy as sa, numpy as np
 from contextlib import ExitStack
 from sqlalchemy import create_engine
-from gateway.asset.asset_spider import AssetSpider
+from gateway.spider.asset_spider import AssetSpider
 from gateway.database import (
     engine,
     metadata,
@@ -21,6 +21,8 @@ from gateway.database.db_schema import (
     convertible_basics,
     asset_router,
 )
+
+__all__ = ['AssetWriter']
 
 _rename_router_cols = frozenset(['sid',
                                  'asset_name',
@@ -177,12 +179,12 @@ class AssetWriter(object):
             if txn is None:
                 txn = stack.enter_context(self.engine.begin())
             tables_already_exist = self._all_tables_present(txn)
-            # Create the SQL tables if they do not already exist.
-            metadata.create_all(txn, checkfirst=True)
-            if tables_already_exist:
-                check_version_info(txn, version_info, ASSET_DB_VERSION)
-            else:
-                write_version_info(txn, version_info, ASSET_DB_VERSION)
+            if not tables_already_exist:
+                # Create the SQL tables if they do not already exist.
+                metadata.create_all(txn, checkfirst=True)
+            #     check_version_info(txn, version_info, ASSET_DB_VERSION)
+            # else:
+            #     write_version_info(txn, version_info, ASSET_DB_VERSION)
 
     @staticmethod
     def _write_assets(frame,
@@ -298,6 +300,3 @@ class AssetWriter(object):
             fund_mappings=fund_frame,
             chunk_size=chunk_size,
         )
-
-
-assetDb = AssetWriter()

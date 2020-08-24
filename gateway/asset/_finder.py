@@ -12,9 +12,9 @@ from functools import partial
 from gateway.asset.asset_db_schema import asset_db_table_names
 from gateway.asset.assets import Equity, Convertible, Fund
 from gateway.asset._config import ASSERT_URL_MAPPING
-from gateway.driver.api.client import tsclient
+from gateway.driver.client import tsclient
 from gateway.driver.tools import _parse_url
-from gateway.driver import engine
+from gateway.database import engine
 
 
 SectorPrefix = {
