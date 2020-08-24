@@ -62,10 +62,10 @@ class Engine(ABC):
         # default assets
         equities = self.asset_finder.retrieve_type_assets('equity')
         # save the high priority and asset which can be traded
-        default = self.restricted_rules.is_restricted(equities, dts)
+        default_mask = self.restricted_rules.is_restricted(equities, dts)
         # set pipe metadata
-        history_metadata = self._get_loader.load_pipeline_arrays(dts, default)
-        return default, history_metadata, traded_positions, remove_positions, dts, capital
+        history_metadata = self._get_loader.load_pipeline_arrays(dts, default_mask)
+        return default_mask, history_metadata, traded_positions, remove_positions, dts, capital
 
     @staticmethod
     def resolve_pipeline_final(outputs):
@@ -78,27 +78,27 @@ class Engine(ABC):
         finals = valmap(lambda x: x[0].event.asset if x else None, group_sorted)
         return finals
 
-    def _run_pipeline(self, pipeline, metadata, default):
+    def _run_pipeline(self, pipeline, metadata, mask):
         """
         ----------
         pipe : zipline.pipe.Pipeline
             The pipe to run.
         """
-        yield pipeline.to_execution_plan(default, metadata, self.alternatives)
+        yield pipeline.to_execution_plan(metadata, self.alternatives, mask)
 
-    def run_pipeline(self, pipeline_metadata, default):
+    def run_pipeline(self, pipeline_metadata, mask):
         """
         Compute values for  pipelines on a specific date.
         Parameters
         ----------
         pipeline_metadata : cache data for pipe
-        default : pipe --- default asset list
+        mask : default asset list
         ----------
         return --- event
         """
         _impl = partial(self._run_pipeline,
                         metadata=pipeline_metadata,
-                        default=default)
+                        mask=mask)
 
         with Pool(processes=len(self.pipelines))as pool:
             results = [pool.apply_async(_impl, pipeline)
@@ -133,9 +133,9 @@ class Engine(ABC):
             calculate pipelines and ump
         """
         # default pipe_metadata --- pipe ; positions_not_righted pipe_metadata --- ump ;
-        default, pipe_metadata, traded_positions, removed_positions, dts, capital = self._compute_default(ledger)
+        default_mask, pipe_metadata, traded_positions, removed_positions, dts, capital = self._compute_default(ledger)
         # 执行算法逻辑
-        pipe_proxy = self.run_pipeline(pipe_metadata, default)
+        pipe_proxy = self.run_pipeline(pipe_metadata, default_mask)
         # 退出算法包含righted position
         ump_positions = self.run_ump(pipe_metadata, traded_positions) + removed_positions
         # 买入的event , 卖出的ump_positions , 总持仓（剔除配股持仓）

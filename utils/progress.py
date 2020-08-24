@@ -200,7 +200,7 @@ class ProgressModel(object):
 
     @property
     def execution_bounds(self):
-        return (self._start_date, self._end_date)
+        return self._start_date, self._end_date
 
     @property
     def current_chunk_bounds(self):

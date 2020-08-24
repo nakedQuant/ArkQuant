@@ -29,10 +29,10 @@ class Bound(object):
             4 借鉴斐波那契数列性质
     """
     def __init__(self,
-                 threshold,
+                 params,
                  measure_period):
-        self.threshold = threshold
-        self.back_period = measure_period
+        # fields ,window, threshold
+        self.params = params
 
     def _compute(self, data, kwargs):
         """
@@ -40,15 +40,19 @@ class Bound(object):
         :param kwargs:
         :return:
         """
-        rets = data['close'] - data['close'].shift(1)
+        window_data = data.iloc[-kwargs['window', :]]
+        ret = window_data['close'] - window_data['close'].shift(1)
         peak = np.argmax(data['close'])
-        withdraw = (rets[-1] - rets[peak]) / rets[peak]
+        withdraw = (ret[-1] - ret[peak]) / ret[peak]
         return withdraw
 
-    def compute(self, feed, kwargs):
+    def compute(self, feed, mask):
+        # 过滤
+        data = valmap(lambda x : x in mask, feed)
+        kwargs = self.params.copy()
         out = dict()
-        for sid, data in feed.items():
-            out[sid] = self._compute(data, kwargs)
+        for sid, frame in data.items():
+            out[sid] = self._compute(frame, kwargs.pop('fields'))
         # filter threshold
         output = valmap(lambda x: x >= self.threshold, out)
         return output

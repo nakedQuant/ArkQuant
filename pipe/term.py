@@ -7,6 +7,7 @@ Created on Tue Mar 12 15:37:47 2019
 """
 import glob, numpy as np
 from weakref import WeakValueDictionary
+from pipe.domain import infer_domain
 
 
 class NotSpecific(Exception):
@@ -29,35 +30,32 @@ class Term(object):
             5 每一个节点产生有序的股票集合，一层所有的交集按照各自节点形成综合排序
             6 最终节点 --- 返回一个有序有限的集合
         节点:
-            1 inputs --- asset list
+            1 mask --- asset list
             2 compute ---- algorithm list
             3 outputs --- algorithm list & asset list
 
         term --- 不可变通过改变不同的dependence重构pipeline
         term --- universe
     """
-    inputs = NotSpecified
-    outputs = NotSpecified
-    window_length = NotSpecified
-    mask = NotSpecified
-    domain = NotSpecified
+    mask = NotSpecific
     _term_cache = WeakValueDictionary
     namespace = dict()
 
-    __slots__ = ['domain', 'dependence', 'd_type', 'term_logic', '_subclass_called_validate']
+    __slots__ = ['domain', 'dependence', 'd_type', 'ins_logic', '_subclass_called_validate']
 
     def __new__(cls,
-                domain,
-                script,
+                script_path,
                 params,
                 d_type=list,
                 dependence=NotSpecific
                 ):
         # 解析策略文件并获取对象
-        script_path = glob.glob('strategy/%s.py' % script)
-        with open(script_path, 'r') as f:
+        script = glob.glob('strategy/%s.py' % script_path)
+        with open(script, 'r') as f:
             exec(f.read(), cls.namespace)
+        # 获取strategy object
         logic_cls = cls.namespace[script]
+        domain = infer_domain(params)
         # 设立身份属性防止重复产生实例
         identity = cls._static_identity(domain, logic_cls, params, d_type, dependence)
         try:
@@ -72,7 +70,7 @@ class Term(object):
         return domain, script_class, script_params, d_type, dependence
 
     # __new__已经初始化后，不需要在__init__里面调用
-    def _init(self, domain, script, params, d_type, dependence):
+    def _init(self, domain, class_cls, params, d_type, dependence):
         """
             __new__已经初始化后，不需要在__init__里面调用
             Noop constructor to play nicely with our caching __new__.  Subclasses
@@ -90,8 +88,12 @@ class Term(object):
             ----------
             domain : zipline.pipe.domain.Domain
                 The domain of this term.
+
             dtype : np.dtype
                 Dtype of this term's output.
+
+            class_cls : class base for script
+
             params : tuple[(str, hashable)]
                 Tuple of key/value pairs of additional parameters.
         """
@@ -99,8 +101,8 @@ class Term(object):
         self.dependence = dependence
         self.d_type = d_type
         try:
-            instance = script(params)
-            self.term_logic = instance
+            instance = class_cls(params)
+            self.ins_logic = instance
             self._validate()
         except TypeError:
             self._subclass_called_validate = False
@@ -123,6 +125,25 @@ class Term(object):
     def __setattr__(self, key, value):
         raise NotImplementedError()
 
+    def _downsampled_type(self, *args, **kwargs):
+        """
+        The expression type to return from self.downsample().
+        """
+        raise NotImplementedError(
+            "downsampling is not yet implemented "
+            "for instances of %s." % type(self).__name__
+        )
+
+    def downsample(self, frequency):
+        """
+        Make a term that computes from ``self`` at lower-than-daily frequency.
+
+        Parameters
+        ----------
+        {frequency}
+        """
+        return self._downsampled_type(term=self, frequency=frequency)
+
     def postprocess(self, data):
         """
             Called with an result of ``self``, unravelled (i.e. 1-dimensional)
@@ -141,56 +162,6 @@ class Term(object):
         except Exception as e:
             raise TypeError('cannot transform the style of data to %s due to error %s' % (self.d_type, e))
         return data
-
-    def _compute(self, inputs, data):
-        """
-            Subclasses should implement this to perform actual computation.
-            This is named ``_compute`` rather than just ``compute`` because
-            ``compute`` is reserved for user-supplied functions in
-            CustomFilter/CustomFactor/CustomClassifier.
-            1. subclass should implement when _verify_asset_finder is True
-            2. self.postprocess()
-        """
-        output = self.term_logic.compute(inputs, data)
-        validate_output = self.postprocess(output)
-        return validate_output
-
-    def compute(self, inputs, data):
-        """
-            1. subclass should implement when _verify_asset_finder is True
-            2. self.postprocess()
-        """
-        output = self._compute(inputs, data)
-        return output
-
-    @lazyval
-    def windowed(self):
-        """
-        Whether or not this term represents a trailing window computation.
-
-        If term.windowed is truthy, its compute_from_windows method will be
-        called with instances of AdjustedArray as inputs.
-
-        If term.windowed is falsey, its compute_from_baseline will be called
-        with instances of np.ndarray as inputs.
-        """
-        return (
-            self.window_length is not NotSpecified
-            and self.window_length > 0
-        )
-
-    @lazyval
-    def dependencies(self):
-        """
-        The number of extra rows needed for each of our inputs to compute this
-        term.
-        """
-        extra_input_rows = max(0, self.window_length - 1)
-        out = {}
-        for term in self.inputs:
-            out[term] = extra_input_rows
-        out[self.mask] = 0
-        return out
 
     def to_workspace_value(self, result, assets):
         """
@@ -217,63 +188,54 @@ class Term(object):
             fill_value=self.missing_value,
         ).values
 
-    def _downsampled_type(self, *args, **kwargs):
-        """
-        The expression type to return from self.downsample().
-        """
-        raise NotImplementedError(
-            "downsampling is not yet implemented "
-            "for instances of %s." % type(self).__name__
-        )
+    # def _compute(self, inputs, data):
+    #     """
+    #         Subclasses should implement this to perform actual computation.
+    #         This is named ``_compute`` rather than just ``compute`` because
+    #         ``compute`` is reserved for user-supplied functions in
+    #         CustomFilter/CustomFactor/CustomClassifier.
+    #         1. subclass should implement when _verify_asset_finder is True
+    #         2. self.postprocess()
+    #     """
+    #     output = self.term_logic.compute(inputs, data)
+    #     validate_output = self.postprocess(output)
+    #     return validate_output
 
-    @expect_downsample_frequency
-    @templated_docstring(frequency=PIPELINE_DOWNSAMPLING_FREQUENCY_DOC)
-    def downsample(self, frequency):
-        """
-        Make a term that computes from ``self`` at lower-than-daily frequency.
+    # def compute(self, inputs, data):
+    #     """
+    #         1. subclass should implement when _verify_asset_finder is True
+    #         2. self.postprocess()
+    #     """
+    #     output = self._compute(inputs, data)
+    #     return output
 
-        Parameters
-        ----------
-        {frequency}
+    def _compute(self, data, mask):
         """
-        return self._downsampled_type(term=self, frequency=frequency)
-
-    def _aliased_type(self, *args, **kwargs):
+            Subclasses should implement this to perform actual computation.
+            This is named ``_compute`` rather than just ``compute`` because
+            ``compute`` is reserved for user-supplied functions in
+            CustomFilter/CustomFactor/CustomClassifier.
+            1. subclass should implement when _verify_asset_finder is True
+            2. self.postprocess()
         """
-        The expression type to return from self.alias().
+        output = self.ins_logic.compute(data, mask)
+        validate_output = self.postprocess(output)
+        return validate_output
+
+    def compute(self, data, mask):
         """
-        raise NotImplementedError(
-            "alias is not yet implemented "
-            "for instances of %s." % type(self).__name__
-        )
-
-    @templated_docstring(name=PIPELINE_ALIAS_NAME_DOC)
-    def alias(self, name):
+            1. subclass should implement when _verify_asset_finder is True
+            2. self.postprocess()
         """
-        Make a term from ``self`` that names the expression.
-
-        Parameters
-        ----------
-        {name}
-
-        Returns
-        -------
-        aliased : Aliased
-            ``self`` with a name.
-
-        Notes
-        -----
-        This is useful for giving a name to a numerical or boolean expression.
-        """
-        return self._aliased_type(term=self, name=name)
+        output = self._compute(data, mask)
+        return output
 
     def __repr__(self):
         return (
-            "{type}([{inputs}], {window_length})"
+            "{type}({dependences})"
         ).format(
             type=type(self).__name__,
-            inputs=', '.join(i.recursive_repr() for i in self.inputs),
-            window_length=self.window_length,
+            dependences=', '.join(i.recursive_repr() for i in self.dependence if i != NotSpecific),
         )
 
     def recursive_repr(self):

@@ -237,6 +237,29 @@ class Jump(BaseFeature):
         return jump
 
 
+class Gap(BaseFeature):
+    """
+        gap : 低开上破昨日收盘价（preclose < open and close > preclose）
+              高开高走 (open > preclose and close > open9
+        gap power :delta vol * (close - open) / (preclose - open)
+        逻辑:
+        1、统计出现次数
+        2、计算跳空能量
+    """
+
+
+class Power(BaseFeature):
+    """
+        momenum — measure  （high close）— vwap（成交量加权价格）
+        logic ： power = （close - vwap ）* volume
+                       ratio  = power / amount
+       （增加的动能占总成交金额的比例衡量动能强度）
+         window 中如果增加的power站区间的平均的成交金额的比例达到一定阈值，表明动能强度）
+                          —- stability （市值大，惯性越强；反之小市值的标的，波动性较大）
+        剥离stability属性得出能量 ， amount / mkv
+    """
+
+
 class Speed(BaseFeature):
     """
     趋势速度跟踪策略 基于符号来定义定义趋势变化的速度值（比率），波动中前进，总会存在回调，度量回调的个数

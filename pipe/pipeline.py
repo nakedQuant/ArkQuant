@@ -51,8 +51,6 @@ class Pipeline(object):
 
         Parameters
         ----------
-        default_screen : zipline.pipeline.Term
-            Term to use as a screen if self.screen is None.
 
         Returns
         -------
@@ -83,19 +81,19 @@ class Pipeline(object):
     def __setattr__(self, key, value):
         raise NotImplementedError
 
-    def _load_term(self, term, default):
+    def _load_term(self, term, default_mask):
         if term.dependencies != NotSpecific:
             # 将节点的依赖筛选出来
-            inter_inputs = keyfilter(lambda x: x in term.dependencies,
+            dependence_masks = keyfilter(lambda x: x in term.dependencies,
                                      self._workspace)
             # 将依赖的交集作为节点的input
-            input_of_term = reduce(lambda x, y: set(x) & set(y),
-                                   inter_inputs.values())
+            input_mask = reduce(lambda x, y: set(x) & set(y),
+                                   dependence_masks.values())
         else:
-            input_of_term = default
-        return input_of_term
+            input_mask = default_mask
+        return input_mask
 
-    def _decref_recursive(self, metadata, default):
+    def _decref_recursive(self, metadata, mask):
         """
             internal method for decref_recursive
             decrease by layer
@@ -103,12 +101,12 @@ class Pipeline(object):
         # return in_degree == 0 nodes
         decref_nodes = self.graph.decref_dependencies()
         for node in decref_nodes:
-            _input = self._load_term(node, default)
-            output = node.compute(_input, metadata)
+            _mask = self._load_term(node, mask)
+            output = node.compute(_mask, metadata)
             self._workspace[node] = output
-        self._decref_recursive(metadata, default)
+        self._decref_recursive(metadata, mask)
 
-    def _inner_decref_recursive(self, metadata, default):
+    def _inner_decref_recursive(self, metadata, mask):
         """
         Return a topologically-sorted list of the terms in ``self`` which
         need to be computed.
@@ -121,13 +119,13 @@ class Pipeline(object):
         metadata : dict[Term, np.ndarray]
             Initial state of workspace for a pipe execution. May contain
             pre-computed values provided by ``populate_initial_workspace``.
-        default : asset list
+        mask : asset list
             Reference counts for terms to be computed. Terms with reference
             counts of 0 do not need to be computed.
         return : PIPE list
         """
         self._initialize_workspace()
-        self._decref_recursive(metadata, default)
+        self._decref_recursive(metadata, mask)
 
     def _finalize(self, alternative):
         """将pipeline.name --- outs"""
@@ -137,12 +135,12 @@ class Pipeline(object):
                    in enumerate(final[:alternative])]
         return outputs
 
-    def to_execution_plan(self, default, metadata, alternative):
+    def to_execution_plan(self, metadata, alternative, mask):
         """
             to execute pipe logic
         """
         try:
-            self._inner_decref_recursive(metadata, default)
+            self._inner_decref_recursive(metadata, mask)
         except Exception as e:
             print('error means graph decrease to top occur %s' % e)
         result = self._finalize(alternative)

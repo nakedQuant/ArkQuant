@@ -5,6 +5,7 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
+__all__ = ['Domain', 'infer_domain']
 
 
 class Domain(object):
@@ -42,3 +43,11 @@ class Domain(object):
         else:
             raise Exception('domain type is needed')
         return self
+
+
+def infer_domain(kwargs):
+    fields = kwargs.get('fields', ['open', 'high', 'low', 'close', 'amount', 'volume'])
+    assert 'window' not in kwargs, 'strategy must need window args'
+    window = kwargs['window'] if isinstance(kwargs['window'], int) else max(kwargs['window'])
+    domain = Domain(fields, window)
+    return domain

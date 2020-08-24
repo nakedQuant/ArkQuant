@@ -65,3 +65,10 @@ class BusinessDaysEvent(object):
     Factors describing information about event data (e.g. earnings
     announcements, acquisitions, dividends, etc.).
     """
+
+
+class Driven(object):
+    """
+        select asset which has events occurred (investor interveiw | asset reconstruction |  share transfer |
+        equity private placement) --- 事件（比如举牌、增持、减持、股权转让、重组）
+    """

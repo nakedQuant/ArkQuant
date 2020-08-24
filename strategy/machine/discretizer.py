@@ -9,6 +9,7 @@ Created on Tue Mar 12 15:37:47 2019
 
 class Discretizer(object):
     """
+        encode
         --- 股价涨跌的波动的关联性
         encoding algorithm to classify the dataset and conf ,dense method is not avaivable for classify the stock ;
         ordinal method ---  encoded as an integer value suits for seek the pattern of stock price change
