@@ -28,3 +28,4 @@ Temporary Items
 .apdisk
 
 将删除 .idea/
+/gateway/spider/__init__.py

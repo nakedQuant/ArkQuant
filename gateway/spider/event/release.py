@@ -8,7 +8,8 @@ Created on Tue Mar 12 15:37:47 2019
 import json, pandas as pd
 from gateway.database.db_writer import db
 from gateway.spider.xml import ASSET_FUNDAMENTAL_URL
-from gateway.spider.base import Crawler
+from gateway.spider import Crawler
+from gateway.driver.tools import _parse_url
 
 
 class ReleaseWriter(Crawler):
@@ -22,7 +23,7 @@ class ReleaseWriter(Crawler):
                  '&js={"data":(x)}'
         while True:
             url = ASSET_FUNDAMENTAL_URL['release'] % count + prefix
-            text = self.tool(url, encoding=None,bs=False)
+            text = _parse_url(url, encoding=None, bs=False)
             text = json.loads(text)
             if text['data'] and len(text['data']):
                 info = text['data']

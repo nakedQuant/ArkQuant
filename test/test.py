@@ -10427,3 +10427,85 @@ from numpy.lib.stride_tricks import as_strided
 #             )
 #     return returns
 # mtime = getmtime(filepath)
+
+# def last_modified_time(path):
+#     """
+#     Get the last modified time of path as a Timestamp.
+#     """
+#     return pd.Timestamp(os.path.getmtime(path), unit='s', tz='UTC')
+
+
+# def load_prices_from_csv(filepath, identifier_col, tz='UTC'):
+#     data = pd.read_csv(filepath, index_col=identifier_col)
+#     data.index = pd.DatetimeIndex(data.index, tz=tz)
+#     data.sort_index(inplace=True)
+#     return data
+#
+#
+# def load_prices_from_csv_folder(folder, identifier_col, tz='UTC'):
+#     data = None
+#     for file in os.listdir(folder):
+#         if '.csv' not in file:
+#             continue
+#         raw = load_prices_from_csv(os.path.join(folder, file),
+#                                    identifier_col, tz)
+#         if data is None:
+#             data = raw
+#         else:
+#             data = pd.concat([data, raw], axis=1)
+#     return data
+
+
+# def has_data_for_dates(series_or_df, first_date, last_date):
+#     """
+#     Does `series_or_df` have data on or before first_date and on or after
+#     last_date?
+#     """
+#     dts = series_or_df.index
+#     if not isinstance(dts, pd.DatetimeIndex):
+#         raise TypeError("Expected a DatetimeIndex, but got %s." % type(dts))
+#     first, last = dts[[0, -1]]
+#     return (first <= first_date) and (last >= last_date)
+
+# class Crawler(ABC):
+#
+#     @property
+#     def metadata(self):
+#         return MetaData(bind=engine)
+#
+#     @staticmethod
+#     @lru_cache(maxsize=128)
+#     def spider_proxies():
+#         raw = _parse_url(ProxyIp, encoding='utf-8')
+#         table = raw.find('table')
+#         # ip
+#         ip_item = [item.find('td', {'data-title': 'IP'}) for item in table.findAll('tr')]
+#         ip = [ele.get_text() for ele in ip_item if ele]
+#         # port
+#         port_item = [item.find('td', {'data-title': 'PORT'}) for item in table.findAll('tr')]
+#         port = [ele.get_text() for ele in port_item if ele]
+#         # category
+#         category_item = [item.find('td', {'data-title': '类型'}) for item in table.findAll('tr')]
+#         category = [ele.get_text() for ele in category_item if ele]
+#         # construct proxy
+#         proxies = []
+#         for item in zip(category, ip, port):
+#             proxy = item[0].lower() + '://' + item[1] + ':' + item[-1]
+#             proxies.append(proxy)
+#         return proxies
+#
+#     @property
+#     def proxy(self):
+#         # proxies = self.spider_proxies()
+#         proxies = None
+#         proxy_func = partial(_parse_url, proxy=proxies)
+#         return proxy_func
+#
+#     @abstractmethod
+#     def writer(self, *args):
+#         """
+#             intend to spider data from online
+#         :return:
+#         """
+#         raise NotImplementedError()
+

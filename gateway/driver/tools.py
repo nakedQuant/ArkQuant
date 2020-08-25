@@ -5,25 +5,31 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-import pandas as pd
-import requests
-import re
-import os
+import pandas as pd, numpy as np ,re, requests, time
 from bs4 import BeautifulSoup
 from collections import defaultdict
+from gateway.spider import UserAgent, ProxyIp
 
 
 def _parse_url(url, encoding='gbk', bs=True):
-    Header = {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_3) AppleWebKit/537.36(KHTML, like Gecko)'
-                      ' Chrome/79.0.3945.130 Safari/537.36'}
-    req = requests.get(url, headers=Header, timeout=1)
+    """
+    :param url: url_path
+    :param encoding: utf-8 or gbk
+    :param bs: bool
+    :param proxy: proxies = {"http": "http://10.10.1.10:3128", "https": "http://10.10.1.10:1080"} ,list
+    :return:
+    """
+    header = {'User-Agent': UserAgent[np.random.randint(0, len(UserAgent)-1)]}
+    proxy = {'http': ProxyIp[np.random.randint(0, len(ProxyIp) - 1)]}
+    # request
+    req = requests.get(url, headers=header, proxies=proxy, timeout=3)
     req.encoding = encoding
     if bs:
-        raw = BeautifulSoup(req.text, features='lxml')
+        data = BeautifulSoup(req.text, features='lxml')
     else:
-        raw = req.text
-    return raw
+        data = req.text
+    time.sleep(np.random.randint(0, 5))
+    return data
 
 
 def unpack_df_to_component_dict(stack):
@@ -46,7 +52,7 @@ def unpack_df_to_component_dict(stack):
         unpack[index] = unpack[index].append(raw, ignore_index=True)
     return unpack
 
-# 解析头文件
+
 def parse_content_from_header(header):
     cols = [t.get_text() for t in header.findAll('td', {'width': re.compile('[0-9]+')})]
     raw = [t.get_text() for t in header.findAll('td')]
@@ -66,46 +72,6 @@ def parse_content_from_header(header):
         text.update({mid[0]: mid[1:]})
     contents = pd.DataFrame.from_dict(text)
     return contents
-
-
-def last_modified_time(path):
-    """
-    Get the last modified time of path as a Timestamp.
-    """
-    return pd.Timestamp(os.path.getmtime(path), unit='s', tz='UTC')
-
-
-def load_prices_from_csv(filepath, identifier_col, tz='UTC'):
-    data = pd.read_csv(filepath, index_col=identifier_col)
-    data.index = pd.DatetimeIndex(data.index, tz=tz)
-    data.sort_index(inplace=True)
-    return data
-
-
-def load_prices_from_csv_folder(folder, identifier_col, tz='UTC'):
-    data = None
-    for file in os.listdir(folder):
-        if '.csv' not in file:
-            continue
-        raw = load_prices_from_csv(os.path.join(folder, file),
-                                   identifier_col, tz)
-        if data is None:
-            data = raw
-        else:
-            data = pd.concat([data, raw], axis=1)
-    return data
-
-
-def has_data_for_dates(series_or_df, first_date, last_date):
-    """
-    Does `series_or_df` have data on or before first_date and on or after
-    last_date?
-    """
-    dts = series_or_df.index
-    if not isinstance(dts, pd.DatetimeIndex):
-        raise TypeError("Expected a DatetimeIndex, but got %s." % type(dts))
-    first, last = dts[[0, -1]]
-    return (first <= first_date) and (last >= last_date)
 
 
 def transfer_to_timestamp(dt):

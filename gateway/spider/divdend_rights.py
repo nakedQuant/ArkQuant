@@ -7,9 +7,10 @@ Created on Tue Mar 12 15:37:47 2019
 """
 from sqlalchemy import select, func
 import pandas as pd, time, numpy as np
-from gateway.spider.base import Crawler
+from gateway.spider import Crawler
 from gateway.database.db_writer import db
 from gateway.spider.xml import DIVDEND
+from gateway.driver.tools import _parse_url
 
 
 class AdjustmentsWriter(Crawler):
@@ -45,6 +46,14 @@ class AdjustmentsWriter(Crawler):
         deadlines.set_index('sid', inplace=True)
         self.deadlines[tbl] = deadlines.iloc[:, 0]
 
+    def _retrieve_equities_from_sqlite(self):
+        table = self.metadata.tables['asset_router']
+        ins = select([table.c.sid])
+        ins = ins.where(table.c.asset_type == 'equity')
+        rp = self.engine.execute(ins)
+        equities = [r[0] for r in rp.fetchall()]
+        return equities
+
     def _parse_equity_issues(self, content, symbol):
         """配股"""
         raw = list()
@@ -72,23 +81,25 @@ class AdjustmentsWriter(Crawler):
         else:
             delimeter = [item.split('\n')[1:-2] for item in raw]
             frame = pd.DataFrame(delimeter, columns=['declared_date', 'sid_bonus', 'sid_transfer', 'bonus',
-                                                             'progress', 'pay_date', 'record_date', 'effective_date'])
+                                                     'progress', 'pay_date', 'record_date', 'effective_date'])
             frame.loc[:, 'sid'] = sid
             deadline = self.deadlines['equity_divdends'][sid]
             divdends = frame[frame['公告日期'] > deadline] if deadline else frame
             db.writer('equity_divdends', divdends)
 
-    def writer(self, sid):
-        try:
-            contents = self.tool(DIVDEND % sid)
-        except Exception as e:
-            print('%s occur due to high prequency', e)
-            time.sleep(np.random.randint(0, 1))
-            contents = self.tool(DIVDEND % sid)
-        #获取数据库的最新时点
-        self._record_deadlines()
-        #解析网页内容
+    def _writer(self, sid):
+        contents = _parse_url(DIVDEND % sid)
+        # 解析网页内容
         self._parse_equity_issues(contents, sid)
         self._parse_equity_divdend(contents, sid)
+
+    def writer(self, sid):
+        # 获取数据库的最新时点
+        self._record_deadlines()
+        # 获取所有股票
+        q = self._retrieve_assets_from_sqlite()
+        equities = q['equity'].values()
+        for sid in equities:
+            self._writer(sid)
         # reset dict
         self.deadlines.clear()

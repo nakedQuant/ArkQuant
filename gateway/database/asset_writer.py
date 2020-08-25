@@ -8,7 +8,6 @@ Created on Tue Mar 12 15:37:47 2019
 import sqlalchemy as sa, numpy as np
 from contextlib import ExitStack
 from sqlalchemy import create_engine
-from gateway.spider.asset_spider import AssetSpider
 from gateway.database import (
     engine,
     metadata,
@@ -132,10 +131,9 @@ class AssetWriter(object):
     DEFAULT_CHUNK_SIZE = SQLITE_MAX_VARIABLE_NUMBER
 
     # @preprocess(engine=coerce_string_to_eng(require_exists=False))
-    def __init__(self, engine_path=None):
+    def __init__(self, engine_path):
         self.engine = create_engine(engine_path) if engine_path else engine
         self._init_db()
-        self._asset_spider = AssetSpider()
 
     @staticmethod
     def _all_tables_present(txn):
@@ -272,10 +270,9 @@ class AssetWriter(object):
         data_set.funds.rename(columns=_rename_fund_cols, inplace=True)
         return data_set
 
-    def write(self, chunk_size=DEFAULT_CHUNK_SIZE):
+    def write(self, asset_data, chunk_size=DEFAULT_CHUNK_SIZE):
         """Write asset metadata to a sqlite database.
         """
-        asset_data = self._asset_spider.load_data()
         frame = self._rename_frame(asset_data)
 
         self._real_write(

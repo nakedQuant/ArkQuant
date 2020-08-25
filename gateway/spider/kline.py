@@ -9,8 +9,9 @@ import json, pandas as pd
 from multiprocessing import Pool
 from sqlalchemy import select
 from gateway.database.db_writer import db
-from gateway.spider.base import Crawler
-from.xml import ASSETS_BUNDLES_URL
+from gateway.spider import Crawler
+from gateway.spider.xml import ASSETS_BUNDLES_URL
+from gateway.driver.tools import _parse_url
 
 
 class BundlesWriter(Crawler):
@@ -27,18 +28,9 @@ class BundlesWriter(Crawler):
     def default(self):
         return ['trade_dt', 'open', 'close', 'high', 'low', 'volume', 'amount']
 
-    def _retrieve_assets_from_sqlite(self):
-        table = self.metadata.tables['asset_router']
-        ins = select([table.c.sid, table.c.asset_type])
-        rp = self.engine.execute(ins)
-        assets = pd.DataFrame(rp.fetchall(), columns=['sid', 'asset_type'])
-        assets.set_index('sid', inplace=True)
-        mappings = assets.groupby('asset_type').groups
-        return mappings
-
     def _crawler(self, mapping, tbl, pct=False):
         url = ASSETS_BUNDLES_URL[tbl].format(mapping['request_sid'], self.lmt)
-        obj = self.tool(url, bs=False)
+        obj = _parse_url(url, bs=False)
         kline = json.loads(obj)['data']
         cols = self.default + ['pct'] if pct else self.default
         if kline and len(kline['klines']):

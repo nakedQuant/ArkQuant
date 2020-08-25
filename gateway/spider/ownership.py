@@ -7,11 +7,11 @@ Created on Tue Mar 12 15:37:47 2019
 """
 import pandas as pd
 from sqlalchemy import select, func
-from gateway.spider.base import Crawler
-from gateway.spider.xml import OWNERSHIP
-from gateway.spider import COLUMNS
+from gateway.spider import Crawler
+from gateway.spider.xml import OWNERSHIP, COLUMNS
 from gateway.driver.tools import parse_content_from_header
 from gateway.database.db_writer import db
+from gateway.driver.tools import _parse_url
 
 
 class OwnershipWriter(Crawler):
@@ -23,14 +23,6 @@ class OwnershipWriter(Crawler):
         deadlines = pd.DataFrame(rp.fetchall(), columns=['declared_date', 'sid'])
         deadlines.set_index('sid', inplace=True)
         return deadlines
-
-    def _retrieve_equities_from_sqlite(self):
-        table = self.metadata.tables['asset_router']
-        ins = select([table.c.sid])
-        ins = ins.where(table.c.asset_type == 'equity')
-        rp = self.engine.execute(ins)
-        equities = [r[0] for r in rp.fetchall()]
-        return equities
 
     @staticmethod
     def _parse_equity_ownership(content, symbol, deadline):
@@ -55,7 +47,7 @@ class OwnershipWriter(Crawler):
         # initialize deadline
         deadline = self._retrieve_from_sqlite()
         # obtain asset
-        assets = self._retrieve_equities_from_sqlite()
-        for asset in assets:
-            content = self.tool(OWNERSHIP % asset)
+        q = self._retrieve_assets_from_sqlite()
+        for asset in q['equity'].values():
+            content = _parse_url(OWNERSHIP % asset)
             self._parse_equity_ownership(content, asset, deadline)

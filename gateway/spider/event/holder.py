@@ -7,10 +7,9 @@ Created on Tue Mar 12 15:37:47 2019
 """
 from sqlalchemy import select, func
 import json, re, pandas as pd
-from gateway.spider.base import Crawler
+from gateway.spider import Crawler
 from gateway.database.db_writer import db
-from gateway.spider import HolderFields
-from gateway.spider.xml import ASSET_FUNDAMENTAL_URL
+from gateway.spider.xml import ASSET_FUNDAMENTAL_URL, HolderFields
 
 
 class HolderWriter(Crawler):
