@@ -7,7 +7,7 @@ Created on Thu Nov  1 11:27:02 2018
 """
 import pandas as pd, json
 from .tools import _parse_url
-from gateway.spider.xml import BENCHMARK_URL
+from gateway.spider.url import BENCHMARK_URL
 from gateway.driver import lookup_benchmark
 
 __all__ = [

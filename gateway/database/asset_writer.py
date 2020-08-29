@@ -5,31 +5,32 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-import sqlalchemy as sa, numpy as np
+import sqlalchemy as sa, numpy as np, pandas as pd
 from contextlib import ExitStack
 from sqlalchemy import create_engine
+from gateway.database.db_schema import asset_db_table_names
+from gateway.database.db_writer import db
 from gateway.database import (
     engine,
     metadata,
-    ASSET_DB_VERSION,
-    SQLITE_MAX_VARIABLE_NUMBER
-)
-from gateway.database.db_schema import (
-    asset_db_table_names,
-    equity_basics,
-    convertible_basics,
-    asset_router,
+    # ASSET_DB_VERSION,
 )
 
 __all__ = ['AssetWriter']
 
+# 过于过滤frame 防止入库报错
+EquityNullFields = ['sid', 'broker', 'district', 'initial_price', 'business_scope']
+
+ConvertibleNullFields = ['sid', 'swap_code', 'put_price', 'convert_price', 'convert_dt']
+
+# rename cols --- 入库
 _rename_router_cols = frozenset(['sid',
                                  'asset_name',
                                  'asset_type',
-                                 'exchange',
                                  'first_traded',
                                  'last_traded',
-                                 'status'])
+                                 # 'status',
+                                 'exchange'])
 
 _rename_equity_cols = {
     '代码': 'sid',
@@ -49,7 +50,7 @@ _rename_equity_cols = {
     '证券简称更名历史': 'history_name',
     '注册地址': 'register_area',
     '办公地址': 'office_area',
-    'list_date': 'last_traded',
+    'list_date': 'last_traded'
 }
 
 _rename_convertible_cols = {
@@ -128,8 +129,6 @@ class AssetWriter(object):
     engine : Engine or str
         An SQLAlchemy engine or path to a SQL database.
     """
-    DEFAULT_CHUNK_SIZE = SQLITE_MAX_VARIABLE_NUMBER
-
     # @preprocess(engine=coerce_string_to_eng(require_exists=False))
     def __init__(self, engine_path):
         self.engine = create_engine(engine_path) if engine_path else engine
@@ -185,67 +184,48 @@ class AssetWriter(object):
             #     write_version_info(txn, version_info, ASSET_DB_VERSION)
 
     @staticmethod
-    def _write_assets(frame,
-                      txn,
-                      chunk_size):
-        symbols_mapping = frame.loc[:, _rename_router_cols]
-        symbols_mapping.to_sql(
-            asset_router.name,
-            txn.connection,
-            if_exists='append',
-            index=False,
-            chunksize=chunk_size
-        )
+    def _write_assets(frame):
+        # symbols_mapping = frame.loc[:, _rename_router_cols]
+        renamed_frame = frame.reindex(columns=_rename_router_cols, fill_value='')
+        db.writer('asset_router', renamed_frame)
 
-    def _write_df_to_table(self, tbl, df, txn, chunk_size, include=True):
+    def _write_df_to_table(self, tbl, df, include=True):
         df = df.copy()
         if include:
-            self._write_assets(df, txn, chunk_size)
-        df.to_sql(
-            tbl.name,
-            txn.connection,
-            index=False,
-            if_exists='append',
-            chunksize=chunk_size,
-        )
+            self._write_assets(df)
+        db.writer(tbl, df)
 
-    def _read_writer(self,
-                     equity_frame,
-                     convertible_frame,
-                     fund_frame,
-                     chunk_size=DEFAULT_CHUNK_SIZE):
-        with self.engine.begin() as conn:
-            # Create SQL tables if they do not exist.
-            self._init_db(conn)
+    def _real_write(self,
+                    equity_frame=None,
+                    convertible_frame=None,
+                    fund_frame=None):
+        if equity_frame is not None:
+            self._write_df_to_table(
+                'equity_basics',
+                equity_frame,
+            )
+        print('equity successfully')
 
-            if equity_frame is not None:
-                self._write_df_to_table(
-                    equity_basics,
-                    equity_frame,
-                    conn,
-                    chunk_size,
-                )
+        if convertible_frame is not None:
+            self._write_df_to_table(
+                'convertible_basics',
+                convertible_frame,
+            )
+        print('convertible successfully')
 
-            if convertible_frame is not None:
-                self._write_df_to_table(
-                    convertible_basics,
-                    convertible_frame,
-                    conn,
-                    chunk_size,
-                )
-
-            if fund_frame is not None:
-                self._write_assets(
-                    fund_frame,
-                    conn,
-                    chunk_size
-                )
+        if fund_frame is not None:
+            self._write_assets(
+                fund_frame,
+            )
+        print('fund_name successfully')
 
     @staticmethod
-    def _rename_frame(data_set):
+    def _reformat_frame(data_set):
         """
         Generates an output dataframe from the given subset of user-provided
         data, the given column names, and the given default values.
+
+        --- fillna('')  --- rename cols --- dropna by null field --- add fields(e.g. asset_type exchange)
 
         Parameters
         ----------
@@ -253,47 +233,60 @@ class AssetWriter(object):
             A DataFrame, usually from an AssetData object,
             that contains the user's input metadata for the asset type being
             processed
-        default_cols : dict
-            A dict where the keys are the names of the columns of the desired
-            output DataFrame and the values are a function from dataframe and
-            column name to the default values to insert in the DataFrame if no user
-            data is provided
 
         Returns
         -------
         DataFrame
             A DataFrame containing all user-provided metadata, and default values
             wherever user-provided metadata was missing
+
+        Empty DataFrame --- rename Empty DataFrame
         """
+        # equity
+        data_set.equities.fillna('', inplace=True)
         data_set.equities.rename(columns=_rename_equity_cols, inplace=True)
+        data_set.equities.dropna(axis=0, how='any', subset=EquityNullFields, inplace=True)
+        data_set.equities.loc[:, 'asset_type'] = 'equity'
+        print('equities columns', data_set.equities.columns)
         data_set.convertibles.rename(columns=_rename_convertible_cols, inplace=True)
+        # convertible
+        data_set.convertibles.replace(to_replace='-', value=pd.NA, inplace=True)
+        data_set.convertibles.rename(columns=_rename_convertible_cols, inplace=True)
+        data_set.convertibles.dropna(axis=0, how='any', subset=ConvertibleNullFields, inplace=True)
+        data_set.convertibles.loc[:, 'exchange'] = data_set.convertibles['sid'].apply(
+                                                    lambda x: '上海证券交易所' if x.startswith('11') else '深圳证券交易所')
+        data_set.convertibles['asset_type'] = 'convertible'
+        print('convertibles columns', data_set.convertibles.columns)
+        # fund
+        data_set.funds['基金简称'] = data_set.funds['基金简称'].apply(lambda x: x[:-5])
         data_set.funds.rename(columns=_rename_fund_cols, inplace=True)
+        data_set.funds.loc[:, 'exchange'] = data_set.funds['sid'].apply(
+                                                lambda x: '上海证券交易所' if x.startswith('5') else '深圳证券交易所')
+        print('fund', data_set.funds)
         return data_set
 
-    def write(self, asset_data, chunk_size=DEFAULT_CHUNK_SIZE):
+    def write(self, asset_data):
         """Write asset metadata to a sqlite database.
         """
-        frame = self._rename_frame(asset_data)
+        frame = self._reformat_frame(asset_data)
+        print('rename frame', frame)
 
         self._real_write(
             equity_frame=frame.equities,
-            convertible_frame=frame.converibles,
+            convertible_frame=frame.convertibles,
             fund_frame=frame.funds,
-            chunk_size=chunk_size,
         )
 
     def write_direct(self,
                      equity_frame,
                      convertible_frame,
-                     fund_frame,
-                     chunk_size=DEFAULT_CHUNK_SIZE):
+                     fund_frame):
         """Write asset metadata to a sqlite database in the format that it is
         stored in the asset db.
         """
         # raise NotImplementedError('not allowed to write metadata into db directly')
-        self._read_writer(
-            equity_supplementary_mappings=equity_frame,
-            convertible_supplementary_mappings=convertible_frame,
-            fund_mappings=fund_frame,
-            chunk_size=chunk_size,
+        self._real_write(
+            equity_frame=equity_frame,
+            convertible_frame=convertible_frame,
+            fund_frame=fund_frame,
         )

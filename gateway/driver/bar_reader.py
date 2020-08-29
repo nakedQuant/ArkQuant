@@ -157,7 +157,7 @@ class AssetSessionReader(BarReader):
                                              end_date=end_date)
                               )
         sid_groups = groupby(lambda x: x.asset_type, assets)
-        #获取数据
+        # 获取数据
         batch_arrays = {}
         for name, sids in sid_groups.items():
             raw = func(table=name, sids=sids)

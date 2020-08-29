@@ -6,11 +6,13 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 from sqlalchemy import select, func
-import pandas as pd, time, numpy as np
+import pandas as pd
 from gateway.spider import Crawler
 from gateway.database.db_writer import db
-from gateway.spider.xml import DIVDEND
+from gateway.spider.url import DIVDEND
 from gateway.driver.tools import _parse_url
+
+__all__ = ['AdjustmentsWriter']
 
 
 class AdjustmentsWriter(Crawler):
@@ -21,15 +23,8 @@ class AdjustmentsWriter(Crawler):
     """
     adjustment_tables = frozenset(['equity_splits', 'equity_rights'])
 
-    def __init__(self, delay=1):
-        """
-        :param delay: int --- sleep for seconds
-        """
-        self.delay = delay
+    def __init__(self):
         self.deadlines = dict()
-
-    def __setattr__(self, key, value):
-        raise NotImplementedError()
 
     def _record_deadlines(self):
         """
@@ -41,6 +36,7 @@ class AdjustmentsWriter(Crawler):
     def _retrieve_from_sqlite(self, tbl):
         table = self.metadata.tables[tbl]
         ins = select([func.max(table.c.declared_date), table.c.sid])
+        ins = ins.group_by(table.c.sid)
         rp = self.engine.execute(ins)
         deadlines = pd.DataFrame(rp.fetchall(), columns=['declared_date', 'sid'])
         deadlines.set_index('sid', inplace=True)
@@ -67,7 +63,7 @@ class AdjustmentsWriter(Crawler):
                                                         'benchmark_share', 'pay_date', 'record_date',
                                                         '缴款起始日', '缴款终止日', 'effective_date', '募集资金合计'])
             frame.loc[:, 'sid'] = symbol
-            deadline = self.deadlines['equity_rights'][symbol]
+            deadline = self.deadlines['equity_rights'].get(symbol, None)
             rights = frame[frame['公告日期'] > deadline] if deadline else frame
             db.writer('equity_rights', rights)
 
@@ -83,9 +79,9 @@ class AdjustmentsWriter(Crawler):
             frame = pd.DataFrame(delimeter, columns=['declared_date', 'sid_bonus', 'sid_transfer', 'bonus',
                                                      'progress', 'pay_date', 'record_date', 'effective_date'])
             frame.loc[:, 'sid'] = sid
-            deadline = self.deadlines['equity_divdends'][sid]
+            deadline = self.deadlines['equity_splits'].get(sid, None)
             divdends = frame[frame['公告日期'] > deadline] if deadline else frame
-            db.writer('equity_divdends', divdends)
+            db.writer('equity_splits', divdends)
 
     def _writer(self, sid):
         contents = _parse_url(DIVDEND % sid)
@@ -93,13 +89,21 @@ class AdjustmentsWriter(Crawler):
         self._parse_equity_issues(contents, sid)
         self._parse_equity_divdend(contents, sid)
 
-    def writer(self, sid):
+    def writer(self):
         # 获取数据库的最新时点
         self._record_deadlines()
+        print('-----', self.deadlines)
         # 获取所有股票
         q = self._retrieve_assets_from_sqlite()
         equities = q['equity'].values()
+        # equities = ['300357']
         for sid in equities:
             self._writer(sid)
         # reset dict
         self.deadlines.clear()
+
+
+if __name__ == '__main__':
+
+    w = AdjustmentsWriter()
+    w.writer()

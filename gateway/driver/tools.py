@@ -5,10 +5,10 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-import pandas as pd, numpy as np ,re, requests, time
+import pandas as pd, numpy as np, re, requests, time
 from bs4 import BeautifulSoup
 from collections import defaultdict
-from gateway.spider import UserAgent, ProxyIp
+from gateway.spider.xml import UserAgent, ProxyIp
 
 
 def _parse_url(url, encoding='gbk', bs=True):
@@ -22,7 +22,10 @@ def _parse_url(url, encoding='gbk', bs=True):
     header = {'User-Agent': UserAgent[np.random.randint(0, len(UserAgent)-1)]}
     proxy = {'http': ProxyIp[np.random.randint(0, len(ProxyIp) - 1)]}
     # request
-    req = requests.get(url, headers=header, proxies=proxy, timeout=3)
+    if proxy:
+        req = requests.get(url, headers=header, proxies=proxy, timeout=3)
+    else:
+        req = requests.get(url, headers=header, timeout=3)
     req.encoding = encoding
     if bs:
         data = BeautifulSoup(req.text, features='lxml')

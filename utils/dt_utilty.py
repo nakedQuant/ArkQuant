@@ -61,6 +61,21 @@ def ensure_utc(time, tz='UTC'):
     return time.replace(tzinfo=pytz.utc)
 
 
+def normalize_date(frame):
+    frame['year'] = frame['dates'] // 2048 + 2004
+    frame['month'] = (frame['dates'] % 2048) // 100
+    frame['day'] = (frame['dates'] % 2048) % 100
+    frame['hour'] = frame['sub_dates'] // 60
+    frame['minutes'] = frame['sub_dates'] % 60
+    frame['ticker'] = frame.apply(lambda x: pd.Timestamp(
+        datetime.datetime(int(x['year']), int(x['month']), int(x['day']),
+                          int(x['hour']), int(x['minutes']))),
+                            axis=1)
+    # raw['timestamp'] = raw['ticker'].apply(lambda x: x.timestamp())
+    # return frame.loc[:, ['ticker', 'open', 'high', 'low', 'close', 'amount', 'volume']]
+    return frame
+
+
 def _out_of_range_error(a, b=None, var='offset'):
     start = 0
     if b is None:

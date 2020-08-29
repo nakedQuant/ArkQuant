@@ -22,7 +22,7 @@ config = {
     "password": 'macpython',
     "host": 'localhost',
     "port": '3306',
-    'database': 'test01'
+    'database': 'naked'
 }
 
 # engine_path = 'mysql+pymysql://root:macpython@localhost:3306/test01'

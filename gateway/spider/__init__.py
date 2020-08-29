@@ -5,22 +5,68 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-# massive
-MassiveFields = frozenset(['trade_dt', 'sid', 'cname', 'bid_price', 'bid_volume',
-                           'amount', 'buyer_code', 'buyer', 'seller_code', 'seller',
-                           'type', 'unit', 'pct', 'close', 'YSSLTAG', 'discount', 'cjeltszb',
-                           '1_pct', '5_pct', '10_pct', '20_pct', 'TEXCH'])
-# holder
-HolderFields = frozenset(['代码', '中文', '现价', '涨幅', '股东', '方式', '变动股本', '占总流通比', '途径',
-                          '总持仓', '占总股本比', '总流通股', '占流通比', '变动开始日', '变动截止日', 'declared_date'])
-
-# ownership
-COLUMNS = {'变动日期': 'ex_date', '公告日期': 'declared_date', '总股本': 'general', '流通A股': 'float',
-           '限售A股': 'strict', '流通B股': 'b_float', '限售B股': 'b_strict', '流通H股': 'h_float'}
+import pandas as pd
+from abc import ABC, abstractmethod
+from toolz import valmap
+from sqlalchemy import select, func
+from gateway.database import metadata, engine
 
 
-__all__ = [
-    'MassiveFields',
-    'HolderFields',
-    'COLUMNS'
-]
+__all__ = ['UserAgent', 'ProxyIp', 'Crawler']
+
+
+UserAgent = ['Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/605.1.15 '
+             '(KHTML, like Gecko) Version/13.1.2 Safari/605.1.15',
+             'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_3) AppleWebKit/537.36 '
+             '(KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36',
+             'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 '
+             '(KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36'
+            ]
+
+ProxyIp = ['http://0825fq11t1m612:0825fq11t1m612@117.40.5.82:65000',
+           'http://0825fq11t1m612:0825fq11t1m612@117.40.7.122:65000',
+           'http://0825fq11t1m612:0825fq11t1m612@117.40.5.35:65000',
+           'http://0825fq11t1m612:0825fq11t1m612@117.40.5.128:65000',
+           'http://0825fq11t1m612:0825fq11t1m612@117.40.6.202:65000',
+           'http://0825fq11t1m612:0825fq11t1m612@117.40.5.94:65000',
+           'http://0825fq11t1m612:0825fq11t1m612@117.40.5.28:65000',
+           'http://0825fq11t1m612:0825fq11t1m612@117.40.7.9:65000',
+           'http://0825fq11t1m612:0825fq11t1m612@117.40.7.100:65000',
+           'http://0825fq11t1m612:0825fq11t1m612@117.40.7.200:65000',
+           'http://0825fq11t1m612:0825fq11t1m612@117.40.7.165:65000', None]
+
+
+class Crawler(ABC):
+
+    @property
+    def metadata(self):
+        return metadata
+
+    @property
+    def engine(self):
+        return engine
+
+    def _retrieve_assets_from_sqlite(self):
+        table = self.metadata.tables['asset_router']
+        ins = select([table.c.sid, table.c.asset_type])
+        rp = self.engine.execute(ins)
+        assets = pd.DataFrame(rp.fetchall(), columns=['sid', 'asset_type'])
+        assets.set_index('sid', inplace=True)
+        grp = assets.groupby('asset_type').groups
+        mapping = valmap(lambda x: list(x), grp)
+        return mapping
+
+    def _retrieve_deadline_from_sqlite(self, tbl):
+        table = self.metadata.tables[tbl]
+        ins = select([func.max(table.c.declared_date)])
+        rp = self.engine.execute(ins)
+        deadline = rp.scalar()
+        return deadline
+
+    @abstractmethod
+    def writer(self, *args):
+        """
+            intend to spider data from online
+        :return:
+        """
+        raise NotImplementedError()

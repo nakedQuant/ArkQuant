@@ -9,6 +9,7 @@ from collections import namedtuple
 from abc import ABC, abstractmethod
 import struct, pandas as pd, bcolz, numpy as np, os, glob, datetime
 from gateway.driver import TdxDir, OHLC_RATIO
+from utils.dt_utilty import normalize_date
 
 
 __all__ = [
@@ -94,20 +95,6 @@ class BcolzWriter(ABC):
         table = self._ensure_ctable(sid)
         for k, v in kwargs.items():
             table.attrs[k] = v
-
-    @staticmethod
-    def _normalize_date(raw):
-        raw['year'] = raw['dates'] // 2048 + 2004
-        raw['month'] = (raw['dates'] % 2048) // 100
-        raw['day'] = (raw['dates'] % 2048) % 100
-        raw['hour'] = raw['sub_dates'] // 60
-        raw['minutes'] = raw['sub_dates'] % 60
-        raw['ticker'] = raw.apply(lambda x: pd.Timestamp(
-            datetime.datetime(int(x['year']), int(x['month']), int(x['day']),
-                              int(x['hour']), int(x['minutes']))),
-                                axis=1)
-        # raw['timestamp'] = raw['ticker'].apply(lambda x: x.timestamp())
-        return raw.loc[:, ['ticker', 'open', 'high', 'low', 'close', 'amount', 'volume']]
 
     @abstractmethod
     def retrieve_data_from_tdx(self, path):
@@ -215,7 +202,8 @@ class BcolzMinuteBarWriter(BcolzWriter):
             frame = pd.DataFrame(data, columns=['dates', 'sub_dates', 'open',
                                                 'high', 'low', 'close', 'amount',
                                                 'volume', 'appendix'])
-            ticker_frame = self._normalize_date(frame)
+            frame = normalize_date(frame)
+            ticker_frame = frame.loc[:, ['ticker', 'open', 'high', 'low', 'close', 'amount', 'volume']]
             return ticker_frame
 
     def _write_internal(self, sid, data):

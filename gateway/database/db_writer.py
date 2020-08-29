@@ -10,7 +10,7 @@ from sqlalchemy import inspect, create_engine
 from contextlib import ExitStack
 from weakref import WeakValueDictionary
 from gateway.database.db_schema import asset_db_table_names
-from gateway.database import metadata, engine_path
+from gateway.database import metadata, engine_path, SQLITE_MAX_VARIABLE_NUMBER
 
 __all__ = ['db']
 
@@ -27,6 +27,7 @@ class DBWriter(object):
             instance = object().__new__(cls)
             instance._init_db(engine)
             cls._cache[engine] = instance
+            instance.engine = engine
             return cls._cache[engine]
 
     @staticmethod
@@ -85,7 +86,7 @@ class DBWriter(object):
         )
         return connection
 
-    def _write_df_to_table(self, conn, tbl, frame, chunksize=5000):
+    def _write_df_to_table(self, conn, tbl, frame, chunksize=SQLITE_MAX_VARIABLE_NUMBER):
         inspection = inspect(self.engine)
         expected_cols = [item['name'] for item in inspection.get_columns(tbl)]
         if frozenset(frame.columns) != frozenset(expected_cols):
@@ -100,8 +101,8 @@ class DBWriter(object):
         frame.to_sql(
             tbl,
             conn,
-            index=True,
-            index_label=None,
+            flavor='mysql',
+            index=False,
             if_exists='append',
             chunksize=chunksize,
         )
@@ -118,10 +119,9 @@ class DBWriter(object):
         conn.execute(ins, formatted)
 
     def writer(self, tbl, df, direct=True):
-        with open('db_schema.py', 'r') as f:
-            string_obj = f.read()
-        exec(string_obj)
-
+        # with open('db_schema.py', 'r') as f:
+        #     string_obj = f.read()
+        # exec(string_obj)
         with self.engine.begin() as conn:
             # Create SQL tables if they do not exist.
             # self.metadata.create_all(bind=engine)

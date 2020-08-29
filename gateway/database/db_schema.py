@@ -38,7 +38,7 @@ asset_router = sa.Table(
     ),
     sa.Column(
         'sid',
-        sa.Integer,
+        sa.String(10),
         unique=True,
         nullable=False,
         primary_key=True,
@@ -53,33 +53,34 @@ asset_router = sa.Table(
     ),
     sa.Column(
         'asset_type',
-        sa.String(10),
+        sa.String(20),
         nullable=False
     ),
     sa.Column(
         'exchange',
-        sa.String(6)
+        # 中文完整的交易所
+        sa.String(20)
     ),
     sa.Column(
         'first_traded',
-        sa.String(10),
+        sa.String(30),
         # nullable=False
     ),
     sa.Column(
         'last_traded',
-        sa.String(10),
+        sa.String(15),
         default='null'
     ),
-    # null / d / p / st  --- null(normal)
-    sa.Column(
-        'status',
-        sa.String(6),
-        default='null'
-    ),
+    # # null / d / p / st  --- null(normal)
+    # sa.Column(
+    #     'status',
+    #     sa.String(6),
+    #     default='null'
+    # ),
     sa.Column(
         'country_code',
         sa.String(6),
-        default='ch'
+        default='CH'
     ),
 
 )
@@ -89,7 +90,7 @@ equity_basics = sa.Table(
     metadata,
     sa.Column(
         'sid',
-        sa.Integer,
+        sa.String(10),
         # 一对一 或者一对多， 索引一种
         sa.ForeignKey(asset_router.c.sid),
         index=True,
@@ -98,7 +99,7 @@ equity_basics = sa.Table(
     ),
     sa.Column(
         'dual',
-        sa.String(8),
+        sa.String(10),
         default='null'
     ),
     sa.Column(
@@ -124,12 +125,13 @@ equity_basics = sa.Table(
     ),
 )
 
+#  --- 主要考虑流动性和折价空间, 强赎就是半路就赎回了，转债价格超过130的，大部分都满足强赎条件了， 有的可转债可以没回售条款比如金融行业（中行)
 convertible_basics = sa.Table(
     'convertible_basics',
     metadata,
     sa.Column(
         'sid',
-        sa.Integer,
+        sa.String(10),
         sa.ForeignKey(asset_router.c.sid),
         unique=True,
         nullable=False,
@@ -139,39 +141,52 @@ convertible_basics = sa.Table(
     sa.Column(
         # 股票可以发行不止一个可转债
         'swap_code',
-        sa.String(6),
+        sa.String(10),
         nullable=False,
         primary_key=True
     ),
     sa.Column(
+        # 可转债发行价格
         'put_price',
         sa.Numeric(10, 3),
         nullable=False
     ),
     sa.Column(
-        'redeem_price',
-        sa.Numeric(10, 2),
-        nullable=False
-    ),
-    sa.Column(
+        # 转股价
         'convert_price',
         sa.Numeric(10, 2),
         nullable=False
     ),
     sa.Column(
+        # 回售触发价 --- 基于convert_price计算回售触发条款一般为连续30个交易日70%
+        'put_convert_price',
+        sa.Numeric(10, 2),
+        # nullable=False
+    ),
+    sa.Column(
+        # 强制赎回价 --- 基于convert_price计算强制赎回价条款一般为连续30个交易日中不少于15个交易日130%
+        'force_redeem_price',
+        sa.Numeric(10, 2),
+        # nullable=False
+    ),
+    sa.Column(
+        # 一旦触发了强制赎回条款之后以redeem_price赎回未转股的可转债
+        'redeem_price',
+        sa.Numeric(10, 2),
+        # nullable=False
+    ),
+    sa.Column(
+        # 转股日期
         'convert_dt',
         sa.String(10),
         nullable=False
     ),
+
     sa.Column(
-        'put_convert_price',
-        sa.Numeric(10, 2),
-        nullable=False
-    ),
-    sa.Column(
+        # 担保人
         'guarantor',
         sa.Text,
-        nullable=False
+        # nullable=False
     ),
 )
 
@@ -182,10 +197,12 @@ equity_price = sa.Table(
     sa.Column(
         'id',
         sa.Integer,
+        default=0,
+        autoincrement=True,
         index=True,
-        unique=True,
-        nullable=False,
-        primary_key=True,
+        # unique=True,
+        # nullable=False,
+        # primary_key=True,
     ),
     sa.Column(
         'sid',
@@ -215,10 +232,12 @@ convertible_price = sa.Table(
     sa.Column(
         'id',
         sa.Integer,
+        default=0,
+        autoincrement=True,
         index=True,
-        unique=True,
-        nullable=False,
-        primary_key=True,
+        # unique=True,
+        # nullable=False,
+        # primary_key=True,
     ),
     sa.Column(
         'sid',
@@ -226,11 +245,11 @@ convertible_price = sa.Table(
         nullable=False,
         primary_key=True,
     ),
-    sa.Column(
-        'swap_code',
-        sa.String(10),
-        nullable=False
-    ),
+    # sa.Column(
+    #     'swap_code',
+    #     sa.String(10),
+    #     nullable=False
+    # ),
     sa.Column(
         'trade_dt',
         sa.String(10),
@@ -251,10 +270,12 @@ fund_price = sa.Table(
     sa.Column(
         'id',
         sa.Integer,
+        default=0,
+        autoincrement=True,
         index=True,
-        unique=True,
-        nullable=False,
-        primary_key=True,
+        # unique=True,
+        # nullable=False,
+        # primary_key=True,
     ),
     sa.Column('sid',
               sa.String(10),
@@ -267,12 +288,12 @@ fund_price = sa.Table(
         nullable=False,
         primary_key=True
     ),
-    sa.Column('open', sa.Numeric(10, 2), nullable=False),
-    sa.Column('high', sa.Numeric(10, 2), nullable=False),
-    sa.Column('low', sa.Numeric(10, 2), nullable=False),
-    sa.Column('close', sa.Numeric(10, 2), nullable=False),
-    sa.Column('volume', sa.Numeric(10, 0), nullable=False),
-    sa.Column('amount', sa.Numeric(20, 2), nullable=False),
+    sa.Column('open', sa.Numeric(10, 3), nullable=False),
+    sa.Column('high', sa.Numeric(10, 3), nullable=False),
+    sa.Column('low', sa.Numeric(10, 3), nullable=False),
+    sa.Column('close', sa.Numeric(10, 3), nullable=False),
+    sa.Column('volume', sa.Integer, nullable=False),
+    sa.Column('amount', sa.Numeric(20, 3), nullable=False),
 )
 
 # declared_date : 公告日期 ; record_date(ex_date) : 登记日 ; pay_date : 除权除息日 ,effective_date :上市日期
@@ -286,10 +307,12 @@ equity_splits = sa.Table(
     sa.Column(
         'id',
         sa.Integer,
+        default=0,
+        autoincrement=True,
         index=True,
-        unique=True,
-        nullable=False,
-        primary_key=True,
+        # unique=True,
+        # nullable=False,
+        # primary_key=True,
     ),
     sa.Column(
         'sid',
@@ -318,14 +341,16 @@ equity_rights = sa.Table(
     sa.Column(
         'id',
         sa.Integer,
+        default=0,
+        autoincrement=True,
         index=True,
-        unique=True,
-        nullable=False,
-        primary_key=True,
+        # unique=True,
+        # nullable=False,
+        # primary_key=True,
     ),
     sa.Column(
         'sid',
-        sa.Integer,
+        sa.String(10),
         nullable=False,
         primary_key=True,
 
@@ -353,10 +378,12 @@ ownership = sa.Table(
     sa.Column(
         'id',
         sa.Integer,
+        default=0,
+        autoincrement=True,
         index=True,
-        unique=True,
-        nullable=False,
-        primary_key=True,
+        # unique=True,
+        # nullable=False,
+        # primary_key=True,
     ),
     sa.Column(
         'sid',
@@ -371,11 +398,14 @@ ownership = sa.Table(
     ),
     sa.Column('ex_date', sa.String(10)),
     sa.Column('general', sa.Numeric(15, 5)),
-    sa.Column('float', sa.Numeric(15, 5)),
-    sa.Column('strict', sa.Numeric(15, 5)),
-    sa.Column('b_float', sa.Numeric(15, 5)),
-    sa.Column('b_strict', sa.Numeric(15, 5)),
-    sa.Column('h_float', sa.Numeric(15, 5)),
+    # 存在刚开始非流通
+    sa.Column('float', sa.String(10)),
+    # 由于非流通分为高管股以及限制股 所以 -- 表示
+    sa.Column('manager', sa.String(10)),
+    sa.Column('strict', sa.String(10)),
+    sa.Column('b_float', sa.String(10)),
+    sa.Column('b_strict', sa.String(10)),
+    sa.Column('h_float', sa.String(10)),
 )
 
 # 股东增减持
@@ -385,50 +415,55 @@ holder = sa.Table(
     sa.Column(
         'id',
         sa.Integer,
+        default=0,
+        autoincrement=True,
         index=True,
-        unique=True,
-        nullable=False,
-        primary_key=True,
+        # unique=True,
+        # nullable=False,
+        # primary_key=True,
     ),
+    # 同一天股票可以多次减持
     sa.Column(
         'sid',
-        sa.Integer,
+        sa.String(10),
         nullable=False,
-        primary_key=True,
+        # primary_key=True,
     ),
     sa.Column(
         'declared_date',
         sa.String(10),
-        primary_key=True
+        # primary_key=True
     ),
     sa.Column('股东', sa.Text),
     sa.Column('方式', sa.String(20)),
-    sa.Column('变动股本', sa.Numeric(10, 5), nullable=False),
-    sa.Column('总持仓', sa.Numeric(10, 5), nullable=False),
+    sa.Column('变动股本', sa.Numeric(20, 5), nullable=False),
+    sa.Column('总持仓', sa.Numeric(20, 5), nullable=False),
     sa.Column('占总股本比', sa.Numeric(10, 5), nullable=False),
-    sa.Column('总流通股', sa.Numeric(10, 5), nullable=False),
+    sa.Column('总流通股', sa.Numeric(20, 5), nullable=False),
     sa.Column('占流通比', sa.Numeric(10, 5), nullable=False)
 )
 
-# 解禁数据
-release = sa.Table(
-    'release',
+# 解禁数据 release作为mysql关键字 switch to ban_lift
+unfreeze = sa.Table(
+    'unfreeze',
     metadata,
     sa.Column(
         'id',
         sa.Integer,
+        default=0,
+        autoincrement=True,
         index=True,
-        unique=True,
-        nullable=False,
-        primary_key=True,
+        # unique=True,
+        # nullable=False,
+        # primary_key=True,
     ),
     sa.Column(
         'sid',
-        sa.Integer,
+        sa.String(10),
         nullable=False,
         primary_key=True,
     ),
-    # sa.Column('release_date', sa.String(10), nullable=False),
+    # 为了与其他的events 保持一致 --- declared_date
     sa.Column(
         'declared_date',
         sa.String(10),
@@ -436,7 +471,8 @@ release = sa.Table(
         primary_key=True
     ),
     sa.Column('release_type', sa.Text, nullable=False),
-    sa.Column('cjeltszb', sa.Numeric(10, 5), nullable=False)
+    # 解禁市值占解禁前流动市值比例
+    sa.Column('zb', sa.Numeric(10, 5), nullable=False)
 )
 
 # 股东大宗交易
@@ -446,30 +482,34 @@ massive = sa.Table(
     sa.Column(
         'id',
         sa.Integer,
+        default=0,
+        autoincrement=True,
         index=True,
-        unique=True,
-        nullable=False,
-        primary_key=True,
+        # unique=True,
+        # nullable=False,
+        # primary_key=True,
     ),
     sa.Column(
         'sid',
-        sa.Integer,
+        sa.String(10),
         nullable=False,
-        primary_key=True,
+        # primary_key=True,
 
     ),
     sa.Column(
         'declared_date',
         sa.String(10),
         nullable=False,
-        primary_key=True
+        # primary_key=True
     ),
-    sa.Column('bid_price', sa.Text, nullable=False),
+    # 折议率
     sa.Column('discount', sa.Text, nullable=False),
+    sa.Column('bid_price', sa.Text, nullable=False),
     sa.Column('bid_volume', sa.Numeric(10, 5), nullable=False),
     sa.Column('buyer', sa.Text, nullable=False),
     sa.Column('seller', sa.Text, nullable=False),
-    sa.Column('cleltszb', sa.Numeric(10, 5), nullable=False),
+    # 成交总额/流通市值
+    sa.Column('cjeltszb', sa.Numeric(10, 5), nullable=False),
 )
 
 # 流通市值
@@ -500,10 +540,12 @@ version_info = sa.Table(
     sa.Column(
         'id',
         sa.Integer,
+        default=0,
+        autoincrement=True,
         index=True,
-        unique=True,
-        nullable=False,
-        primary_key=True,
+        # unique=True,
+        # nullable=False,
+        # primary_key=True,
     ),
     sa.Column(
         'version',
@@ -517,4 +559,4 @@ version_info = sa.Table(
 
 asset_db_table_names = frozenset(['asset_router',  'equity_basics', 'convertible_basics', 'equity_price',
                                   'convertible_price', 'fund_price', 'equity_splits', 'equity_rights',
-                                  'ownership', 'holder', 'release', 'massive', 'mcap', 'version_info'])
+                                  'ownership', 'holder', 'unfreeze', 'massive', 'mcap', 'version_info'])

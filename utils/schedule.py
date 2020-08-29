@@ -5,3 +5,6 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
+from threading import Timer
+
+# Timer(interval, function, args=None, kwargs=None)

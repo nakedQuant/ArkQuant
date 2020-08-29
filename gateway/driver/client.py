@@ -7,6 +7,8 @@ Created on Sun Feb 17 16:39:46 2019
 """
 import tushare as tu
 
+__all__ = ['tsclient']
+
 
 class TsClient:
 
@@ -74,4 +76,8 @@ class TsClient:
 
 tsclient = TsClient()
 
-__all__ = [tsclient]
+
+if __name__ == '__main__':
+
+    stats = tsclient.to_ts_stats()
+    print(stats)
