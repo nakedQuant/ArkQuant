@@ -31,7 +31,7 @@ def _parse_url(url, encoding='gbk', bs=True):
         data = BeautifulSoup(req.text, features='lxml')
     else:
         data = req.text
-    time.sleep(np.random.randint(0, 5))
+    time.sleep(np.random.randint(1, 3))
     return data
 
 

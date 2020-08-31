@@ -65,8 +65,8 @@ class BcolzReader(BarReader):
         """
         table = self._read_bcolz_data(sid)
         meta = table.attrs['metadata']
-        assert meta.end_session >= sdate, ('%r exceed metadata end_session'%sdate)
-        #获取数据
+        assert meta.end_session >= sdate, ('%r exceed metadata end_session' % sdate)
+        # 获取数据
         if self.data_frequency == 'minute':
             start = transfer_to_timestamp(sdate)
             end = transfer_to_timestamp(edate)

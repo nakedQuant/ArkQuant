@@ -6,7 +6,7 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 from collections import namedtuple, defaultdict
-import json, pandas as pd
+import json, pandas as pd, time
 from itertools import chain
 from toolz import partition_all, keyfilter
 from gateway.spider.url import ASSERT_URL_MAPPING, ASSET_SUPPLEMENT_URL
@@ -93,7 +93,7 @@ class AssetSpider(Crawler):
         # equity etf convertible --- mappings
         existing_assets = self._retrieve_assets_from_sqlite()
         # update equity -- list
-        equities = self._request_equities()[:2]
+        equities = self._request_equities()
         # print('equities', equities)
         left['equity'] = set(equities) - set(existing_assets.get('equity', []))
         # update convertible --- dict contain basics
@@ -234,5 +234,7 @@ class AssetRouterWriter(Crawler):
 
 if __name__ == '__main__':
 
+    t = time.time()
     router = AssetRouterWriter()
     router.writer()
+    print('elapsed time : %f' % (time.time() - t))
