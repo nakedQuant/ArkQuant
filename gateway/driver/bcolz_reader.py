@@ -6,14 +6,15 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 import pandas as pd, bcolz, os
-from .bar_reader import BarReader
-from gateway.driver import TdxDir
-from .tools import transfer_to_timestamp
+from gateway.driver.bar_reader import BarReader
+from gateway.driver.tools import transfer_to_timestamp
 
 __all__ = [
     'BcolzDailyReader',
     'BcolzMinuteReader'
 ]
+
+BcolzDir = r'C:\Users\python\Desktop\bcolz'
 
 
 class BcolzReader(BarReader):
@@ -64,24 +65,31 @@ class BcolzReader(BarReader):
             (A volume of 0 signifies no trades for the given dt.)
         """
         table = self._read_bcolz_data(sid)
-        meta = table.attrs['metadata']
-        assert meta.end_session >= sdate, ('%r exceed metadata end_session' % sdate)
+        print('cparams', table.cparams)
+        meta = table.attrs
+        print('meta', meta)
+        # apply functools
+        # # test = init.eval('(ticker - 34200) / 86400')
         # 获取数据
         if self.data_frequency == 'minute':
             start = transfer_to_timestamp(sdate)
+            assert meta['end_session'] >= start, ('%r exceed metadata end_session' % start)
             end = transfer_to_timestamp(edate)
-            condition = '({0} <= timestamp) & (timestamp <= {1)'.format(start, end)
+            condition = '({0} <= ticker) & (ticker <= {1})'.format(start, end)
         else:
-            condition = '({0} <= trade_dt) & (trade_dt <= {1)'.format(sdate, edate)
-        # raw = table.fetchwhere(condition)
-        # frame = pd.DataFrame(raw)
+            assert meta['end_session'] >= sdate, ('%r exceed metadata end_session' % sdate)
+            condition = "({0} <= trade_dt) & (trade_dt <= {1})".format(sdate, edate)
         frame = pd.DataFrame(table.fetchwhere(condition))
-        # 调整系数
-        inverse_ratio = 1 / meta.ohlc_ratio
-        scale = frame.apply(lambda x: [x[col] * inverse_ratio for col in ['open', 'high', 'low', 'close']], axis=1)
-        scale.set_index('ticker', inplace=True) if 'ticker' in scale.columns \
-            else scale.set_index('trade_dt', inplace=True)
-        return scale
+        if not frame.empty:
+            # set index
+            frame.set_index('ticker', inplace=True) if 'ticker' in frame.columns \
+                else frame.set_index('trade_dt', inplace=True)
+            # 调整系数
+            inverse_ratio = 1 / meta['ohlc_ratio']
+            print('inverse_ratio', inverse_ratio)
+            frame.loc[:, ['open', 'high', 'low', 'close']] = frame.loc[:, ['open', 'high', 'low', 'close']] * inverse_ratio
+            print('scale', frame)
+        return frame
 
     def get_spot_value(self, asset, dt, fields):
         raise NotImplementedError()
@@ -91,11 +99,11 @@ class BcolzReader(BarReader):
         sdate, edate = sessions
         supplements = columns + ['trade_dt'] \
             if self.data_frequency == 'daily' else columns + ['ticker']
-        daily = dict()
+        frame_dict = dict()
         for i, asset in enumerate(assets):
             out = self.get_value(asset.sid, sdate, edate)
-            daily[asset.sid] = out.loc[:, supplements]
-        return daily
+            frame_dict[asset.sid] = out.loc[:, supplements]
+        return frame_dict
 
 
 class BcolzMinuteReader(BcolzReader):
@@ -117,10 +125,9 @@ class BcolzMinuteReader(BcolzReader):
     minutes_per_day : int
         The number of minutes per each period. Defaults to 390, the mode
         of minutes in NYSE trading days.
-
     """
     def __init__(self):
-        self._root_dir = os.path.join(TdxDir, 'minute')
+        self._root_dir = os.path.join(BcolzDir, 'minute')
 
     @property
     def data_frequency(self):
@@ -160,7 +167,7 @@ class BcolzDailyReader(BcolzReader):
     - Day is interpreted as seconds since midnight UTC, Jan 1, 1970.
     """
     def __init__(self):
-        self._root_dir = os.path.join(TdxDir, 'daily')
+        self._root_dir = os.path.join(BcolzDir, 'daily')
 
     @property
     def data_frequency(self):
@@ -169,3 +176,17 @@ class BcolzDailyReader(BcolzReader):
     def get_spot_value(self, date, asset, fields):
         kline = self.get_value(asset.sid, date, date)
         return kline.loc[:, fields + 'trade_dt']
+
+
+if __name__ == '__main__':
+
+    # s = pd.Timestamp('2018-01-01')
+    # e = pd.Timestamp('2018-05-01')
+    # minute_reader = BcolzMinuteReader()
+    # value = minute_reader.get_value('sh000001', s, e)
+    # print('minute value', value)
+    # spot = minute_reader.get_spot_value()
+    s = '20200101'
+    e = '20200901'
+    daily_reader = BcolzDailyReader()
+    value = daily_reader.get_value('sh000001', s, e)

@@ -3245,7 +3245,7 @@
 #                  restrictions, universe_func):
 #
 #         # ==============
-#         # Simulation
+#         # nakedquant
 #         # Param Setup
 #         # ==============
 #         self.sim_params = sim_params
@@ -8364,7 +8364,7 @@ from itertools import product
 #                  restrictions, universe_func):
 #
 #         # ==============
-#         # Simulation
+#         # nakedquant
 #         # Param Setup
 #         # ==============
 #         self.sim_params = sim_params
@@ -10541,4 +10541,18 @@ from numpy.lib.stride_tricks import as_strided
 #     self._handle_data = handle_data
 #     self._before_trading_start = before_trading_start
 #     self._analyze = analyze
+namespace = dict()
+with open('/Users/python/Library/Mobile Documents/com~apple~CloudDocs/nakedquant/test/test_driver.py','r') as f:
+    exec(f.read(), namespace)
 
+print(namespace.keys())
+test = namespace['UnionEngine']
+print(test)
+
+# from graphviz import Digraph,Graph
+#
+# h = Graph('hello', format='svg')
+#
+# h.edge('Hello', 'World')
+#
+# print(h.pipe().decode('utf-8'))

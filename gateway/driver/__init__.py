@@ -10,7 +10,7 @@ OHLC_RATIO = 100
 
 
 # 解析通达信数据存储位置
-TdxDir = ''
+BcolzDir = ''
 
 # seconds
 Seconds_Per_Day = 24 * 60 * 60

@@ -5,7 +5,7 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-import json, pandas as pd
+import json, pandas as pd, datetime
 from threading import Thread
 from functools import partial
 from gateway.database.db_writer import db
@@ -24,9 +24,8 @@ class BundlesWriter(Crawler):
         b. request kline from dfcf
         c. update to mysql
     """
-
-    def __init__(self, lmt=100000):
-        self.lmt = lmt
+    def __init__(self, lmt):
+        self.lmt = lmt if lmt else (datetime.datetime.now() - datetime.datetime(1990, 1, 1)).days
 
     @property
     def default(self):

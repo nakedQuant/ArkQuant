@@ -223,10 +223,10 @@ class AssetRouterWriter(Crawler):
         self.missing = {}
 
     def fulfill_missing(self):
-        AssetData.convertibles = AssetData.funds = pd.DataFrame()
         print('missing equity', self.missing)
         if len(self.missing['equity']):
             equity_frames = self._request_equities_basics(self.missing)
+            AssetData.convertibles = AssetData.funds = pd.DataFrame()
             AssetData.equities = equity_frames
             self._writer.write(AssetData)
             self.fulfill_missing()
