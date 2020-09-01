@@ -12,11 +12,11 @@ from utils.dt_utilty import normalize_date
 Num = 2
 OHLC_RATIO = 10000
 # 解析通达信数据存储位置
-BcolzDir = r'C:\Users\python\Desktop\bcolz'
+BcolzDir = r'E:\bcolz'
 BcolzMinuteFields = ['ticker', 'open', 'high', 'low', 'close', 'amount', 'volume']
 BcolzDailyFields = ['trade_dt', 'open', 'high', 'low', 'close', 'amount', 'volume']
 # 配置bcolz
-bcolz.set_nthreads( Num * bcolz.detect_number_of_cores())
+bcolz.set_nthreads(Num * bcolz.detect_number_of_cores())
 # Print all the versions of packages that bcolz relies on.
 bcolz.print_versions()
 
@@ -29,25 +29,17 @@ class BcolzWriter(ABC):
 
         Parameters:
         clevel : int (0 <= clevel < 10)
-
         The compression level.
-
         shuffle : int
-
         The shuffle filter to be activated. Allowed values are bcolz.NOSHUFFLE (0), bcolz.SHUFFLE (1) and bcolz.BITSHUFFLE (2). The default is bcolz.SHUFFLE.
-
         cname : string (‘blosclz’, ‘lz4’, ‘lz4hc’, ‘snappy’, ‘zlib’, ‘zstd’)
-
         Select the compressor to use inside Blosc.
-
         quantize : int (number of significant digits)
-
         Quantize data to improve (lossy) compression. Data is quantized using np.around(scale*data)/scale, where scale is 2**bits,
         and bits is determined from the quantize value. For example, if quantize=1, bits will be 4. 0 means that the quantization is disabled.
-
         In case some of the parameters are not passed, they will be
-
         set to a default (see `setdefaults()` method).
+        target --- tranform tdx files to bcolz
     """
 
     def _init_attr(self, metadata, path):
@@ -133,9 +125,18 @@ class BcolzWriter(ABC):
     #     for k, v in kwargs.items():
     #         table.attrs[k] = v
 
+    def glob_tdx_files(self):
+        # dir_ = r'D:\通达信-1m\*'
+        sh_path = os.path.join(self._tdx_dir, r'*\vipdoc\*\minline\sh6*')
+        sz_path = os.path.join(self._tdx_dir, r'*\vipdoc\*\minline\sz[0|3]*')
+        sh_files = glob.glob(sh_path)
+        sz_files = glob.glob(sz_path)
+        tdx_file_paths = sh_files + sz_files
+        print('files', len(tdx_file_paths), tdx_file_paths[:10])
+        return tdx_file_paths
+
     @abstractmethod
     def retrieve_data_from_tdx(self, path):
-
         raise NotImplementedError()
 
     @abstractmethod
@@ -158,20 +159,26 @@ class BcolzWriter(ABC):
         """
         raise NotImplementedError()
 
-    def write_sid(self, sid, appendix):
+    def _write_sid(self, path):
         """
         Write a stream of minute data.
         :param sid: asset type (sh / sz)
         :param appendix: .01 / .5 / .day
         :return: dataframe
         """
-        path = os.path.join(self._tdx_dir, ('.').join([sid, appendix]))
+        # path = os.path.join(self._tdx_dir, ('.').join([sid, appendix]))
         try:
             data = self.retrieve_data_from_tdx(path)
         except IOError:
             print('tdx path:%s is not correct' %path)
         else:
-            self._write_internal(sid, data)
+            sid = os.path.basename(path)
+            self._write_internal(sid[:-3], data)
+
+    def write(self):
+        paths = self.glob_tdx_files()
+        for p in paths:
+            self._write_sid(p)
 
     def truncate(self, size=0):
         """Truncate data when size = 0"""
@@ -321,22 +328,30 @@ class BcolzDailyBarWriter(BcolzWriter):
             table.flush()
         print(table.len)
         print('metadata', table.attrs)
-        # test
         # df = table.todataframe()
         # print('df', df)
 
 
 if __name__ == '__main__':
 
-    # initialize all time stamp
-    # start_date = pd.Timestamp('20040401')
-    start_date = datetime.datetime(2004, 4, 1, 0, 0)
-    end_date = datetime.datetime.now()
-    session = pd.date_range(start_date, end_date, freq='1m')
-    print('session', session)
+    # glob different code name
+    # files = glob.glob('^(sz|sh)[0-9]{6}.01$', recursive=True)
+    # files = glob.glob(r'D:\通达信-1m\*\vipdoc\*\minline\*')
+    # files = glob.glob(r'D:\通达信-1m\*\vipdoc\*\minline\sz[0|3]*')
+    # files = glob.glob(r'D:\通达信-1m\*\vipdoc\*\minline\sz0*')
+    # files = glob.glob(r'D:\通达信-1m\*\vipdoc\*\minline\sz3*')
+    # sh_files = glob.glob(r'D:\通达信-1m\*\vipdoc\*\minline\sh6*')
+    # sz_files = glob.glob(r'D:\通达信-1m\*\vipdoc\*\minline\sz[0|3]*')
+    # files = sz_files + sh_files
+    # print('files', len(files), files[:10])
+    # # initialize all time stamp
+    # start_date = pd.Timestamp('20040401').to_pydatetime()
+    # end_date = datetime.datetime.now()
+    # session = pd.date_range(start_date, end_date, freq='1m')
+    # print('session', session)
     # tdx_names = [datetime.datetime.strftime(s, '%Y%m') for s in session]
     # print('formatted datetime', tdx_names)
-    # # t = datetime.datetime.now()
+    # t = datetime.datetime.now()
     # for tdx_name in tdx_names:
     #     source_dir = r'D:\通达信-1m\{}\vipdoc\sh\minline'.format(tdx_name)
     #     print('source_dir', source_dir)
@@ -346,6 +361,10 @@ if __name__ == '__main__':
     # print('elapsed time', datetime.datetime.now() - t)
     # elapsed time 0:01:16.533000 --- set_threads
     # elapsed time 0:01:17.158000 --- no set
-    source_dir = r'E:\通达信-1d\202008\vipdoc\sh\lday'
-    w2 = BcolzDailyBarWriter(source_dir)
-    w2.write_sid('sh000001', 'day')
+    # source_dir = r'E:\通达信-1d\202008\vipdoc\sh\lday'
+    # w2 = BcolzDailyBarWriter(source_dir)
+    # w2.write_sid('sh000001', 'day')
+
+    dir_ = r'D:\通达信-1m'
+    w1 = BcolzMinuteBarWriter(dir_)
+    w1.write()
