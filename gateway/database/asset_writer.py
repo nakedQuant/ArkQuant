@@ -19,7 +19,7 @@ from gateway.database import (
 __all__ = ['AssetWriter']
 
 # 过于过滤frame 防止入库报错
-EquityNullFields = ['sid', 'broker', 'district', 'initial_price', 'business_scope']
+EquityNullFields = ['sid', 'first_traded', 'initial_price', 'business_scope', 'broker', 'district']
 
 ConvertibleNullFields = ['sid', 'swap_code', 'put_price', 'convert_price', 'convert_dt']
 
@@ -34,7 +34,7 @@ _rename_router_cols = frozenset(['sid',
 
 _rename_equity_cols = {
     '代码': 'sid',
-    '港股': 'dual',
+    '港股': 'dual_sid',
     '上市市场': 'exchange',
     '上市日期': 'first_traded',
     '发行价格': 'initial_price',
@@ -58,7 +58,7 @@ _rename_convertible_cols = {
     'SWAPSCODE': 'swap_code',
     'SNAME': 'asset_name',
     'LISTDATE': 'first_traded',
-    'maturity_dt': 'last_traded'
+    # 'maturity_dt': 'last_traded'
 }
 
 # fund -- first_traded
@@ -242,34 +242,49 @@ class AssetWriter(object):
 
         Empty DataFrame --- rename Empty DataFrame
         """
-        # equity
-        data_set.equities.fillna('', inplace=True)
-        data_set.equities.rename(columns=_rename_equity_cols, inplace=True)
-        data_set.equities.dropna(axis=0, how='any', subset=EquityNullFields, inplace=True)
-        data_set.equities.loc[:, 'asset_type'] = 'equity'
-        print('equities columns', data_set.equities.columns)
-        data_set.convertibles.rename(columns=_rename_convertible_cols, inplace=True)
-        # convertible
-        data_set.convertibles.replace(to_replace='-', value=pd.NA, inplace=True)
-        data_set.convertibles.rename(columns=_rename_convertible_cols, inplace=True)
-        data_set.convertibles.dropna(axis=0, how='any', subset=ConvertibleNullFields, inplace=True)
-        data_set.convertibles.loc[:, 'exchange'] = data_set.convertibles['sid'].apply(
-                                                    lambda x: '上海证券交易所' if x.startswith('11') else '深圳证券交易所')
-        data_set.convertibles['asset_type'] = 'convertible'
-        print('convertibles columns', data_set.convertibles.columns)
-        # fund
-        data_set.funds['基金简称'] = data_set.funds['基金简称'].apply(lambda x: x[:-5])
-        data_set.funds.rename(columns=_rename_fund_cols, inplace=True)
-        data_set.funds.loc[:, 'exchange'] = data_set.funds['sid'].apply(
-                                                lambda x: '上海证券交易所' if x.startswith('5') else '深圳证券交易所')
-        print('fund', data_set.funds)
+        # equity replace null -- Nan remove equities which are not on market
+        if not data_set.equities.empty:
+            data_set.equities['上市日期'].replace('--', None, inplace=True)
+            data_set.equities['发行价格'].replace('', None, inplace=True)
+            data_set.equities.rename(columns=_rename_equity_cols, inplace=True)
+            data_set.equities.dropna(axis=0, how='any', subset=EquityNullFields, inplace=True)
+            data_set.equities['initial_price'] = data_set.equities['initial_price'].astype(np.float)
+            data_set.equities.loc[:, 'asset_type'] = 'equity'
+            data_set.equities.fillna('', inplace=True)
+            print('process equity', data_set.equities)
+        if not data_set.convertibles.empty:
+            # convertible
+            data_set.convertibles.replace(to_replace='-', value=pd.NA, inplace=True)
+            print('level 1', len(data_set.convertibles))
+            data_set.convertibles.rename(columns=_rename_convertible_cols, inplace=True)
+            print('level 2', len(data_set.convertibles))
+            # 保留已经上市而且转股的可转债
+            data_set.convertibles.dropna(axis=0, how='any', subset=ConvertibleNullFields, inplace=True)
+            print('level 3', len(data_set.convertibles))
+            # add and transform maturity date format
+            data_set.convertibles.loc[:, 'last_traded'] = data_set.convertibles['maturity_dt'].apply(
+                                                        lambda x: x.replace('-', ''))
+            print('level 4', len(data_set.convertibles))
+
+            data_set.convertibles.loc[:, 'exchange'] = data_set.convertibles['sid'].apply(
+                                                        lambda x: '上海证券交易所' if x.startswith('11') else '深圳证券交易所')
+            print('level 5', len(data_set.convertibles))
+            data_set.convertibles['asset_type'] = 'convertible'
+            print('process convertibles 6 ', len(data_set.convertibles))
+            print('process convertibles', data_set.convertibles)
+        if not data_set.funds.empty:
+            # fund
+            data_set.funds['基金简称'] = data_set.funds['基金简称'].apply(lambda x: x[:-5])
+            data_set.funds.rename(columns=_rename_fund_cols, inplace=True)
+            data_set.funds.loc[:, 'exchange'] = data_set.funds['sid'].apply(
+                                                    lambda x: '上海证券交易所' if x.startswith('5') else '深圳证券交易所')
+            print('fund', data_set.funds)
         return data_set
 
     def write(self, asset_data):
         """Write asset metadata to a sqlite database.
         """
         frame = self._reformat_frame(asset_data)
-        print('rename frame', frame)
 
         self._real_write(
             equity_frame=frame.equities,

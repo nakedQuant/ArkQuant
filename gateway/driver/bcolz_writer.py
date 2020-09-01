@@ -5,16 +5,14 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-import struct, pandas as pd, bcolz, numpy as np, os, glob, datetime, json
+import struct, pandas as pd, bcolz, numpy as np, os, glob
 from abc import ABC, abstractmethod
+from gateway.driver import BcolzDir, OHLC_RATIO, Num
 from utils.dt_utilty import normalize_date
 
-Num = 2
-OHLC_RATIO = 10000
-# 解析通达信数据存储位置
-BcolzDir = r'E:\bcolz'
 BcolzMinuteFields = ['ticker', 'open', 'high', 'low', 'close', 'amount', 'volume']
 BcolzDailyFields = ['trade_dt', 'open', 'high', 'low', 'close', 'amount', 'volume']
+
 # 配置bcolz
 bcolz.set_nthreads(Num * bcolz.detect_number_of_cores())
 # Print all the versions of packages that bcolz relies on.

@@ -48,7 +48,7 @@ class EventWriter(Crawler):
 
     def _writer_holder(self, *args):
         """股票增持、减持、变动情况"""
-        deadline = self._retrieve_deadline_from_sqlite('holder')
+        deadline = self._retrieve_deadlines_from_sqlite('holder')
         print(deadline)
         page = 1
         while True:
@@ -73,7 +73,7 @@ class EventWriter(Crawler):
             获取时间区间内股票大宗交易，时间最好在一个月之内
         """
         page = 1
-        deadline = self._retrieve_deadline_from_sqlite('massive')
+        deadline = self._retrieve_deadlines_from_sqlite('massive')
         print('deadline', deadline)
         while True:
             url = ASSET_FUNDAMENTAL_URL['massive'].format(page=page, start=s_date, end=e_date)
@@ -96,7 +96,7 @@ class EventWriter(Crawler):
             获取A股解禁数据
         """
         page = 1
-        deadline = self._retrieve_deadline_from_sqlite('unfreeze')
+        deadline = self._retrieve_deadlines_from_sqlite('unfreeze')
         while True:
             url = ASSET_FUNDAMENTAL_URL['release'].format(page=page, start=s_date, end=e_date)
             text = _parse_url(url, encoding=None, bs=False)
@@ -115,7 +115,7 @@ class EventWriter(Crawler):
             else:
                 break
 
-    def writer(self, sdate, edate):
+    def _writer_internal(self, sdate, edate):
         threads = []
         for method_name in EVENTS:
             method = getattr(self, '_writer_%s' % method_name)
@@ -126,6 +126,9 @@ class EventWriter(Crawler):
         for t in threads:
             print(t.name, t.is_alive())
             t.join()
+
+    def writer(self, sdate, edate):
+        self._writer_internal(sdate, edate)
 
 
 if __name__ == '__main__':

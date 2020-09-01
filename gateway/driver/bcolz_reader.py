@@ -8,13 +8,13 @@ Created on Tue Mar 12 15:37:47 2019
 import pandas as pd, bcolz, os
 from gateway.driver.bar_reader import BarReader
 from gateway.driver.tools import transfer_to_timestamp
+from gateway.driver import BcolzDir
+
 
 __all__ = [
     'BcolzDailyReader',
     'BcolzMinuteReader'
 ]
-
-BcolzDir = r'C:\Users\python\Desktop\bcolz'
 
 
 class BcolzReader(BarReader):

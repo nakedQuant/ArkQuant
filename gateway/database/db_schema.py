@@ -12,7 +12,7 @@ from gateway.database import metadata
 __all__ = [
            'mcap',
            'holder',
-           'release',
+           'unfreeze',
            'massive',
            'ownership',
            'fund_price',
@@ -68,8 +68,7 @@ asset_router = sa.Table(
     ),
     sa.Column(
         'last_traded',
-        sa.String(15),
-        default='null'
+        sa.String(10),
     ),
     # # null / d / p / st  --- null(normal)
     # sa.Column(
@@ -98,19 +97,20 @@ equity_basics = sa.Table(
         primary_key=True
     ),
     sa.Column(
-        'dual',
+        'dual_sid',
         sa.String(10),
-        default='null'
+        # default='null'
     ),
     sa.Column(
         'broker',
         sa.Text,
         nullable=False
     ),
-    # district code
+    # district code 可能出现多个  e.g. 600286 --- 412200,518000
     sa.Column(
         'district',
-        sa.String(8),
+        # sa.String(8),
+        sa.Text,
         nullable=False
     ),
     sa.Column(
@@ -152,6 +152,12 @@ convertible_basics = sa.Table(
         nullable=False
     ),
     sa.Column(
+        # 转股日期
+        'convert_dt',
+        sa.String(10),
+        nullable=False
+    ),
+    sa.Column(
         # 转股价
         'convert_price',
         sa.Numeric(10, 2),
@@ -175,13 +181,6 @@ convertible_basics = sa.Table(
         sa.Numeric(10, 2),
         # nullable=False
     ),
-    sa.Column(
-        # 转股日期
-        'convert_dt',
-        sa.String(10),
-        nullable=False
-    ),
-
     sa.Column(
         # 担保人
         'guarantor',
@@ -330,7 +329,7 @@ equity_splits = sa.Table(
     sa.Column('effective_date', sa.String(10)),
     sa.Column('sid_bonus', sa.Integer),
     sa.Column('sid_transfer', sa.Integer),
-    sa.Column('bonus', sa.Numeric(5, 2)),
+    sa.Column('bonus', sa.Numeric(10, 5)),
     sa.Column('progress', sa.Text),
     )
 
@@ -472,7 +471,7 @@ unfreeze = sa.Table(
     ),
     sa.Column('release_type', sa.Text, nullable=False),
     # 解禁市值占解禁前流动市值比例
-    sa.Column('zb', sa.Numeric(10, 5), nullable=False)
+    sa.Column('zb', sa.Numeric(10, 8), nullable=False)
 )
 
 # 股东大宗交易
@@ -509,7 +508,7 @@ massive = sa.Table(
     sa.Column('buyer', sa.Text, nullable=False),
     sa.Column('seller', sa.Text, nullable=False),
     # 成交总额/流通市值
-    sa.Column('cjeltszb', sa.Numeric(10, 5), nullable=False),
+    sa.Column('cjeltszb', sa.Numeric(10, 8), nullable=False),
 )
 
 # 流通市值

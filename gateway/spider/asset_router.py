@@ -30,6 +30,7 @@ class AssetSpider(Crawler):
     """
         a.获取全部的资产标的 --- equity convertible etf
         b.筛选出需要更新的标的（与缓存进行比较）
+        # 字段非string一定要单独进行格式处理
     """
 
     @staticmethod
@@ -92,28 +93,35 @@ class AssetSpider(Crawler):
         left = dict()
         # equity etf convertible --- mappings
         existing_assets = self._retrieve_assets_from_sqlite()
+        print('asset_router keys', existing_assets.keys())
         # update equity -- list
-        equities = self._request_equities()
-        # print('equities', equities)
+        equities = self._request_equities()[:10]
+        print('full equities', len(equities))
+        print('asset_router', len(existing_assets.get('equity', [])))
         left['equity'] = set(equities) - set(existing_assets.get('equity', []))
+        print('update equities', len(left['equity']))
         # update convertible --- dict contain basics
         convertibles = self._request_convertibles()
+        print('full convertible', len(convertibles.keys()))
+        print('asset_router convertible', len(existing_assets.get('convertible', [])))
         update_convertibles = set(convertibles) - set(existing_assets.get('convertible', []))
         left['convertible'] = keyfilter(lambda x: x in update_convertibles, convertibles)
-        # print('convertibles', left['convertible'])
+        print('update convertibles', len(left['convertible']))
         # update funds -- frame  contain basics
         fund = self._request_funds()
+        print('full fund', len(fund))
+        print('asset_router funds', len(existing_assets.get('fund', [])))
         update_funds = set(fund['基金代码'].values) - set(existing_assets.get('fund', []))
         fund_frame = fund[fund['基金代码'].isin(update_funds)] if update_funds else pd.DataFrame()
         left['fund'] = fund_frame
-        # print('fund', fund_frame)
+        print('update funds', len(left['fund']))
         # update duals
         duals = self._request_duals()
         # print('dual', duals)
         left['dual'] = duals
         return left
 
-    def writer(self, *args):
+    def _writer_internal(self, *args):
         raise NotImplementedError()
 
 
@@ -121,7 +129,7 @@ class AssetRouterWriter(Crawler):
 
     def __init__(self, engine_path=None):
         self._writer = AssetWriter(engine_path)
-        self.missing = defaultdict(list)
+        self.missing = defaultdict(set)
         self.spider = AssetSpider()
 
     @staticmethod
@@ -142,6 +150,8 @@ class AssetRouterWriter(Crawler):
 
     def _request_equities_basics(self, update_mapping):
         equities = update_mapping['equity']
+        missing = self.missing['equity']
+        t = time.time()
         if equities:
             # 获取dual
             dual_equity = update_mapping['dual']
@@ -152,27 +162,25 @@ class AssetRouterWriter(Crawler):
                 try:
                     mapping = self._request_equity_basics(code)
                 except Exception as e:
-                    self.missing['equity'].append(code)
                     print('code:%s due to %s' % (code, e))
+                    missing.add(code)
                 else:
                     print('scrapy code % s from sina successfully' % code)
-                    if code in dual_equity:
-                        dual = dual_equity[code]
-                        mapping.update({'港股': dual})
+                    dual = dual_equity.get(code, None)
+                    mapping.update({'港股': dual})
                     basics.append(mapping)
-                    if code in self.missing['equity']:
-                        self.missing['equity'].remove(code)
-            # transform [dict] to DataFrame
+                    missing.discard(code)
             frame = pd.DataFrame(basics)
-            # replace null -- Nan
+            frame.to_csv('equity_basics.csv')
+            # # replace null -- Nan
             frame.replace(to_replace='null', value=pd.NA, inplace=True)
-            # frame.set_index('代码', inplace=True)
             frame.set_index('代码', drop=False, inplace=True)
-            # append status
+            # append status 由于吸收合并代码可能会消失但是主体继续上市存在 e.g. T00018
             status = status.reindex(index=frame.index)
             frame = pd.concat([frame, status], axis=1)
         else:
             frame = pd.DataFrame()
+        print('spider equity basics elapsed time : %f' % (time.time() - t))
         return frame
 
     @staticmethod
@@ -185,6 +193,7 @@ class AssetRouterWriter(Crawler):
             text = json.loads(text)
             # 取交集
             common_bond = set(bond_mappings) & set([basic['id'] for basic in text['rows']])
+            print('common', len(common_bond))
             # combine two dict object --- single --- 保持数据的完整性
             [basic['cell'].update(bond_mappings[basic['id']]) for basic in text['rows'] if basic['id'] in common_bond]
             basics = [basic['cell'] for basic in text['rows'] if basic['id'] in common_bond]
@@ -216,20 +225,23 @@ class AssetRouterWriter(Crawler):
         data = self._load_data(to_be_updated)
         return data
 
-    def writer(self):
-        asset_data = self.load_data()
-        self._writer.write(asset_data)
-        self.fulfill_missing()
-        self.missing = {}
-
-    def fulfill_missing(self):
+    def rerun(self):
         print('missing equity', self.missing)
         if len(self.missing['equity']):
             equity_frames = self._request_equities_basics(self.missing)
             AssetData.convertibles = AssetData.funds = pd.DataFrame()
             AssetData.equities = equity_frames
             self._writer.write(AssetData)
-            self.fulfill_missing()
+            self.rerun()
+        self.missing['equity'] = set()
+
+    def _writer_internal(self):
+        asset_data = self.load_data()
+        self._writer.write(asset_data)
+        self.rerun()
+
+    def writer(self):
+        self._writer_internal()
 
 
 if __name__ == '__main__':

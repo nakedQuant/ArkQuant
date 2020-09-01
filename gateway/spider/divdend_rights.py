@@ -5,7 +5,6 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-from sqlalchemy import select, func
 import pandas as pd
 from gateway.spider import Crawler
 from gateway.database.db_writer import db
@@ -25,30 +24,14 @@ class AdjustmentsWriter(Crawler):
 
     def __init__(self):
         self.deadlines = dict()
+        self.missed = set()
 
     def _record_deadlines(self):
         """
             record the declared date of equities in mysql
         """
         for tbl in self.adjustment_tables:
-            self._retrieve_from_sqlite(tbl)
-
-    def _retrieve_from_sqlite(self, tbl):
-        table = self.metadata.tables[tbl]
-        ins = select([func.max(table.c.declared_date), table.c.sid])
-        ins = ins.group_by(table.c.sid)
-        rp = self.engine.execute(ins)
-        deadlines = pd.DataFrame(rp.fetchall(), columns=['declared_date', 'sid'])
-        deadlines.set_index('sid', inplace=True)
-        self.deadlines[tbl] = deadlines.iloc[:, 0]
-
-    def _retrieve_equities_from_sqlite(self):
-        table = self.metadata.tables['asset_router']
-        ins = select([table.c.sid])
-        ins = ins.where(table.c.asset_type == 'equity')
-        rp = self.engine.execute(ins)
-        equities = [r[0] for r in rp.fetchall()]
-        return equities
+            self.deadlines[tbl] = self._retrieve_deadlines_from_sqlite(tbl)
 
     def _parse_equity_issues(self, content, symbol):
         """配股"""
@@ -60,11 +43,11 @@ class AdjustmentsWriter(Crawler):
         else:
             delimeter = [item.split('\n')[1:-2] for item in raw]
             frame = pd.DataFrame(delimeter, columns=['declared_date', 'rights_bonus', 'rights_price',
-                                                        'benchmark_share', 'pay_date', 'record_date',
-                                                        '缴款起始日', '缴款终止日', 'effective_date', '募集资金合计'])
+                                                     'benchmark_share', 'pay_date', 'record_date',
+                                                     '缴款起始日', '缴款终止日', 'effective_date', '募集资金合计'])
             frame.loc[:, 'sid'] = symbol
             deadline = self.deadlines['equity_rights'].get(symbol, None)
-            rights = frame[frame['公告日期'] > deadline] if deadline else frame
+            rights = frame[frame['declared_date'] > deadline] if deadline else frame
             db.writer('equity_rights', rights)
 
     def _parse_equity_divdend(self, content, sid):
@@ -80,27 +63,43 @@ class AdjustmentsWriter(Crawler):
                                                      'progress', 'pay_date', 'record_date', 'effective_date'])
             frame.loc[:, 'sid'] = sid
             deadline = self.deadlines['equity_splits'].get(sid, None)
-            divdends = frame[frame['公告日期'] > deadline] if deadline else frame
+            divdends = frame[frame['declared_date'] > deadline] if deadline else frame
             db.writer('equity_splits', divdends)
 
-    def _writer(self, sid):
+    def _parser_writer(self, sid):
         contents = _parse_url(DIVDEND % sid)
         # 解析网页内容
         self._parse_equity_issues(contents, sid)
         self._parse_equity_divdend(contents, sid)
 
+    def rerun(self):
+        if len(self.missed):
+            self._writer_internal(self.missed)
+            self.rerun()
+        # reset
+        self.missed = set()
+        self.deadlines.clear()
+
+    def _writer_internal(self, equities):
+        for sid in equities:
+            try:
+                self._parser_writer(sid)
+            except Exception as e:
+                print('spider divdends and splits of code:%s failure due to %r' % (sid, e))
+                self.missed.add(sid)
+            else:
+                self.missed.discard(sid)
+        # reset dict
+        self.deadlines.clear()
+
     def writer(self):
         # 获取数据库的最新时点
         self._record_deadlines()
-        print('-----', self.deadlines)
+        print('asset deadlines', self.deadlines)
         # 获取所有股票
-        q = self._retrieve_assets_from_sqlite()
-        equities = q['equity'].values()
+        equities = self._retrieve_assets_from_sqlite()['equity']
         # equities = ['300357']
-        for sid in equities:
-            self._writer(sid)
-        # reset dict
-        self.deadlines.clear()
+        self._writer_internal(equities)
 
 
 if __name__ == '__main__':

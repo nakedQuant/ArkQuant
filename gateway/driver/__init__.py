@@ -6,14 +6,17 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 # bcolz sacle factor
-OHLC_RATIO = 100
-
-
+OHLC_RATIO = 10000
+# bcolz parallel num
+Num = 2
 # 解析通达信数据存储位置
-BcolzDir = ''
+BcolzDir = r'E:\bcolz'
 
 # seconds
 Seconds_Per_Day = 24 * 60 * 60
+
+# bcolz path
+BcolzDir = r'C:\Users\python\Desktop\bcolz'
 
 
 # 外围指数对应关系

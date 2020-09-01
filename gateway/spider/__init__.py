@@ -29,23 +29,42 @@ class Crawler(ABC):
         table = self.metadata.tables['asset_router']
         ins = select([table.c.sid, table.c.asset_type])
         rp = self.engine.execute(ins)
-        assets = pd.DataFrame(rp.fetchall(), columns=['sid', 'asset_type'])
+        assets = pd.DataFrame(rp.fetchall(), columns=['sid', 'category'])
+        # add asset_type
+        assets.loc[:, 'asset_type'] = assets['category'].apply(lambda x:
+                                                               'fund' if x not in ['equity', 'convertible'] else x)
         assets.set_index('sid', inplace=True)
         grp = assets.groupby('asset_type').groups
         mapping = valmap(lambda x: list(x), grp)
         return mapping
 
-    def _retrieve_deadline_from_sqlite(self, tbl):
+    # def _retrieve_deadline_from_sqlite(self, tbl):
+    #     table = self.metadata.tables[tbl]
+    #     ins = select([func.max(table.c.declared_date)])
+    #     rp = self.engine.execute(ins)
+    #     deadline = rp.scalar()
+    #     return deadline
+
+    def _retrieve_deadlines_from_sqlite(self, tbl):
         table = self.metadata.tables[tbl]
-        ins = select([func.max(table.c.declared_date)])
+        ins = select([func.max(table.c.declared_date), table.c.sid])
+        ins = ins.group_by(table.c.sid)
         rp = self.engine.execute(ins)
-        deadline = rp.scalar()
-        return deadline
+        deadlines = pd.DataFrame(rp.fetchall(), columns=['declared_date', 'sid'])
+        deadlines.set_index('sid', inplace=True)
+        # self.deadlines[tbl] = deadlines.iloc[:, 0]
+        deadlines = deadlines.iloc[:, 0]
+        return deadlines
 
     @abstractmethod
+    def _writer_internal(self, *args):
+        """
+            internal method for writer
+        """
+        raise NotImplementedError()
+
     def writer(self, *args):
         """
-            intend to spider data from online
-        :return:
+            intend to api _writer_internal
         """
         raise NotImplementedError()

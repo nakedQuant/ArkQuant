@@ -122,14 +122,16 @@ class DBWriter(object):
         # with open('db_schema.py', 'r') as f:
         #     string_obj = f.read()
         # exec(string_obj)
-        with self.engine.begin() as conn:
-            # Create SQL tables if they do not exist.
-            # self.metadata.create_all(bind=engine)
-            con = self.set_isolation_level(conn)
-            if direct:
-                self._writer_direct(con, tbl, df)
-            else:
-                self._write_df_to_table(con, tbl, df)
+        # 每个线程单独 --- cursor con
+        if not df.empty:
+            with self.engine.begin() as conn:
+                # Create SQL tables if they do not exist.
+                # self.metadata.create_all(bind=engine)
+                con = self.set_isolation_level(conn)
+                if direct:
+                    self._writer_direct(con, tbl, df)
+                else:
+                    self._write_df_to_table(con, tbl, df)
 
     def reset(self, overwriter=False):
         if overwriter:

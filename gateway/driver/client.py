@@ -77,7 +77,7 @@ class TsClient:
 tsclient = TsClient()
 
 
-if __name__ == '__main__':
-
-    stats = tsclient.to_ts_stats()
-    print(stats)
+# if __name__ == '__main__':
+#
+#     stats = tsclient.to_ts_stats()
+#     print(len(stats), stats)

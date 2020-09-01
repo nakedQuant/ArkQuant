@@ -6,7 +6,6 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 import pandas as pd
-from sqlalchemy import select, func
 from gateway.spider import Crawler
 from gateway.spider.url import OWNERSHIP
 from gateway.driver.tools import parse_content_from_header
@@ -29,17 +28,11 @@ COLUMNS = {'变动日期': 'ex_date',
 
 class OwnershipWriter(Crawler):
 
-    def _retrieve_deadlines_from_sqlite(self):
-        table = self.metadata.tables['ownership']
-        ins = select([func.max(table.c.declared_date), table.c.sid])
-        ins = ins.group_by(table.c.sid)
-        rp = self.engine.execute(ins)
-        deadlines = pd.DataFrame(rp.fetchall(), columns=['declared_date', 'sid'])
-        deadlines.set_index('sid', inplace=True)
-        return deadlines
+    def __init__(self):
+        self.deadlines = None
+        self.missed = set()
 
-    @staticmethod
-    def _parse_equity_ownership(content, symbol, deadline):
+    def _parse_equity_ownership(self, content, symbol):
         """获取股票股权结构分布"""
         frame = pd.DataFrame()
         tbody = content.findAll('tbody')
@@ -48,25 +41,40 @@ class OwnershipWriter(Crawler):
         for th in tbody:
             formatted = parse_content_from_header(th)
             frame = frame.append(formatted)
-        print('frame', frame)
         # rename columns
         frame.rename(columns=COLUMNS, inplace=True)
         # 调整
         frame.loc[:, 'sid'] = symbol
         frame.index = range(len(frame))
-        deadline_date = deadline.get(symbol, None)
-        equity = frame[frame['公告日期'] > deadline_date] if deadline_date else frame
+        deadline_date = self.deadlines.get(symbol, None)
+        equity = frame[frame['declared_date'] > deadline_date] if deadline_date else frame
         db.writer('ownership', equity)
+
+    def rerun(self):
+        if len(self.missed):
+            self._writer_internal(self.missed)
+            self.rerun()
+        self.missed = set()
+
+    def _writer_internal(self, equities):
+        for sid in equities:
+            try:
+                content = _parse_url(OWNERSHIP % sid)
+                self._parse_equity_ownership(content, sid)
+            except Exception as e:
+                print('spider code: % s  ownership failure due to % r' % (sid, e))
+                self.missed.add(sid)
+            else:
+                self.missed.discard(sid)
 
     def writer(self):
         # initialize deadline
-        deadline = self._retrieve_deadlines_from_sqlite()
-        q = self._retrieve_assets_from_sqlite()
-        equities = q['equity'].values()
+        self.deadlines = self._retrieve_deadlines_from_sqlite('ownership')
+        print('deadlines---------', self.deadlines)
+        equities = self._retrieve_assets_from_sqlite()['equity']
         # equities = ['300357']
-        for asset in equities:
-            content = _parse_url(OWNERSHIP % asset)
-            self._parse_equity_ownership(content, asset, deadline)
+        self._writer_internal(equities)
+        self.rerun()
 
 
 if __name__ == '__main__':

@@ -10556,3 +10556,22 @@ print(test)
 # h.edge('Hello', 'World')
 #
 # print(h.pipe().decode('utf-8'))
+
+
+# import pandas as pd, numpy as np
+# from gateway.driver.client import tsclient
+#
+# status = tsclient.to_ts_stats()
+# print('status', status['list_date'].dtype)
+#
+# path = '/Users/python/Library/Mobile Documents/com~apple~CloudDocs/nakedquant/gateway/spider/equity_basics.csv'
+#
+# frame = pd.read_csv(path, dtype={'代码': np.str, '发行价格': np.float, 'list_date': np.str})
+# frame['发行价格'].fillna('0.00', inplace=True)
+# frame['发行价格'].astype(np.float, copy=False)
+# print('frame 32', frame.iloc[31, :])
+# frame.set_index('代码', drop=False, inplace=True)
+# frame['list_date'].fillna('', inplace=True)
+# print(frame['list_date'])
+# print(frame[frame['代码']=='000003']['list_date'])
+
