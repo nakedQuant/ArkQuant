@@ -168,7 +168,7 @@ class BcolzWriter(ABC):
         try:
             data = self.retrieve_data_from_tdx(path)
         except IOError:
-            print('tdx path:%s is not correct' %path)
+            print('tdx path:%s is not correct' % path)
         else:
             sid = os.path.basename(path)
             self._write_internal(sid[:-3], data)
