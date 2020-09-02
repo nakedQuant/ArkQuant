@@ -18,6 +18,7 @@ __all__ = [
            'fund_price',
            'version_info',
            'asset_router',
+           'equity_status',
            'equity_basics',
            'equity_price',
            'equity_splits',
@@ -34,6 +35,8 @@ asset_router = sa.Table(
     sa.Column(
         'id',
         sa.Integer,
+        default=0,
+        primary_key=True,
         autoincrement=True
     ),
     sa.Column(
@@ -84,9 +87,51 @@ asset_router = sa.Table(
 
 )
 
+# status table intend to sync asset_router last_traded
+equity_status = sa.Table(
+    'equity_status',
+    metadata,
+    sa.Column(
+        'id',
+        sa.Integer,
+        default=0,
+        primary_key=True,
+        autoincrement=True
+    ),
+    sa.Column(
+        'sid',
+        sa.String(10),
+        nullable=True,
+        primary_key=True
+
+    ),
+    sa.Column(
+        'name',
+        sa.String(30),
+        nullable=True,
+        primary_key=True
+    ),
+    sa.Column(
+        'last_traded',
+        sa.String(10)
+    ),
+    sa.Column(
+        'status',
+        sa.String(5)
+    )
+)
+
+
 equity_basics = sa.Table(
     'equity_basics',
     metadata,
+    sa.Column(
+        'id',
+        sa.Integer,
+        default=0,
+        primary_key=True,
+        autoincrement=True
+    ),
     sa.Column(
         'sid',
         sa.String(10),
@@ -106,7 +151,8 @@ equity_basics = sa.Table(
         sa.Text,
         nullable=False
     ),
-    # district code 可能出现多个  e.g. 600286 --- 412200,518000
+    # district code 可能出现多个
+    # e.g. 600286 --- 412200,518000
     sa.Column(
         'district',
         # sa.String(8),
@@ -129,6 +175,13 @@ equity_basics = sa.Table(
 convertible_basics = sa.Table(
     'convertible_basics',
     metadata,
+    sa.Column(
+        'id',
+        sa.Integer,
+        default=0,
+        primary_key=True,
+        autoincrement=True
+    ),
     sa.Column(
         'sid',
         sa.String(10),
@@ -197,11 +250,8 @@ equity_price = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        autoincrement=True,
-        index=True,
-        # unique=True,
-        # nullable=False,
-        # primary_key=True,
+        primary_key=True,
+        autoincrement=True
     ),
     sa.Column(
         'sid',
@@ -219,9 +269,9 @@ equity_price = sa.Table(
     sa.Column('high', sa.Numeric(10, 2), nullable=False),
     sa.Column('low', sa.Numeric(10, 2), nullable=False),
     sa.Column('close', sa.Numeric(10, 2), nullable=False),
-    sa.Column('volume', sa.Numeric(10, 2), nullable=False),
-    sa.Column('amount', sa.Numeric(20, 0), nullable=False),
-    sa.Column('pct', sa.Numeric(20, 2), nullable=False),
+    sa.Column('volume', sa.Integer, nullable=False),
+    sa.Column('amount', sa.Numeric(40, 5), nullable=False),
+    sa.Column('pct', sa.Numeric(5, 2), nullable=False),
 
 )
 
@@ -232,11 +282,8 @@ convertible_price = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        autoincrement=True,
-        index=True,
-        # unique=True,
-        # nullable=False,
-        # primary_key=True,
+        primary_key=True,
+        autoincrement=True
     ),
     sa.Column(
         'sid',
@@ -259,8 +306,8 @@ convertible_price = sa.Table(
     sa.Column('high', sa.Numeric(10, 2), nullable=False),
     sa.Column('low', sa.Numeric(10, 2), nullable=False),
     sa.Column('close', sa.Numeric(10, 2), nullable=False),
-    sa.Column('volume', sa.Numeric(20, 0), nullable=False),
-    sa.Column('amount', sa.Numeric(20, 2), nullable=False),
+    sa.Column('volume', sa.Integer, nullable=False),
+    sa.Column('amount', sa.Numeric(40, 5), nullable=False),
 )
 
 fund_price = sa.Table(
@@ -270,11 +317,8 @@ fund_price = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        autoincrement=True,
-        index=True,
-        # unique=True,
-        # nullable=False,
-        # primary_key=True,
+        primary_key=True,
+        autoincrement=True
     ),
     sa.Column('sid',
               sa.String(10),
@@ -292,14 +336,13 @@ fund_price = sa.Table(
     sa.Column('low', sa.Numeric(10, 3), nullable=False),
     sa.Column('close', sa.Numeric(10, 3), nullable=False),
     sa.Column('volume', sa.Integer, nullable=False),
-    sa.Column('amount', sa.Numeric(20, 3), nullable=False),
+    sa.Column('amount', sa.Numeric(40, 5), nullable=False),
 )
 
 # declared_date : 公告日期 ; record_date(ex_date) : 登记日 ; pay_date : 除权除息日 ,effective_date :上市日期
 # 股权登记日后的下一个交易日就是除权日或除息日，这一天购入该公司股票的股东不再享有公司此次分红配股
 # 红股上市日指上市公司所送红股可上市交易（卖出）的日期,上交所证券的红股上市日为股权除权日的下一个交易日；
 # 深交所证券的红股上市日为股权登记日后的第3个交易日
-
 equity_splits = sa.Table(
     'equity_splits',
     metadata,
@@ -307,11 +350,8 @@ equity_splits = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        autoincrement=True,
-        index=True,
-        # unique=True,
-        # nullable=False,
-        # primary_key=True,
+        primary_key=True,
+        autoincrement=True
     ),
     sa.Column(
         'sid',
@@ -322,14 +362,15 @@ equity_splits = sa.Table(
     sa.Column(
         'declared_date',
         sa.String(10),
-        primary_key = True,
+        primary_key=True,
     ),
     sa.Column('ex_date', sa.String(10)),
     sa.Column('pay_date', sa.String(10)),
     sa.Column('effective_date', sa.String(10)),
     sa.Column('sid_bonus', sa.Integer),
     sa.Column('sid_transfer', sa.Integer),
-    sa.Column('bonus', sa.Numeric(10, 5)),
+    # e.g. 000507 --- 0.42429
+    sa.Column('bonus', sa.Numeric(20, 10)),
     sa.Column('progress', sa.Text),
     )
 
@@ -341,11 +382,8 @@ equity_rights = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        autoincrement=True,
-        index=True,
-        # unique=True,
-        # nullable=False,
-        # primary_key=True,
+        primary_key=True,
+        autoincrement=True
     ),
     sa.Column(
         'sid',
@@ -363,7 +401,7 @@ equity_rights = sa.Table(
     sa.Column('pay_date', sa.String(10)),
     sa.Column('effective_date', sa.String(10)),
     sa.Column('rights_bonus', sa.Integer),
-    sa.Column('rights_price', sa.Numeric(6, 2)),
+    sa.Column('rights_price', sa.Numeric(10, 5)),
 )
 
 # 股权结构
@@ -378,11 +416,8 @@ ownership = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        autoincrement=True,
-        index=True,
-        # unique=True,
-        # nullable=False,
-        # primary_key=True,
+        primary_key=True,
+        autoincrement=True
     ),
     sa.Column(
         'sid',
@@ -390,12 +425,16 @@ ownership = sa.Table(
         nullable=False,
         primary_key=True,
     ),
+    # 变动日为唯一，而公告日会重复 e.g. 000429 (2020-06-22)
     sa.Column(
-        'declared_date',
+        'ex_date',
         sa.String(10),
         primary_key=True
     ),
-    sa.Column('ex_date', sa.String(10)),
+    sa.Column(
+        'declared_date',
+        sa.String(10),
+    ),
     sa.Column('general', sa.Numeric(15, 5)),
     # 存在刚开始非流通
     sa.Column('float', sa.String(10)),
@@ -415,11 +454,8 @@ holder = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        autoincrement=True,
-        index=True,
-        # unique=True,
-        # nullable=False,
-        # primary_key=True,
+        primary_key=True,
+        autoincrement=True
     ),
     # 同一天股票可以多次减持
     sa.Column(
@@ -450,11 +486,8 @@ unfreeze = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        autoincrement=True,
-        index=True,
-        # unique=True,
-        # nullable=False,
-        # primary_key=True,
+        primary_key=True,
+        autoincrement=True
     ),
     sa.Column(
         'sid',
@@ -482,11 +515,8 @@ massive = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        autoincrement=True,
-        index=True,
-        # unique=True,
-        # nullable=False,
-        # primary_key=True,
+        primary_key=True,
+        autoincrement=True
     ),
     sa.Column(
         'sid',
@@ -540,11 +570,8 @@ version_info = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        autoincrement=True,
-        index=True,
-        # unique=True,
-        # nullable=False,
-        # primary_key=True,
+        primary_key=True,
+        autoincrement=True
     ),
     sa.Column(
         'version',
@@ -556,6 +583,7 @@ version_info = sa.Table(
     sa.CheckConstraint('id <= 1')
 )
 
-asset_db_table_names = frozenset(['asset_router',  'equity_basics', 'convertible_basics', 'equity_price',
-                                  'convertible_price', 'fund_price', 'equity_splits', 'equity_rights',
+
+asset_db_table_names = frozenset(['asset_router',  'equity_status', 'equity_basics', 'convertible_basics',
+                                  'equity_price', 'convertible_price', 'fund_price', 'equity_splits', 'equity_rights',
                                   'ownership', 'holder', 'unfreeze', 'massive', 'mcap', 'version_info'])

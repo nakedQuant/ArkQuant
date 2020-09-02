@@ -10,7 +10,6 @@ import json, pandas as pd, time
 from itertools import chain
 from toolz import partition_all, keyfilter
 from gateway.spider.url import ASSERT_URL_MAPPING, ASSET_SUPPLEMENT_URL
-from gateway.driver.client import tsclient
 from gateway.spider import Crawler
 from gateway.database.asset_writer import AssetWriter
 from gateway.driver.tools import _parse_url
@@ -91,26 +90,20 @@ class AssetSpider(Crawler):
 
     def to_be_updated(self):
         left = dict()
-        # equity etf convertible --- mappings
         existing_assets = self._retrieve_assets_from_sqlite()
-        print('asset_router keys', existing_assets.keys())
         # update equity -- list
-        equities = self._request_equities()[:10]
-        print('full equities', len(equities))
-        print('asset_router', len(existing_assets.get('equity', [])))
+        equities = self._request_equities()
         left['equity'] = set(equities) - set(existing_assets.get('equity', []))
         print('update equities', len(left['equity']))
         # update convertible --- dict contain basics
         convertibles = self._request_convertibles()
-        print('full convertible', len(convertibles.keys()))
-        print('asset_router convertible', len(existing_assets.get('convertible', [])))
+        # print('full convertible', len(convertibles.keys()))
         update_convertibles = set(convertibles) - set(existing_assets.get('convertible', []))
         left['convertible'] = keyfilter(lambda x: x in update_convertibles, convertibles)
         print('update convertibles', len(left['convertible']))
         # update funds -- frame  contain basics
         fund = self._request_funds()
-        print('full fund', len(fund))
-        print('asset_router funds', len(existing_assets.get('fund', [])))
+        # print('full fund', len(fund))
         update_funds = set(fund['基金代码'].values) - set(existing_assets.get('fund', []))
         fund_frame = fund[fund['基金代码'].isin(update_funds)] if update_funds else pd.DataFrame()
         left['fund'] = fund_frame
@@ -120,6 +113,22 @@ class AssetSpider(Crawler):
         # print('dual', duals)
         left['dual'] = duals
         return left
+
+    # def to_be_updated(self):
+    #     left = dict()
+    #     existing_assets = self._retrieve_assets_from_sqlite()
+    #     # update equity -- list
+    #     left['equity'] = []
+    #     print('update equities', len(left['equity']))
+    #     # update convertible --- dict contain basics
+    #     left['convertible'] = {}
+    #     print('update convertibles', len(left['convertible']))
+    #     # update funds -- frame  contain basics
+    #     left['fund'] = pd.DataFrame()
+    #     print('update funds', len(left['fund']))
+    #     # print('dual', duals)
+    #     left['dual'] = {}
+    #     return left
 
     def _writer_internal(self, *args):
         raise NotImplementedError()
@@ -152,10 +161,10 @@ class AssetRouterWriter(Crawler):
         equities = update_mapping['equity']
         missing = self.missing['equity']
         t = time.time()
-        if equities:
+        if len(equities):
             # 获取dual
             dual_equity = update_mapping['dual']
-            status = tsclient.to_ts_stats()
+            # status = tsclient.to_ts_stats()
             basics = []
             # 公司基本情况
             for code in equities:
@@ -172,22 +181,19 @@ class AssetRouterWriter(Crawler):
                     missing.discard(code)
             frame = pd.DataFrame(basics)
             frame.to_csv('equity_basics.csv')
-            # # replace null -- Nan
-            frame.replace(to_replace='null', value=pd.NA, inplace=True)
-            frame.set_index('代码', drop=False, inplace=True)
-            # append status 由于吸收合并代码可能会消失但是主体继续上市存在 e.g. T00018
-            status = status.reindex(index=frame.index)
-            frame = pd.concat([frame, status], axis=1)
         else:
             frame = pd.DataFrame()
         print('spider equity basics elapsed time : %f' % (time.time() - t))
         return frame
 
+    # def _request_equities_basics(self, update_mapping):
+    #     frame = pd.read_csv('equity_basics.csv', dtype={'代码': str})
+    #     return frame
+
     @staticmethod
     def _request_convertible_basics(update_mapping):
-        # 剔除未上市的
-        if update_mapping:
-            bond_mappings = update_mapping['convertible']
+        bond_mappings = update_mapping['convertible']
+        if bond_mappings:
             # bond basics 已上市的basics
             text = _parse_url(ASSET_SUPPLEMENT_URL['convertible_supplement'], encoding=None, bs=False)
             text = json.loads(text)

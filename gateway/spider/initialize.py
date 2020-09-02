@@ -24,18 +24,20 @@ ownership_writer = OwnershipWriter()
 
 class SyncSpider(object):
 
-    def __init__(self, init=True):
+    def __init__(self, initialization=True):
         self.n_jobs = multiprocessing.cpu_count()
         # initialize or daily
-        self.pattern = 'initialize' if init else 'daily'
-        self.bundle_writer = BundlesWriter(None if init else 1)
-        self._init()
+        self.pattern = 'initialize' if initialization else 'daily'
+        self.bundle_writer = BundlesWriter(None if initialization else 1)
 
     @classmethod
     def _init(cls):
         router_writer.writer()
 
     def __call__(self):
+        # sync asset_router
+        self._init()
+
         iterable = [self.bundle_writer, adjust_writer, ownership_writer]
 
         def when_done(r):
@@ -58,14 +60,13 @@ class SyncSpider(object):
         edate = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d')
         sdate = '1990-01-01' if self.pattern == 'initialize' else edate
         event_writer.writer(sdate, edate)
-        # return result
 
 
 if __name__ == '__main__':
 
     # initialize
     init = SyncSpider()
-    # # daily
-    # SyncSpider(init=False)
-    # init()
+    # daily
+        # init = SyncSpider(init=False)
+    init()
 

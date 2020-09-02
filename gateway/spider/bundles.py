@@ -95,6 +95,7 @@ class BundlesWriter(Crawler):
             for t in threads:
                 print(t.is_alive())
                 t.join()
+
     def rerun(self):
         dct = valmap(lambda x: len(x), self.missed)
         if sum(dct.values()) != 0:

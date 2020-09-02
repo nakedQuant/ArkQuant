@@ -58,26 +58,30 @@ class TsClient:
 
     def _get_ts_status(self, status):
         """status : D -- delist ; P --- suspend """
-        abnormal = self.pro.stock_basic(exchange='', list_status=status, fields='symbol,name,list_date')
-        abnormal.loc[:,'status'] = status
+        abnormal = self.pro.stock_basic(exchange='', list_status=status, fields='symbol,name, delist_date')
+        abnormal.loc[:, 'status'] = status
         return abnormal
 
-    def to_ts_stats(self):
+    def to_ts_status(self):
         """
             基于tushare模块对股票退市或者暂停上市的状态更新
             暴力更新 获取 清空 入库
         """
-        delist = self._get_ts_status('D')
+        withdraw = self._get_ts_status('D')
         suspend = self._get_ts_status('P')
-        status = delist.append(suspend)
-        status.set_index('symbol', inplace=True)
+        status = withdraw.append(suspend)
+        status.rename(columns={'symbol': 'sid', 'delist_date': 'last_traded'}, inplace=True)
+        # 入库序列号存在重复
+        status.index = range(len(status))
+        print(status)
         return status
 
 
 tsclient = TsClient()
 
 
-# if __name__ == '__main__':
-#
-#     stats = tsclient.to_ts_stats()
-#     print(len(stats), stats)
+if __name__ == '__main__':
+
+    stats = tsclient.to_ts_status()
+    stats.dropna(axis=0, how='any', inplace=True)
+    print(len(stats), stats)

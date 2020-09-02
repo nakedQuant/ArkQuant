@@ -13,13 +13,12 @@ from gateway.database.db_writer import db
 from gateway.database import (
     engine,
     metadata,
-    # ASSET_DB_VERSION,
 )
 
 __all__ = ['AssetWriter']
 
-# 过于过滤frame 防止入库报错
-EquityNullFields = ['sid', 'first_traded', 'initial_price', 'business_scope', 'broker', 'district']
+# 确保过滤还未上市的标的 , 由于退市的股票数据不全只能取关键的上市日字段
+EquityNullFields = ['sid', 'first_traded']
 
 ConvertibleNullFields = ['sid', 'swap_code', 'put_price', 'convert_price', 'convert_dt']
 
@@ -50,7 +49,7 @@ _rename_equity_cols = {
     '证券简称更名历史': 'history_name',
     '注册地址': 'register_area',
     '办公地址': 'office_area',
-    'list_date': 'last_traded'
+    # 'delist_date': 'last_traded'
 }
 
 _rename_convertible_cols = {
@@ -67,58 +66,6 @@ _rename_fund_cols = {
     '基金简称': 'asset_name',
     '类型': 'asset_type'
 }
-
-
-def check_version_info(conn, version_table, expected_version):
-    """
-    Checks for a version value in the version table.
-
-    Parameters
-    ----------
-    conn : sa.Connection
-        The connection to use to perform the check.
-    version_table : sa.Table
-        The version table of the asset database
-    expected_version : int
-        The expected version of the asset database
-
-    Raises
-    ------
-    AssetDBVersionError
-        If the version is in the table and not equal to ASSET_DB_VERSION.
-    """
-
-    # Read the version out of the table
-    version_from_table = conn.execute(
-        sa.select(version_table.c.version),
-    ).scalar()
-
-    # A db without a version is considered v0
-    if version_from_table is None:
-        version_from_table = 0
-
-    # Raise an error if the versions do not match
-    if version_from_table != expected_version:
-        # raise AssetDBVersionError(db_version=version_from_table,
-        #                           expected_version=expected_version)
-        raise ValueError('db_version != version_from_table')
-
-
-def write_version_info(conn, version_table, version_value):
-    """
-    Inserts the version value in to the version table.
-
-    Parameters
-    ----------
-    conn : sa.Connection
-        The connection to use to execute the insert.
-    version_table : sa.Table
-        The version table of the asset database
-    version_value : int
-        The version to write in to the database
-
-    """
-    conn.execute(sa.insert(version_table, values={'version': version_value}))
 
 
 class AssetWriter(object):
@@ -179,9 +126,6 @@ class AssetWriter(object):
             if not tables_already_exist:
                 # Create the SQL tables if they do not already exist.
                 metadata.create_all(txn, checkfirst=True)
-            #     check_version_info(txn, version_info, ASSET_DB_VERSION)
-            # else:
-            #     write_version_info(txn, version_info, ASSET_DB_VERSION)
 
     @staticmethod
     def _write_assets(frame):
@@ -244,41 +188,38 @@ class AssetWriter(object):
         """
         # equity replace null -- Nan remove equities which are not on market
         if not data_set.equities.empty:
+            # # replace null -- Nan
+            data_set.equities.replace(to_replace='null', value=pd.NA, inplace=True)
             data_set.equities['上市日期'].replace('--', None, inplace=True)
-            data_set.equities['发行价格'].replace('', None, inplace=True)
+            data_set.equities['发行价格'].replace('', 0.00, inplace=True)
+            data_set.equities['发行价格'].fillna(0.00, inplace=True)
             data_set.equities.rename(columns=_rename_equity_cols, inplace=True)
             data_set.equities.dropna(axis=0, how='any', subset=EquityNullFields, inplace=True)
             data_set.equities['initial_price'] = data_set.equities['initial_price'].astype(np.float)
             data_set.equities.loc[:, 'asset_type'] = 'equity'
             data_set.equities.fillna('', inplace=True)
-            print('process equity', data_set.equities)
+            print('process equity', data_set.equities.head())
+
         if not data_set.convertibles.empty:
             # convertible
             data_set.convertibles.replace(to_replace='-', value=pd.NA, inplace=True)
-            print('level 1', len(data_set.convertibles))
             data_set.convertibles.rename(columns=_rename_convertible_cols, inplace=True)
-            print('level 2', len(data_set.convertibles))
             # 保留已经上市而且转股的可转债
             data_set.convertibles.dropna(axis=0, how='any', subset=ConvertibleNullFields, inplace=True)
-            print('level 3', len(data_set.convertibles))
             # add and transform maturity date format
             data_set.convertibles.loc[:, 'last_traded'] = data_set.convertibles['maturity_dt'].apply(
                                                         lambda x: x.replace('-', ''))
-            print('level 4', len(data_set.convertibles))
-
             data_set.convertibles.loc[:, 'exchange'] = data_set.convertibles['sid'].apply(
                                                         lambda x: '上海证券交易所' if x.startswith('11') else '深圳证券交易所')
-            print('level 5', len(data_set.convertibles))
             data_set.convertibles['asset_type'] = 'convertible'
-            print('process convertibles 6 ', len(data_set.convertibles))
-            print('process convertibles', data_set.convertibles)
+            print('process convertibles', data_set.convertibles.head())
         if not data_set.funds.empty:
             # fund
             data_set.funds['基金简称'] = data_set.funds['基金简称'].apply(lambda x: x[:-5])
             data_set.funds.rename(columns=_rename_fund_cols, inplace=True)
             data_set.funds.loc[:, 'exchange'] = data_set.funds['sid'].apply(
                                                     lambda x: '上海证券交易所' if x.startswith('5') else '深圳证券交易所')
-            print('fund', data_set.funds)
+            print('process fund', data_set.funds.head())
         return data_set
 
     def write(self, asset_data):
@@ -291,6 +232,8 @@ class AssetWriter(object):
             convertible_frame=frame.convertibles,
             fund_frame=frame.funds,
         )
+        # update last_traded via equity_status transfer to asset_router
+        db.update()
 
     def write_direct(self,
                      equity_frame,

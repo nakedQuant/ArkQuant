@@ -21,7 +21,8 @@ def _parse_url(url, encoding='gbk', bs=True):
     """
     header = {'User-Agent': UserAgent[np.random.randint(0, len(UserAgent)-1)]}
     proxy = {'http': ProxyIp[np.random.randint(0, len(ProxyIp) - 1)]}
-    # request
+    # delay in case of httpError
+    time.sleep(np.random.randint(2, 4))
     if proxy:
         req = requests.get(url, headers=header, proxies=proxy, timeout=3)
     else:
@@ -31,7 +32,6 @@ def _parse_url(url, encoding='gbk', bs=True):
         data = BeautifulSoup(req.text, features='lxml')
     else:
         data = req.text
-    time.sleep(np.random.randint(2, 4))
     return data
 
 
