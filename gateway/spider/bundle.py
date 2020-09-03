@@ -5,10 +5,10 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-import json, pandas as pd, datetime
+import json, pandas as pd, datetime, threading
 from toolz import valmap
 from collections import defaultdict
-from threading import Thread
+from threading import Thread, Lock
 from functools import partial
 from gateway.database.db_writer import db
 from gateway.spider import Crawler
@@ -17,7 +17,7 @@ from gateway.driver.tools import _parse_url
 
 __all__ = ['BundlesWriter']
 
-Method = frozenset(['equity', 'fund', 'convertible'])
+sema = threading.Semaphore(100)
 
 
 class BundlesWriter(Crawler):
@@ -47,50 +47,65 @@ class BundlesWriter(Crawler):
             db.writer(tbl, frame)
 
     def request_equity_kline(self, sid):
-        sid_id = '1.' + sid if sid.startswith('6') else '0.' + sid
-        try:
-            self._crawler({'request_sid': sid_id, 'sid': sid}, 'equity_price', pct=True)
-        except Exception as e:
-            print('spider %s  equity kline failure due to %r' % (sid, e))
-            self.missed['equity'].add(sid)
-        else:
-            self.missed['equity'].discard(sid)
+        with sema:
+            sid_id = '1.' + sid if sid.startswith('6') else '0.' + sid
+            try:
+                self._crawler({'request_sid': sid_id, 'sid': sid}, 'equity_price', pct=True)
+            except Exception as e:
+                print('spider %s  equity kline failure due to %r' % (sid, e))
+                self.missed['equity'].add(sid)
+            else:
+                self.missed['equity'].discard(sid)
 
     def request_fund_kline(self, sid):
         # fund 以1或者5开头 --- 5（SH） 1（SZ）
-        fund_id = '1.' + sid if sid.startswith('5') else '0.' + sid
-        try:
-            self._crawler({'request_sid': fund_id, 'sid': sid}, 'fund_price')
-        except Exception as e:
-            print('spider %s  fund kline failure due to %r' % (sid, e))
-            self.missed['fund'].add(sid)
-        else:
-            self.missed['fund'].discard(sid)
+        with sema:
+            fund_id = '1.' + sid if sid.startswith('5') else '0.' + sid
+            try:
+                self._crawler({'request_sid': fund_id, 'sid': sid}, 'fund_price')
+            except Exception as e:
+                print('spider %s  fund kline failure due to %r' % (sid, e))
+                self.missed['fund'].add(sid)
+            else:
+                self.missed['fund'].discard(sid)
 
     def request_convertible_kline(self, sid):
         # 11开头 --- 6 ； 12开头 --- 0或者3
-        bond_id = '1.' + sid if sid.startswith('11') else '0.' + sid
-        try:
-            self._crawler({'request_sid': bond_id, 'sid': sid}, 'convertible_price')
-        except Exception as e:
-            print('spider %s  convertible kline failure due to %r' % (sid, e))
-            self.missed['convertible'].add(sid)
-        else:
-            self.missed['convertible'].discard(sid)
+        with sema:
+            bond_id = '1.' + sid if sid.startswith('11') else '0.' + sid
+            try:
+                self._crawler({'request_sid': bond_id, 'sid': sid}, 'convertible_price')
+            except Exception as e:
+                print('spider %s  convertible kline failure due to %r' % (sid, e))
+                self.missed['convertible'].add(sid)
+            else:
+                self.missed['convertible'].discard(sid)
 
     def _implement(self, method_name, q):
         method = getattr(self, 'request_{}_kline'.format(method_name))
         threads = []
+        lock = Lock()
         if len(q[method_name]):
             for sid in q[method_name]:
-                print('sid', sid)
-                # 事件对象（线程之间通信）可以控制线程数量通过event set() clear() wait()
-                # Semaphore(value=1) 代表 release() 方法的调用次数减去 acquire() 的调用次数再加上一个初始值(Value)
-                # threading.BoundedSemaphore(value) 有界信号量通过检查以确保它当前的值不会超过初始值。如果超过了初始值，将会引发 ValueError 异常(上下文）
-                # Semaphore --- return threading instance as contextmanager
-                thread = Thread(target=method, kwargs={'sid': sid}, name=sid)
-                thread.start()
-                threads.append(thread)
+                try:
+                    print('sid', sid)
+                    # 事件对象（线程之间通信）可以控制线程数量通过event set() clear() wait()
+                    # Semaphore(value=1) 代表 release() 方法的调用次数减去 acquire() 的调用次数再加上一个初始值(Value)
+                    # threading.BoundedSemaphore(value) 有界信号量通过检查以确保它当前的值不会超过初始值。如果超过了初始值，将会引发 ValueError 异常(上下文）
+                    # Semaphore --- return threading instance as contextmanager
+                    # if len(threads) <= MaxThreads:
+                    thread = Thread(target=method, kwargs={'sid': sid}, name=sid)
+                    thread.start()
+                except RuntimeError:
+                    lock.acquire()
+                    for t in threads:
+                        print(t.is_alive())
+                        t.join()
+                    lock.release()
+                    thread.start()
+                    threads = []
+                finally:
+                    threads.append(thread)
 
             for t in threads:
                 print(t.is_alive())
@@ -118,7 +133,6 @@ class BundlesWriter(Crawler):
 
     def writer(self):
         q = self._retrieve_assets_from_sqlite()
-        # q = {'equity': ['300357', '600636'], 'fund': ['512760', '512880'], 'convertible': ['113581']}
         self._writer_internal(q)
         print('failure bundles asset: %r' % self.missed)
         self.rerun()
@@ -128,6 +142,7 @@ if __name__ == '__main__':
 
     bundle = BundlesWriter(lmt=None)
     bundle.writer()
-    # bundle.request_equity_kline('300357')
-    # bundle.request_convertible_kline('113581')
+    # 琼民源A
+    # bundle.request_equity_kline('000508')
+    # bundle.request_convertible_kline('127021')
     # bundle.request_fund_kline('512760')

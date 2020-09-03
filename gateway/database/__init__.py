@@ -14,6 +14,8 @@ import sqlalchemy as sa
 # .asset_db_migrations
 ASSET_DB_VERSION = 8
 SQLITE_MAX_VARIABLE_NUMBER = 999
+PoolSize = 1000
+OVerFlow = 20
 
 # A frozenset of the names of all tables in the asset db
 # NOTE: When modifying this schema, update the ASSET_DB_VERSION value
@@ -32,8 +34,6 @@ engine_path = 'mysql+pymysql://{user}:{password}@{host}:{port}/{database}'.forma
                                                                                   port=config['port'],
                                                                                   database=config['database'],)
 
-engine = sa.create_engine(engine_path)
+engine = sa.create_engine(engine_path, pool_size=PoolSize, max_overflow=OVerFlow)
 
 metadata = sa.MetaData(bind=engine)
-
-

@@ -242,7 +242,6 @@ convertible_basics = sa.Table(
     ),
 )
 
-
 equity_price = sa.Table(
     'equity_price',
     metadata,
@@ -265,13 +264,13 @@ equity_price = sa.Table(
         nullable=False,
         primary_key=True,
     ),
-    sa.Column('open', sa.Numeric(10, 2), nullable=False),
-    sa.Column('high', sa.Numeric(10, 2), nullable=False),
-    sa.Column('low', sa.Numeric(10, 2), nullable=False),
-    sa.Column('close', sa.Numeric(10, 2), nullable=False),
+    sa.Column('open', sa.Numeric(10, 5), nullable=False),
+    sa.Column('high', sa.Numeric(10, 5), nullable=False),
+    sa.Column('low', sa.Numeric(10, 5), nullable=False),
+    sa.Column('close', sa.Numeric(10, 5), nullable=False),
     sa.Column('volume', sa.Integer, nullable=False),
     sa.Column('amount', sa.Numeric(40, 5), nullable=False),
-    sa.Column('pct', sa.Numeric(5, 2), nullable=False),
+    sa.Column('pct', sa.Numeric(10, 5), nullable=False),
 
 )
 
@@ -302,10 +301,10 @@ convertible_price = sa.Table(
         nullable=False,
         primary_key=True
     ),
-    sa.Column('open', sa.Numeric(10, 2), nullable=False),
-    sa.Column('high', sa.Numeric(10, 2), nullable=False),
-    sa.Column('low', sa.Numeric(10, 2), nullable=False),
-    sa.Column('close', sa.Numeric(10, 2), nullable=False),
+    sa.Column('open', sa.Numeric(10, 5), nullable=False),
+    sa.Column('high', sa.Numeric(10, 5), nullable=False),
+    sa.Column('low', sa.Numeric(10, 5), nullable=False),
+    sa.Column('close', sa.Numeric(10, 5), nullable=False),
     sa.Column('volume', sa.Integer, nullable=False),
     sa.Column('amount', sa.Numeric(40, 5), nullable=False),
 )
@@ -331,10 +330,10 @@ fund_price = sa.Table(
         nullable=False,
         primary_key=True
     ),
-    sa.Column('open', sa.Numeric(10, 3), nullable=False),
-    sa.Column('high', sa.Numeric(10, 3), nullable=False),
-    sa.Column('low', sa.Numeric(10, 3), nullable=False),
-    sa.Column('close', sa.Numeric(10, 3), nullable=False),
+    sa.Column('open', sa.Numeric(10, 5), nullable=False),
+    sa.Column('high', sa.Numeric(10, 5), nullable=False),
+    sa.Column('low', sa.Numeric(10, 5), nullable=False),
+    sa.Column('close', sa.Numeric(10, 5), nullable=False),
     sa.Column('volume', sa.Integer, nullable=False),
     sa.Column('amount', sa.Numeric(40, 5), nullable=False),
 )

@@ -6,9 +6,9 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 import multiprocessing, datetime
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from gateway.spider.asset_router import AssetRouterWriter
-from gateway.spider.bundles import BundlesWriter
+from gateway.spider.bundle import BundlesWriter
 from gateway.spider.divdend_rights import AdjustmentsWriter
 from gateway.spider.ownership import OwnershipWriter
 from gateway.spider.events import EventWriter
@@ -25,20 +25,15 @@ ownership_writer = OwnershipWriter()
 class SyncSpider(object):
 
     def __init__(self, initialization=True):
-        self.n_jobs = multiprocessing.cpu_count()
         # initialize or daily
+        self.n_jobs = multiprocessing.cpu_count()
         self.pattern = 'initialize' if initialization else 'daily'
-        self.bundle_writer = BundlesWriter(None if initialization else 1)
-
-    @classmethod
-    def _init(cls):
-        router_writer.writer()
+        bundle_writer = BundlesWriter(None if initialization else 1)
+        self._iterable = [bundle_writer, adjust_writer, ownership_writer]
 
     def __call__(self):
-        # sync asset_router
-        self._init()
-
-        iterable = [self.bundle_writer, adjust_writer, ownership_writer]
+        # sync asset_router first
+        # router_writer.writer()
 
         def when_done(r):
             # '''每一个进程结束后结果append到result中'''
@@ -46,16 +41,21 @@ class SyncSpider(object):
             print('future : %r finished' % r)
 
         if self.n_jobs == 1:
-            for jb in iterable:
+            for jb in self._iterable:
                 # result.append(jb[0](*jb[1], **jb[2]))
                 getattr(jb, 'writer')()
         else:
             with ThreadPoolExecutor(self.n_jobs) as pool:
-                for jb in iterable:
+                to_do = []
+                for jb in self._iterable:
                     method = getattr(jb, 'writer')
                     # future_result = pool.submit(jb[0], *jb[1], **jb[2])
-                    future_result = pool.submit(method)
-                    future_result.add_done_callback(when_done)
+                    future = pool.submit(method)
+                    future.add_done_callback(when_done)
+                    to_do.append(to_do)
+                    # 线程处理
+                for f in as_completed(to_do):
+                    f.result()
         # execute event_writer
         edate = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d')
         sdate = '1990-01-01' if self.pattern == 'initialize' else edate
@@ -67,6 +67,6 @@ if __name__ == '__main__':
     # initialize
     init = SyncSpider()
     # daily
-        # init = SyncSpider(init=False)
+    # init = SyncSpider(init=False)
     init()
 

@@ -10,7 +10,7 @@ from sqlalchemy import inspect, create_engine, update
 from contextlib import ExitStack
 from weakref import WeakValueDictionary
 from gateway.database.db_schema import asset_db_table_names
-from gateway.database import metadata, engine_path, SQLITE_MAX_VARIABLE_NUMBER
+from gateway.database import metadata, engine_path, SQLITE_MAX_VARIABLE_NUMBER, PoolSize, OVerFlow
 from gateway.driver.client import tsclient
 
 
@@ -25,7 +25,7 @@ class DBWriter(object):
         try:
             return cls._cache[root_path]
         except KeyError:
-            engine = create_engine(root_path, isolation_level=level)
+            engine = create_engine(root_path,  pool_size=PoolSize, max_overflow=OVerFlow, isolation_level=level)
             instance = object().__new__(cls)
             instance._init_db(engine)
             cls._cache[engine] = instance
@@ -137,10 +137,6 @@ class DBWriter(object):
             conn.execute(ins)
 
     def update(self):
-        # append status 由于吸收合并代码可能会消失但是主体继续上市存在 e.g. T00018
-        # 对于暂停上市 delist_date 为None(作为一种长期停盘的情况来考虑，由于我们不能存在后视误差不清楚是否能重新上市）
-        # 基于算法发出信号操作暂时上市的标的, 为了避免前视误差，过滤筛选距离已经退市标的而不是暂停上市  e.g. 5个交易日的股票；
-        # 对于暂停上市的股票可能还存在重新上市的可能性也可能存在退市的可能性 --- None ,状态不断的更新
         self.clear('equity_status')
         df = tsclient.to_ts_status()
         self.writer('equity_status', df)

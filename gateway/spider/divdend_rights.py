@@ -98,7 +98,6 @@ class AdjustmentsWriter(Crawler):
         print('asset deadlines', self.deadlines)
         # 获取所有股票
         equities = self._retrieve_assets_from_sqlite()['equity']
-        # equities = ['300357']
         self._writer_internal(equities)
 
 

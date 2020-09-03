@@ -38,13 +38,6 @@ class Crawler(ABC):
         mapping = valmap(lambda x: list(x), grp)
         return mapping
 
-    # def _retrieve_deadline_from_sqlite(self, tbl):
-    #     table = self.metadata.tables[tbl]
-    #     ins = select([func.max(table.c.declared_date)])
-    #     rp = self.engine.execute(ins)
-    #     deadline = rp.scalar()
-    #     return deadline
-
     def _retrieve_deadlines_from_sqlite(self, tbl):
         table = self.metadata.tables[tbl]
         ins = select([func.max(table.c.declared_date), table.c.sid])

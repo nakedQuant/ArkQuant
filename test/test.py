@@ -10575,3 +10575,5 @@ print(test)
 # print(frame['list_date'])
 # print(frame[frame['代码']=='000003']['list_date'])
 
+# locals() 只读, globals() 可读可写
+

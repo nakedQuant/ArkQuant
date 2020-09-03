@@ -114,81 +114,70 @@ class AssetSpider(Crawler):
         left['dual'] = duals
         return left
 
-    # def to_be_updated(self):
-    #     left = dict()
-    #     existing_assets = self._retrieve_assets_from_sqlite()
-    #     # update equity -- list
-    #     left['equity'] = []
-    #     print('update equities', len(left['equity']))
-    #     # update convertible --- dict contain basics
-    #     left['convertible'] = {}
-    #     print('update convertibles', len(left['convertible']))
-    #     # update funds -- frame  contain basics
-    #     left['fund'] = pd.DataFrame()
-    #     print('update funds', len(left['fund']))
-    #     # print('dual', duals)
-    #     left['dual'] = {}
-    #     return left
-
     def _writer_internal(self, *args):
         raise NotImplementedError()
 
 
 class AssetRouterWriter(Crawler):
-
+    """
+        asset status 由于吸收合并代码可能会消失但是主体继续上市存在 e.g. T00018
+        对于暂停上市 delist_date 为None(作为一种长期停盘的情况来考虑，由于我们不能存在后视误差不清楚是否能重新上市）
+        基于算法发出信号操作暂时上市的标的, 为了避免前视误差，过滤筛选距离已经退市标的而不是暂停上市  e.g. 5个交易日的股票；
+        对于暂停上市的股票可能还存在重新上市的可能性也可能存在退市的可能性 --- None ,状态不断的更新
+    """
     def __init__(self, engine_path=None):
         self._writer = AssetWriter(engine_path)
         self.missing = defaultdict(set)
         self.spider = AssetSpider()
 
-    @staticmethod
-    def _request_equity_basics(code):
-        url = ASSET_SUPPLEMENT_URL['equity_supplement'] % code
-        obj = _parse_url(url)
-        table = obj.find('table', {'id': 'comInfo1'})
-        tag = [item.findAll('td') for item in table.findAll('tr')]
-        tag_chain = list(chain(*tag))
-        raw = [item.get_text() for item in tag_chain]
-        # remove format
-        raw = [i.replace('：', '') for i in raw]
-        raw = [i.strip() for i in raw]
-        brief = list(zip(raw[::2], raw[1::2]))
-        mapping = {item[0]: item[1] for item in brief}
-        mapping.update({'代码': code})
-        return mapping
+    # @staticmethod
+    # def _request_equity_basics(code):
+    #     url = ASSET_SUPPLEMENT_URL['equity_supplement'] % code
+    #     obj = _parse_url(url)
+    #     table = obj.find('table', {'id': 'comInfo1'})
+    #     tag = [item.findAll('td') for item in table.findAll('tr')]
+    #     tag_chain = list(chain(*tag))
+    #     raw = [item.get_text() for item in tag_chain]
+    #     # remove format
+    #     raw = [i.replace('：', '') for i in raw]
+    #     raw = [i.strip() for i in raw]
+    #     brief = list(zip(raw[::2], raw[1::2]))
+    #     mapping = {item[0]: item[1] for item in brief}
+    #     mapping.update({'代码': code})
+    #     return mapping
+    #
+    # def _request_equities_basics(self, update_mapping):
+    #     equities = update_mapping['equity']
+    #     missing = self.missing['equity']
+    #     t = time.time()
+    #     if len(equities):
+    #         # 获取dual
+    #         dual_equity = update_mapping['dual']
+    #         # status = tsclient.to_ts_stats()
+    #         basics = []
+    #         # 公司基本情况
+    #         for code in equities:
+    #             try:
+    #                 mapping = self._request_equity_basics(code)
+    #             except Exception as e:
+    #                 print('code:%s due to %s' % (code, e))
+    #                 missing.add(code)
+    #             else:
+    #                 missing.discard(code)
+    #                 print('scrapy code % s from sina successfully' % code)
+    #                 dual = dual_equity.get(code, None)
+    #                 mapping.update({'港股': dual})
+    #                 basics.append(mapping)
+    #         frame = pd.DataFrame(basics)
+    #         frame.to_csv('equity_basics.csv')
+    #     else:
+    #         frame = pd.DataFrame()
+    #     print('spider equity basics elapsed time : %f' % (time.time() - t))
+    #     return frame
 
     def _request_equities_basics(self, update_mapping):
-        equities = update_mapping['equity']
-        missing = self.missing['equity']
-        t = time.time()
-        if len(equities):
-            # 获取dual
-            dual_equity = update_mapping['dual']
-            # status = tsclient.to_ts_stats()
-            basics = []
-            # 公司基本情况
-            for code in equities:
-                try:
-                    mapping = self._request_equity_basics(code)
-                except Exception as e:
-                    print('code:%s due to %s' % (code, e))
-                    missing.add(code)
-                else:
-                    print('scrapy code % s from sina successfully' % code)
-                    dual = dual_equity.get(code, None)
-                    mapping.update({'港股': dual})
-                    basics.append(mapping)
-                    missing.discard(code)
-            frame = pd.DataFrame(basics)
-            frame.to_csv('equity_basics.csv')
-        else:
-            frame = pd.DataFrame()
-        print('spider equity basics elapsed time : %f' % (time.time() - t))
+        frame = pd.read_csv('equity_basics.csv', dtype={'代码': str})
         return frame
-
-    # def _request_equities_basics(self, update_mapping):
-    #     frame = pd.read_csv('equity_basics.csv', dtype={'代码': str})
-    #     return frame
 
     @staticmethod
     def _request_convertible_basics(update_mapping):

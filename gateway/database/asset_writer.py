@@ -190,8 +190,11 @@ class AssetWriter(object):
         if not data_set.equities.empty:
             # # replace null -- Nan
             data_set.equities.replace(to_replace='null', value=pd.NA, inplace=True)
-            data_set.equities['上市日期'].replace('--', None, inplace=True)
+            # replace(to_value, value) to_replace is a scalar, list or tuple and value is None. ,method = pad(default)
+            # data_set.equities['上市日期'].replace('--', None, inplace=True)
+            data_set.equities['上市日期'].replace('--', pd.NA, inplace=True)
             data_set.equities['发行价格'].replace('', 0.00, inplace=True)
+            # fillna --- Fill NA/NaN values using the specified method.
             data_set.equities['发行价格'].fillna(0.00, inplace=True)
             data_set.equities.rename(columns=_rename_equity_cols, inplace=True)
             data_set.equities.dropna(axis=0, how='any', subset=EquityNullFields, inplace=True)
