@@ -180,12 +180,6 @@ class BcolzDailyReader(BcolzReader):
 
 if __name__ == '__main__':
 
-    # s = pd.Timestamp('2018-01-01')
-    # e = pd.Timestamp('2018-05-01')
-    # minute_reader = BcolzMinuteReader()
-    # value = minute_reader.get_value('sh000001', s, e)
-    # print('minute value', value)
-    # spot = minute_reader.get_spot_value()
     s = '20200101'
     e = '20200901'
     daily_reader = BcolzDailyReader()

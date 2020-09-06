@@ -8,9 +8,8 @@ Created on Tue Mar 12 15:37:47 2019
 import sqlalchemy as sa
 from gateway.database import metadata
 
-
 __all__ = [
-           'mcap',
+           'm_cap',
            'holder',
            'unfreeze',
            'massive',
@@ -28,7 +27,6 @@ __all__ = [
            'asset_db_table_names'
 ]
 
-
 asset_router = sa.Table(
     'asset_router',
     metadata,
@@ -36,7 +34,6 @@ asset_router = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        primary_key=True,
         autoincrement=True
     ),
     sa.Column(
@@ -84,7 +81,6 @@ asset_router = sa.Table(
         sa.String(6),
         default='CH'
     ),
-
 )
 
 # status table intend to sync asset_router last_traded
@@ -95,7 +91,6 @@ equity_status = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        primary_key=True,
         autoincrement=True
     ),
     sa.Column(
@@ -129,7 +124,6 @@ equity_basics = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        primary_key=True,
         autoincrement=True
     ),
     sa.Column(
@@ -179,7 +173,6 @@ convertible_basics = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        primary_key=True,
         autoincrement=True
     ),
     sa.Column(
@@ -249,7 +242,6 @@ equity_price = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        primary_key=True,
         autoincrement=True
     ),
     sa.Column(
@@ -281,7 +273,6 @@ convertible_price = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        primary_key=True,
         autoincrement=True
     ),
     sa.Column(
@@ -290,11 +281,6 @@ convertible_price = sa.Table(
         nullable=False,
         primary_key=True,
     ),
-    # sa.Column(
-    #     'swap_code',
-    #     sa.String(10),
-    #     nullable=False
-    # ),
     sa.Column(
         'trade_dt',
         sa.String(10),
@@ -316,7 +302,6 @@ fund_price = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        primary_key=True,
         autoincrement=True
     ),
     sa.Column('sid',
@@ -338,18 +323,17 @@ fund_price = sa.Table(
     sa.Column('amount', sa.Numeric(40, 5), nullable=False),
 )
 
-# declared_date : 公告日期 ; record_date(ex_date) : 登记日 ; pay_date : 除权除息日 ,effective_date :上市日期
-# 股权登记日后的下一个交易日就是除权日或除息日，这一天购入该公司股票的股东不再享有公司此次分红配股
-# 红股上市日指上市公司所送红股可上市交易（卖出）的日期,上交所证券的红股上市日为股权除权日的下一个交易日；
-# 深交所证券的红股上市日为股权登记日后的第3个交易日
 equity_splits = sa.Table(
+    # declared_date : 公告日期 ; record_date(ex_date) : 登记日 ; pay_date : 除权除息日 ,effective_date :上市日期;
+    # 股权登记日后的下一个交易日就是除权日或除息日，这一天购入该公司股票的股东不再享有公司此次分红配股
+    # 红股上市日指上市公司所送红股可上市交易（卖出）的日期,上交所证券的红股上市日为股权除权日的下一个交易日；
+    # 深交所证券的红股上市日为股权登记日后的第3个交易日
     'equity_splits',
     metadata,
     sa.Column(
         'id',
         sa.Integer,
         default=0,
-        primary_key=True,
         autoincrement=True
     ),
     sa.Column(
@@ -370,6 +354,7 @@ equity_splits = sa.Table(
     sa.Column('sid_transfer', sa.Integer),
     # e.g. 000507 --- 0.42429
     sa.Column('bonus', sa.Numeric(20, 10)),
+    # 实施 | 不分配
     sa.Column('progress', sa.Text),
     )
 
@@ -381,7 +366,6 @@ equity_rights = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        primary_key=True,
         autoincrement=True
     ),
     sa.Column(
@@ -404,18 +388,17 @@ equity_rights = sa.Table(
 )
 
 # 股权结构
-# ['变动日期', '公告日期', '股本结构图', '变动原因', '总股本', '流通股', '流通A股', '高管股', '限售A股',
-#  '流通B股', '限售B股', '流通H股', '国家股', '国有法人股', '境内法人股', '境内发起人股', '募集法人股',
-#  '一般法人股', '战略投资者持股', '基金持股', '转配股', '内部职工股', '优先股'],
-# 高管股 属于限售股 --- 限售A股为空 ， 但是高管股不为0 ，总股本 = 流通A股 + 高管股 + 限售A股
 ownership = sa.Table(
+    # ['变动日期', '公告日期', '股本结构图', '变动原因', '总股本', '流通股', '流通A股', '高管股', '限售A股',
+    #  '流通B股', '限售B股', '流通H股', '国家股', '国有法人股', '境内法人股', '境内发起人股', '募集法人股',
+    #  '一般法人股', '战略投资者持股', '基金持股', '转配股', '内部职工股', '优先股'],
+    # 高管股 属于限售股 --- 限售A股为空 ， 但是高管股不为0 ，总股本 = 流通A股 + 高管股 + 限售A股
     'ownership',
     metadata,
     sa.Column(
         'id',
         sa.Integer,
         default=0,
-        primary_key=True,
         autoincrement=True
     ),
     sa.Column(
@@ -436,13 +419,13 @@ ownership = sa.Table(
     ),
     sa.Column('general', sa.Numeric(15, 5)),
     # 存在刚开始非流通
-    sa.Column('float', sa.String(10)),
+    sa.Column('float', sa.String(20)),
     # 由于非流通分为高管股以及限制股 所以 -- 表示
-    sa.Column('manager', sa.String(10)),
-    sa.Column('strict', sa.String(10)),
-    sa.Column('b_float', sa.String(10)),
-    sa.Column('b_strict', sa.String(10)),
-    sa.Column('h_float', sa.String(10)),
+    sa.Column('manager', sa.String(20)),
+    sa.Column('strict', sa.String(20)),
+    sa.Column('b_float', sa.String(20)),
+    sa.Column('b_strict', sa.String(20)),
+    sa.Column('h_float', sa.String(20)),
 )
 
 # 股东增减持
@@ -453,7 +436,6 @@ holder = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        primary_key=True,
         autoincrement=True
     ),
     # 同一天股票可以多次减持
@@ -485,7 +467,6 @@ unfreeze = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        primary_key=True,
         autoincrement=True
     ),
     sa.Column(
@@ -503,7 +484,7 @@ unfreeze = sa.Table(
     ),
     sa.Column('release_type', sa.Text, nullable=False),
     # 解禁市值占解禁前流动市值比例
-    sa.Column('zb', sa.Numeric(10, 8), nullable=False)
+    sa.Column('zb', sa.Numeric(20, 18), nullable=False)
 )
 
 # 股东大宗交易
@@ -514,7 +495,6 @@ massive = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        primary_key=True,
         autoincrement=True
     ),
     sa.Column(
@@ -537,13 +517,19 @@ massive = sa.Table(
     sa.Column('buyer', sa.Text, nullable=False),
     sa.Column('seller', sa.Text, nullable=False),
     # 成交总额/流通市值
-    sa.Column('cjeltszb', sa.Numeric(10, 8), nullable=False),
+    sa.Column('cjeltszb', sa.Numeric(20, 18), nullable=False),
 )
 
 # 流通市值
-mcap = sa.Table(
-    'mcap',
+m_cap = sa.Table(
+    'm_cap',
     metadata,
+    sa.Column(
+        'id',
+        sa.Integer,
+        default=0,
+        autoincrement=True
+    ),
     sa.Column(
         'sid',
         sa.Integer,
@@ -556,10 +542,21 @@ mcap = sa.Table(
         sa.String(10),
         nullable=False,
         primary_key=True),
-    sa.Column('mkv', sa.Numeric(15,5), nullable=False),
-    sa.Column('mkv_cap', sa.Numeric(15, 5), nullable=False),
-    sa.Column('mkv_strict', sa.Numeric(15, 5), nullable=False),
+    sa.Column(
+        'mkv',
+        sa.Numeric(15, 5),
+        nullable=False
+    ),
+    sa.Column(
+        'mkv_cap',
+        sa.Numeric(15, 5),
+        nullable=False),
+    sa.Column(
+        'mkv_strict',
+        sa.Numeric(15, 5),
+        nullable=False
     )
+)
 
 # 版本
 version_info = sa.Table(
@@ -569,7 +566,6 @@ version_info = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        primary_key=True,
         autoincrement=True
     ),
     sa.Column(
@@ -582,7 +578,9 @@ version_info = sa.Table(
     sa.CheckConstraint('id <= 1')
 )
 
-
-asset_db_table_names = frozenset(['asset_router',  'equity_status', 'equity_basics', 'convertible_basics',
-                                  'equity_price', 'convertible_price', 'fund_price', 'equity_splits', 'equity_rights',
-                                  'ownership', 'holder', 'unfreeze', 'massive', 'mcap', 'version_info'])
+asset_db_table_names = frozenset([
+    'asset_router',
+    'equity_status',
+    'equity_basics',
+    'convertible_basics'
+])

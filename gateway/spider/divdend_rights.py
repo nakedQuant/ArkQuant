@@ -43,7 +43,7 @@ class AdjustmentsWriter(Crawler):
         else:
             delimeter = [item.split('\n')[1:-2] for item in raw]
             frame = pd.DataFrame(delimeter, columns=['declared_date', 'rights_bonus', 'rights_price',
-                                                     'benchmark_share', 'pay_date', 'record_date',
+                                                     'benchmark_share', 'pay_date', 'ex_date',
                                                      '缴款起始日', '缴款终止日', 'effective_date', '募集资金合计'])
             frame.loc[:, 'sid'] = symbol
             deadline = self.deadlines['equity_rights'].get(symbol, None)
@@ -60,7 +60,7 @@ class AdjustmentsWriter(Crawler):
         else:
             delimeter = [item.split('\n')[1:-2] for item in raw]
             frame = pd.DataFrame(delimeter, columns=['declared_date', 'sid_bonus', 'sid_transfer', 'bonus',
-                                                     'progress', 'pay_date', 'record_date', 'effective_date'])
+                                                     'progress', 'pay_date', 'ex_date', 'effective_date'])
             frame.loc[:, 'sid'] = sid
             deadline = self.deadlines['equity_splits'].get(sid, None)
             divdends = frame[frame['declared_date'] > deadline] if deadline else frame
@@ -74,11 +74,13 @@ class AdjustmentsWriter(Crawler):
 
     def rerun(self):
         if len(self.missed):
-            self._writer_internal(self.missed)
+            print('missing', self.missed)
+            missed = self.missed.copy()
+            # RuntimeError: Set changed size during iteration
+            self._writer_internal(missed)
             self.rerun()
         # reset
         self.missed = set()
-        self.deadlines.clear()
 
     def _writer_internal(self, equities):
         for sid in equities:
@@ -95,10 +97,10 @@ class AdjustmentsWriter(Crawler):
     def writer(self):
         # 获取数据库的最新时点
         self._record_deadlines()
-        print('asset deadlines', self.deadlines)
         # 获取所有股票
         equities = self._retrieve_assets_from_sqlite()['equity']
         self._writer_internal(equities)
+        self.rerun()
 
 
 if __name__ == '__main__':

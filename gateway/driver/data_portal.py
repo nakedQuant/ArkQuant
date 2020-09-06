@@ -29,6 +29,7 @@ class DataPortal(object):
 
     Parameters
     ----------
+    rule --- resample rule
     asset_finder : assets.assets.AssetFinder
         The AssetFinder instance used to resolve asset.
     """
@@ -312,3 +313,8 @@ class DataPortal(object):
     def get_equity_factor(code):
         factor = tsclient.to_ts_adjfactor(code)
         return factor
+
+
+if  __name__ == '__main__':
+
+    data_portal = DataPortal()

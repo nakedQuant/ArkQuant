@@ -5,11 +5,9 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-import pandas as pd, numpy as np, sqlalchemy as sa, json
-from sqlalchemy import MetaData, select
-from gateway.database import engine
-from gateway.driver.bar_reader import AssetSessionReader
-from gateway.driver.tools import _parse_url
+import pandas as pd, numpy as np, sqlalchemy as sa
+from sqlalchemy import select
+from gateway.database import engine, metadata
 from _calendar.trading_calendar import calendar
 
 __all__ = [
@@ -18,6 +16,10 @@ __all__ = [
     'Convertible',
     'Fund'
 ]
+
+
+# 科创板股票上市后的前5个交易日不设涨跌幅限制，从第六个交易日开始设置20%涨跌幅限制
+RestrictedWindow = 5
 
 
 class Asset(object):
@@ -30,10 +32,13 @@ class Asset(object):
         Persistent unique identifier assigned to the asset.
     engine : str
         sqlalchemy engine
+
+    extend :
+        __get__(self, instance, owner):调用一个属性时,触发
+        __set__(self, instance, value):为一个属性赋值时,触发
+        __delete__(self, instance):采用del删除属性时,触发
     """
     __slots__ = ['sid']
-
-    reader = AssetSessionReader()
 
     def __init__(self, sid):
         self.sid = sid
@@ -43,12 +48,12 @@ class Asset(object):
     def _retrieve_asset_mappings(self):
         table = self.metadata.tables['asset_router']
         ins = select([table.c.asset_type, table.c.asset_name, table.c.first_traded,
-                      table.c.last_traded, table.c.country_code])
+                      table.c.last_traded, table.c.country_code, table.c.exchange])
         ins = ins.where(table.c.sid == self.sid)
         rp = self.engine.execute(ins)
-        assets = pd.DataFrame(rp.fetchall(), columns=['asset_type', 'asset_name', 'first_traded',
-                                                      'last_traded', 'country_code', 'status'])
-        for k, v in assets.iloc[0, :].items():
+        basics = pd.DataFrame(rp.fetchall(), columns=['asset_type', 'asset_name', 'first_traded',
+                                                      'last_traded', 'country_code', 'exchange'])
+        for k, v in basics.iloc[0, :].items():
             self.__setattr__(k, v)
 
     def _supplementary_for_asset(self):
@@ -68,7 +73,8 @@ class Asset(object):
 
     @property
     def metadata(self):
-        return MetaData(bind=self.engine)
+        metadata.reflect(bind=engine)
+        return metadata
 
     @property
     def tick_size(self):
@@ -79,12 +85,9 @@ class Asset(object):
         return self.tick_size
 
     @property
-    # 日内交易日
     def is_interday(self):
+        # 日内交易日
         return False
-
-    def __setattr__(self, key, value):
-        raise NotImplementedError()
 
     def restricted(self, dt):
         raise NotImplementedError()
@@ -105,14 +108,18 @@ class Asset(object):
         -------
         boolean: whether the asset is alive at the given dt.
         """
-        if self.last_traded != 'null':
+        if self.last_traded :
             active = self.first_traded <= session_label <= self.last_traded
         else:
-            active = self.first_trade <= session_label
+            active = self.first_traded <= session_label
+        return active
+
+    def is_active(self, session_label):
+        active = self._is_active(session_label)
         return active
 
     def __repr__(self):
-        return '%s(%d)' % (type(self).__name__, self.sid)
+        return '%s(%s)' % (type(self).__name__, self.sid)
 
     def __reduce__(self):
         """
@@ -127,7 +134,6 @@ class Asset(object):
                                  self.exchange,
                                  self.first_traded,
                                  self.last_traded,
-                                 self.status,
                                  self.tick_size,
                                  self.price_multiplier
                                  ))
@@ -146,7 +152,6 @@ class Asset(object):
             'asset_name': self.asset_name,
             'first_traded': self.first_traded,
             'last_traded': self.last_traded,
-            'status': self.status,
             'exchange': self.exchange,
             'tick_size': self.tick_size,
             'multiplier': self.price_multiplier
@@ -160,12 +165,10 @@ class Equity(Asset):
     """
     def __init__(self, sid):
         super(Equity, self).__init__(sid)
-        self._retrieve_asset_mappings()
-        self._supplementary_for_asset()
 
     def _supplementary_for_asset(self):
         tbl = self.metadata.tables['equity_basics']
-        ins = sa.select([tbl.c.dual,
+        ins = sa.select([tbl.c.dual_sid,
                          tbl.c.broker,
                          tbl.c.district,
                          tbl.c.initial_price]).where(tbl.c.sid == self.sid)
@@ -187,22 +190,18 @@ class Equity(Asset):
         per = 1 if self.sid.startswith('688') else self.tick_size
         return per
 
-    def __setattr__(self, key, value):
-        raise NotImplementedError()
-
     def restricted(self, dt):
-
         """
             科创板股票上市后的前5个交易日不设涨跌幅限制，从第六个交易日开始设置20%涨跌幅限制
         """
-        end_dt = self.trading_calendar.dt_window_size(dt, self._restricted_window)
+        end_dt = self.trading_calendar.dt_window_size(dt, RestrictedWindow)
 
         if self.first_traded == dt:
-            _limit = np.inf if self.sid.startwith('688') else 0.44
-        elif self.first_traded <= end_dt:
-            _limit = np.inf if self.sid.startwith('688') else 0.1
+            _limit = np.inf if self.sid.startswith('688') else 0.44
+        elif self.first_traded >= end_dt:
+            _limit = np.inf if self.sid.startswith('688') else 0.1
         else:
-            _limit = 0.2 if self.sid.startwith('688') else 0.1
+            _limit = 0.2 if self.sid.startswith('688') else 0.1
         return _limit
 
     @property
@@ -211,24 +210,6 @@ class Equity(Asset):
             复牌时，对已经接受的申报实行集合竞价撮合交易，申报价格最小变动单位为0.01"""
         bid_mechanism = 0.02 if self.sid.startwith('688') else None
         return bid_mechanism
-
-    def is_active(self, session_label):
-        # between first_traded and last_traded ; is tradeable on session label
-        active = self._is_active(session_label)
-        data = self.reader.load_raw_arrays([session_label, session_label], self.sid, ['close'])
-        active &= (True if data else False)
-        return active
-
-    @staticmethod
-    def suspend(dt):
-        """
-            获取时间dt --- 2020-07-13停盘信息
-        """
-        supspend_url = 'http://datainterface.eastmoney.com/EM_DataCenter/JS.aspx?type=FD&sty=SRB&st=0&sr=-1&p=1&ps=50&'\
-                       'js={"pages":(pc),"data":[(x)]}&mkt=1&fd=%s' % dt
-        text = _parse_url(supspend_url, bs=False, encoding=None)
-        text = json.loads(text)
-        return text['data']
 
     def is_specialized(self, dt):
         """
@@ -253,8 +234,6 @@ class Convertible(Asset):
     """
     def __init__(self, bond_id):
         super(Convertible, self).__init__(bond_id)
-        self._retrieve_asset_mappings()
-        self._supplementary_for_asset()
 
     def _supplementary_for_asset(self):
         tbl = self.metadata.tables['convertible_basics']
@@ -269,13 +248,13 @@ class Convertible(Asset):
         rp = self.engine.execute(ins)
         df = pd.DataFrame(rp.fetchall(), columns=['swap_code',
                                                   'put_price',
-                                                  'put_price',
                                                   'redeem_price',
                                                   'convert_price',
                                                   'convert_dt',
                                                   'put_convert_price',
                                                   'guarantor'])
-        for k, v in df.iloc[0, :].to_dict():
+
+        for k, v in df.iloc[0, :].to_dict().items():
             self.__setattr__(k, v)
 
     @property
@@ -286,15 +265,8 @@ class Convertible(Asset):
     def bid_mechanism(self):
         return None
 
-    def __setattr__(self, key, value):
-        raise NotImplementedError()
-
     def restricted(self, dt):
         return None
-
-    def is_active(self, dt):
-        active = self._is_active(dt)
-        return active
 
 
 class Fund(Asset):
@@ -305,21 +277,27 @@ class Fund(Asset):
     """
     def __init__(self, fund_id):
         super(Fund, self).__init__(fund_id)
-        self._retrieve_asset_mappings()
 
     def _supplementary_for_asset(self):
-        raise NotImplementedError()
+        """
+            fund has no extraordinary basics
+        """
 
     @property
     def bid_mechanism(self):
         return None
 
-    def __setattr__(self, key, value):
-        raise NotImplementedError()
-
     def restricted(self, dt):
         return 0.1
 
-    def is_active(self, session_label):
-        active = self._is_active(session_label)
-        return active
+
+if __name__ == '__main__':
+
+    asset = Equity('300570')
+    # asset = Fund('515500')
+    # asset = Convertible('123013')
+    # p = pickle.dumps(asset)
+    limit = asset.restricted('2020-03-05')
+    limit = asset.is_active('2020-03-05')
+    # limit = asset.suspend('2020-09-04')
+    print('limit', limit)

@@ -9,10 +9,15 @@ from collections import defaultdict
 from abc import ABC, abstractmethod
 import numpy as np
 from _calendar.trading_calendar import calendar
+from gateway.driver.bar_reader import AssetSessionReader
+from gateway.driver.bcolz_reader import BcolzMinuteReader
+from gateway.driver.adjustment_reader import SQLiteAdjustmentReader
 from gateway.driver.adjustArray import (
                         AdjustedDailyWindow,
                         AdjustedMinuteWindow
                                         )
+from gateway.asset.assets import Equity, Convertible, Fund
+
 
 __all__ = [
     'HistoryMinuteLoader',
@@ -116,6 +121,7 @@ class ExpiredCache(object):
             Raised if the key is not in the cache or the value for the key
             has expired.
         """
+        print('key', key)
         try:
             return self._cache[key].unwrap(dt)
         except Expired:
@@ -156,7 +162,7 @@ class HistoryLoader(ABC):
     def _compute_slice_window(self, data, date, window):
         raise NotImplementedError
 
-    def _ensure_adjust_windows(self, dts, assets, field):
+    def _ensure_sliding_windows(self, dts, assets, field):
         """
         Ensure that there is a Float64Multiply window for each asset that can
         provide data for the given parameters.
@@ -186,7 +192,7 @@ class HistoryLoader(ABC):
         needed_assets = []
         for asset in assets:
             try:
-                _window = self._window_blocks[asset].get(
+                _window = self._window_blocks[asset.sid].get(
                     field, dts)
             except KeyError or Expired:
                 needed_assets.append(asset)
@@ -232,7 +238,7 @@ class HistoryLoader(ABC):
         out : np.ndarray with shape(len(days between start, end), len(asset))
         """
         # 不包括当天数据
-        session = self.trading_calendar.sessions_in_range(dts, window, include=False)
+        session = self.trading_calendar.session_in_window(dts, window, include=False)
 
         if len(session) == 1:
             block_arrays = self.adjust_window.array(session, assets, field)
@@ -288,3 +294,17 @@ class HistoryMinuteLoader(HistoryLoader):
         ticker = np.clip(np.array(_window.index), *dts)
         _slice_window = _window.reindex(ticker)
         return _slice_window
+
+
+if __name__ == '__main__':
+
+    minute_reader = BcolzMinuteReader()
+    session_reader = AssetSessionReader()
+    adjustment_reader = SQLiteAdjustmentReader()
+
+    asset = Equity('000001')
+    sessions = ['2010-08-10', '2015-10-30']
+    # minute_history = HistoryMinuteLoader(minute_reader, adjustment_reader)
+    daily_history = HistoryDailyLoader(session_reader, adjustment_reader)
+    his = daily_history.history([asset], ['close', 'open'], sessions[0], 10)
+    print('his', his)

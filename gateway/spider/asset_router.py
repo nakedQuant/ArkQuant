@@ -130,54 +130,52 @@ class AssetRouterWriter(Crawler):
         self.missing = defaultdict(set)
         self.spider = AssetSpider()
 
-    # @staticmethod
-    # def _request_equity_basics(code):
-    #     url = ASSET_SUPPLEMENT_URL['equity_supplement'] % code
-    #     obj = _parse_url(url)
-    #     table = obj.find('table', {'id': 'comInfo1'})
-    #     tag = [item.findAll('td') for item in table.findAll('tr')]
-    #     tag_chain = list(chain(*tag))
-    #     raw = [item.get_text() for item in tag_chain]
-    #     # remove format
-    #     raw = [i.replace('：', '') for i in raw]
-    #     raw = [i.strip() for i in raw]
-    #     brief = list(zip(raw[::2], raw[1::2]))
-    #     mapping = {item[0]: item[1] for item in brief}
-    #     mapping.update({'代码': code})
-    #     return mapping
-    #
-    # def _request_equities_basics(self, update_mapping):
-    #     equities = update_mapping['equity']
-    #     missing = self.missing['equity']
-    #     t = time.time()
-    #     if len(equities):
-    #         # 获取dual
-    #         dual_equity = update_mapping['dual']
-    #         # status = tsclient.to_ts_stats()
-    #         basics = []
-    #         # 公司基本情况
-    #         for code in equities:
-    #             try:
-    #                 mapping = self._request_equity_basics(code)
-    #             except Exception as e:
-    #                 print('code:%s due to %s' % (code, e))
-    #                 missing.add(code)
-    #             else:
-    #                 missing.discard(code)
-    #                 print('scrapy code % s from sina successfully' % code)
-    #                 dual = dual_equity.get(code, None)
-    #                 mapping.update({'港股': dual})
-    #                 basics.append(mapping)
-    #         frame = pd.DataFrame(basics)
-    #         frame.to_csv('equity_basics.csv')
-    #     else:
-    #         frame = pd.DataFrame()
-    #     print('spider equity basics elapsed time : %f' % (time.time() - t))
-    #     return frame
+    @staticmethod
+    def _request_equity_basics(code):
+        url = ASSET_SUPPLEMENT_URL['equity_supplement'] % code
+        obj = _parse_url(url)
+        table = obj.find('table', {'id': 'comInfo1'})
+        tag = [item.findAll('td') for item in table.findAll('tr')]
+        tag_chain = list(chain(*tag))
+        raw = [item.get_text() for item in tag_chain]
+        # remove format
+        raw = [i.replace('：', '') for i in raw]
+        raw = [i.strip() for i in raw]
+        brief = list(zip(raw[::2], raw[1::2]))
+        mapping = {item[0]: item[1] for item in brief}
+        mapping.update({'代码': code})
+        return mapping
 
     def _request_equities_basics(self, update_mapping):
-        frame = pd.read_csv('equity_basics.csv', dtype={'代码': str})
+        equities = update_mapping['equity']
+        t = time.time()
+        if len(equities):
+            # 获取dual
+            dual_equity = update_mapping['dual']
+            basics = []
+            # 公司基本情况
+            for code in equities:
+                try:
+                    mapping = self._request_equity_basics(code)
+                except Exception as e:
+                    print('code:%s due to %s' % (code, e))
+                    self.missing['equity'].add(code)
+                else:
+                    self.missing['equity'].discard(code)
+                    print('scrapy code % s from sina successfully' % code)
+                    dual = dual_equity.get(code, None)
+                    mapping.update({'港股': dual})
+                    basics.append(mapping)
+            frame = pd.DataFrame(basics)
+            # frame.to_csv('equity_basics.csv')
+        else:
+            frame = pd.DataFrame()
+        print('spider equity basics elapsed time : %f' % (time.time() - t))
         return frame
+
+    # def _request_equities_basics(self, update_mapping):
+    #     frame = pd.read_csv('equity_basics.csv', dtype={'代码': str})
+    #     return frame
 
     @staticmethod
     def _request_convertible_basics(update_mapping):
@@ -223,7 +221,9 @@ class AssetRouterWriter(Crawler):
     def rerun(self):
         print('missing equity', self.missing)
         if len(self.missing['equity']):
-            equity_frames = self._request_equities_basics(self.missing)
+            missed = self.missing.copy()
+            # RuntimeError: Set changed size during iteration
+            equity_frames = self._request_equities_basics(missed)
             AssetData.convertibles = AssetData.funds = pd.DataFrame()
             AssetData.equities = equity_frames
             self._writer.write(AssetData)

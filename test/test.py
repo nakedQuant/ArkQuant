@@ -10577,3 +10577,51 @@ print(test)
 
 # locals() 只读, globals() 可读可写
 
+
+# if calendar is None:
+#     cal = self.trading_calendar
+# elif calendar is calendars.US_EQUITIES:
+#     cal = get_calendar('XNYS')
+# elif calendar is calendars.US_FUTURES:
+#     cal = get_calendar('us_futures')
+
+# asset_db_table_names = frozenset(['asset_router',  'equity_status', 'equity_basics', 'convertible_basics',
+#                                   'equity_price', 'convertible_price', 'fund_price', 'equity_splits', 'equity_rights',
+#                                   'ownership', 'holder', 'unfreeze', 'massive', 'm_cap', 'version_info'])
+
+# metadata.reflect(bind=engine)
+
+# current mappings   data: a nested dictionary: knowledge_date -> lookup_date ->
+# {add: [symbol list], 'delete': []}, delete: [symbol list]}
+#     def update_current(self, effective_date, symbols, change_func):
+
+# assets = [asset for asset in chain(*self._asset_type_cache.values())
+#           if asset.asset_type == category]
+
+# def window_arrays(self, sessions, assets, field):
+#     """
+#     :param sessions: [a,b]
+#     :param assets: Assets list
+#     :param field: str or list
+#     :return: arrays which is adjusted by divdends and rights
+#     """
+#     adjustments, raw_arrays, sessions = self._compatible_adjustment.calculate_adjustments_in_sessions(sessions, assets)
+#     adjusted_fields = set(field) & AdjustFields
+#     if adjusted_fields:
+#         # 计算调整数据
+#         adjust_arrays = {}
+#         for asset in assets:
+#             sid = asset.sid
+#             qfq = adjustments[sid]
+#             raw = raw_arrays[sid]
+#             try:
+#                 qfq = qfq.reindex(sessions)
+#                 qfq.fillna(method='bfill', inplace=True)
+#                 qfq.fillna(1.0, inplace=True)
+#                 raw[adjusted_fields] = raw.loc[:, adjusted_fields].multiply(qfq, axis=0)
+#             except Exception as e:
+#                 print(e, asset)
+#             adjust_arrays[sid] = raw
+#     else:
+#         adjust_arrays = raw_arrays
+#     return adjust_arrays

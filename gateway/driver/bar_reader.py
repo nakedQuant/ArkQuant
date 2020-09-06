@@ -12,13 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from abc import ABC, abstractmethod
-import sqlalchemy as sa
-import pandas as pd
+import sqlalchemy as sa, pandas as pd, numpy as np
 from functools import partial
-from sqlalchemy import MetaData
-from toolz import groupby
-from gateway.database import engine
+from toolz import groupby, valmap
+from gateway.database import engine, metadata
 from gateway.driver.tools import unpack_df_to_component_dict
+from gateway.asset.assets import Equity, Convertible, Fund
+
+KLINE_COLUMNS_TYPE = {
+            'open': np.float64,
+            'high': np.float64,
+            'low': np.float64,
+            'close': np.float64,
+            'volume': np.int,
+            'amount': np.float64
+                    }
 
 
 class BarReader(ABC):
@@ -29,7 +37,8 @@ class BarReader(ABC):
 
     @property
     def metadata(self):
-        return MetaData(bind=engine)
+        metadata.reflect(bind=engine)
+        return metadata
 
     @abstractmethod
     def get_spot_value(self, asset, dt, fields):
@@ -94,7 +103,7 @@ class AssetSessionReader(BarReader):
         return 'daily'
 
     def get_equity_pct(self, dt):
-        tbl = self.metadata['equity_price']
+        tbl = self.metadata.tables['equity_price']
         sql = sa.select([tbl.c.sid, sa.cast(tbl.c.pct, sa.Numeric(10, 2)).label('pct')])\
             .where(tbl.c.trade_dt == dt)
         rp = self.engine.execute(sql)
@@ -102,34 +111,53 @@ class AssetSessionReader(BarReader):
         data.set_index('sid', inplace=True)
         return data
 
+    @staticmethod
+    def _adjust_frame_type(df):
+        for col, col_type in KLINE_COLUMNS_TYPE.items():
+            try:
+                df[col] = df[col].astype(col_type)
+            except KeyError:
+                pass
+            except TypeError:
+                raise TypeError('%s cannot mutate into %s' % (col, col_type))
+        return df
+
     def get_spot_value(self, dt, asset, fields):
         """
             retrieve asset data  on dt
         """
         table_name = '%s_price' % asset.asset_type
-        tbl = self.metadata[table_name]
-        orm = sa.select([
-                    sa.cast(tbl.c.open, sa.Numeric(10, 2)).label('open'),
-                    sa.cast(tbl.c.close, sa.Numeric(12, 2)).label('close'),
-                    sa.cast(tbl.c.high, sa.Numeric(10, 2)).label('high'),
-                    sa.cast(tbl.c.low, sa.Numeric(10, 3)).label('low'),
-                    sa.cast(tbl.c.volume, sa.Numeric(15, 0)).label('volume'),
-                    sa.cast(tbl.c.amount, sa.Numeric(15, 2)).label('amount')])\
-            .where(sa.and_(tbl.c.trade_dt == dt, tbl.c.sid == asset.sid))
-        rp = self.engine.execute(orm)
-        arrays = [[r.trade_dt, r.code, r.open, r.close, r.high, r.low, r.volume] for r in
-                  rp.fetchall()]
-        kline = pd.DataFrame(arrays, columns=['open', 'close', 'high',
-                                              'low', 'volume', 'amount'])
-        return kline.loc[:, fields]
+        try:
+            tbl = self.metadata.tables[table_name]
+        except KeyError:
+            tbl = self.metadata.tables['fund_price']
+        finally:
+            orm = sa.select([
+                        tbl.c.trade_dt,
+                        sa.cast(tbl.c.open, sa.Numeric(10, 2)).label('open'),
+                        sa.cast(tbl.c.close, sa.Numeric(12, 2)).label('close'),
+                        sa.cast(tbl.c.high, sa.Numeric(10, 2)).label('high'),
+                        sa.cast(tbl.c.low, sa.Numeric(10, 3)).label('low'),
+                        sa.cast(tbl.c.volume, sa.Numeric(15, 0)).label('volume'),
+                        sa.cast(tbl.c.amount, sa.Numeric(15, 2)).label('amount')])\
+                .where(sa.and_(tbl.c.trade_dt == dt, tbl.c.sid == asset.sid))
+            rp = self.engine.execute(orm)
+            arrays = [[r.trade_dt, r.open, r.close, r.high, r.low, r.volume, r.amount] for r in
+                      rp.fetchall()]
+            kline = pd.DataFrame(arrays, columns=['trade_dt', 'open', 'close', 'high',
+                                                  'low', 'volume', 'amount'])
+            if not kline.empty:
+                frame = self._adjust_frame_type(kline)
+                return frame.loc[0, fields]
+            return kline
 
-    def _retrieve_assets(self, table, sids, fields, start_date, end_date):
+    def _retrieve_kline(self, table, sids, fields, start_date, end_date):
         """
             retrieve specific categroy asset
         """
-        tbl = self.metadata['%s_price' % table]
+        tbl = self.metadata.tables['%s_price' % table]
         orm = sa.select([tbl.c.trade_dt, tbl.c.sid,
-                         sa.cast(tbl.c.open,sa.Numeric(10, 2)).label('open'),
+                         sa.cast(tbl.c.open, sa.Numeric(10, 2)).label('open'),
                          sa.cast(tbl.c.high, sa.Numeric(10, 2)).label('high'),
                          sa.cast(tbl.c.low, sa.Numeric(10, 3)).label('low'),
                          sa.cast(tbl.c.close, sa.Numeric(12, 2)).label('close'),
@@ -137,29 +165,44 @@ class AssetSessionReader(BarReader):
                          sa.cast(tbl.c.amount, sa.Numeric(15, 2)).label('amount')]). \
             where(tbl.c.trade_dt.between(start_date, end_date))
         rp = self.engine.execute(orm)
-        arrays = [[r.trade_dt, r.code, r.open, r.close, r.high, r.low, r.volume] for r in
+        arrays = [[r.trade_dt, r.sid, r.open, r.high, r.low, r.close, r.volume, r.amount] for r in
                   rp.fetchall()]
-        raw = pd.DataFrame(arrays, columns=['trade_dt', 'code', 'open','high',
-                                           'low', 'close', 'volume', 'amount'])
-        raw.set_index('code', inplace=True)
-        # 基于code
-        _slice = raw.loc[sids]
-        # 基于fields 获取数据
-        kline = _slice.loc[:, fields]
-        unpack_kline = unpack_df_to_component_dict(kline)
+        frame = pd.DataFrame(arrays, columns=['trade_dt', 'sid', 'open', 'high',
+                                              'low', 'close', 'volume', 'amount'])
+        frame.drop_duplicates(ignore_index=True, inplace=True)
+        frame = frame[frame['sid'].isin(sids)]
+        frame.set_index('sid', inplace=True)
+        kline = self._adjust_frame_type(frame)
+        unpack_kline = unpack_df_to_component_dict(kline.loc[:, fields], 'trade_dt')
         return unpack_kline
 
-    def load_raw_arrays(self, session_labels, assets, columns):
+    def load_raw_arrays(self, session_labels, asset_objs, columns):
         start_date, end_date = session_labels
         columns = set(columns + ['trade_dt'])
-        func = partial(self._retrieve_assets(fields=columns,
-                                             start_date=start_date,
-                                             end_date=end_date)
-                              )
-        sid_groups = groupby(lambda x: x.asset_type, assets)
-        # 获取数据
+        func = partial(self._retrieve_kline,
+                       fields=columns,
+                       start_date=start_date,
+                       end_date=end_date)
+        # adjust
+        groups = groupby(lambda x: x.asset_type if x.asset_type in ['equity', 'convertible'] else 'fund', asset_objs)
+        sid_groups = valmap(lambda x: [a.sid for a in x], groups)
         batch_arrays = {}
         for name, sids in sid_groups.items():
-            raw = func(table=name, sids=sids)
-            batch_arrays.update(raw)
+            data = func(table=name, sids=sids)
+            batch_arrays.update(data)
         return batch_arrays
+
+
+if __name__ == '__main__':
+
+    reader = AssetSessionReader()
+    asset = Equity('603612')
+    pct = reader.get_equity_pct('2020-08-25')
+    spot_value = reader.get_spot_value('2020-08-25', asset, ['open', 'high', 'low', 'close'])
+    print('spot_value', spot_value)
+    raw = reader.load_raw_arrays(['2020-08-10', '2020-09-04'], [asset], ['open', 'high', 'low', 'close'])
+    print('raw', raw)
+    sessions = ['2010-08-10', '2011-10-30']
+    his_close = reader.load_raw_arrays(sessions, [asset], ['open', 'high', 'low', 'close', 'volume', 'amount'])
+    print('test', his_close)
+

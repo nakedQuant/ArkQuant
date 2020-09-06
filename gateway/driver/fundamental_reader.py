@@ -153,7 +153,7 @@ class HolderSessionReader(BarReader):
         return trackers
 
 
-class StructureSessionReader(BarReader):
+class OwnershipSessionReader(BarReader):
 
     def __init__(self):
         self.engine = engine
@@ -279,3 +279,13 @@ class MarginSessionReader(BarReader):
         margin = margin.iloc[start_idx:end_idx + 1, :]
         margin = margin.loc[:, fields] if fields else margin
         return margin
+
+
+if __name__ == '__main__':
+
+    massive = MassiveSessionReader()
+    release = ReleaseSessionReader()
+    holder = HolderSessionReader()
+    ownership = OwnershipSessionReader()
+    gdp = GrossSessionReader()
+    marign = MarginSessionReader()

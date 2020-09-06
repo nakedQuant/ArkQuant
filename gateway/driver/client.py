@@ -5,7 +5,7 @@ Created on Sun Feb 17 16:39:46 2019
 
 @author: python
 """
-import tushare as tu
+import tushare as tu, pandas as pd
 
 __all__ = ['tsclient']
 
@@ -29,7 +29,8 @@ class TsClient:
                                       exchange='SSE',
                                       is_open='1')
         calendar.columns = ['exchange', 'trade_dt', 'is_open']
-        return calendar
+        sessions = calendar['trade_dt'].apply(lambda x: pd.Timestamp(str(x)).strftime('%Y-%m-%d'))
+        return sessions
 
     def to_ts_con(self, exchange, new):
         """获取沪港通和深港通股票数据 , is_new = 1 表示沪港通的标的， is_new = 0 表示已经被踢出的沪港通的股票,exchange : SH SZ"""
@@ -85,3 +86,5 @@ if __name__ == '__main__':
     stats = tsclient.to_ts_status()
     stats.dropna(axis=0, how='any', inplace=True)
     print(len(stats), stats)
+    trading_days = tsclient.to_ts_calendar('1990-01-01', '3000-01-01')
+    print('calendar', trading_days)

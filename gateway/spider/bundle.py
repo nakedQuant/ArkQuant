@@ -114,7 +114,9 @@ class BundlesWriter(Crawler):
     def rerun(self):
         dct = valmap(lambda x: len(x), self.missed)
         if sum(dct.values()) != 0:
-            self._writer_internal(self.missed)
+            missed = self.missed.copy()
+            # RuntimeError: Set changed size during iteration
+            self._writer_internal(missed)
             self.rerun()
         self.missed = defaultdict(list)
 
@@ -122,7 +124,7 @@ class BundlesWriter(Crawler):
         _main_func = partial(self._implement, q=q)
         # multi thread
         threads = []
-        for method_name in Method:
+        for method_name in ['equity', 'convertible', 'fund']:
             thread = Thread(target=_main_func, kwargs={'method_name': method_name})
             thread.start()
             threads.append(thread)

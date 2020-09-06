@@ -15,15 +15,15 @@ from gateway.driver.tools import _parse_url
 __all__ = ['OwnershipWriter']
 
 # ownership
-COLUMNS = {'变动日期': 'ex_date',
-           '公告日期': 'declared_date',
-           '总股本': 'general',
-           '流通A股': 'float',
-           ' 高管股': 'manager',
-           '限售A股': 'strict',
-           '流通B股': 'b_float',
-           '限售B股': 'b_strict',
-           '流通H股': 'h_float'}
+OwnershipFields = {'变动日期': 'ex_date',
+                   '公告日期': 'declared_date',
+                   '总股本': 'general',
+                   '流通A股': 'float',
+                   ' 高管股': 'manager',
+                   '限售A股': 'strict',
+                   '流通B股': 'b_float',
+                   '限售B股': 'b_strict',
+                   '流通H股': 'h_float'}
 
 
 class OwnershipWriter(Crawler):
@@ -42,7 +42,7 @@ class OwnershipWriter(Crawler):
             formatted = parse_content_from_header(th)
             frame = frame.append(formatted)
         # rename columns
-        frame.rename(columns=COLUMNS, inplace=True)
+        frame.rename(columns=OwnershipFields, inplace=True)
         # 调整
         frame.loc[:, 'sid'] = symbol
         frame.index = range(len(frame))
@@ -52,7 +52,10 @@ class OwnershipWriter(Crawler):
 
     def rerun(self):
         if len(self.missed):
-            self._writer_internal(self.missed)
+            print('missing', self.missed)
+            missed = self.missed.copy()
+            # RuntimeError: Set changed size during iteration
+            self._writer_internal(missed)
             self.rerun()
         self.missed = set()
 
@@ -61,6 +64,7 @@ class OwnershipWriter(Crawler):
             try:
                 content = _parse_url(OWNERSHIP % sid)
                 self._parse_equity_ownership(content, sid)
+                print('successfully spider ownership of code : %s' % sid)
             except Exception as e:
                 print('spider code: % s  ownership failure due to % r' % (sid, e))
                 self.missed.add(sid)
@@ -70,9 +74,7 @@ class OwnershipWriter(Crawler):
     def writer(self):
         # initialize deadline
         self.deadlines = self._retrieve_deadlines_from_sqlite('ownership')
-        print('deadlines---------', self.deadlines)
         equities = self._retrieve_assets_from_sqlite()['equity']
-        # equities = ['300357']
         self._writer_internal(equities)
         self.rerun()
 

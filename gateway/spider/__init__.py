@@ -45,7 +45,6 @@ class Crawler(ABC):
         rp = self.engine.execute(ins)
         deadlines = pd.DataFrame(rp.fetchall(), columns=['declared_date', 'sid'])
         deadlines.set_index('sid', inplace=True)
-        # self.deadlines[tbl] = deadlines.iloc[:, 0]
         deadlines = deadlines.iloc[:, 0]
         return deadlines
 

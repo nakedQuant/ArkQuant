@@ -10,23 +10,23 @@ from datetime import datetime
 from dateutil import rrule
 from toolz import partition_all
 from _calendar import autumn, spring, Holiday
-from gateway.driver.api.client import tsclient
+from gateway.driver.client import tsclient
+
+__all__ = ['calendar']
 
 
 class TradingCalendar (object):
     """
-    元旦：1月1日 ; 清明节：4月4日; 劳动节：5月1日; 国庆节:10月1日 春节 中秋
+        元旦：1月1日 ; 清明节：4月4日; 劳动节：5月1日; 国庆节:10月1日 春节 中秋
+        数据时间格式 %Y-%m-%d (price, splits, rights, ownership, holder, massive, unfreeze)
+
     """
-
     def __init__(self):
-        trading_days = tsclient.to_ts_calendar('1990-01-01', '3000-01-01')
-        self.all_sessions = trading_days['trade_dt'].values
+        self.all_sessions = tsclient.to_ts_calendar('1990-01-01', '3000-01-01')
 
-    @property
-    def _fixed_holiday(self):
+    # @property
+    def holiday_sessions(self):
         non_trading_rules = dict()
-        non_trading_rules['spring'] = spring
-        non_trading_rules['autumn'] = autumn
         tz = pytz.timezone('Asia/Shanghai')
         start = pd.Timestamp(min(self.all_sessions), tz=tz)
         end = pd.Timestamp(max(self.all_sessions), tz=tz)
@@ -38,6 +38,7 @@ class TradingCalendar (object):
             dtstart=start,
             until=end
         )
+        new_year = [d.strftime('%Y-%m-%d') for d in new_year]
         non_trading_rules.update({'new_year': new_year})
 
         april_4 = rrule.rrule(
@@ -48,6 +49,8 @@ class TradingCalendar (object):
             dtstart=start,
             until=end
         )
+        april_4 = [d.strftime('%Y-%m-%d') for d in april_4]
+        print('april_4', april_4)
         non_trading_rules.update({'tomb': april_4})
 
         may_day = rrule.rrule(
@@ -58,6 +61,8 @@ class TradingCalendar (object):
             dtstart=start,
             until=end
         )
+        may_day = [d.strftime('%Y-%m-%d') for d in may_day]
+        print('may_day', may_day)
         non_trading_rules.update({'labour': may_day})
 
         national_day = rrule.rrule(
@@ -68,7 +73,12 @@ class TradingCalendar (object):
             dtstart=start,
             until=end
         )
+        national_day = [d.strftime('%Y-%m-%d') for d in national_day]
+        print('national_day', national_day)
         non_trading_rules.update({'national': national_day})
+        # append
+        non_trading_rules['spring'] = spring
+        non_trading_rules['autumn'] = autumn
         return non_trading_rules
 
     def _roll_forward(self, dt, window):
@@ -86,25 +96,28 @@ class TradingCalendar (object):
         """
         if window == 0:
             return dt
-        pos = self.all_sessions.searchsorted(dt.strftime('%Y-%m-%d'))
+        # pos = self.all_sessions.searchsorted(dt.strftime('%Y-%m-%d'))
+        pos = self.all_sessions.searchsorted(dt)
         try:
             loc = pos if self.all_sessions[pos] == dt else pos - 1
             forward = self.all_sessions[loc + 1 - window]
-            return pd.Timestamp(self.all_sessions[forward])
+            # return pd.Timestamp(self.all_sessions[forward])
+            return forward
         except IndexError:
             raise ValueError(
-                "Date {} was past the last session for domain {}. "
+                "Date {} was past the last session for {}. "
                 "The last session for this domain is {}.".format(
-                    dt.date(),
+                    dt,
                     self,
-                    self.all_sessions[-1].date()
+                    self.all_sessions[-1]
                 )
             )
 
     def dt_window_size(self, dt, window):
         if isinstance(dt, pd.Timestamp):
-            before = self._roll_forward(dt, window)
-        return before
+            dt = dt.dt.strftime('%Y-%m-%d')
+        pre = self._roll_forward(dt, window)
+        return pre
 
     def session_in_range(self, start_date, end_date, include):
         """
@@ -117,23 +130,17 @@ class TradingCalendar (object):
             raise ValueError("End date %s cannot precede start date %s." %
                              (end_date.strftime("%Y-%m-%d"),
                               start_date.strftime("%Y-%m-%d")))
-        idx_s = np.searchsorted(self.all_sessions, start_date.strftime('%Y-%m-%'))
-        idx_e = np.searchsorted(self.all_sessions, end_date.strftime('%Y-%m-%'))
-        sessions = self.all_sessions[idx_s, idx_e + 1] if include \
-            else self.all_sessions[idx_s, idx_e]
+        # idx_s = np.searchsorted(self.all_sessions, start_date.strftime('%Y-%m-%'))
+        # idx_e = np.searchsorted(self.all_sessions, end_date.strftime('%Y-%m-%'))
+        print('sessions', self.all_sessions)
+        idx_s = np.searchsorted(self.all_sessions, start_date)
+        idx_e = np.searchsorted(self.all_sessions, end_date)
+        print('idx_s', idx_s)
+        print('idx_e', idx_e)
+        sessions = self.all_sessions[idx_s: idx_e + 1] if include \
+            else self.all_sessions[idx_s: idx_e]
+        print('sessions', sessions)
         return sessions
-
-    @staticmethod
-    def sessions_in_minutes(dt):
-        # return day minutes
-        morning_session = pd.date_range(dt + pd.Timedelta(hours=9, minutes=30),
-                                        dt+pd.Timedelta(hours=11, minutes=30),
-                                        freq='%dminute' % 1)
-        after_session = pd.date_range(dt + pd.Timedelta(hours=13, minutes=00),
-                                      dt+pd.Timedelta(hours=15, minutes=00),
-                                      freq='%dminute' % 1)
-        minutes_session = [morning_session] + [after_session]
-        return minutes_session
 
     def session_in_window(self, end_date, window, include):
         """
@@ -150,9 +157,22 @@ class TradingCalendar (object):
         return session_labels
 
     @staticmethod
+    def session_in_minutes(dt):
+        dt = dt if isinstance(dt, (pd.Timestamp, datetime)) else pd.Timestamp(dt)
+        # return day minutes
+        morning_session = pd.date_range(dt + pd.Timedelta(hours=9, minutes=30),
+                                        dt+pd.Timedelta(hours=11, minutes=30),
+                                        freq='%dminute' % 1)
+        after_session = pd.date_range(dt + pd.Timedelta(hours=13, minutes=00),
+                                      dt+pd.Timedelta(hours=15, minutes=00),
+                                      freq='%dminute' % 1)
+        minutes_session = [morning_session] + [after_session]
+        return minutes_session
+
+    @staticmethod
     def execution_time_from_open(sessions):
-        opens = [dt + pd.Timedelta(hours=9, minutes=30) for dt in sessions]
-        _opens = [dt + pd.Timedelta(hours=13) for dt in sessions]
+        opens = [pd.Timestamp(dt) + pd.Timedelta(hours=9, minutes=30) for dt in sessions]
+        _opens = [pd.Timestamp(dt) + pd.Timedelta(hours=13) for dt in sessions]
         # 熔断期间 --- 2次提前收市
         if '20160107' in sessions:
             idx = np.searchsorted('20160107', sessions)
@@ -161,8 +181,8 @@ class TradingCalendar (object):
 
     @staticmethod
     def execution_time_from_close(sessions):
-        closes = [dt + pd.Timedelta(hours=11, minutes=30) for dt in sessions]
-        _closes = [dt + pd.Timedelta(hours=15) for dt in sessions]
+        closes = [pd.Timestamp(dt) + pd.Timedelta(hours=11, minutes=30) for dt in sessions]
+        _closes = [pd.Timestamp(dt) + pd.Timedelta(hours=15) for dt in sessions]
         # 熔断期间 --- 2次提前收市
         if '20160104' in sessions:
             idx = np.searchsorted('20160104', sessions)
@@ -201,7 +221,7 @@ class TradingCalendar (object):
         # forward --- 节日之前 ， 节日之后
         if holiday_name not in Holiday:
             raise ValueError('unidentified holiday name')
-        holiday_days = self._fixed_holiday[holiday_name]
+        holiday_days = self.holiday_sessions[holiday_name]
         idx_list = [np.searchsorted(self.all_sessions, t) for t in holiday_days]
         if forward:
             trading_list = self.all_sessions[list(map(lambda x: x - 1, idx_list))]
@@ -243,14 +263,11 @@ class TradingCalendar (object):
         early_close_days = self.session_in_range('2016-01-01', '2016-01-07')
         return early_close_days
 
-# if calendar is None:
-#     cal = self.trading_calendar
-# elif calendar is calendars.US_EQUITIES:
-#     cal = get_calendar('XNYS')
-# elif calendar is calendars.US_FUTURES:
-#     cal = get_calendar('us_futures')
-
 
 calendar = TradingCalendar()
 
-__all__ = [calendar]
+
+if __name__ == '__main__':
+
+    days = calendar.holiday_sessions()
+    print('days', days)

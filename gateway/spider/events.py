@@ -5,7 +5,7 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-import json, re, pandas as pd
+import json, re, pandas as pd, time, numpy as np
 from threading import Thread
 from gateway.spider import Crawler
 from gateway.database.db_writer import db
@@ -49,20 +49,23 @@ class EventWriter(Crawler):
     def _writer_holder(self, *args):
         """股票增持、减持、变动情况"""
         deadline = self._retrieve_deadlines_from_sqlite('holder')
-        print(deadline)
         page = 1
         while True:
             url = ASSET_FUNDAMENTAL_URL['holder'] % page
-            raw = _parse_url(url, bs=False)
-            match = re.search('\[(.*.)\]', raw)
+            try:
+                text = _parse_url(url, bs=False)
+            except Exception as e:
+                print('error %r' % e)
+                time.sleep(np.random.randint(5, 10))
+                text = _parse_url(url, bs=False)
+            match = re.search('\[(.*.)\]', text)
             data = json.loads(match.group())
             data = [item.split(',')[:-1] for item in data]
             frame = pd.DataFrame(data, columns=HolderFields)
             frame.loc[:, 'sid'] = frame['代码']
             # '' -- 0.0
             frame.replace(to_replace='', value=0.0, inplace=True)
-            print(frame)
-            holdings = frame[frame['declared_date'] > deadline] if deadline else frame
+            holdings = frame[frame['declared_date'] > deadline.max()] if not deadline.empty else frame
             if len(holdings) == 0:
                 break
             db.writer('holder', holdings)
@@ -72,19 +75,25 @@ class EventWriter(Crawler):
         """
             获取时间区间内股票大宗交易，时间最好在一个月之内
         """
-        page = 1
         deadline = self._retrieve_deadlines_from_sqlite('massive')
-        print('deadline', deadline)
+        print('deadline', deadline.max())
+        page = 1
         while True:
             url = ASSET_FUNDAMENTAL_URL['massive'].format(page=page, start=s_date, end=e_date)
-            data = _parse_url(url, bs=False, encoding=None)
-            data = json.loads(data)
+            try:
+                text = _parse_url(url, bs=False, encoding=None)
+            except Exception as e:
+                print('error %r' % e)
+                time.sleep(np.random.randint(5, 10))
+                text = _parse_url(url, bs=False)
+            data = json.loads(text)
             if data['data'] and len(data['data']):
                 frame = pd.DataFrame(data['data'])
                 frame.rename(columns=MassiveFields, inplace=True)
                 frame.loc[:, 'declared_date'] = frame['trade_dt'].apply(lambda x: str(x)[:10])
-                frame.dropna(axis=0, how='any', inplace=True)
-                massive = frame[frame['declared_date'] > deadline] if deadline else frame
+                frame.dropna(axis=0, how='all', inplace=True)
+                print('frame', frame)
+                massive = frame[frame['declared_date'] > deadline.max()] if not deadline.empty else frame
                 print('massive', massive)
                 db.writer('massive', massive)
                 page = page + 1
@@ -95,11 +104,17 @@ class EventWriter(Crawler):
         """
             获取A股解禁数据
         """
-        page = 1
         deadline = self._retrieve_deadlines_from_sqlite('unfreeze')
+        print(deadline)
+        page = 1
         while True:
             url = ASSET_FUNDAMENTAL_URL['release'].format(page=page, start=s_date, end=e_date)
-            text = _parse_url(url, encoding=None, bs=False)
+            try:
+                text = _parse_url(url, encoding=None, bs=False)
+            except Exception as e:
+                print(e)
+                time.sleep(np.random.randint(5, 10))
+                text = _parse_url(url, bs=False)
             text = json.loads(text)
             if text['data'] and len(text['data']):
                 info = text['data']
@@ -107,8 +122,9 @@ class EventWriter(Crawler):
                 # release_date --- declared_date
                 frame = pd.DataFrame(data, columns=['sid', 'release_date', 'release_type', 'zb'])
                 frame.loc[:, 'declared_date'] = frame['release_date'].apply(lambda x: str(x)[:10])
-                frame.dropna(axis=0, how='any', inplace=True)
-                release = frame[frame['declared_date'] > deadline] if deadline else frame
+                frame.dropna(axis=0, how='all', inplace=True)
+                print('frame', frame)
+                release = frame[frame['declared_date'] > deadline.max()] if not deadline.empty else frame
                 print('release', release)
                 db.writer('unfreeze', release)
                 page = page + 1
@@ -134,5 +150,4 @@ class EventWriter(Crawler):
 if __name__ == '__main__':
 
     w = EventWriter()
-    # date -- e.g '2020-02-08'
-    w.writer('2000-01-01', '2020-09-03')
+    w.writer('2010-01-01', '2020-09-03')

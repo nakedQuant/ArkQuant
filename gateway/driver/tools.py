@@ -8,6 +8,7 @@ Created on Tue Mar 12 15:37:47 2019
 import pandas as pd, numpy as np, re, requests, time
 from bs4 import BeautifulSoup
 from collections import defaultdict
+from toolz import valmap
 from gateway.spider.xml import UserAgent, ProxyIp
 
 
@@ -35,7 +36,7 @@ def _parse_url(url, encoding='gbk', bs=True):
     return data
 
 
-def unpack_df_to_component_dict(stack):
+def unpack_df_to_component_dict(stack, col):
     """Returns the set of known tables in the adjustments file in DataFrame
     form.
 
@@ -53,7 +54,9 @@ def unpack_df_to_component_dict(stack):
     unpack = defaultdict(pd.DataFrame)
     for index, raw in stack.iterrows():
         unpack[index] = unpack[index].append(raw, ignore_index=True)
-    return unpack
+    # set trade_dt to index
+    _unpack = valmap(lambda x: x.set_index(col), unpack)
+    return _unpack
 
 
 def parse_content_from_header(header):

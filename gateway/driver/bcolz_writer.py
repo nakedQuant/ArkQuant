@@ -362,7 +362,6 @@ if __name__ == '__main__':
     # source_dir = r'E:\通达信-1d\202008\vipdoc\sh\lday'
     # w2 = BcolzDailyBarWriter(source_dir)
     # w2.write_sid('sh000001', 'day')
-
     dir_ = r'D:\通达信-1m'
     w1 = BcolzMinuteBarWriter(dir_)
     w1.write()

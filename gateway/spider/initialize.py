@@ -33,7 +33,7 @@ class SyncSpider(object):
 
     def __call__(self):
         # sync asset_router first
-        # router_writer.writer()
+        router_writer.writer()
 
         def when_done(r):
             # '''每一个进程结束后结果append到result中'''
@@ -58,15 +58,12 @@ class SyncSpider(object):
                     f.result()
         # execute event_writer
         edate = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d')
-        sdate = '1990-01-01' if self.pattern == 'initialize' else edate
+        sdate = '2000-01-01' if self.pattern == 'initialize' else edate
         event_writer.writer(sdate, edate)
 
 
 if __name__ == '__main__':
 
     # initialize
-    init = SyncSpider()
-    # daily
-    # init = SyncSpider(init=False)
-    init()
-
+    m = SyncSpider(initialization=False)
+    m()
