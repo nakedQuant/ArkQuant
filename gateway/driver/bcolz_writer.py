@@ -21,6 +21,7 @@ bcolz.print_versions()
 
 class BcolzWriter(ABC):
     """
+        used to tranform tdx files to bcolz
         The defaults for parameters used in compression (dict).
         The default is {‘clevel’: 5, ‘shuffle’: True, ‘cname’: ‘lz4’, quantize: 0}.
         classbcolz.cparams(clevel=None, shuffle=None, cname=None, quantize=None)
@@ -37,9 +38,7 @@ class BcolzWriter(ABC):
         and bits is determined from the quantize value. For example, if quantize=1, bits will be 4. 0 means that the quantization is disabled.
         In case some of the parameters are not passed, they will be
         set to a default (see `setdefaults()` method).
-        target --- tranform tdx files to bcolz
     """
-
     def _init_attr(self, metadata, path):
         # 初始化
         # metadata = defaultdict(None)
@@ -123,8 +122,8 @@ class BcolzWriter(ABC):
     #     for k, v in kwargs.items():
     #         table.attrs[k] = v
 
-    def glob_tdx_files(self):
-        # dir_ = r'D:\通达信-1m\*'
+    def glob_files(self):
+        # e.g.  r'D:\通达信-1m\*'
         sh_path = os.path.join(self._tdx_dir, r'*\vipdoc\*\minline\sh6*')
         sz_path = os.path.join(self._tdx_dir, r'*\vipdoc\*\minline\sz[0|3]*')
         sh_files = glob.glob(sh_path)
@@ -174,7 +173,7 @@ class BcolzWriter(ABC):
             self._write_internal(sid[:-3], data)
 
     def write(self):
-        paths = self.glob_tdx_files()
+        paths = self.glob_files()
         for p in paths:
             self._write_sid(p)
 
@@ -332,36 +331,6 @@ class BcolzDailyBarWriter(BcolzWriter):
 
 if __name__ == '__main__':
 
-    # glob different code name
-    # files = glob.glob('^(sz|sh)[0-9]{6}.01$', recursive=True)
-    # files = glob.glob(r'D:\通达信-1m\*\vipdoc\*\minline\*')
-    # files = glob.glob(r'D:\通达信-1m\*\vipdoc\*\minline\sz[0|3]*')
-    # files = glob.glob(r'D:\通达信-1m\*\vipdoc\*\minline\sz0*')
-    # files = glob.glob(r'D:\通达信-1m\*\vipdoc\*\minline\sz3*')
-    # sh_files = glob.glob(r'D:\通达信-1m\*\vipdoc\*\minline\sh6*')
-    # sz_files = glob.glob(r'D:\通达信-1m\*\vipdoc\*\minline\sz[0|3]*')
-    # files = sz_files + sh_files
-    # print('files', len(files), files[:10])
-    # # initialize all time stamp
-    # start_date = pd.Timestamp('20040401').to_pydatetime()
-    # end_date = datetime.datetime.now()
-    # session = pd.date_range(start_date, end_date, freq='1m')
-    # print('session', session)
-    # tdx_names = [datetime.datetime.strftime(s, '%Y%m') for s in session]
-    # print('formatted datetime', tdx_names)
-    # t = datetime.datetime.now()
-    # for tdx_name in tdx_names:
-    #     source_dir = r'D:\通达信-1m\{}\vipdoc\sh\minline'.format(tdx_name)
-    #     print('source_dir', source_dir)
-    #     w1 = BcolzMinuteBarWriter(source_dir)
-    #     w1.write_sid('sh000001', '01')
-    #     # w1.truncate(size=0)
-    # print('elapsed time', datetime.datetime.now() - t)
-    # elapsed time 0:01:16.533000 --- set_threads
-    # elapsed time 0:01:17.158000 --- no set
-    # source_dir = r'E:\通达信-1d\202008\vipdoc\sh\lday'
-    # w2 = BcolzDailyBarWriter(source_dir)
-    # w2.write_sid('sh000001', 'day')
-    dir_ = r'D:\通达信-1m'
+    dir_ = r'E:\update'
     w1 = BcolzMinuteBarWriter(dir_)
     w1.write()

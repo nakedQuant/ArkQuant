@@ -8,8 +8,8 @@ Created on Tue Mar 12 15:37:47 2019
 import pandas as pd, bcolz, os
 from gateway.driver.bar_reader import BarReader
 from gateway.driver.tools import transfer_to_timestamp
-from gateway.driver import BcolzDir
-
+from gateway.driver import BcolzDir, OHLC_RATIO
+# from gateway.asset.assets import Equity
 
 __all__ = [
     'BcolzDailyReader',
@@ -24,8 +24,9 @@ class BcolzReader(BarReader):
     default = frozenset(['open', 'high', 'low', 'close', 'amount', 'volume'])
 
     def get_sid_attr(self, sid):
-        sid_path = '{}.bcolz'.format(sid)
-        root = os.path.join(self._root_dir, sid_path)
+        prefix_sid = 'sh' + sid if sid.startswith('6') else 'sz' + sid
+        bcolz_file = '{}.bcolz'.format(prefix_sid)
+        root = os.path.join(self._root_dir, bcolz_file)
         return root
 
     def _read_bcolz_data(self, sid):
@@ -84,11 +85,11 @@ class BcolzReader(BarReader):
             # set index
             frame.set_index('ticker', inplace=True) if 'ticker' in frame.columns \
                 else frame.set_index('trade_dt', inplace=True)
-            # 调整系数
-            inverse_ratio = 1 / meta['ohlc_ratio']
-            print('inverse_ratio', inverse_ratio)
+            # 调整系数  原来的系数有问题（10000） --- 100
+            # inverse_ratio = 1 / meta['ohlc_ratio']
+            inverse_ratio = 1 / OHLC_RATIO
+            # print('original frame', frame)
             frame.loc[:, ['open', 'high', 'low', 'close']] = frame.loc[:, ['open', 'high', 'low', 'close']] * inverse_ratio
-            print('scale', frame)
         return frame
 
     def get_spot_value(self, asset, dt, fields):
@@ -180,7 +181,10 @@ class BcolzDailyReader(BcolzReader):
 
 if __name__ == '__main__':
 
-    s = '20200101'
-    e = '20200901'
-    daily_reader = BcolzDailyReader()
-    value = daily_reader.get_value('sh000001', s, e)
+    s = '2020-01-01'
+    e = '2020-09-01'
+    # equity = Equity('000001')
+    minute_reader = BcolzMinuteReader()
+    value = minute_reader.get_value('000001', s, e)
+    print('value', value)
+    # minute_reader.get_spot_value()

@@ -11,7 +11,7 @@ Num = 2
 BcolzDir = r'E:\bcolz'
 
 # bcolz sacle factor
-OHLC_RATIO = 10000
+OHLC_RATIO = 100
 
 # h5 -- scale factor
 # Retain 3 decimal places for prices.
