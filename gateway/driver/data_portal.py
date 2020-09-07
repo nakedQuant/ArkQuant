@@ -6,11 +6,12 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 import pandas as pd, json
-from functools import lru_cache
+# from functools import lru_cache
 from gateway.asset.assets import Asset
 from gateway.driver.tools import _parse_url
 from gateway.driver.client import tsclient
 from gateway.asset._finder import AssetFinder
+from gateway.driver.resample import Sample
 from gateway.driver.bar_reader import AssetSessionReader
 from gateway.driver.bcolz_reader import BcolzMinuteReader
 from gateway.driver.adjustment_reader import SQLiteAdjustmentReader
@@ -36,12 +37,11 @@ class DataPortal(object):
     """
     OHLCV_FIELDS = frozenset(["open", "high", "low", "close", "volume"])
 
-    def __init__(self, rule):
+    def __init__(self):
 
+        self.resize_rule = Sample()
         self.asset_finder = AssetFinder()
         self._adjustment_reader = SQLiteAdjustmentReader()
-        # resample module
-        self.resize_rule = rule
         _minute_reader = BcolzMinuteReader()
         _session_reader = AssetSessionReader()
 
@@ -128,7 +128,7 @@ class DataPortal(object):
         rights = self._adjustment_reader.load_rights_for_sid(asset.sid, trading_day)
         return rights
 
-    @lru_cache(maxsize=32)
+    # @lru_cache(maxsize=32)
     def _retrieve_pct(self, dts):
         pct = self._pricing_reader['daily'].get_equity_pct(dts)
         return pct
@@ -170,7 +170,7 @@ class DataPortal(object):
         history_arrays = history.history(assets, fields, end_dt, bar_count)
         return history_arrays
 
-    @lru_cache(maxsize=32)
+    # @lru_cache(maxsize=32)
     def get_history_window(self,
                            assets,
                            end_date,
@@ -223,7 +223,7 @@ class DataPortal(object):
                                                             data_frequency)
         return history_window_arrays
 
-    @lru_cache(maxsize=32)
+    # @lru_cache(maxsize=32)
     def get_window_data(self,
                         assets,
                         dt,

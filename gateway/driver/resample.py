@@ -5,7 +5,7 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-import numpy as np, pandas as pd
+import pandas as pd
 from _calendar.trading_calendar import calendar
 
 __all__ = ['Sample']
@@ -37,10 +37,10 @@ class Sample(object):
         :param td_delta: number
         """
         return set(
-            pd.Series(data=self.sessions)
+            pd.Series(data=self.sessions, index=self.sessions)
             .groupby(lambda x: x.isocalendar()[0:2])
             .nth(td_delta)
-            .astype(np.int64)
+            # .astype(np.int64)
         )
 
     def month_rules(self, td_delta):
@@ -48,19 +48,20 @@ class Sample(object):
         :param td_delta: number
         """
         return set(
-            pd.Series(data=self.sessions)
-            .groupby([self.sessions.year, self.sessions.month])
+            pd.Series(data=self.sessions, index=self.sessions)
+            .groupby([lambda x: x.year, lambda x: x.month])
             .nth(td_delta)
-            .astype(np.int64)
+            # .astype(np.int64)
         )
 
 
 if __name__ == '__main__':
 
     r = Sample()
+    print('length', len(r.sessions))
     min = r.minute_rule({'hour': 10, 'minute': 45})
-    print('min', min)
+    print('min', len(min), min)
     week = r.week_rules(3)
-    print('week', week)
-    # mon = r.month_rules(3)
-    # print('mon', mon)
+    print('week', len(week), week)
+    mon = r.month_rules(3)
+    print('mon', len(mon), mon)
