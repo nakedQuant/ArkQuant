@@ -69,8 +69,8 @@ class SQLiteAdjustmentReader(object):
         sdate, edate = sessions
         sql = sa.select([self.equity_rights.c.sid,
                          self.equity_rights.c.ex_date,
-                         sa.cast(self.equity_rights.c.right_bonus,sa.Numeric(5, 2)),
-                         sa.cast(self.equity_rights.c.right_price,sa.Numeric(5, 2))]).\
+                         sa.cast(self.equity_rights.c.right_bonus, sa.Numeric(5, 2)),
+                         sa.cast(self.equity_rights.c.right_price, sa.Numeric(5, 2))]).\
             where(sa.self.equity_rights.c.pay_date.between(sdate, edate))
         rp = self.engine.execute(sql)
         rights = pd.DataFrame(rp.fetchall(), columns=['code', 'ex_date',

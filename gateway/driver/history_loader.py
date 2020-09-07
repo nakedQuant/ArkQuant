@@ -5,7 +5,6 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-from collections import defaultdict
 from abc import ABC, abstractmethod
 import numpy as np
 from _calendar.trading_calendar import calendar
@@ -23,6 +22,8 @@ __all__ = [
     'HistoryMinuteLoader',
     'HistoryDailyLoader'
 ]
+
+DefaultFields = frozenset(['open', 'high', 'low', 'close', 'amount', 'volume'])
 
 
 class Expired(Exception):
@@ -64,8 +65,7 @@ class CachedObject(object):
             Raised when `dt` is greater than self.expires.
         """
         expires = self._expires
-        #
-        if dts[0] < expires[0] or dts[0] > expires[-1]:
+        if dts[0] < expires[0] or dts[-1] > expires[-1]:
             raise Expired(self._expired)
         return self._value
 
@@ -92,22 +92,18 @@ class ExpiredCache(object):
         provided, defaults to a no-op.
 
     """
-    def __init__(self, cache=None, cleanup=lambda value_to_clean: None):
-        if cache is not None:
-            self._cache = cache
-        else:
-            self._cache = {}
+    def __init__(self):
+        self._cache = {}
+        # cleanup = lambda value_to_clean: None
 
-        self.cleanup = cleanup
-
-    def get(self, key, dt):
+    def get(self, key, dts):
         """Get the value of a cached object.
 
         Parameters
         ----------
         key : any
             The key to lookup.
-        dt : datetime
+        dts : datetime list e.g.[start, end]
             The time of the lookup.
 
         Returns
@@ -121,22 +117,16 @@ class ExpiredCache(object):
             Raised if the key is not in the cache or the value for the key
             has expired.
         """
-        print('key', key)
-        try:
-            return self._cache[key].unwrap(dt)
-        except Expired:
-            self.cleanup(self._cache[key]._unsafe_get_value())
-            del self._cache[key]
-        except KeyError:
-            pass
+        value = self._cache[key].unwrap(dts)
+        return value
 
     def set(self, key, value, expiration_dt):
         """Adds a new key value pair to the cache.
 
         Parameters
         ----------
-        key : any
-            The key to use for the pair.
+        key : sid
+            Asset object sid attribute
         value : any
             The value to store under the name ``key``.
         expiration_dt : datetime
@@ -147,8 +137,6 @@ class ExpiredCache(object):
 
 
 class HistoryLoader(ABC):
-
-    _window_blocks = defaultdict(ExpiredCache)
 
     @property
     def trading_calendar(self):
@@ -162,7 +150,7 @@ class HistoryLoader(ABC):
     def _compute_slice_window(self, data, date, window):
         raise NotImplementedError
 
-    def _ensure_sliding_windows(self, dts, assets, field):
+    def _ensure_sliding_windows(self, dts, assets, fields):
         """
         Ensure that there is a Float64Multiply window for each asset that can
         provide data for the given parameters.
@@ -180,7 +168,7 @@ class HistoryLoader(ABC):
             The datetimes for which to fetch data.
             Makes an assumption that all dts are present and contiguous,
             in the _calendar.
-        field : str or list
+        fields : str or list
             The OHLCV field for which to retrieve data.
         Returns
         -------
@@ -190,32 +178,38 @@ class HistoryLoader(ABC):
         """
         asset_windows = {}
         needed_assets = []
-        for asset in assets:
+        for asset_obj in assets:
+            print('blocks', self._window_blocks)
+            print('asset', asset_obj)
             try:
-                _window = self._window_blocks[asset.sid].get(
-                    field, dts)
-            except KeyError or Expired:
-                needed_assets.append(asset)
+                cache_window = self._window_blocks.get(
+                    asset_obj, dts)
+                print('cache_window', cache_window)
+            except Expired:
+                del self._window_blocks[asset_obj]
+            except KeyError:
+                needed_assets.append(asset_obj)
             else:
-                slice_window = self._compute_slice_window(_window, dts)
-                asset_windows[asset] = slice_window
+                slice_window = self._compute_slice_window(cache_window, dts)
+                asset_windows[asset_obj] = slice_window.loc[:, fields]
 
         if needed_assets:
-            for i, asset in enumerate(needed_assets):
+            for i, target_asset in enumerate(needed_assets):
                 sliding_window = self.adjust_window.window_arrays(
                         dts,
-                        asset,
-                        field
-                            )
-                asset_windows[asset] = sliding_window
+                        [target_asset],
+                        list(DefaultFields)
+                            )[target_asset.sid]
                 # ExpiredCache
-                self._window_blocks[asset].set(
-                    field,
+                self._window_blocks.set(
+                    target_asset,
                     sliding_window,
                     dts)
-        return [asset_windows[asset] for asset in assets]
+                asset_windows[target_asset] = sliding_window.loc[:, fields] \
+                    if not sliding_window.empty else sliding_window
+        return [asset_windows[item] for item in assets]
 
-    def history(self, assets, field, dts, window):
+    def history(self, assets, field, dts, window=None):
         """
         A window of pricing data with adjustments applied assuming that the
         end of the window is the day before the current nakedquant time.
@@ -238,16 +232,16 @@ class HistoryLoader(ABC):
         out : np.ndarray with shape(len(days between start, end), len(asset))
         """
         # 不包括当天数据
-        session = self.trading_calendar.session_in_window(dts, window, include=False)
-
-        if len(session) == 1:
-            block_arrays = self.adjust_window.array(session, assets, field)
-        else:
+        if window:
+            pre_dt = self.trading_calendar.dt_window_size(dts, window)
+            print('pre_dt', pre_dt)
             block_arrays = self._ensure_sliding_windows(
-                                            session,
+                                            [pre_dt, dts],
                                             assets,
                                             field
                                             )
+        else:
+            block_arrays = self.adjust_window.array([dts, dts], assets, field)
         return block_arrays
 
 
@@ -263,20 +257,24 @@ class HistoryDailyLoader(HistoryLoader):
         self.adjust_window = AdjustedDailyWindow(
                                             _daily_reader,
                                             equity_adjustment_reader)
-        # 不同频率 --- 单独设立
-        self._window_blocks = defaultdict(ExpiredCache)
+        self._window_blocks = ExpiredCache()
 
     @property
     def frequency(self):
         return 'daily'
 
-    def _compute_slice_window(self, _window, dts):
-        sessions = calendar.session_in_range(*dts, include=True)
+    @staticmethod
+    def _compute_slice_window(_window, dts):
+        print('_window', _window)
+        # print('dts', dts)
+        sessions = calendar.session_in_range(*dts)
+        # print('sessions', sessions)
         slice_window = _window.reindex(sessions)
         return slice_window
 
 
-class HistoryMinuteLoader(HistoryLoader):
+# class HistoryMinuteLoader(HistoryLoader):
+class HistoryMinuteLoader(object):
 
     def __init__(self,
                  _minute_reader,
@@ -284,13 +282,14 @@ class HistoryMinuteLoader(HistoryLoader):
         self.adjust_window = AdjustedMinuteWindow(
                                             _minute_reader,
                                             equity_adjustment_reader)
-        self._window_blocks = defaultdict(ExpiredCache)
+        self._window_blocks = ExpiredCache()
 
     @property
     def frequency(self):
         return 'minute'
 
-    def _compute_slice_window(self, _window, dts):
+    @staticmethod
+    def _compute_slice_window(_window, dts):
         ticker = np.clip(np.array(_window.index), *dts)
         _slice_window = _window.reindex(ticker)
         return _slice_window
@@ -304,7 +303,9 @@ if __name__ == '__main__':
 
     asset = Equity('000001')
     sessions = ['2010-08-10', '2015-10-30']
-    # minute_history = HistoryMinuteLoader(minute_reader, adjustment_reader)
+    # sessions = ['2020-08-25', '2020-08-25']
     daily_history = HistoryDailyLoader(session_reader, adjustment_reader)
-    his = daily_history.history([asset], ['close', 'open'], sessions[0], 10)
-    print('his', his)
+    # his_data = daily_history.history([asset], ['close', 'open'], sessions[0], window=30)
+    his_data = daily_history.history([asset], ['close', 'open'], '2010-12-31')
+    print('his', his_data)
+    # minute_history = HistoryMinuteLoader(minute_reader, adjustment_reader)

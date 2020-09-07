@@ -315,6 +315,6 @@ class DataPortal(object):
         return factor
 
 
-if  __name__ == '__main__':
+if __name__ == '__main__':
 
     data_portal = DataPortal()

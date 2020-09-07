@@ -7,8 +7,10 @@ Created on Tue Mar 12 15:37:47 2019
 """
 import numpy as np, pandas as pd
 
+__all__ = ['Resample']
 
-class ResampleRule(object):
+
+class Resample(object):
     """
         every_day week_start week_end month_start month_end (specific trading day)
         # grouped_by_sid = source_df.groupby(["sid"])

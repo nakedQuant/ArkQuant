@@ -22,7 +22,7 @@ class TradingCalendar (object):
 
     """
     def __init__(self):
-        self.all_sessions = tsclient.to_ts_calendar('1990-01-01', '3000-01-01')
+        self.all_sessions = tsclient.to_ts_calendar('1990-01-01', '3000-01-01').values
 
     # @property
     def holiday_sessions(self):
@@ -119,7 +119,7 @@ class TradingCalendar (object):
         pre = self._roll_forward(dt, window)
         return pre
 
-    def session_in_range(self, start_date, end_date, include):
+    def session_in_range(self, start_date, end_date, include=True):
         """
         :param start_date: pd.Timestamp
         :param end_date: pd.Timestamp
@@ -132,14 +132,10 @@ class TradingCalendar (object):
                               start_date.strftime("%Y-%m-%d")))
         # idx_s = np.searchsorted(self.all_sessions, start_date.strftime('%Y-%m-%'))
         # idx_e = np.searchsorted(self.all_sessions, end_date.strftime('%Y-%m-%'))
-        print('sessions', self.all_sessions)
         idx_s = np.searchsorted(self.all_sessions, start_date)
         idx_e = np.searchsorted(self.all_sessions, end_date)
-        print('idx_s', idx_s)
-        print('idx_e', idx_e)
         sessions = self.all_sessions[idx_s: idx_e + 1] if include \
             else self.all_sessions[idx_s: idx_e]
-        print('sessions', sessions)
         return sessions
 
     def session_in_window(self, end_date, window, include):
@@ -153,7 +149,7 @@ class TradingCalendar (object):
         if window == 0:
             return [end_date, end_date]
         start_date = self._roll_forward(end_date, window)
-        session_labels = self.session_in_range(start_date, end_date, include)
+        session_labels = self.session_in_range(start_date, end_date, include=include)
         return session_labels
 
     @staticmethod

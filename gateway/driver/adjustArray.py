@@ -168,16 +168,19 @@ class SlidingWindow(object):
             adjust_arrays = {}
             for asset in assets:
                 sid = asset.sid
-                raw = raw_arrays[sid]
-                qfq = adjustments[sid]
-                qfq = qfq.reindex(index=set(raw.index))
-                qfq.sort_index(inplace=True)
-                qfq.fillna(method='bfill', inplace=True)
-                qfq.fillna(1.0, inplace=True)
-                print('full qfq', qfq)
-                raw[adjusted_fields] = raw.loc[:, adjusted_fields].multiply(qfq, axis=0)
-                adjust_arrays[sid] = raw[adjusted_fields]
-                print('adjust_raw', raw[adjusted_fields])
+                try:
+                    raw = raw_arrays[sid]
+                    qfq = adjustments[sid]
+                    qfq = qfq.reindex(index=set(raw.index))
+                    qfq.sort_index(inplace=True)
+                    qfq.fillna(method='bfill', inplace=True)
+                    qfq.fillna(1.0, inplace=True)
+                    print('full qfq', qfq)
+                    raw[adjusted_fields] = raw.loc[:, adjusted_fields].multiply(qfq, axis=0)
+                    adjust_arrays[sid] = raw[adjusted_fields]
+                    print('adjust_raw', raw[adjusted_fields])
+                except KeyError:
+                    adjust_arrays[sid] = pd.DataFrame()
         else:
             adjust_arrays = raw_arrays
         return adjust_arrays

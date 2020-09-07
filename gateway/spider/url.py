@@ -55,8 +55,12 @@ release = 'http://dcfm.eastmoney.com/EM_MutiSvcExpandInterface/api/js/get?type=X
 
 gross_url = 'http://data.eastmoney.com/cjsj/grossdomesticproduct.aspx?p=%d'
 
-margin_url = 'http://api.dataide.eastmoney.com/data/get_rzrq_lshj?' \
-             'orderby=dim_date&order=desc&pageindex=%d&pagesize=50'
+# margin_url = 'http://api.dataide.eastmoney.com/data/get_rzrq_lshj?' \
+#              'orderby=dim_date&order=desc&pageindex=%d&pagesize=50'
+
+margin_url = 'http://datacenter.eastmoney.com/api/data/get?' \
+             'type=RPTA_RZRQ_LSHJ&sty=ALL&source=WEB&st=dim_date&sr=-1&p=%d&ps=50'
+
 
 ASSET_FUNDAMENTAL_URL = {
     'holder': holder,

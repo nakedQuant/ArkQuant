@@ -6,7 +6,7 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 import sqlalchemy as sa
-from gateway.database import metadata
+from gateway.database import metadata, engine
 
 __all__ = [
            'm_cap',
@@ -26,6 +26,7 @@ __all__ = [
            'convertible_price',
            'asset_db_table_names'
 ]
+
 
 asset_router = sa.Table(
     'asset_router',
@@ -459,34 +460,6 @@ holder = sa.Table(
     sa.Column('占流通比', sa.Numeric(10, 5), nullable=False)
 )
 
-# 解禁数据 release作为mysql关键字 switch to ban_lift
-unfreeze = sa.Table(
-    'unfreeze',
-    metadata,
-    sa.Column(
-        'id',
-        sa.Integer,
-        default=0,
-        autoincrement=True
-    ),
-    sa.Column(
-        'sid',
-        sa.String(10),
-        nullable=False,
-        primary_key=True,
-    ),
-    # 为了与其他的events 保持一致 --- declared_date
-    sa.Column(
-        'declared_date',
-        sa.String(10),
-        nullable=False,
-        primary_key=True
-    ),
-    sa.Column('release_type', sa.Text, nullable=False),
-    # 解禁市值占解禁前流动市值比例
-    sa.Column('zb', sa.Numeric(20, 18), nullable=False)
-)
-
 # 股东大宗交易
 massive = sa.Table(
     'massive',
@@ -518,6 +491,58 @@ massive = sa.Table(
     sa.Column('seller', sa.Text, nullable=False),
     # 成交总额/流通市值
     sa.Column('cjeltszb', sa.Numeric(20, 18), nullable=False),
+)
+
+# 解禁数据 release作为mysql关键字 switch to ban_lift
+unfreeze = sa.Table(
+    'unfreeze',
+    metadata,
+    sa.Column(
+        'id',
+        sa.Integer,
+        default=0,
+        autoincrement=True
+    ),
+    sa.Column(
+        'sid',
+        sa.String(10),
+        nullable=False,
+        primary_key=True,
+    ),
+    # 为了与其他的events 保持一致 --- declared_date
+    sa.Column(
+        'declared_date',
+        sa.String(10),
+        nullable=False,
+        primary_key=True
+    ),
+    sa.Column('release_type', sa.Text, nullable=False),
+    # 解禁市值占解禁前流动市值比例
+    sa.Column('zb', sa.Numeric(20, 18), nullable=False)
+)
+
+# 市场融资融券数据
+margin = sa.Table(
+    'margin',
+    metadata,
+    sa.Column(
+        'id',
+        sa.Integer,
+        default=0,
+        autoincrement=True
+    ),
+    sa.Column(
+        'declared_date',
+        sa.String(10),
+        nullable=False,
+        primary_key=True,
+    ),
+    # 融资余额
+    sa.Column('rzye', sa.Numeric(15, 8), nullable=False),
+    # 融资余额占流通市值比
+    sa.Column('rzyezb', sa.Numeric(12, 10), nullable=False),
+    # 融券余额
+    sa.Column('rqye', sa.Numeric(15, 8), nullable=False)
 )
 
 # 流通市值
@@ -584,3 +609,5 @@ asset_db_table_names = frozenset([
     'equity_basics',
     'convertible_basics'
 ])
+
+metadata.create_all(bind=engine)

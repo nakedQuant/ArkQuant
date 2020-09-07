@@ -35,7 +35,7 @@ from gateway.driver.benchmark import (
     get_alternative_returns
 )
 from gateway.driver.data_portal import DataPortal
-from gateway.driver.resample import TradingDayRule
+from gateway.driver.resample import Resample
 from gens.clock import MinuteSimulationClock
 from gens.tradesimulation import AlgorithmSimulator
 from pipe.engine import SimplePipelineEngine
@@ -173,7 +173,7 @@ class TradingAlgorithm(object):
         # set benchmark returns
         self.benchmark_returns = self._calculate_benchmark_returns()
         # set resample rule
-        self.resample_rule = resample_rule or TradingDayRule(sim_params.sessions)
+        self.resample_rule = resample_rule or Resample(sim_params.sessions)
         # set data_portal
         if self.data_portal is None:
             if asset_finder is None:

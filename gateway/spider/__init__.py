@@ -40,12 +40,17 @@ class Crawler(ABC):
 
     def _retrieve_deadlines_from_sqlite(self, tbl):
         table = self.metadata.tables[tbl]
-        ins = select([func.max(table.c.declared_date), table.c.sid])
-        ins = ins.group_by(table.c.sid)
-        rp = self.engine.execute(ins)
-        deadlines = pd.DataFrame(rp.fetchall(), columns=['declared_date', 'sid'])
-        deadlines.set_index('sid', inplace=True)
-        deadlines = deadlines.iloc[:, 0]
+        try:
+            ins = select([func.max(table.c.declared_date), table.c.sid])
+            ins = ins.group_by(table.c.sid)
+            rp = self.engine.execute(ins)
+            deadlines = pd.DataFrame(rp.fetchall(), columns=['declared_date', 'sid'])
+            deadlines.set_index('sid', inplace=True)
+            deadlines = deadlines.iloc[:, 0]
+        except AttributeError:
+            ins = select([func.max(table.c.declared_date)])
+            rp = self.engine.execute(ins)
+            deadlines = rp.scalar()
         return deadlines
 
     @abstractmethod
