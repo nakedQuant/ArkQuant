@@ -262,7 +262,7 @@ equity_price = sa.Table(
     sa.Column('low', sa.Numeric(10, 5), nullable=False),
     sa.Column('close', sa.Numeric(10, 5), nullable=False),
     sa.Column('volume', sa.Integer, nullable=False),
-    sa.Column('amount', sa.Numeric(40, 5), nullable=False),
+    sa.Column('amount', sa.Numeric(20, 5), nullable=False),
     sa.Column('pct', sa.Numeric(10, 5), nullable=False),
 
 )
@@ -293,7 +293,7 @@ convertible_price = sa.Table(
     sa.Column('low', sa.Numeric(10, 5), nullable=False),
     sa.Column('close', sa.Numeric(10, 5), nullable=False),
     sa.Column('volume', sa.Integer, nullable=False),
-    sa.Column('amount', sa.Numeric(40, 5), nullable=False),
+    sa.Column('amount', sa.Numeric(20, 5), nullable=False),
 )
 
 fund_price = sa.Table(
@@ -321,7 +321,7 @@ fund_price = sa.Table(
     sa.Column('low', sa.Numeric(10, 5), nullable=False),
     sa.Column('close', sa.Numeric(10, 5), nullable=False),
     sa.Column('volume', sa.Integer, nullable=False),
-    sa.Column('amount', sa.Numeric(40, 5), nullable=False),
+    sa.Column('amount', sa.Numeric(20, 5), nullable=False),
 )
 
 equity_splits = sa.Table(
@@ -354,7 +354,7 @@ equity_splits = sa.Table(
     sa.Column('sid_bonus', sa.Integer),
     sa.Column('sid_transfer', sa.Integer),
     # e.g. 000507 --- 0.42429
-    sa.Column('bonus', sa.Numeric(20, 10)),
+    sa.Column('bonus', sa.Numeric(15, 10)),
     # 实施 | 不分配
     sa.Column('progress', sa.Text),
     )
@@ -569,16 +569,16 @@ m_cap = sa.Table(
         primary_key=True),
     sa.Column(
         'mkv',
-        sa.Numeric(15, 5),
+        sa.Numeric(20, 5),
         nullable=False
     ),
     sa.Column(
         'mkv_cap',
-        sa.Numeric(15, 5),
+        sa.Numeric(20, 5),
         nullable=False),
     sa.Column(
         'mkv_strict',
-        sa.Numeric(15, 5),
+        sa.Numeric(20, 5),
         nullable=False
     )
 )

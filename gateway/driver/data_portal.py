@@ -8,12 +8,13 @@ Created on Tue Mar 12 15:37:47 2019
 import pandas as pd, json
 from functools import lru_cache
 from gateway.asset.assets import Asset
-from .tools import _parse_url
-from .client import tsclient
-from .bar_reader import AssetSessionReader
-from .bcolz_reader import BcolzMinuteReader
-from .adjustment_reader import SQLiteAdjustmentReader
-from .history_loader import (
+from gateway.driver.tools import _parse_url
+from gateway.driver.client import tsclient
+from gateway.asset._finder import AssetFinder
+from gateway.driver.bar_reader import AssetSessionReader
+from gateway.driver.bcolz_reader import BcolzMinuteReader
+from gateway.driver.adjustment_reader import SQLiteAdjustmentReader
+from gateway.driver.history_loader import (
     HistoryDailyLoader,
     HistoryMinuteLoader
 )
@@ -33,14 +34,11 @@ class DataPortal(object):
     asset_finder : assets.assets.AssetFinder
         The AssetFinder instance used to resolve asset.
     """
-
     OHLCV_FIELDS = frozenset(["open", "high", "low", "close", "volume"])
 
-    def __init__(self,
-                 rule,
-                 asset_finder):
+    def __init__(self, rule):
 
-        self.asset_finder = asset_finder
+        self.asset_finder = AssetFinder()
         self._adjustment_reader = SQLiteAdjustmentReader()
         # resample module
         self.resize_rule = rule
