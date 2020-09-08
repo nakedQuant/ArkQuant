@@ -10625,3 +10625,21 @@ print(test)
 #     else:
 #         adjust_arrays = raw_arrays
 #     return adjust_arrays
+
+# def get_fetcher_assets(self, sids):
+#     """
+#     Returns a list of asset for the current date, as defined by the
+#     fetcher data.
+#
+#     Returns
+#     -------
+#     list: a list of Asset objects.
+#     """
+#     # return a list of asset for the current date, as defined by the
+#     # fetcher source
+#     found, missing = self.asset_finder.retrieve_asset(sids)
+#     return found, missing
+#
+# def get_all_assets(self, asset_type=None):
+#     all_assets = self.asset_finder.retrieve_all(asset_type)
+#     return all_assets

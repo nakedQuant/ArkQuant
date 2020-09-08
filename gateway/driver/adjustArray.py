@@ -140,6 +140,10 @@ class SlidingWindow(object):
     def reader(self):
         return self._compatible_adjustment.reader
 
+    def get_spot_value(self, dt, asset, fields):
+        spot_value = self.reader.get_spot_value(dt, asset, fields)
+        return spot_value
+
     def array(self, dts, assets, fields):
         """
         :param dts:  list (length 2)
@@ -203,6 +207,10 @@ class AdjustedDailyWindow(SlidingWindow):
     def frequency(self):
         return 'daily'
 
+    def get_equity_pctchange(self, dts):
+        frame_pct = self.reader.get_equity_pctchange(dts)
+        return frame_pct
+
 
 class AdjustedMinuteWindow(SlidingWindow):
     """
@@ -226,19 +234,19 @@ if __name__ == '__main__':
 
     minute_reader = BcolzMinuteReader()
     session_reader = AssetSessionReader()
-    adjustment_reader = SQLiteAdjustmentReader()
+    adjust_reader = SQLiteAdjustmentReader()
 
     asset = Equity('000001')
     sessions = ['2010-08-10', '2015-10-30']
-    # his = HistoryCompatibleAdjustments(session_reader, adjustment_reader)
+    # his = HistoryCompatibleAdjustments(session_reader, adjust_reader)
     # his.calculate_adjustments_in_sessions(['2017-08-10', '2020-10-30'], [asset])
     # window_arrays = his.window_arrays(['2010-08-10', '2015-10-30'], [asset], ['open', 'close'])
     # print('window_arrays', window_arrays)
     # original = his.array(sessions, [asset], ['open', 'close'])
     # print('original array', original)
-    daily_adjust = AdjustedDailyWindow(session_reader, adjustment_reader)
+    daily_adjust = AdjustedDailyWindow(session_reader, adjust_reader)
     close = daily_adjust.window_arrays(sessions, [asset], ['close'])
     print('daily adjust close', close)
     raw_close = daily_adjust.array(sessions, [asset], ['close'])
     print('raw_close', raw_close)
-    # minute_adjust = AdjustedMinuteWindow(minute_reader, adjustment_reader)
+    # minute_adjust = AdjustedMinuteWindow(minute_reader, adjust_reader)

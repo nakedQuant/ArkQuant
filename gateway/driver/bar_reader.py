@@ -102,7 +102,7 @@ class AssetSessionReader(BarReader):
     def data_frequency(self):
         return 'daily'
 
-    def get_equity_pct(self, dt):
+    def get_equity_pctchange(self, dt):
         tbl = self.metadata.tables['equity_price']
         sql = sa.select([tbl.c.sid, sa.cast(tbl.c.pct, sa.Numeric(10, 2)).label('pct')])\
             .where(tbl.c.trade_dt == dt)
@@ -110,17 +110,6 @@ class AssetSessionReader(BarReader):
         data = pd.DataFrame(rp.fetchall(), columns=['sid', 'pct'])
         data.set_index('sid', inplace=True)
         return data
-
-    @staticmethod
-    def _adjust_frame_type(df):
-        for col, col_type in KLINE_COLUMNS_TYPE.items():
-            try:
-                df[col] = df[col].astype(col_type)
-            except KeyError:
-                pass
-            except TypeError:
-                raise TypeError('%s cannot mutate into %s' % (col, col_type))
-        return df
 
     def get_spot_value(self, dt, asset, fields):
         """
@@ -150,6 +139,17 @@ class AssetSessionReader(BarReader):
                 frame = self._adjust_frame_type(kline)
                 return frame.loc[0, fields]
             return kline
+
+    @staticmethod
+    def _adjust_frame_type(df):
+        for col, col_type in KLINE_COLUMNS_TYPE.items():
+            try:
+                df[col] = df[col].astype(col_type)
+            except KeyError:
+                pass
+            except TypeError:
+                raise TypeError('%s cannot mutate into %s' % (col, col_type))
+        return df
 
     def _retrieve_kline(self, table, sids, fields, start_date, end_date):
         """

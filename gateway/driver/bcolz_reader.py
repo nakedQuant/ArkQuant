@@ -96,7 +96,7 @@ class BcolzReader(BarReader):
         raise NotImplementedError()
 
     def load_raw_arrays(self, sessions, assets, columns):
-        assert set(columns) in self.default, 'unknown field'
+        assert set(columns).issubset(self.default), 'unknown field'
         sdate, edate = sessions
         supplements = columns + ['trade_dt'] \
             if self.data_frequency == 'daily' else columns + ['ticker']

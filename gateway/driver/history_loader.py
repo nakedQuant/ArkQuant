@@ -191,7 +191,7 @@ class HistoryLoader(ABC):
                 needed_assets.append(asset_obj)
             else:
                 slice_window = self._compute_slice_window(cache_window, dts)
-                asset_windows[asset_obj] = slice_window.loc[:, fields]
+                asset_windows[asset_obj.sid] = slice_window.loc[:, fields]
 
         if needed_assets:
             for i, target_asset in enumerate(needed_assets):
@@ -205,9 +205,14 @@ class HistoryLoader(ABC):
                     target_asset,
                     sliding_window,
                     dts)
-                asset_windows[target_asset] = sliding_window.loc[:, fields] \
+                asset_windows[target_asset.sid] = sliding_window.loc[:, fields] \
                     if not sliding_window.empty else sliding_window
-        return [asset_windows[item] for item in assets]
+        return asset_windows
+
+    def window(self, assets, field, dts, window):
+        pre_dt = self.trading_calendar.dt_window_size(dts, window)
+        raw = self.adjust_window.array([pre_dt, dts], assets, field)
+        return raw
 
     def history(self, assets, field, dts, window=None):
         """
@@ -241,7 +246,7 @@ class HistoryLoader(ABC):
                                             field
                                             )
         else:
-            block_arrays = self.adjust_window.array([dts, dts], assets, field)
+             block_arrays = self.window(assets, field, dts, window=0)
         return block_arrays
 
 
@@ -263,6 +268,10 @@ class HistoryDailyLoader(HistoryLoader):
     def frequency(self):
         return 'daily'
 
+    def get_spot_value(self, dt, asset, fields):
+        spot = self.adjust_window.get_spot_value(dt, asset, fields)
+        return spot
+
     @staticmethod
     def _compute_slice_window(_window, dts):
         print('_window', _window)
@@ -271,6 +280,20 @@ class HistoryDailyLoader(HistoryLoader):
         # print('sessions', sessions)
         slice_window = _window.reindex(sessions)
         return slice_window
+
+    def get_open_pct(self, assets, dts):
+        open_pct = dict()
+        pre_close = dict()
+        # 获取标的pct_change
+        frame = self.adjust_window.get_equity_pctchange(dts)
+        kline = self.window(assets, ['open', 'close'], 'daily', 1)
+        for asset in assets:
+            sid = asset.sid
+            daily = kline[sid]
+            pct = frame[sid]
+            pre_close[sid] = daily['close'][-1] / (1 + pct)
+            open_pct[sid] = daily['open'][-1] / pre_close[sid]
+        return open_pct, pre_close
 
 
 # class HistoryMinuteLoader(HistoryLoader):
@@ -295,17 +318,17 @@ class HistoryMinuteLoader(object):
         return _slice_window
 
 
-if __name__ == '__main__':
-
-    minute_reader = BcolzMinuteReader()
-    session_reader = AssetSessionReader()
-    adjustment_reader = SQLiteAdjustmentReader()
-
-    asset = Equity('000001')
-    sessions = ['2010-08-10', '2015-10-30']
-    # sessions = ['2020-08-25', '2020-08-25']
-    daily_history = HistoryDailyLoader(session_reader, adjustment_reader)
-    # his_data = daily_history.history([asset], ['close', 'open'], sessions[0], window=30)
-    his_data = daily_history.history([asset], ['close', 'open'], '2010-12-31')
-    print('his', his_data)
-    # minute_history = HistoryMinuteLoader(minute_reader, adjustment_reader)
+# if __name__ == '__main__':
+#
+#     minute_reader = BcolzMinuteReader()
+#     session_reader = AssetSessionReader()
+#     adjustment_reader = SQLiteAdjustmentReader()
+#
+#     asset = Equity('000001')
+#     sessions = ['2010-08-10', '2015-10-30']
+#     # sessions = ['2020-08-25', '2020-08-25']
+#     daily_history = HistoryDailyLoader(session_reader, adjustment_reader)
+#     # his_data = daily_history.history([asset], ['close', 'open'], sessions[0], window=30)
+#     his_data = daily_history.history([asset], ['close', 'open'], '2010-12-31')
+#     print('his', his_data)
+#     # minute_history = HistoryMinuteLoader(minute_reader, adjustment_reader)

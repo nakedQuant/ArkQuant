@@ -10,8 +10,8 @@ import pandas as pd, json
 from gateway.asset.assets import Asset
 from gateway.driver.tools import _parse_url
 from gateway.driver.client import tsclient
-from gateway.asset._finder import AssetFinder
 from gateway.driver.resample import Sample
+from gateway.asset.assets import Equity, Fund, Convertible
 from gateway.driver.bar_reader import AssetSessionReader
 from gateway.driver.bcolz_reader import BcolzMinuteReader
 from gateway.driver.adjustment_reader import SQLiteAdjustmentReader
@@ -19,7 +19,6 @@ from gateway.driver.history_loader import (
     HistoryDailyLoader,
     HistoryMinuteLoader
 )
-from _calendar.trading_calendar import calendar
 
 
 class DataPortal(object):
@@ -40,21 +39,16 @@ class DataPortal(object):
     def __init__(self):
 
         self.resize_rule = Sample()
-        self.asset_finder = AssetFinder()
         self._adjustment_reader = SQLiteAdjustmentReader()
         _minute_reader = BcolzMinuteReader()
         _session_reader = AssetSessionReader()
 
-        self._pricing_reader = {
-            'minute': _minute_reader,
-            'daily': _session_reader,
-        }
         _history_daily_loader = HistoryDailyLoader(
-            _minute_reader,
+            _session_reader,
             self._adjustment_reader,
         )
         _history_minute_loader = HistoryMinuteLoader(
-            _session_reader,
+            _minute_reader,
             self._adjustment_reader,
 
         )
@@ -67,24 +61,6 @@ class DataPortal(object):
     @property
     def adjustment_reader(self):
         return self._adjustment_reader
-
-    def get_fetcher_assets(self, sids):
-        """
-        Returns a list of asset for the current date, as defined by the
-        fetcher data.
-
-        Returns
-        -------
-        list: a list of Asset objects.
-        """
-        # return a list of asset for the current date, as defined by the
-        # fetcher source
-        found, missing = self.asset_finder.retrieve_asset(sids)
-        return found, missing
-
-    def get_all_assets(self, asset_type=None):
-        all_assets = self.asset_finder.retrieve_all(asset_type)
-        return all_assets
 
     def get_dividends_for_asset(self, asset, trading_day):
         """
@@ -128,47 +104,51 @@ class DataPortal(object):
         rights = self._adjustment_reader.load_rights_for_sid(asset.sid, trading_day)
         return rights
 
-    # @lru_cache(maxsize=32)
-    def _retrieve_pct(self, dts):
-        pct = self._pricing_reader['daily'].get_equity_pct(dts)
-        return pct
-
     def get_open_pct(self, assets, dts):
-        open_pct = dict()
-        pre_close = dict()
-        # 获取标的pct_change
-        frame = self._retrieve_pct(dts)
-        if isinstance(assets, Asset):
-            assets = [assets]
-        # 获取close
-        kline = self.get_window_data(assets, 1, ['open', 'close'], 'daily')
-        # 计算close
-        for asset in assets:
-            sid = asset.sid
-            daily = kline[sid]
-            pct = frame.loc[sid, 'pct']
-            pre_close[asset] = daily['close'] / (1 + pct)
-            open_pct[asset] = daily['open'][-1] / pre_close
+        # pre_close 经过qfq --- close
+        open_pct, pre_close = self._history_loader['daily'].get_open_pct(assets, dts)
         return open_pct, pre_close
 
     def get_spot_value(self, asset, dts, frequency, fields):
-        spot_value = self._pricing_reader[frequency].get_spot_value(dts, asset, fields)
+        spot_value = self._history_loader[frequency].get_spot_value(dts, asset, fields)
         return spot_value
 
-    def _get_history_sliding_window(self,
-                                    assets,
-                                    end_dt,
-                                    fields,
-                                    bar_count,
-                                    frequency):
+    # @lru_cache(maxsize=32)
+    def get_window_data(self,
+                        assets,
+                        dt,
+                        days_in_window,
+                        field,
+                        data_frequency):
         """
-            Internal method that gets a window of adjusted daily data for a sid
-            and specified date range.  Used to support the history API method for
-            daily bars.
+        Internal method that gets a window of raw daily data for a sid
+        and specified date range.  Used to support the history API method for
+        daily bars.
+
+        Parameters
+        ----------
+        assets : list --- element is Asset
+            The asset whose data is desired.
+
+        dt: pandas.Timestamp
+            The end of the desired window of data.
+
+        field: string or list
+            The specific field to return.  "open", "high", "close_price", etc.
+
+        days_in_window: int
+            The number of days of data to return.
+
+        data_frequency : minute or daily
+
+        Returns
+        -------
+        A numpy array with requested values.  Any missing slots filled with
+        nan.
         """
-        history = self._history_loader[frequency]
-        history_arrays = history.history(assets, fields, end_dt, bar_count)
-        return history_arrays
+        history_reader = self._history_loader[data_frequency]
+        window_array = history_reader.window(assets, field, dt, days_in_window)
+        return window_array
 
     # @lru_cache(maxsize=32)
     def get_history_window(self,
@@ -208,60 +188,19 @@ class DataPortal(object):
         -------
         A dataframe containing the requested data.
         """
-        if field not in self.OHLCV_FIELDS:
+        fields = field if isinstance(field, (set, list)) else [field]
+        if not set(field).issubset(self.OHLCV_FIELDS):
             raise ValueError("Invalid field: {0}".format(field))
 
         if bar_count < 1:
             raise ValueError(
                 "bar_count must be >= 1, but got {}".format(bar_count)
             )
-        history_window_arrays = self._get_history_sliding_window(
-                                                            assets,
-                                                            end_date,
-                                                            field,
-                                                            bar_count,
-                                                            data_frequency)
+        history = self._history_loader[data_frequency]
+        history_window_arrays = history.history(assets, fields, end_date, bar_count)
         return history_window_arrays
 
-    # @lru_cache(maxsize=32)
-    def get_window_data(self,
-                        assets,
-                        dt,
-                        days_in_window,
-                        field,
-                        data_frequency):
-        """
-        Internal method that gets a window of raw daily data for a sid
-        and specified date range.  Used to support the history API method for
-        daily bars.
-
-        Parameters
-        ----------
-        assets : list --- element is Asset
-            The asset whose data is desired.
-
-        dt: pandas.Timestamp
-            The end of the desired window of data.
-
-        field: string or list
-            The specific field to return.  "open", "high", "close_price", etc.
-
-        days_in_window: int
-            The number of days of data to return.
-
-        data_frequency : minute or daily
-
-        Returns
-        -------
-        A numpy array with requested values.  Any missing slots filled with
-        nan.
-        """
-        _reader = self._pricing_reader[data_frequency]
-        sessions = calendar.session_in_window(dt, days_in_window, False)
-        window_array = _reader.load_raw_arrays(sessions, assets, field)
-        return window_array
-
-    def fetch_minute_freq(self, kwargs):
+    def freq_by_minute(self, kwargs):
         """
         :param kwargs: hour,minute
         :return: minute ticker list
@@ -269,7 +208,7 @@ class DataPortal(object):
         minutes = self.resize_rule.minute_rule(kwargs)
         return minutes
 
-    def fetch_week_freq(self, delta):
+    def freq_by_week(self, delta):
         """
         :param delta: int , the number day of week (1-7) which is trading_day
         :return: trading list
@@ -277,7 +216,7 @@ class DataPortal(object):
         week_days = self.resize_rule.week_rules(delta)
         return week_days
 
-    def fetch_month_freq(self, delta):
+    def freq_by_month(self, delta):
         """
         :param delta: int ,the number day of month (max -- 31) which is trading_day
         :return: trading list
@@ -286,7 +225,7 @@ class DataPortal(object):
         return month_days
 
     @staticmethod
-    def get_current(sid):
+    def get_current_minutes(sid):
         """
             return current live tickers data
         """
@@ -307,12 +246,16 @@ class DataPortal(object):
         frame = tsclient.to_ts_pledge(symbol)
         return frame
 
-    @staticmethod
-    def get_equity_factor(code):
-        factor = tsclient.to_ts_adjfactor(code)
-        return factor
-
 
 if __name__ == '__main__':
 
     data_portal = DataPortal()
+    sessions = ['2017-03-01', '2020-09-07']
+    assets = [Equity('000002'), Equity('300360')]
+    fields = ['open', 'close']
+    window_data = data_portal.get_window_data(assets, sessions[1],
+                                              days_in_window=300, field=fields, data_frequency='daily')
+    print('window_data', window_data)
+    history_data = data_portal.get_history_window(assets, sessions[1],
+                                                  bar_count=300, field=fields, data_frequency='daily')
+    print('history_data', history_data)
