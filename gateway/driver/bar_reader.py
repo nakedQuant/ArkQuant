@@ -20,12 +20,12 @@ from gateway.driver.tools import unpack_df_to_component_dict
 from gateway.asset.assets import Equity, Convertible, Fund
 
 KLINE_COLUMNS_TYPE = {
-            'open': np.float64,
-            'high': np.float64,
-            'low': np.float64,
-            'close': np.float64,
+            'open': np.double,
+            'high': np.double,
+            'low': np.double,
+            'close': np.double,
             'volume': np.int,
-            'amount': np.float64
+            'amount': np.double
                     }
 
 
@@ -108,6 +108,7 @@ class AssetSessionReader(BarReader):
             .where(tbl.c.trade_dt == dt)
         rp = self.engine.execute(sql)
         data = pd.DataFrame(rp.fetchall(), columns=['sid', 'pct'])
+        data['pct'] = data['pct'].astype(np.double)
         data.set_index('sid', inplace=True)
         return data
 

@@ -286,12 +286,16 @@ class HistoryDailyLoader(HistoryLoader):
         pre_close = dict()
         # 获取标的pct_change
         frame = self.adjust_window.get_equity_pctchange(dts)
-        kline = self.window(assets, ['open', 'close'], 'daily', 1)
+        print('frame pct', frame.head())
+        kline = self.window(assets, ['open', 'high', 'low'], dts, 2)
+        print('kline', kline)
         for asset in assets:
             sid = asset.sid
             daily = kline[sid]
-            pct = frame[sid]
-            pre_close[sid] = daily['close'][-1] / (1 + pct)
+            pct = frame.loc[sid, 'pct']
+            print(sid, pct)
+            # pre_close[sid] = daily['close'][-1] / (1 + pct/100)
+            pre_close[sid] = 100 * (daily['high'][-1] - daily['low'][-1]) / pct
             open_pct[sid] = daily['open'][-1] / pre_close[sid]
         return open_pct, pre_close
 

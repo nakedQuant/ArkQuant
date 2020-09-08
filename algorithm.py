@@ -35,7 +35,7 @@ from gateway.driver.benchmark import (
     get_alternative_returns
 )
 from gateway.driver.data_portal import DataPortal
-from gateway.driver.resample import Resample
+from gateway.driver.resample import Sample
 from gens.clock import MinuteSimulationClock
 from gens.tradesimulation import AlgorithmSimulator
 from pipe.engine import SimplePipelineEngine
@@ -132,7 +132,7 @@ class TradingAlgorithm(object):
                  position_risk_models=None,
                  # dataApi --- only entrance of backtest
                  data_portal=None,
-                 resample_rule=None,
+                 sample_rule=None,
                  asset_finder=None,
                  # finance module intended for order object
                  slippage=None,
@@ -173,7 +173,7 @@ class TradingAlgorithm(object):
         # set benchmark returns
         self.benchmark_returns = self._calculate_benchmark_returns()
         # set resample rule
-        self.resample_rule = resample_rule or Resample(sim_params.sessions)
+        self.sample_rule = sample_rule or Sample(sim_params.sessions)
         # set data_portal
         if self.data_portal is None:
             if asset_finder is None:
@@ -182,7 +182,7 @@ class TradingAlgorithm(object):
                     "to TradingAlgorithm()"
                 )
             self.asset_finder = asset_finder
-            self.data_portal = DataPortal(resample_rule, asset_finder)
+            self.data_portal = DataPortal()
         else:
             # Raise an error if we were passed two different asset finders.
             # There's no world where that's a good idea.

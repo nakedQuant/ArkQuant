@@ -11,7 +11,6 @@ from gateway.asset.assets import Asset
 from gateway.driver.tools import _parse_url
 from gateway.driver.client import tsclient
 from gateway.driver.resample import Sample
-from gateway.asset.assets import Equity, Fund, Convertible
 from gateway.driver.bar_reader import AssetSessionReader
 from gateway.driver.bcolz_reader import BcolzMinuteReader
 from gateway.driver.adjustment_reader import SQLiteAdjustmentReader
@@ -19,6 +18,7 @@ from gateway.driver.history_loader import (
     HistoryDailyLoader,
     HistoryMinuteLoader
 )
+from gateway.asset.assets import Equity, Fund, Convertible
 
 
 class DataPortal(object):
@@ -106,11 +106,11 @@ class DataPortal(object):
 
     def get_open_pct(self, assets, dts):
         # pre_close 经过qfq --- close
-        open_pct, pre_close = self._history_loader['daily'].get_open_pct(assets, dts)
-        return open_pct, pre_close
+        open_pctchange, pre_close = self._history_loader['daily'].get_open_pct(assets, dts)
+        return open_pctchange, pre_close
 
-    def get_spot_value(self, asset, dts, frequency, fields):
-        spot_value = self._history_loader[frequency].get_spot_value(dts, asset, fields)
+    def get_spot_value(self, asset, dts, frequency, field):
+        spot_value = self._history_loader[frequency].get_spot_value(dts, asset, field)
         return spot_value
 
     # @lru_cache(maxsize=32)
@@ -253,9 +253,17 @@ if __name__ == '__main__':
     sessions = ['2017-03-01', '2020-09-07']
     assets = [Equity('000002'), Equity('300360')]
     fields = ['open', 'close']
-    window_data = data_portal.get_window_data(assets, sessions[1],
-                                              days_in_window=300, field=fields, data_frequency='daily')
-    print('window_data', window_data)
-    history_data = data_portal.get_history_window(assets, sessions[1],
-                                                  bar_count=300, field=fields, data_frequency='daily')
-    print('history_data', history_data)
+    # window_data = data_portal.get_window_data(assets, sessions[1],
+    #                                           days_in_window=300, field=fields, data_frequency='daily')
+    # print('window_data', window_data)
+    # history_data = data_portal.get_history_window(assets, sessions[1],
+    #                                               bar_count=300, field=fields, data_frequency='daily')
+    # print('history_data', history_data)
+    # spot_value = data_portal.get_spot_value(assets[0], '2020-09-03', 'daily', ['close', 'low'])
+    # print('spot_value', spot_value)
+    # divdends = data_portal.get_dividends_for_asset(assets[1], '2017-05-25')
+    # print('divdends', divdends)
+    # rights = data_portal.get_rights_for_asset(assets[0], '2000-01-24')
+    # print('rights', rights)
+    open_pct = data_portal.get_open_pct(assets, '2020-09-03')
+    print('open_pct', open_pct)
