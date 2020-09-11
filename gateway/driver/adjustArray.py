@@ -5,7 +5,8 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-import pandas as pd
+import pandas as pd, time
+from toolz import valmap
 from functools import partial
 from gateway.driver.bar_reader import AssetSessionReader
 from gateway.driver.bcolz_reader import BcolzMinuteReader
@@ -49,8 +50,11 @@ class HistoryCompatibleAdjustments(object):
            后复权：复权后价格=复权前价格×(1+流通股份变动比例)+现金红利
         """
         kline = data[sid]
+        kline.index = [time.strftime('%Y-%m-%d %H-%M-%S', time.localtime(i)) for i in data['600000'].index]
+        print('kline', kline)
         try:
             divdends = adjustment['divdends'][sid]
+            print('union', set(divdends.index) & set(kline.index))
             ex_close = kline['close'].reindex(index=divdends.index)
             qfq = (1 - divdends['bonus']/(10 * ex_close)) / \
                   (1 + (divdends['sid_bonus'] + divdends['sid_transfer']) / 10)
@@ -75,7 +79,9 @@ class HistoryCompatibleAdjustments(object):
 
     def calculate_adjustments_for_sid(self, adjustment, data, sid):
         fq_divdends = self._calculate_divdends_for_sid(adjustment, data, sid)
+        # print('divdends', fq_divdends)
         fq_rights = self._calculate_rights_for_sid(adjustment, data, sid)
+        # print('rights', fq_rights)
         fq = fq_divdends.append(fq_rights)
         fq.sort_index(ascending=False, inplace=True)
         qfq = 1 / fq.cumprod()
@@ -83,8 +89,13 @@ class HistoryCompatibleAdjustments(object):
         return qfq
 
     def _adjust_by_frequency(self, adjustments):
+        # print('adjustments', adjustments)
         if self.data_frequency == 'minute':
-            adjustments.index = [pd.Timestamp(x).timestamp() + 15 * 60 * 60 for x in adjustments.index]
+            def reformat(frame):
+                frame.index = [int(pd.Timestamp(i).timestamp() + 15 * 60 * 60) for i in frame.index]
+                return frame
+            adjustments['divdends'] = valmap(lambda x: reformat(x), adjustments['divdends'])
+            adjustments['rights'] = valmap(lambda x: reformat(x), adjustments['rights'])
         return adjustments
 
     def calculate_adjustments_in_sessions(self, sessions, assets):
@@ -179,10 +190,10 @@ class SlidingWindow(object):
                     qfq.sort_index(inplace=True)
                     qfq.fillna(method='bfill', inplace=True)
                     qfq.fillna(1.0, inplace=True)
-                    print('full qfq', qfq)
+                    # print('full qfq', qfq)
                     raw[adjusted_fields] = raw.loc[:, adjusted_fields].multiply(qfq, axis=0)
                     adjust_arrays[sid] = raw[adjusted_fields]
-                    print('adjust_raw', raw[adjusted_fields])
+                    # print('adjust_raw', raw[adjusted_fields])
                 except KeyError:
                     adjust_arrays[sid] = pd.DataFrame()
         else:
@@ -236,17 +247,26 @@ if __name__ == '__main__':
     session_reader = AssetSessionReader()
     adjust_reader = SQLiteAdjustmentReader()
 
-    asset = Equity('000001')
-    sessions = ['2010-08-10', '2015-10-30']
+    asset = Equity('600000')
+    sessions = ['2005-01-10', '2005-01-11']
+    fields = ['open', 'close']
     # his = HistoryCompatibleAdjustments(session_reader, adjust_reader)
     # his.calculate_adjustments_in_sessions(['2017-08-10', '2020-10-30'], [asset])
     # window_arrays = his.window_arrays(['2010-08-10', '2015-10-30'], [asset], ['open', 'close'])
     # print('window_arrays', window_arrays)
     # original = his.array(sessions, [asset], ['open', 'close'])
     # print('original array', original)
-    daily_adjust = AdjustedDailyWindow(session_reader, adjust_reader)
-    close = daily_adjust.window_arrays(sessions, [asset], ['close'])
-    print('daily adjust close', close)
-    raw_close = daily_adjust.array(sessions, [asset], ['close'])
-    print('raw_close', raw_close)
-    # minute_adjust = AdjustedMinuteWindow(minute_reader, adjust_reader)
+
+    # daily_adjust = AdjustedDailyWindow(session_reader, adjust_reader)
+    # close = daily_adjust.window_arrays(sessions, [asset], ['close'])
+    # print('daily adjust close', close)
+    # raw_close = daily_adjust.array(sessions, [asset], ['close'])
+    # print('raw_close', raw_close)
+
+    minute_adjust = AdjustedMinuteWindow(minute_reader, adjust_reader)
+    # minute_spot = minute_adjust.get_spot_value('2020-09-03', asset, fields)
+    # print('minute spot value', minute_spot)
+    # minute_array = minute_adjust.array(sessions, [asset], fields)
+    # print('minute_array', minute_array)
+    minute_window_array = minute_adjust.window_arrays(sessions, [asset], fields)
+    print('minute_window_array', minute_window_array)

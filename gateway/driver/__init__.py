@@ -8,7 +8,7 @@ Created on Tue Mar 12 15:37:47 2019
 # bcolz parallel num
 Num = 2
 # bcolz path
-BcolzDir = r'E:\bcolz'
+BcolzDir = r'/Users/python/Downloads/tdx'
 
 # bcolz sacle factor
 OHLC_RATIO = 100

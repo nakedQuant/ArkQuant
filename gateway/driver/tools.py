@@ -81,12 +81,14 @@ def parse_content_from_header(header):
 
 
 def transfer_to_timestamp(dt):
-    if not isinstance(dt, pd.Timestamp):
+    if isinstance(dt, float):
+        timestamps = dt
+    elif isinstance(dt, pd.Timestamp):
+        timestamps = dt.timestamp()
+    else:
         try:
             stamp = pd.Timestamp(dt)
         except Exception as e:
             raise TypeError('cannot tranform %r to timestamp due to %s' % (dt, e))
-    else:
-        stamp = dt
-    timestamps = stamp.timestamp()
+        timestamps = stamp.timestamp()
     return timestamps

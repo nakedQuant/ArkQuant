@@ -69,38 +69,26 @@ class SQLiteAdjustmentReader(object):
         sdate, edate = sessions
         sql = sa.select([self.equity_rights.c.sid,
                          self.equity_rights.c.ex_date,
-                         sa.cast(self.equity_rights.c.right_bonus, sa.Numeric(5, 2)),
-                         sa.cast(self.equity_rights.c.right_price, sa.Numeric(5, 2))]).\
-            where(sa.self.equity_rights.c.pay_date.between(sdate, edate))
+                         sa.cast(self.equity_rights.c.rights_bonus, sa.Numeric(5, 2)),
+                         sa.cast(self.equity_rights.c.rights_price, sa.Numeric(5, 2))]).\
+            where(self.equity_rights.c.pay_date.between(sdate, edate))
         rp = self.engine.execute(sql)
-        rights = pd.DataFrame(rp.fetchall(), columns=['code', 'ex_date',
-                                                      'right_bonus', 'right_price'])
+        rights = pd.DataFrame(rp.fetchall(), columns=['sid', 'ex_date',
+                                                      'rights_bonus', 'rights_price'])
         rights.set_index('sid', inplace=True)
         adjust_rights = self._adjust_frame_type(rights)
         unpack_rights = unpack_df_to_component_dict(adjust_rights, 'ex_date')
         return unpack_rights
 
-    def _load_adjustments_from_sqlite(self,
-                                      sessions,
-                                      should_include_dividends,
-                                      should_include_rights):
+    def _load_adjustments_from_sqlite(self, sessions):
         adjustments = {}
-        if should_include_dividends:
-            adjustments['divdends'] = self._get_divdends_with_ex_date(sessions)
-        elif should_include_rights:
-            adjustments['rights'] = self._get_rights_with_ex_date(sessions)
-        else:
-            raise ValueError('must include divdends or rights')
+        # retrieve from mysql
+        adjustments['divdends'] = self._get_divdends_with_ex_date(sessions)
+        adjustments['rights'] = self._get_rights_with_ex_date(sessions)
         return adjustments
 
-    def load_pricing_adjustments(self, sessions,
-                                 should_include_dividends=True,
-                                 should_include_rights=True,
-                                 ):
-        pricing_adjustments = self._load_adjustments_from_sqlite(
-                                sessions,
-                                should_include_dividends,
-                                should_include_rights)
+    def load_pricing_adjustments(self, sessions):
+        pricing_adjustments = self._load_adjustments_from_sqlite(sessions)
         return pricing_adjustments
 
     def load_divdends_for_sid(self, sid, date):
@@ -138,9 +126,9 @@ class SQLiteAdjustmentReader(object):
 if __name__ == '__main__':
 
     reader = SQLiteAdjustmentReader()
-    adjustments = reader.load_pricing_adjustments(['20180101', '20200901'])
-    print('adjustments', adjustments)
-    symbol_divdends = reader.load_divdends_for_sid('600061', '20200401')
-    print('divdends', symbol_divdends)
-    symbol_rights = reader.load_rights_for_sid('600061', '20200401')
-    print('rights', symbol_rights)
+    adjustments = reader.load_pricing_adjustments(['2018-01-01', '2020-09-01'])
+    print('adjustments.keys', adjustments.keys())
+    # symbol_divdends = reader.load_divdends_for_sid('600061', '20200401')
+    # print('divdends', symbol_divdends)
+    # symbol_rights = reader.load_rights_for_sid('600061', '20200401')
+    # print('rights', symbol_rights)

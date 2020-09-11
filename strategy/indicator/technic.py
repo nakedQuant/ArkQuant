@@ -5,6 +5,7 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 import pandas as pd, numpy as np
+from functools import reduce
 from strategy.indicator import (
      BaseFeature,
      MA,
@@ -21,8 +22,7 @@ class TEMA(EMA):
         三重指数移动平均 --- 3 * EMA - 3 * EMA的EMA + EMA的EMA的EMA
     """
     @classmethod
-    def _calc_feature(cls, feed, kwargs):
-        frame = feed.copy()
+    def _calc_feature(cls, frame, kwargs):
         ema = EMA.compute(frame, kwargs)
         kwargs.update({'dimension': 2})
         xema = XEMA.compute(frame, kwargs)
@@ -36,11 +36,13 @@ class DEMA(EMA):
     """
         双指数移动平均线，一个单指数移动平均线和一个双指数移动平均线 : 2 * n日EMA - n日EMA的EMA
     """
-    @classmethod
-    def _calc_feature(cls, feed, kwargs):
-        ema = EMA.compute(feed,  kwargs)
-        kwargs.update({'dimension': 2})
-        xema2 = XEMA.compute(feed, kwargs)
+    def __init__(self, dimension=2):
+        self.dimension = dimension
+
+    def _calc_feature(self, frame, kwargs):
+        ema = EMA.compute(frame,  kwargs)
+        kwargs.update({'dimension': self.dimension})
+        xema2 = XEMA.compute(frame, kwargs)
         dema_windowed = 2 * ema[-len(xema2):] - xema2
         return dema_windowed
 
@@ -52,8 +54,7 @@ class IMI(BaseFeature):
         ISd则与ISu相反
     """
     @classmethod
-    def _calc_feature(cls, feed, kwargs):
-        frame = feed.copy()
+    def compute(cls, frame, kwargs):
         diff = frame['close'] - frame['open']
         isu = diff[frame['close'] > frame['open']]
         try:
@@ -68,8 +69,7 @@ class RAVI(BaseFeature):
         区间运动辨识指数（RAVI）7日的SMA与65 天的SMA之差占65天的SMA绝对值，一般来讲，RAVI被限制在3 % 以下，市场做区间运动
     """
     @classmethod
-    def _calc_feature(cls, feed, kwargs):
-        frame = feed.copy()
+    def _calc_feature(cls, frame, kwargs):
         window = kwargs['window']
         short = SMA.compute(frame, min(window))
         long = SMA.compute(frame, max(window))
@@ -83,8 +83,7 @@ class DMA(BaseFeature):
         DMA与AMA比较判断交易方向,参数：12、50、14
     """
     @classmethod
-    def _calc_feature(cls, feed, kwargs):
-        frame = feed.copy()
+    def _calc_feature(cls, frame, kwargs):
         window = kwargs['window']
         short = MA.compute(frame, min(window))
         long = MA.compute(frame, max(window))
@@ -101,11 +100,9 @@ class ER(BaseFeature):
         Signal(i) = ABS(Price(i) - Price(i - N)) ― 当前信号值，当前价格和N周期前的价格差的绝对值;
         Noise(i) = Sum(ABS(Price(i) - Price(i - 1)), N) ― 当前噪声值，对当前周期价格和前一周期价格差的绝对值求N周期的和。
         在很强趋势下效率比倾向于1；如果无定向移动，则稍大于0
-
     """
     @classmethod
-    def _calc_feature(cls, feed, kwargs):
-        frame = feed.copy()
+    def _calc_feature(cls, frame, kwargs):
         window = kwargs['window']
         displacement = frame - frame.shift(window)
         distance = abs(frame.diff()).rolling(window=window).sum()
@@ -125,41 +122,48 @@ class AMA(BaseFeature):
     _fast = 2/3
     _low = 2/31
 
-    @classmethod
-    def _calc_feature(cls, feed, kwargs):
-        frame = feed.copy()
+    def align_wgt(self, weights):
+        p = weights.copy()
+        p.insert(0, 0)
+        # 计算可变系数序列
+        p2 = weights.copy()
+        p2.append(1)
+        p2.reverse()
+        wgt = np.cumprod(p2) * (1 - p)
+        return wgt
+
+    def _calc_feature(self, frame, kwargs):
         window = kwargs['window']
-        er_windowed = ER.calc_feature(frame, window)
+        er_windowed = ER.compute(frame, window)
         ssc = (er_windowed * (cls._fast - cls._low) + cls._low) ** 2
-        align_raw = frame[-len(ssc)-1:]
-        ama_win = [AEMA.compute(align_raw[:idx], kwargs) for idx in range(window, len(align_raw) + 1)]
-        ama_windowed = pd.Series(ama_win, index=align_raw.index[-len(ama_win):])
+        weights = self.align_wgt(ssc)
+        aema = [frame.iloc[-window:loc, :].apply(lambda x: np.array(x) * weights, axis=0)
+                for loc in range(window, len(frame))]
         return ama_windowed
 
 
-class VEMA(BaseFeature):
-    """
-        变量移动平均线基于数据系列的波动性而调整百分比的指数移动平均线
-        (SM * VR） *收盘价 + （1 - SM * VR） * （昨天）MA
-        SM = 2 / (n + 1);
-        VR可以采用钱德勒摆动指标绝对值 / 100
-    """
-    @staticmethod
-    def _init_vema(raw, window):
-        vema_std = raw.rolling(window=window).std()
-        vema_ratio = vema_std * (1/(window + 1))
-        return vema_ratio
-
-    @classmethod
-    def _calc_feature(cls, feed, kwargs):
-        frame = feed.copy()
-        window = kwargs['window']
-        ins = VEMA()
-        vr = ins._init_vema(frame, window)
-        align_raw = frame[-len(vr) - 1:]
-        vema_win = [AEMA.compute(align_raw[:idx], kwargs) for idx in range(window, len(align_raw) + 1)]
-        vema_windowed = pd.Series(vema_win, index = align_raw.index[-len(vema_win):])
-        return vema_windowed
+# class VEMA(BaseFeature):
+#     """
+#         变量移动平均线基于数据系列的波动性而调整百分比的指数移动平均线
+#         (SM * VR） *收盘价 + （1 - SM * VR） * （昨天）MA
+#         SM = 2 / (n + 1);
+#         VR可以采用钱德勒摆动指标绝对值 / 100
+#     """
+#     @staticmethod
+#     def _init_vema(raw, window):
+#         vema_std = raw.rolling(window=window).std()
+#         vema_ratio = vema_std * (1/(window + 1))
+#         return vema_ratio
+#
+#     @classmethod
+#     def _calc_feature(cls, frame, kwargs):
+#         window = kwargs['window']
+#         ins = VEMA()
+#         vr = ins._init_vema(frame, window)
+#         align_raw = frame[-len(vr) - 1:]
+#         vema_win = [AEMA.compute(align_raw[:idx], kwargs) for idx in range(window, len(align_raw) + 1)]
+#         vema_windowed = pd.Series(vema_win, index=align_raw.index[-len(vema_win):])
+#         return vema_windowed
 
 
 class CMO(BaseFeature):
@@ -170,17 +174,16 @@ class CMO(BaseFeature):
     @staticmethod
     def _calc_init(data):
         # 标准化
-        data =(data - data.min())/(data.max() - data.min())
+        data = (data - data.min())/(data.max() - data.min())
         data_diff = data - data.shift(1)
         su = data[data_diff > 0].sum()
-        sd =  data[data_diff < 0 ].sum()
+        sd = data[data_diff < 0].sum()
         cmo = (su + sd) / (su - sd)
         return cmo
 
     @classmethod
-    def _calc_feature(cls, feed, kwargs):
-        raw = feed.copy()
-        cmo = cls._calc_init(raw)
+    def _calc_feature(cls, frame, kwargs):
+        cmo = cls._calc_init(frame)
         return cmo
 
 
@@ -192,15 +195,13 @@ class Vidya(BaseFeature):
     """
     @staticmethod
     def _init_vidya(feed, window):
-        #标准化
+        # 标准化
         cmo = CMO.calc_feature(feed, window)
-        print('cmo', cmo)
         vidya_ratio = cmo * (2/(window+1))
         return vidya_ratio
 
     @classmethod
-    def _calc_feature(cls, feed, kwargs):
-        frame = feed.copy()
+    def _calc_feature(cls, frame, kwargs):
         window = kwargs['window']
         vidya = cls._init_vidya(frame, window)
         print('vidya', vidya/100)
@@ -230,8 +231,7 @@ class Jump(BaseFeature):
         return power
 
     @classmethod
-    def _calc_feature(cls, feed, kwargs):
-        frame = feed.copy()
+    def _calc_feature(cls, frame, kwargs):
         window = kwargs['window']
         jump = cls._cal_jump(frame, window)
         return jump
@@ -246,9 +246,7 @@ class Gap(BaseFeature):
         1、统计出现次数
         2、计算跳空能量
     """
-
-    def _calc_feature(self, feed, kwargs):
-        frame = feed.copy()
+    def _calc_feature(self, frame, kwargs):
         frame['pre_close'] = frame['close'].shift(1)
         frame['delta_vol'] = frame['volume'] - frame['volume'].shift(1)
         frame['gap'] = (frame['close'] - frame['pre_close']) / (frame['open'] - frame['pre_close']) - 1
@@ -276,8 +274,7 @@ class BreakPower(BaseFeature):
     """
         close -- pre_high
     """
-    def _calc_feature(self, feed, kwargs):
-        frame = feed.copy()
+    def _calc_feature(self, frame, kwargs):
         power = frame['volume'] * (frame['close'] - frame['high'].shift(1)) / frame['close'].shift(1)
         return power
 
@@ -290,8 +287,7 @@ class Speed(BaseFeature):
     所对应的趋势变化敏感速度数值, 以及相关性＊敏感度＝敏感度置信度
     """
     @classmethod
-    def _calc_feature(cls, feed, kwargs):
-        frame = feed.copy()
+    def _calc_feature(cls, frame, kwargs):
         window = kwargs['window']
         raw_trend = (frame.rolling(window=window).mean()).diff()
         raw_trend.dropna(inplace=True)
@@ -858,8 +854,7 @@ class CurveScorer(BaseFeature):
         logic : if the triangle area exceed curve area means positive
     """
     @classmethod
-    def _calc_feature(cls, feed, kwargs):
-        frame = feed.copy()
+    def _calc_feature(cls, frame, kwargs):
         _normalize = zoom(frame)
         width = len(_normalize)
         area = np.trapz(np.array(_normalize), np.array(range(1, width + 1)))

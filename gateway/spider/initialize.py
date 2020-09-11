@@ -36,7 +36,7 @@ class SyncSpider(object):
         router_writer.writer()
 
         def when_done(r):
-            # '''每一个进程结束后结果append到result中'''
+            # 每一个进程结束后结果append到result中
             # result.append(r.result())
             print('future : %r finished' % r)
 
@@ -65,5 +65,5 @@ class SyncSpider(object):
 if __name__ == '__main__':
 
     # initialize
-    m = SyncSpider(initialization=False)
+    m = SyncSpider(initialization=True)
     m()

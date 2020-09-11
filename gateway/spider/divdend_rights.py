@@ -33,15 +33,15 @@ class AdjustmentsWriter(Crawler):
         for tbl in self.adjustment_tables:
             self.deadlines[tbl] = self._retrieve_deadlines_from_sqlite(tbl)
 
-    def _parse_equity_issues(self, content, symbol):
+    def _parse_equity_rights(self, content, symbol):
         """配股"""
-        raw = list()
+        text = list()
         table = content.find('table', {'id': 'sharebonus_2'})
-        [raw.append(item.get_text()) for item in table.tbody.findAll('tr')]
-        if len(raw) == 1 and raw[0] == '暂时没有数据！':
-            print('------------code : %s has not 配股' % symbol, raw[0])
+        [text.append(item.get_text()) for item in table.tbody.findAll('tr')]
+        if len(text) == 1 and text[0] == '暂时没有数据！':
+            print('------------code : %s has not 配股' % symbol, text[0])
         else:
-            delimeter = [item.split('\n')[1:-2] for item in raw]
+            delimeter = [item.split('\n')[1:-2] for item in text]
             frame = pd.DataFrame(delimeter, columns=['declared_date', 'rights_bonus', 'rights_price',
                                                      'benchmark_share', 'pay_date', 'ex_date',
                                                      '缴款起始日', '缴款终止日', 'effective_date', '募集资金合计'])
@@ -52,13 +52,13 @@ class AdjustmentsWriter(Crawler):
 
     def _parse_equity_divdend(self, content, sid):
         """获取分红配股数据"""
-        raw = list()
+        text = list()
         table = content.find('table', {'id': 'sharebonus_1'})
-        [raw.append(item.get_text()) for item in table.tbody.findAll('tr')]
-        if len(raw) == 1 and raw[0] == '暂时没有数据！':
-            print('------------code : %s has not splits and divdend' % sid, raw[0])
+        [text.append(item.get_text()) for item in table.tbody.findAll('tr')]
+        if len(text) == 1 and text[0] == '暂时没有数据！':
+            print('------------code : %s has not splits and divdend' % sid, text[0])
         else:
-            delimeter = [item.split('\n')[1:-2] for item in raw]
+            delimeter = [item.split('\n')[1:-2] for item in text]
             frame = pd.DataFrame(delimeter, columns=['declared_date', 'sid_bonus', 'sid_transfer', 'bonus',
                                                      'progress', 'pay_date', 'ex_date', 'effective_date'])
             frame.loc[:, 'sid'] = sid
@@ -69,7 +69,7 @@ class AdjustmentsWriter(Crawler):
     def _parser_writer(self, sid):
         contents = _parse_url(DIVDEND % sid)
         # 解析网页内容
-        self._parse_equity_issues(contents, sid)
+        self._parse_equity_rights(contents, sid)
         self._parse_equity_divdend(contents, sid)
 
     def rerun(self):
@@ -98,7 +98,8 @@ class AdjustmentsWriter(Crawler):
         # 获取数据库的最新时点
         self._record_deadlines()
         # 获取所有股票
-        equities = self._retrieve_assets_from_sqlite()['equity']
+        # equities = self._retrieve_assets_from_sqlite()['equity']
+        equities = ['000001']
         self._writer_internal(equities)
         self.rerun()
 

@@ -7,29 +7,29 @@ Created on Tue Mar 12 15:37:47 2019
 """
 import pandas as pd, numpy as np
 from gateway.driver.client import tsclient
-from gateway.spider.url import ASSET_SUPPLEMENT_URL
+from gateway.spider.url import ASSET_SUPPLEMENT_URL, DIVDEND
 from gateway.driver.tools import _parse_url
 from itertools import chain
 from gateway.database import engine, metadata
 from sqlalchemy import distinct, select
 
-metadata.reflect(bind=engine)
-print(metadata.tables)
-router = metadata.tables['asset_router']
-ins = select([router.c.sid]).where(router.c.asset_type == 'fund')
-ins = engine.execute(ins)
-router_assets = [i[0] for i in ins.fetchall()]
-print(router_assets)
-
-# equity kline
-equity_kline = metadata.tables['fund_price']
-ins = select([distinct(equity_kline.c.sid)])
-ins = engine.execute(ins)
-equity_assets = [i[0] for i in ins.fetchall()]
-print(equity_assets)
-
-difference = set(router_assets) - set(equity_assets)
-print('difference', difference)
+# metadata.reflect(bind=engine)
+# print(metadata.tables)
+# router = metadata.tables['asset_router']
+# ins = select([router.c.sid]).where(router.c.asset_type == 'fund')
+# ins = engine.execute(ins)
+# router_assets = [i[0] for i in ins.fetchall()]
+# print(router_assets)
+#
+# # equity kline
+# equity_kline = metadata.tables['fund_price']
+# ins = select([distinct(equity_kline.c.sid)])
+# ins = engine.execute(ins)
+# equity_assets = [i[0] for i in ins.fetchall()]
+# print(equity_assets)
+#
+# difference = set(router_assets) - set(equity_assets)
+# print('difference', difference)
 
 
 
@@ -232,3 +232,20 @@ print('difference', difference)
 # mapping = {item[0]: item[1] for item in brief}
 # mapping.update({'代码': code})
 # print('mapping', mapping)
+
+sid = '000001'
+content = _parse_url(DIVDEND % sid)
+
+text = list()
+table = content.find('table', {'id': 'sharebonus_2'})
+[text.append(item.get_text()) for item in table.tbody.findAll('tr')]
+if len(text) == 1 and text[0] == '暂时没有数据！':
+    print('------------code : %s has not 配股' % sid, text[0])
+else:
+    delimeter = [item.split('\n')[1:-2] for item in text]
+    print('delimeter', delimeter)
+    frame = pd.DataFrame(delimeter, columns=['declared_date', 'rights_bonus', 'rights_price',
+                                             'benchmark_share', 'pay_date', 'ex_date',
+                                             '缴款起始日', '缴款终止日', 'effective_date', '募集资金合计'])
+    print('frame', frame.iloc[0, :])
+    frame.loc[:, 'sid'] = sid

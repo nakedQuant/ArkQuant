@@ -265,5 +265,12 @@ if __name__ == '__main__':
     # print('divdends', divdends)
     # rights = data_portal.get_rights_for_asset(assets[0], '2000-01-24')
     # print('rights', rights)
-    open_pct = data_portal.get_open_pct(assets, '2020-09-03')
-    print('open_pct', open_pct)
+    # open_pct = data_portal.get_open_pct(assets, '2020-09-03')
+    # print('open_pct', open_pct)
+    window_data = data_portal.get_window_data(assets, sessions[1],
+                                              days_in_window=300, field=fields, data_frequency='minute')
+    print('minute_window_data', window_data)
+    history_data = data_portal.get_history_window(assets, sessions[1],
+                                                  bar_count=300, field=fields, data_frequency='minute')
+    print('minute_history_data', history_data)
+

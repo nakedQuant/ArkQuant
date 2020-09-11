@@ -24,11 +24,13 @@ class MarketWidth(BaseFeature):
             ratio = len(ret[ret > 0]) / len(ret[ret != 0])
             return ratio
 
+    def _calc_feature(self, frame, kwargs):
+        pass
+
     @classmethod
-    def _calc_feature(cls, feed, kwargs):
-        frame = feed.copy()
+    def compute(cls, frame, kwargs):
         window = kwargs['window']
-        close = frame.pivot(columns='code', values='close')
+        close = frame.pivot(columns='sid', values='close')
         # T -- minutes S -- second M -- month
         rate = close.apply(cls._calc_return, axis=1)
         rate_windowed = rate.resample('%dD' % window).mean()

@@ -173,10 +173,6 @@ class AssetRouterWriter(Crawler):
         print('spider equity basics elapsed time : %f' % (time.time() - t))
         return frame
 
-    # def _request_equities_basics(self, update_mapping):
-    #     frame = pd.read_csv('equity_basics.csv', dtype={'代码': str})
-    #     return frame
-
     @staticmethod
     def _request_convertible_basics(update_mapping):
         bond_mappings = update_mapping['convertible']

@@ -198,10 +198,10 @@ class AssetWriter(object):
             data_set.equities['发行价格'].fillna(0.00, inplace=True)
             data_set.equities.rename(columns=_rename_equity_cols, inplace=True)
             data_set.equities.dropna(axis=0, how='any', subset=EquityNullFields, inplace=True)
-            data_set.equities['initial_price'] = data_set.equities['initial_price'].astype(np.float)
-            data_set.equities.loc[:, 'asset_type'] = 'equity'
-            data_set.equities.fillna('', inplace=True)
-            print('process equity', data_set.equities.head())
+            if not data_set.equities.empty:
+                data_set.equities['initial_price'] = data_set.equities['initial_price'].astype(np.float)
+                data_set.equities.loc[:, 'asset_type'] = 'equity'
+                data_set.equities.fillna('', inplace=True)
 
         if not data_set.convertibles.empty:
             # convertible
@@ -210,12 +210,12 @@ class AssetWriter(object):
             # 保留已经上市而且转股的可转债
             data_set.convertibles.dropna(axis=0, how='any', subset=ConvertibleNullFields, inplace=True)
             # add and transform maturity date format
-            data_set.convertibles.loc[:, 'last_traded'] = data_set.convertibles['maturity_dt'].apply(
-                                                        lambda x: x.replace('-', ''))
-            data_set.convertibles.loc[:, 'exchange'] = data_set.convertibles['sid'].apply(
-                                                        lambda x: '上海证券交易所' if x.startswith('11') else '深圳证券交易所')
-            data_set.convertibles['asset_type'] = 'convertible'
-            print('process convertibles', data_set.convertibles.head())
+            if not data_set.convertibles.empty:
+                data_set.convertibles.loc[:, 'last_traded'] = data_set.convertibles['maturity_dt'].apply(
+                                                            lambda x: x.replace('-', ''))
+                data_set.convertibles.loc[:, 'exchange'] = data_set.convertibles['sid'].apply(
+                                                            lambda x: '上海证券交易所' if x.startswith('11') else '深圳证券交易所')
+                data_set.convertibles.loc[:, 'asset_type'] = 'convertible'
         if not data_set.funds.empty:
             # fund
             data_set.funds['基金简称'] = data_set.funds['基金简称'].apply(lambda x: x[:-5])

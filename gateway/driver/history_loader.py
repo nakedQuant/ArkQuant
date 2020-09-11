@@ -300,8 +300,7 @@ class HistoryDailyLoader(HistoryLoader):
         return open_pct, pre_close
 
 
-# class HistoryMinuteLoader(HistoryLoader):
-class HistoryMinuteLoader(object):
+class HistoryMinuteLoader(HistoryLoader):
 
     def __init__(self,
                  _minute_reader,
@@ -322,17 +321,23 @@ class HistoryMinuteLoader(object):
         return _slice_window
 
 
-# if __name__ == '__main__':
-#
-#     minute_reader = BcolzMinuteReader()
-#     session_reader = AssetSessionReader()
-#     adjustment_reader = SQLiteAdjustmentReader()
-#
-#     asset = Equity('000001')
-#     sessions = ['2010-08-10', '2015-10-30']
-#     # sessions = ['2020-08-25', '2020-08-25']
-#     daily_history = HistoryDailyLoader(session_reader, adjustment_reader)
-#     # his_data = daily_history.history([asset], ['close', 'open'], sessions[0], window=30)
-#     his_data = daily_history.history([asset], ['close', 'open'], '2010-12-31')
-#     print('his', his_data)
-#     # minute_history = HistoryMinuteLoader(minute_reader, adjustment_reader)
+if __name__ == '__main__':
+
+    minute_reader = BcolzMinuteReader()
+    session_reader = AssetSessionReader()
+    adjustment_reader = SQLiteAdjustmentReader()
+
+    asset = Equity('600000')
+    sessions = ['1995-01-10', '2005-10-30']
+    # sessions = ['2020-08-25', '2020-08-25']
+    # daily_history = HistoryDailyLoader(session_reader, adjustment_reader)
+    # his_data = daily_history.history([asset], ['close', 'open'], sessions[0], window=30)
+    # his_data = daily_history.history([asset], ['close', 'open'], '2010-12-31')
+    # print('his', his_data)
+    minute_history = HistoryMinuteLoader(minute_reader, adjustment_reader)
+    his_data = minute_history.history([asset], ['close', 'open'], '2005-09-03', window=1000)
+    print('his_data', his_data)
+    # his_raw_data = minute_history.history([asset], ['close', 'open'], '2020-09-03')
+    # print('his_raw_data', his_raw_data)
+    # window_data = his_window_data = minute_history.window([asset], ['close', 'open'], '2020-09-03', 10)
+    # print('window_data', window_data)

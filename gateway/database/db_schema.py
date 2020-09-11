@@ -388,7 +388,7 @@ equity_rights = sa.Table(
     sa.Column('rights_price', sa.Numeric(10, 5)),
 )
 
-# 股权结构
+# 股权结构 --- 由于数据问题存在declared_date ex_date 一致的情况（000012， 000002，600109）增加约束条件流通股和限制股
 ownership = sa.Table(
     # ['变动日期', '公告日期', '股本结构图', '变动原因', '总股本', '流通股', '流通A股', '高管股', '限售A股',
     #  '流通B股', '限售B股', '流通H股', '国家股', '国有法人股', '境内法人股', '境内发起人股', '募集法人股',
@@ -417,13 +417,18 @@ ownership = sa.Table(
     sa.Column(
         'declared_date',
         sa.String(10),
+        primary_key=True,
     ),
     sa.Column('general', sa.Numeric(15, 5)),
     # 存在刚开始非流通
-    sa.Column('float', sa.String(20)),
+    sa.Column('float',
+              sa.String(20),
+              primary_key=True),
     # 由于非流通分为高管股以及限制股 所以 -- 表示
     sa.Column('manager', sa.String(20)),
-    sa.Column('strict', sa.String(20)),
+    sa.Column('strict',
+              sa.String(20),
+              primary_key=True),
     sa.Column('b_float', sa.String(20)),
     sa.Column('b_strict', sa.String(20)),
     sa.Column('h_float', sa.String(20)),
