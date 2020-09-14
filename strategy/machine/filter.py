@@ -6,61 +6,17 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 from itertools import chain
-import datetime
 from numpy import (
     float64,
     nan,
-    nanpercentile,
-    uint8,
-    isnan,
-    dtype,
-    datetime64
+    nanpercentile
 )
-
-int64_dtype = dtype('int64')
-
-bool_dtype = dtype('bool')
-
-bool_dtype = dtype('bool')
-
-FILTER_DTYPES = frozenset({bool_dtype})
-
-
-def make_kind_check(python_types, numpy_kind):
-    """
-    Make a function that checks whether a scalar or array is of a given kind
-    (e.g. float, int, datetime, timedelta).
-    """
-    def check(value):
-        if hasattr(value, 'dtype'):
-            return value.dtype.kind == numpy_kind
-        return isinstance(value, python_types)
-    return check
-
-
-is_float = make_kind_check(float, 'f')
-is_int = make_kind_check(int, 'i')
-is_datetime = make_kind_check(datetime, 'M')
-is_object = make_kind_check(object, 'O')
-
-
-def isnat(obj):
-    """
-    Check if a value is np.NaT.
-    """
-    if obj.dtype.kind not in ('m', 'M'):
-        raise ValueError("%s is not a numpy datetime or timedelta")
-    return obj.view(int64_dtype) == iNaT
 
 
 def is_missing(data, missing_value):
     """
     Generic is_missing function that handles NaN and NaT.
     """
-    if is_float(data) and isnan(missing_value):
-        return isnan(data)
-    elif is_datetime(data) and isnat(missing_value):
-        return isnat(data)
     return data == missing_value
 
 
@@ -103,20 +59,6 @@ class Filter(object):
     output of a Pipeline and for reducing memory consumption of Pipeline
     results.
     """
-    # Filters are window-safe by default, since a yes/no decision means the
-    # same thing from all temporal perspectives.
-    window_safe = True
-
-    # Used by RestrictedDTypeMixin
-    ALLOWED_DTYPES = FILTER_DTYPES
-    dtype = bool_dtype
-
-    def _validate(self):
-        # Run superclass validation first so that we handle `dtype not passed`
-        # before this.
-        if self.dtype != bool_dtype:
-            raise ValueError('filter values --- bool values')
-        return True
 
 
 class NullFilter(Filter):

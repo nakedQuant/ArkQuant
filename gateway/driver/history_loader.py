@@ -146,6 +146,14 @@ class HistoryLoader(ABC):
     def frequency(self):
         raise NotImplementedError()
 
+    def get_spot_value(self, dt, asset, fields):
+        spot = self.adjust_window.get_spot_value(dt, asset, fields)
+        return spot
+
+    def get_stack_value(self, tbl, session):
+        stack = self.reader.get_stack_value(tbl, session)
+        return stack
+
     @abstractmethod
     def _compute_slice_window(self, data, date, window):
         raise NotImplementedError
@@ -267,10 +275,6 @@ class HistoryDailyLoader(HistoryLoader):
     @property
     def frequency(self):
         return 'daily'
-
-    def get_spot_value(self, dt, asset, fields):
-        spot = self.adjust_window.get_spot_value(dt, asset, fields)
-        return spot
 
     @staticmethod
     def _compute_slice_window(_window, dts):

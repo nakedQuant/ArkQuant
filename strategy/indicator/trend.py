@@ -23,12 +23,9 @@ class MedianFilter(BaseFeature):
         优点： 能有效克服因偶然因素引起的波动干扰对变化缓慢的被测参数有良好的滤波效果
         缺点：对流量、速度等快速变化的参数不宜
     """
-
     @classmethod
-    def _calc_feature(cls, feed, kwargs):
-        frame = feed.copy()
-        window = kwargs['window']
-        median= frame.rolling(window=window).median()
+    def _calc_feature(cls, frame, kwargs):
+        median = frame.rolling(window=kwargs['window']).median()
         return median
 
 
@@ -44,7 +41,7 @@ class MMedianFilter(BaseFeature):
         缺点：测量速度较慢，和算术平均滤波法一样
     """
     @staticmethod
-    def _init_mmedian(data):
+    def _calculate_mmedian(data):
         data.sort_values(ascending=True, inplace=True)
         mmedian = data[1:-1].mean()
         return mmedian
@@ -53,7 +50,7 @@ class MMedianFilter(BaseFeature):
     def _calc_feature(cls, feed, kwargs):
         frame = feed.copy()
         window = kwargs['window']
-        mmedian = frame.rolling(window=window).apply(cls._init_mmedian)
+        mmedian = frame.rolling(window=window).apply(cls._calculate_mmedian)
         return mmedian
 
 
@@ -62,8 +59,7 @@ class AmplitudeFilter(BaseFeature):
         限幅波动 , 参考3Q法则
     """
     @classmethod
-    def _calc_feature(cls, feed, kwargs):
-        frame = feed.copy()
+    def _calc_feature(cls, frame, kwargs):
         upper = 3 * np.nanstd(frame) + np.nanmean(frame)
         bottom = - 3 * np.nanstd(frame) + np.nanmean(frame)
         tunnel = np.clip(np.array(frame.values()), bottom, upper)
@@ -101,17 +97,16 @@ class GaussianFilter(BaseFeature):
     """
 
     @staticmethod
-    def _init_guassian(x, theta):
+    def _calculate_guassian(x, theta):
         guassian = np.exp(- x ** 2 / (2 * theta ** 2)) / (np.sqrt(2 * np.math.pi) * theta)
         return guassian
 
     @classmethod
     def _calc_feature(cls, feed, kwargs):
         frame = feed.copy()
-        frozen = partial(cls._init_guassian, theta=frame.std())
-        guassian = [frozen(x) for x in np.array(frame)]
-        guassian_windowed = pd.Series(guassian, index=frame.index)
-        return guassian_windowed
+        func = partial(cls._calculate_guassian, theta=frame.std())
+        guassian = pd.Series([func(x) for x in np.array(frame)], index=frame.index)
+        return guassian
 
 
 class Detrend(BaseFeature):
@@ -121,18 +116,16 @@ class Detrend(BaseFeature):
     _degree = 0
 
     @classmethod
-    def _calc_feature(cls, feed, kwargs):
-        frame = feed.copy()
+    def _calc_feature(cls, frame, kwargs):
         _coef = _fit_poly(range(1, len(frame) + 1), frame, degree=kwargs['degree'])
-        de_trend = frame - _coef * np.array(range(1, len(frame) + 1))
-        return de_trend
+        detrend = frame - _coef * np.array(range(1, len(frame) + 1))
+        return detrend
 
 
 class RegRatio(BaseFeature):
 
     @classmethod
-    def _calc_feature(cls, feed, kwargs):
-        frame = feed.copy()
+    def _calc_feature(cls, frame, kwargs):
         window = kwargs['window']
         upper = frame['high'].rolling(window=window).mean()
         bottom = frame['low'].rolling(window=window).mean()

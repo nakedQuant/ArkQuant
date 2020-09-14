@@ -96,6 +96,12 @@ class BcolzReader(BarReader):
     def get_spot_value(self, asset, dt, fields):
         raise NotImplementedError()
 
+    def get_stack_value(self, tbl_name, session):
+        raise NotImplementedError(
+            'minute reader cannot implement stack value '
+            'because different sid has solo bcolz'
+        )
+
     def load_raw_arrays(self, sessions, assets, columns):
         assert set(columns).issubset(self.default), 'unknown field'
         sdate, edate = sessions
@@ -175,8 +181,8 @@ class BcolzDailyReader(BcolzReader):
     def data_frequency(self):
         return "daily"
 
-    def get_spot_value(self, date, asset, fields):
-        kline = self.get_value(asset.sid, date, date)
+    def get_spot_value(self, dt, asset, fields):
+        kline = self.get_value(asset.sid, dt, dt)
         return kline.loc[:, fields]
 
 

@@ -33,8 +33,7 @@ class ADF(BaseFeature):
             2、对数序列
     """
     @classmethod
-    def _calc_feature(cls, feed, kwargs):
-        frame = feed.copy()
+    def _calc_feature(cls, frame, kwargs):
         adf, p_adf, lag, nobs, critical_dict, ic_best = adfuller(np.array(frame), regression=kwargs['mode'])
         # 判断是否平稳 返回p_adf ， lag --- number of lags used
         status = True if p_adf >= kwargs['p_value'] else False
@@ -47,8 +46,7 @@ class Coint(BaseFeature):
             1、筛选出相关性的两个标的 ，
             2、判断序列是否平稳 --- 数据差分进行处理
             3、协整模块
-
-        coint返回值三个如下:
+        Coint 返回值三个如下:
             coint_t: float t - statistic of unit - root test on residuals
             pvalue: float MacKinnon's approximate p-value based on MacKinnon (1994)
             crit_value: dict Critical  values for the test statistic at the 1 %, 5 %, and 10 % levels.
@@ -56,10 +54,15 @@ class Coint(BaseFeature):
             statsmodels.tsa.stattools.coint(y0，y1，trend ='c'，method ='aeg'，maxlag = None，autolag ='aic'，
     """
     @classmethod
-    def _calc_feature(cls, feeds, kwargs):
-        y, x = feeds.values()
+    def _calc_feature(cls, feed, kwargs):
+        y, x = feed.values()
         result = coint(y, x)
         return result[0], result[-1]
+
+    def compute(self, frame, kwargs):
+        assert isinstance(frame, (tuple, list)) and len(frame) == 2, 'need x,y to calculate Coint'
+        coint = self._calc_feature(frame, kwargs)
+        return coint
 
 
 class ACF(BaseFeature):
@@ -69,11 +72,10 @@ class ACF(BaseFeature):
         qstat ---表示序列之间的相关性是否显著（自回归）
     """
     @classmethod
-    def _calc_feature(cls, feed, kwargs):
-        frame = feed.copy()
+    def _calc_feature(cls, frame, kwargs):
         lag = kwargs['lag']
         correlation = acf(frame, nlags=lag, fft=kwargs['fft'])
-        _acf= pd.Series(correlation, index=frame.index[: lag + 1])
+        _acf = pd.Series(correlation, index=frame.index[lag:])
         return _acf
 
 
@@ -87,11 +89,10 @@ class PACF(BaseFeature):
     """
     _n_lags = 10
     @classmethod
-    def _calc_feature(cls, feed, kwargs):
-        frame = feed.copy()
+    def _calc_feature(cls, frame, kwargs):
         n_lags = kwargs['lag']
         coef = pacf(frame, nlags=n_lags)
-        pacf_coef = pd.Series(coef, index=frame.index[: n_lags + 1])
+        pacf_coef = pd.Series(coef, index=frame.index[n_lags:])
         return pacf_coef
 
 
@@ -105,8 +106,7 @@ class VRT(BaseFeature):
         与adf搭配使用，基于adf中的滞后项
     """
     @classmethod
-    def _calc_feature(cls, feed, kwargs):
-        frame = feed.copy()
+    def _calc_feature(cls, frame, kwargs):
         window = kwargs['window']
         adjust_x = pd.Series(np.log(frame))
         var_shift = adjust_x / adjust_x.shift(window)
@@ -133,7 +133,7 @@ class FRAMA(BaseFeature):
             8、将7步的序列对数与长度的对数进行回归，斜率Hurst指数
     """
     @classmethod
-    def _calc_feature(cls, feed, kwargs):
+    def _calc_feature(cls, frame, kwargs):
         raise NotImplementedError()
 
 
@@ -155,18 +155,15 @@ class PCA(BaseFeature):
 
     6）Y=PX  即为降维到k维后的数据
     '''
-    _topNfeat = 2
-
     @classmethod
-    def _calc_feature(cls, feed, kwargs):
-        datamat = feed.copy()
+    def _calc_feature(cls, datamat, kwargs):
+        _topNfeat = kwargs['dimension']
         meanval = np.mean(datamat, axis=0)
         meanremoved = datamat - meanval
-        print('mean', meanremoved)
         covmat = np.cov(meanremoved, rowvar=0)
         eigval, eigvect = np.linalg.eig(np.mat(covmat))
         eigvalind = np.argsort(eigval)
-        eigvalind = eigvalind[-cls._topNfeat:]
+        eigvalind = eigvalind[-_topNfeat:]
         redeigvect = eigvect[:, eigvalind]
         reconmat = meanremoved * redeigvect * redeigvect.T + meanval
         return reconmat

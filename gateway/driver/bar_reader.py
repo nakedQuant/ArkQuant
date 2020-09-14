@@ -141,6 +141,28 @@ class AssetSessionReader(BarReader):
                 return frame.loc[0, fields]
             return kline
 
+    def get_stack_value(self, tbl_name, session):
+        """
+            intend to calculate market index
+        """
+        tbl = self.metadata.tables['%s_price' % tbl_name]
+        start_date, end_date = session
+        orm = sa.select([
+                    tbl.c.trade_dt, tbl.c.sid,
+                    sa.cast(tbl.c.open, sa.Numeric(10, 2)).label('open'),
+                    sa.cast(tbl.c.close, sa.Numeric(12, 2)).label('close'),
+                    sa.cast(tbl.c.high, sa.Numeric(10, 2)).label('high'),
+                    sa.cast(tbl.c.low, sa.Numeric(10, 3)).label('low'),
+                    sa.cast(tbl.c.volume, sa.Numeric(15, 0)).label('volume'),
+                    sa.cast(tbl.c.amount, sa.Numeric(15, 2)).label('amount')])\
+            .where(tbl.c.trade_dt.between(start_date, end_date))
+        rp = self.engine.execute(orm)
+        arrays = [[r.trade_dt, r.sid, r.open, r.close, r.high, r.low, r.volume, r.amount] for r in
+                  rp.fetchall()]
+        kline = pd.DataFrame(arrays, columns=['trade_dt', 'sid', 'open', 'close',
+                                              'high', 'low', 'volume', 'amount'])
+        return kline
+
     @staticmethod
     def _adjust_frame_type(df):
         for col, col_type in KLINE_COLUMNS_TYPE.items():

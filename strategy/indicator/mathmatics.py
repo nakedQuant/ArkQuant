@@ -9,6 +9,38 @@ import statsmodels.api as sm, numpy as np
 from scipy import integrate
 
 
+def demean(row):
+    return row - np.nanmean(row)
+
+
+def zoom(raw):
+    scale = (raw - raw.min()) / (raw.max() - raw.min())
+    return scale
+
+
+def standardize(raw):
+    standard = (raw - raw.mean()) / raw.std()
+    return standard
+
+
+def zscore(row):
+    return (row - np.nanmean(row)) / np.nanstd(row)
+
+
+# 弧度转角度
+def coef2deg(x):
+    rad = np.math.acos(x)
+    deg = np.rad2deg(rad)
+    return deg
+
+
+# 积分
+def funcScorer(func, *args):
+    area, err = integrate.quad(func, *args)
+    ratio = (area - err) / area
+    return area, ratio
+
+
 def Euclidean(x, y):
     """
         1 /（1 + 距离） y和y_fit的euclidean欧式距离(L2范数)、点与点之间的绝对距离
@@ -66,7 +98,7 @@ def RankDistance(x, y):
 
 
 def _fit_poly(y, degree):
-    #return n_array (dimension ascending = False) p(x) = p[0] * x**deg + ... + p[deg]
+    # return n_array (dimension ascending = False) p(x) = p[0] * x**deg + ... + p[deg]
     y.dropna(inplace=True)
     res = np.polyfit(range(len(y)), np.array(y), degree)
     return res[0]
@@ -90,37 +122,6 @@ def _fit_statsmodel(x, y):
 def _fit_lstsq(x, y):
     res = np.linalg.lstsq(x, y)
     return res[0][0]
-
-
-def zoom(raw):
-    scale = (raw - raw.min()) / (raw.max() - raw.min())
-    return scale
-
-
-def standardize(raw):
-    standard = (raw - raw.mean()) / raw.std()
-    return standard
-
-
-# 弧度转角度
-def coef2deg(x):
-    rad = np.math.acos(x)
-    deg = np.rad2deg(rad)
-    return deg
-
-
-def funcScorer(func, *args):
-    area, err = integrate.quad(func, *args)
-    ratio = (area - err) / area
-    return area, ratio
-
-
-def demean(row):
-    return row - np.nanmean(row)
-
-
-def zscore(row):
-    return (row - np.nanmean(row)) / np.nanstd(row)
 
 
 def winsorize(row, min_percentile, max_percentile):

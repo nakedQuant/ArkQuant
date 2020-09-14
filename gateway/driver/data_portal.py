@@ -113,6 +113,10 @@ class DataPortal(object):
         spot_value = self._history_loader[frequency].get_spot_value(dts, asset, field)
         return spot_value
 
+    def get_stack_value(self, tbl, session):
+        stack = self._history_loader.get_stack_value(tbl, session)
+        return stack
+
     # @lru_cache(maxsize=32)
     def get_window_data(self,
                         assets,
