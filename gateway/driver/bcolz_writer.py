@@ -13,11 +13,6 @@ from utils.dt_utilty import normalize_date
 BcolzMinuteFields = ['ticker', 'open', 'high', 'low', 'close', 'amount', 'volume']
 BcolzDailyFields = ['trade_dt', 'open', 'high', 'low', 'close', 'amount', 'volume']
 
-# 配置bcolz
-bcolz.set_nthreads(Num * bcolz.detect_number_of_cores())
-# Print all the versions of packages that bcolz relies on.
-bcolz.print_versions()
-
 
 class BcolzWriter(ABC):
     """
@@ -72,6 +67,23 @@ class BcolzWriter(ABC):
             os.makedirs(bcolz_dir)
             print('path', path)
         initial_array = np.empty(0, np.uint32)
+        # 配置bcolz
+        bcolz.set_nthreads(Num * bcolz.detect_number_of_cores())
+        # Print all the versions of packages that bcolz relies on.
+        bcolz.print_versions()
+        """
+        clevel : int (0 <= clevel < 10) The compression level.
+        shuffle : int The shuffle filter to be activated. Allowed values are bcolz.NOSHUFFLE (0), 
+                bcolz.SHUFFLE (1) and bcolz.BITSHUFFLE (2). The default is bcolz.SHUFFLE.
+        cname : string (‘blosclz’, ‘lz4’, ‘lz4hc’, ‘snappy’, ‘zlib’, ‘zstd’)
+                Select the compressor to use inside Blosc.
+        quantize : int (number of significant digits)
+                Quantize data to improve (lossy) compression. Data is quantized using np.around(scale*data)/scale,
+                 where scale is 2**bits, and bits is determined from the quantize value. For example,
+                  if quantize=1, bits will be 4. 0 means that the quantization is disabled.
+        default : cparams(clevel=5, shuffle=1, cname='lz4', quantize=0)
+        """
+        params = bcolz.cparams(clevel=9)
         table = bcolz.ctable(
             rootdir=path,
             columns=[
@@ -85,7 +97,9 @@ class BcolzWriter(ABC):
             ],
             names=self._bcolz_fields,
             mode='w',
+            cparams=params
         )
+        print('cparams', table.cparams)
         table.flush()
         table = self._init_attr(table, path)
         # table.attrs['metadata'] = self._init_metadata(path)
@@ -335,6 +349,6 @@ class BcolzDailyBarWriter(BcolzWriter):
 
 if __name__ == '__main__':
 
-    tdx_dir = r'E:\tdx\test'
+    tdx_dir = r'D:\通达信-1m\*'
     w1 = BcolzMinuteBarWriter(tdx_dir)
     w1.write()
