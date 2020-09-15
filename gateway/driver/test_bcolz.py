@@ -9,7 +9,6 @@ import pandas as pd, bcolz, os, datetime
 from gateway.driver.bar_reader import BarReader
 from gateway.driver.tools import transfer_to_timestamp
 from gateway.driver import BcolzDir, OHLC_RATIO
-from gateway.asset.assets import Equity
 
 __all__ = [
     'BcolzDailyReader',
@@ -82,7 +81,10 @@ class BcolzReader(BarReader):
             assert meta['end_session'] >= sdate, ('%r exceed metadata end_session' % sdate)
             condition = "({0} <= trade_dt) & (trade_dt <= {1})".format(sdate, edate)
         frame = pd.DataFrame(table.fetchwhere(condition))
+        # out.index = [time.strftime('%Y-%m-%d %H:%M', time.localtime(i)) for i in out.index]
+        print('frame', frame)
         if not frame.empty:
+            # set index
             frame.set_index('ticker', inplace=True) if 'ticker' in frame.columns \
                 else frame.set_index('trade_dt', inplace=True)
             print('index name', frame.index.name)
@@ -109,9 +111,9 @@ class BcolzReader(BarReader):
         sdate, edate = sessions
         frame_dict = dict()
         for i, asset in enumerate(assets):
-            out = self.get_value(asset.sid, sdate, edate)
+            out = self.get_value(asset, sdate, edate)
             print('out', out)
-            frame_dict[asset.sid] = out.loc[:, columns]
+            frame_dict[asset] = out.loc[:, columns]
         return frame_dict
 
 
@@ -151,7 +153,7 @@ class BcolzMinuteReader(BcolzReader):
         """
         start_dts = transfer_to_timestamp(dt + ' 09:30:00')
         end_dts = transfer_to_timestamp(dt + ' 15:00:00')
-        minutes = self.get_value(asset.sid, start_dts, end_dts)
+        minutes = self.get_value(asset, start_dts, end_dts)
         print('minutes', minutes)
         return minutes.loc[:, fields]
 
@@ -190,12 +192,12 @@ class BcolzDailyReader(BcolzReader):
 
 if __name__ == '__main__':
 
-    session = ['2020-01-01', '2020-09-03']
-    equity = Equity('600000')
+    session = ['2004-04-01', '2004-04-30']
+    # equity = Equity('600000')
     fields = ['open', 'close']
     minute_reader = BcolzMinuteReader()
-    raw = minute_reader.load_raw_arrays(session, [equity], fields)
+    raw = minute_reader.load_raw_arrays(session, ['000785'], fields)
     print('raw', raw)
-    spot_value = minute_reader.get_spot_value('2020-09-07', equity, fields)
-    print('spot_value', spot_value)
+    # spot_value = minute_reader.get_spot_value('2020-09-07', '600000', fields)
+    # print('spot_value', spot_value)
 

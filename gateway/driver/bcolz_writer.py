@@ -40,9 +40,7 @@ class BcolzWriter(ABC):
         set to a default (see `setdefaults()` method).
     """
     def _init_attr(self, metadata, path):
-        # 初始化
-        # metadata = defaultdict(None)
-        # 定义属性
+        # 初始化 定义属性
         metadata.attrs['start_session'] = None
         metadata.attrs['end_session'] = None
         metadata.attrs['ohlc_ratio'] = self._default_ohlc_ratio
@@ -124,8 +122,11 @@ class BcolzWriter(ABC):
 
     def glob_files(self):
         # e.g.  r'D:\通达信-1m\*'
-        sh_path = os.path.join(self._tdx_dir, r'*\vipdoc\*\minline\sh6*')
-        sz_path = os.path.join(self._tdx_dir, r'*\vipdoc\*\minline\sz[0|3]*')
+        print('_tdx_dir', self._tdx_dir)
+        sh_path = os.path.join(self._tdx_dir, 'vipdoc\sh\minline\sh6*')
+        print('sh_path', sh_path)
+        sz_path = os.path.join(self._tdx_dir, 'vipdoc\sz\minline\sz[0|3]*')
+        print('sz_path', sz_path)
         sh_files = glob.glob(sh_path)
         sz_files = glob.glob(sz_path)
         tdx_file_paths = sh_files + sz_files
@@ -250,8 +251,11 @@ class BcolzMinuteBarWriter(BcolzWriter):
         # 剔除重复的
         start_session = table.attrs['start_session']
         end_session = table.attrs['end_session']
+        print('original tdx data', data)
         data['ticker'] = data['ticker'].apply(lambda x: x.timestamp())
+        print('adjust data', data)
         frame = data[data['ticker'] > end_session] if end_session else data
+        print('frame', frame)
         if len(frame):
             ctable_frame = self.c_table.fromdataframe(frame)
             table.append(ctable_frame)
@@ -331,6 +335,6 @@ class BcolzDailyBarWriter(BcolzWriter):
 
 if __name__ == '__main__':
 
-    dir_ = r'E:\update'
-    w1 = BcolzMinuteBarWriter(dir_)
+    tdx_dir = r'E:\tdx\test'
+    w1 = BcolzMinuteBarWriter(tdx_dir)
     w1.write()

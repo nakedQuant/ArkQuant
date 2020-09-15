@@ -5,7 +5,7 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-import pandas as pd, time
+import pandas as pd, datetime
 from toolz import valmap
 from functools import partial
 from gateway.driver.bar_reader import AssetSessionReader
@@ -50,7 +50,8 @@ class HistoryCompatibleAdjustments(object):
            后复权：复权后价格=复权前价格×(1+流通股份变动比例)+现金红利
         """
         kline = data[sid]
-        kline.index = [time.strftime('%Y-%m-%d %H-%M-%S', time.localtime(i)) for i in data['600000'].index]
+        # kline.index = [time.strftime('%Y-%m-%d %H-%M-%S', time.localtime(i)) for i in data['600000'].index]
+        kline.index = [datetime.datetime.utcfromtimestamp(i).strftime('%Y-%m-%d %H:%M') for i in data['600000'].index]
         print('kline', kline)
         try:
             divdends = adjustment['divdends'][sid]
