@@ -4,10 +4,9 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-from strategy import Strategy
 
 
-class AHRatio(Strategy):
+class AHRatio(object):
     """
         数据处理：对数价差
         获取股票每天A/H股价比率

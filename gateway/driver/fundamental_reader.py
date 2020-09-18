@@ -259,26 +259,26 @@ class GrossSessionReader(BarReader):
             page = page + 1
         return gross_value
 
-
-if __name__ == '__main__':
-
-    sessions = ['2020-01-01', '2020-09-10']
-    asset = [Equity('000001')]
-    massive = MassiveSessionReader()
-    release = ReleaseSessionReader()
-    holder = HolderSessionReader()
-    ownership = OwnershipSessionReader()
-    gdp = GrossSessionReader()
-    marign = MarginSessionReader()
-    # m = massive.load_raw_arrays(sessions, asset)
-    # print('massive', m)
-    # r = release.load_raw_arrays(sessions, asset)
-    # print('release', r)
-    # h = holder.load_raw_arrays(sessions, asset)
-    # print('holder', h)
-    # o = ownership.load_raw_arrays(sessions, asset)
-    # print('ownership', o)
-    # margin_data = marign.load_raw_arrays(sessions)
-    # print('margin', margin_data)
-    g = gdp.load_raw_arrays()
-    print('gdp', g)
+#
+# if __name__ == '__main__':
+#
+#     sessions = ['2020-01-01', '2020-09-10']
+#     asset = [Equity('000001')]
+#     massive = MassiveSessionReader()
+#     m = massive.load_raw_arrays(sessions, asset)
+#     print('massive', m)
+#     release = ReleaseSessionReader()
+#     r = release.load_raw_arrays(sessions, asset)
+#     print('release', r)
+#     holder = HolderSessionReader()
+#     h = holder.load_raw_arrays(sessions, asset)
+#     print('holder', h)
+#     ownership = OwnershipSessionReader()
+#     o = ownership.load_raw_arrays(sessions, asset)
+#     print('ownership', o)
+#     marign = MarginSessionReader()
+#     margin_data = marign.load_raw_arrays(sessions)
+#     print('margin', margin_data)
+#     gdp = GrossSessionReader()
+#     g = gdp.load_raw_arrays()
+#     print('gdp', g)

@@ -66,10 +66,12 @@ class EventWriter(Crawler):
             # '' -- 0.0
             frame.replace(to_replace='', value=0.0, inplace=True)
             holdings = frame[frame['declared_date'] > deadline.max()] if not deadline.empty else frame
+            print('holding', holdings.head())
             if len(holdings) == 0:
                 break
             db.writer('holder', holdings)
             page = page + 1
+            time.sleep(np.random.randint(0, 3))
 
     def _writer_margin(self, *args):
         """获取市场全量融资融券"""
@@ -93,9 +95,10 @@ class EventWriter(Crawler):
                 frame.loc[:, ['rzye', 'rqye']] = frame.loc[:, ['rzye', 'rqye']].div(1e8)
                 frame.fillna(0.0, inplace=True)
                 margin = frame[frame['declared_date'] > deadline] if deadline else frame
-                print('marign', margin)
+                print('marign', margin.head())
                 db.writer('margin', margin)
                 page = page + 1
+                time.sleep(np.random.randint(0, 3))
             else:
                 break
 
@@ -121,11 +124,11 @@ class EventWriter(Crawler):
                 # frame.loc[:, 'declared_date'] = frame['declared_date'].apply(lambda x: str(x)[:10])
                 frame['declared_date'] = frame['declared_date'].apply(lambda x: pd.Timestamp(x).strftime('%Y-%m-%d'))
                 frame.dropna(axis=0, how='all', inplace=True)
-                print('frame', frame)
                 massive = frame[frame['declared_date'] > deadline.max()] if not deadline.empty else frame
-                print('massive', massive)
+                print('massive', massive.head())
                 db.writer('massive', massive)
                 page = page + 1
+                time.sleep(np.random.randint(0, 3))
             else:
                 break
 
@@ -152,11 +155,11 @@ class EventWriter(Crawler):
                 # frame.loc[:, 'declared_date'] = frame['release_date'].apply(lambda x: str(x)[:10])
                 frame['declared_date'] = frame['declared_date'].apply(lambda x: pd.Timestamp(x).strftime('%Y-%m-%d'))
                 frame.dropna(axis=0, how='all', inplace=True)
-                print('frame', frame)
                 release = frame[frame['declared_date'] > deadline.max()] if not deadline.empty else frame
-                print('release', release)
+                print('release', release.head())
                 db.writer('unfreeze', release)
                 page = page + 1
+                time.sleep(np.random.randint(0, 3))
             else:
                 break
 
@@ -176,8 +179,8 @@ class EventWriter(Crawler):
         self._writer_internal(sdate, edate)
 
 
-if __name__ == '__main__':
-
-    w = EventWriter()
-    # w.writer('2010-01-01', '2020-09-03')
-    w._writer_margin()
+# if __name__ == '__main__':
+#
+#     w = EventWriter()
+#     w.writer('2010-01-01', '2020-09-03')
+#     w._writer_margin()

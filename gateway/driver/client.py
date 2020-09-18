@@ -80,10 +80,10 @@ class TsClient:
 tsclient = TsClient()
 
 
-if __name__ == '__main__':
-
-    stats = tsclient.to_ts_status()
-    stats.dropna(axis=0, how='any', inplace=True)
-    print(len(stats), stats)
-    trading_days = tsclient.to_ts_calendar('1990-01-01', '3000-01-01')
-    print('calendar', trading_days)
+# if __name__ == '__main__':
+#
+#     stats = tsclient.to_ts_status()
+#     stats.dropna(axis=0, how='any', inplace=True)
+#     print(len(stats), stats)
+#     trading_days = tsclient.to_ts_calendar('1990-01-01', '3000-01-01')
+#     print('calendar', trading_days)

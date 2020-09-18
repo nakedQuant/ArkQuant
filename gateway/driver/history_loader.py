@@ -309,35 +309,35 @@ class HistoryMinuteLoader(HistoryLoader):
         return _slice_window
 
 
-if __name__ == '__main__':
-
-    minute_reader = BcolzMinuteReader()
-    session_reader = AssetSessionReader()
-    adjustment_reader = SQLiteAdjustmentReader()
-
-    asset = Equity('600000')
-    sessions = ['2005-01-01', '2010-10-30']
-    fields = ['open', 'close']
-    # daily_history = HistoryDailyLoader(session_reader, adjustment_reader)
-    # his_window_daily = daily_history.history([asset], fields, sessions[0], window=-30)
-    # print('history_window_daily', his_window_daily)
-    # his_daily = daily_history.history([asset], fields, '2010-12-31')
-    # print('his', his_daily)
-    # daily_spot_value = daily_history.get_spot_value('2005-09-07', asset, fields)
-    # print('daily_spot_value', daily_spot_value)
-    # daily_spot_value = daily_history.get_stack_value('equity', sessions)
-    # print('daily_spot_value', daily_spot_value)
-    # daily_open_pct = daily_history.get_open_pct([asset], '2005-09-07')
-    # print('daily_open_pct', daily_open_pct)
-
-    minute_history = HistoryMinuteLoader(minute_reader, adjustment_reader)
-    # his_window_minute = minute_history.history([asset], ['close', 'open'], '2005-09-03', window=-1000)
-    # print('his_window_minute', his_window_minute)
-    his_minute = minute_history.history([asset], ['close', 'open'], '2005-09-08', -1)
-    print('his_minute', his_minute)
-    # minute_window = his_window_data = minute_history.window([asset], ['close', 'open'], '2005-09-07', -10)
-    # print('window_data', minute_window)
-    # minute_spot_value = minute_history.get_spot_value('2005-09-07', asset, fields)
-    # print('minute_spot_value', minute_spot_value)
-    # minute_stack_value = minute_history.get_stack_value('equity', sessions)
-    # print('minute_stack_value', minute_stack_value)
+# if __name__ == '__main__':
+#
+#     minute_reader = BcolzMinuteReader()
+#     session_reader = AssetSessionReader()
+#     adjustment_reader = SQLiteAdjustmentReader()
+#
+#     asset = Equity('600000')
+#     sessions = ['2005-01-01', '2010-10-30']
+#     fields = ['open', 'close']
+#     daily_history = HistoryDailyLoader(session_reader, adjustment_reader)
+#     his_window_daily = daily_history.history([asset], fields, sessions[0], window=-30)
+#     print('history_window_daily', his_window_daily)
+#     his_daily = daily_history.history([asset], fields, '2010-12-31')
+#     print('his', his_daily)
+#     daily_spot_value = daily_history.get_spot_value('2005-09-07', asset, fields)
+#     print('daily_spot_value', daily_spot_value)
+#     daily_spot_value = daily_history.get_stack_value('equity', sessions)
+#     print('daily_spot_value', daily_spot_value)
+#     daily_open_pct = daily_history.get_open_pct([asset], '2005-09-07')
+#     print('daily_open_pct', daily_open_pct)
+#
+#     minute_history = HistoryMinuteLoader(minute_reader, adjustment_reader)
+#     his_window_minute = minute_history.history([asset], ['close', 'open'], '2005-09-03', window=-1000)
+#     print('his_window_minute', his_window_minute)
+#     his_minute = minute_history.history([asset], ['close', 'open'], '2005-09-08', -1)
+#     print('his_minute', his_minute)
+#     minute_window = his_window_data = minute_history.window([asset], ['close', 'open'], '2005-09-07', -10)
+#     print('window_data', minute_window)
+#     minute_spot_value = minute_history.get_spot_value('2005-09-07', asset, fields)
+#     print('minute_spot_value', minute_spot_value)
+#     minute_stack_value = minute_history.get_stack_value('equity', sessions)
+#     print('minute_stack_value', minute_stack_value)

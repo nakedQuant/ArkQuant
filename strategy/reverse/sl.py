@@ -4,10 +4,9 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-from strategy import Strategy
 
 
-class SLTrading(Strategy):
+class SLTrading(object):
     """
         主要针对于ETF或者其他的自定义指数
         度量动量配对交易策略凸优化(Convex Optimization)

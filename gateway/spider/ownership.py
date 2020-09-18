@@ -80,7 +80,7 @@ class OwnershipWriter(Crawler):
         self.rerun()
 
 
-if __name__ == '__main__':
-
-    w = OwnershipWriter()
-    w.writer()
+# if __name__ == '__main__':
+#
+#     w = OwnershipWriter()
+#     w.writer()

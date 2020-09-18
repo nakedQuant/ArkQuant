@@ -4,10 +4,15 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-from strategy import Strategy
 
 
-class CrossReverse(Strategy):
+class Cycle(object):
+    """
+        标的 --- 按照市值排明top 1% 标的标的集合 --- 度量周期的联动性
+    """
+
+
+class CrossReverse(object):
     """
         跨行业（横截面）均值回归 ---- 相对收益率的反转，即为回归
         具体逻辑实现：

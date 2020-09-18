@@ -4,14 +4,13 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-from strategy import Strategy
 from itertools import product
 from toolz import keyfilter
 import numpy as np
 from strategy.indicator.tseries import ADF
 
 
-class PairWise(Strategy):
+class PairWise(object):
     """
         不同ETF之间的配对交易 ；相当于个股来讲更加具有稳定性
         1、价格比率交易（不具备协整关系，但是具有优势）

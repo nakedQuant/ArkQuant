@@ -6,10 +6,9 @@ Created on Tue Mar 12 15:37:47 2019
 """
 from toolz import keyfilter, valmap
 from strategy.indicator.technic import Power
-from strategy import Strategy
 
 
-class Momentum(Strategy):
+class Momentum(object):
     """
         动量策略 --- 基于价格、成交量 -- DPower 度量动量
         参数 ： 最高价格、最低价、收盘价、成交量，时间窗口

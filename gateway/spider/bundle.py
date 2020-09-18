@@ -140,11 +140,11 @@ class BundlesWriter(Crawler):
         self.rerun()
 
 
-if __name__ == '__main__':
-
-    bundle = BundlesWriter(lmt=None)
-    bundle.writer()
-    # 琼民源A
-    # bundle.request_equity_kline('000508')
-    # bundle.request_convertible_kline('127021')
-    # bundle.request_fund_kline('512760')
+# if __name__ == '__main__':
+#
+#     bundle = BundlesWriter(lmt=None)
+#     bundle.writer()
+#     # 琼民源A
+#     bundle.request_equity_kline('000508')
+#     bundle.request_convertible_kline('127021')
+#     bundle.request_fund_kline('512760')

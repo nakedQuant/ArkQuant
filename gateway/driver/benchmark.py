@@ -54,8 +54,8 @@ def get_outer_returns(index_name):
     return returns
 
 
-if __name__ == '__main__':
-
-    rets = get_benchmark_returns('000001')
-    print('ret', rets)
-    # outer_ret = get_outer_returns()
+# if __name__ == '__main__':
+#
+#     rets = get_benchmark_returns('000001')
+#     print('ret', rets)
+#    outer_ret = get_outer_returns()

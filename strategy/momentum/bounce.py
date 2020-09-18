@@ -6,10 +6,9 @@ Created on Tue Mar 12 15:37:47 2019
 """
 import numpy as np
 from toolz import keyfilter, valmap
-from strategy import Strategy
 
 
-class Bound(Strategy):
+class Bound(object):
     """
         参数： backPeriod --- 回测度量周期
               withdraw --- 回调比例

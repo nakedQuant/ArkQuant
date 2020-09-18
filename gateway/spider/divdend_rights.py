@@ -104,7 +104,7 @@ class AdjustmentsWriter(Crawler):
         self.rerun()
 
 
-if __name__ == '__main__':
-
-    w = AdjustmentsWriter()
-    w.writer()
+# if __name__ == '__main__':
+#
+#     w = AdjustmentsWriter()
+#     w.writer()

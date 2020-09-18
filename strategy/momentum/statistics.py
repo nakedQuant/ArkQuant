@@ -4,10 +4,9 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-from strategy import Strategy
 
 
-class Proba(Strategy):
+class Proba(object):
     """
         1、序列中基于中位数的性质更加能代表趋势动向
         2、预警指标的出现股票集中，容易出现后期的大黑马，由此推导出异动逻辑以及在持续性

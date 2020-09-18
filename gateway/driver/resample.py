@@ -55,13 +55,13 @@ class Freq(object):
         )
 
 
-if __name__ == '__main__':
-
-    r = Freq()
-    print('length', len(r.sessions))
-    min = r.minute_rule({'hour': 10, 'minute': 45})
-    print('min', len(min), min)
-    week = r.week_rules(3)
-    print('week', len(week), week)
-    mon = r.month_rules(3)
-    print('mon', len(mon), mon)
+# if __name__ == '__main__':
+#
+#     r = Freq()
+#     print('length', len(r.sessions))
+#     min = r.minute_rule({'hour': 10, 'minute': 45})
+#     print('min', len(min), min)
+#     week = r.week_rules(3)
+#     print('week', len(week), week)
+#     mon = r.month_rules(3)
+#     print('mon', len(mon), mon)
