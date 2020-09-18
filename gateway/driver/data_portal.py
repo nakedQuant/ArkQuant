@@ -10,7 +10,7 @@ import pandas as pd, json
 from gateway.asset.assets import Asset
 from gateway.driver.tools import _parse_url
 from gateway.driver.client import tsclient
-from gateway.driver.resample import Sample
+from gateway.driver.resample import Freq
 from gateway.driver.bar_reader import AssetSessionReader
 from gateway.driver.bcolz_reader import BcolzMinuteReader
 from gateway.driver.adjustment_reader import SQLiteAdjustmentReader
@@ -37,11 +37,10 @@ class DataPortal(object):
     OHLCV_FIELDS = frozenset(["open", "high", "low", "close", "volume"])
 
     def __init__(self):
-
-        self.resize_rule = Sample()
-        self._adjustment_reader = SQLiteAdjustmentReader()
         _minute_reader = BcolzMinuteReader()
         _session_reader = AssetSessionReader()
+
+        self._adjustment_reader = SQLiteAdjustmentReader()
 
         _history_daily_loader = HistoryDailyLoader(
             _session_reader,
@@ -56,6 +55,7 @@ class DataPortal(object):
             'daily': _history_daily_loader,
             'minute': _history_minute_loader,
         }
+        self.resize_rule = Freq()
         self._extra_source = None
 
     @property
@@ -104,21 +104,27 @@ class DataPortal(object):
         rights = self._adjustment_reader.load_rights_for_sid(asset.sid, trading_day)
         return rights
 
-    def get_open_pct(self, assets, dts):
-        # pre_close 经过qfq --- close
-        open_pctchange, pre_close = self._history_loader['daily'].get_open_pct(assets, dts)
-        return open_pctchange, pre_close
-
     def get_spot_value(self, asset, dts, frequency, field):
         spot_value = self._history_loader[frequency].get_spot_value(dts, asset, field)
         return spot_value
 
-    def get_stack_value(self, tbl, session):
-        stack = self._history_loader.get_stack_value(tbl, session)
+    def get_stack_value(self, tbl, session, frequency):
+        stack = self._history_loader[frequency].get_stack_value(tbl, session)
         return stack
 
+    def get_open_pct(self, asset, dt):
+        if asset.asset_type == 'equity':
+            # 存在0.1%误差
+            spot_value = self.get_spot_value(asset, dt, 'daily', ['open', 'high', 'low', 'close', 'pct'])
+            open_pct = (spot_value['high'] - spot_value['low']) * 100 / (spot_value['pct'] * spot_value['open']) - 1
+        else:
+            spot_value = self.get_spot_value(asset, dt, 'daily', ['open', 'close'])
+            pre_value = self._history_loader['daily'].window([asset], ['open', 'close'], dt, -1)
+            open_pct = spot_value['open'] / pre_value['close']
+        return open_pct
+
     # @lru_cache(maxsize=32)
-    def get_window_data(self,
+    def get_window(self,
                         assets,
                         dt,
                         days_in_window,
@@ -196,37 +202,23 @@ class DataPortal(object):
         if not set(field).issubset(self.OHLCV_FIELDS):
             raise ValueError("Invalid field: {0}".format(field))
 
-        if bar_count < 1:
+        if abs(bar_count) < 1:
             raise ValueError(
-                "bar_count must be >= 1, but got {}".format(bar_count)
+                "abs (bar_count) must be >= 1, but got {}".format(bar_count)
             )
         history = self._history_loader[data_frequency]
         history_window_arrays = history.history(assets, fields, end_date, bar_count)
         return history_window_arrays
 
-    def freq_by_minute(self, kwargs):
+    def resample_by_freq(self, freq, args, kwargs):
         """
-        :param kwargs: hour,minute
-        :return: minute ticker list
+            by_minute  :param kwargs: hour,minute
+            by_week :param delta: int , the number day of week (1-7) which is trading_day
+            by_month :param delta: int ,the number day of month (max -- 31) which is trading_day
         """
-        minutes = self.resize_rule.minute_rule(kwargs)
-        return minutes
-
-    def freq_by_week(self, delta):
-        """
-        :param delta: int , the number day of week (1-7) which is trading_day
-        :return: trading list
-        """
-        week_days = self.resize_rule.week_rules(delta)
-        return week_days
-
-    def freq_by_month(self, delta):
-        """
-        :param delta: int ,the number day of month (max -- 31) which is trading_day
-        :return: trading list
-        """
-        month_days = self.resize_rule.month_rules(delta)
-        return month_days
+        method_name = '%s_rules' % freq
+        resamples = self.resize_rule.get(method_name)(args, kwargs)
+        return resamples
 
     @staticmethod
     def get_current_minutes(sid):
@@ -251,30 +243,46 @@ class DataPortal(object):
         return frame
 
 
-if __name__ == '__main__':
-
-    data_portal = DataPortal()
-    sessions = ['2017-03-01', '2020-09-07']
-    assets = [Equity('000002'), Equity('300360')]
-    fields = ['open', 'close']
-    # window_data = data_portal.get_window_data(assets, sessions[1],
-    #                                           days_in_window=300, field=fields, data_frequency='daily')
-    # print('window_data', window_data)
-    # history_data = data_portal.get_history_window(assets, sessions[1],
-    #                                               bar_count=300, field=fields, data_frequency='daily')
-    # print('history_data', history_data)
-    # spot_value = data_portal.get_spot_value(assets[0], '2020-09-03', 'daily', ['close', 'low'])
-    # print('spot_value', spot_value)
-    # divdends = data_portal.get_dividends_for_asset(assets[1], '2017-05-25')
-    # print('divdends', divdends)
-    # rights = data_portal.get_rights_for_asset(assets[0], '2000-01-24')
-    # print('rights', rights)
-    # open_pct = data_portal.get_open_pct(assets, '2020-09-03')
-    # print('open_pct', open_pct)
-    window_data = data_portal.get_window_data(assets, sessions[1],
-                                              days_in_window=300, field=fields, data_frequency='minute')
-    print('minute_window_data', window_data)
-    history_data = data_portal.get_history_window(assets, sessions[1],
-                                                  bar_count=300, field=fields, data_frequency='minute')
-    print('minute_history_data', history_data)
-
+# if __name__ == '__main__':
+#
+#     data_portal = DataPortal()
+#     assets = [Equity('600000')]
+#     fields = ['open', 'close']
+#     sessions = ['2006-01-01', '2010-09-07']
+#
+#     divdends = data_portal.get_dividends_for_asset(assets[0], '2017-05-25')
+#     print('divdends', divdends)
+#
+#     rights = data_portal.get_rights_for_asset(assets[0], '2000-01-24')
+#     print('rights', rights)
+#
+#     open_pct = data_portal.get_open_pct(assets[0], '2020-09-03')
+#     print('open_pct', open_pct)
+#
+#     daily_window_data = data_portal.get_window(assets, sessions[1], days_in_window=-300,
+#                                                field=fields, data_frequency='daily')
+#     print('daily_window_data', daily_window_data)
+#
+#     minute_window_data = data_portal.get_window(assets, sessions[0], days_in_window=-300,
+#                                                 field=fields, data_frequency='minute')
+#     print('minute_window_data', minute_window_data)
+#
+#     history_daily_data = data_portal.get_history_window(assets, sessions[0],
+#                                                         bar_count=-300, field=fields, data_frequency='daily')
+#     print('history_daily_data', history_daily_data)
+#
+#     history_minute_data = data_portal.get_history_window(assets, sessions[0],
+#                                                          bar_count=-300, field=fields, data_frequency='minute')
+#     print('history_minute_data', history_minute_data)
+#
+#     daily_spot_value = data_portal.get_spot_value(assets[0], '2020-09-03', 'daily', ['close', 'low'])
+#     print('daily_spot_value', daily_spot_value)
+#
+#     minute_spot_value = data_portal.get_spot_value(assets[0], '2005-09-07', 'minute', ['close', 'low'])
+#     print('minute_spot_value', minute_spot_value)
+#
+#     daily_stack_value = data_portal.get_stack_value('equity', sessions, 'daily')
+#     print('daily_stack_value', daily_stack_value)
+#
+#     minute_stack_value = data_portal.get_stack_value('equity', sessions, 'minute')
+#     print('minute_stack_value', minute_stack_value)

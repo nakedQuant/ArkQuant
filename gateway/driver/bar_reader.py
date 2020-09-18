@@ -25,7 +25,8 @@ KLINE_COLUMNS_TYPE = {
             'low': np.double,
             'close': np.double,
             'volume': np.int,
-            'amount': np.double
+            'amount': np.double,
+            'pct': np.double
                     }
 
 
@@ -102,26 +103,29 @@ class AssetSessionReader(BarReader):
     def data_frequency(self):
         return 'daily'
 
-    def get_equity_pctchange(self, dt):
-        tbl = self.metadata.tables['equity_price']
-        sql = sa.select([tbl.c.sid, sa.cast(tbl.c.pct, sa.Numeric(10, 2)).label('pct')])\
-            .where(tbl.c.trade_dt == dt)
-        rp = self.engine.execute(sql)
-        data = pd.DataFrame(rp.fetchall(), columns=['sid', 'pct'])
-        data['pct'] = data['pct'].astype(np.double)
-        data.set_index('sid', inplace=True)
-        return data
-
     def get_spot_value(self, dt, asset, fields):
         """
             retrieve asset data  on dt
         """
-        table_name = '%s_price' % asset.asset_type
-        try:
-            tbl = self.metadata.tables[table_name]
-        except KeyError:
-            tbl = self.metadata.tables['fund_price']
-        finally:
+        table_name = '%s_price' % asset.asset_type if asset.asset_type in ['equity', 'convertible'] else 'fund_price'
+        tbl = self.metadata.tables[table_name]
+        if asset.asset_type == 'equity':
+            orm = sa.select([
+                        tbl.c.trade_dt,
+                        sa.cast(tbl.c.open, sa.Numeric(10, 2)).label('open'),
+                        sa.cast(tbl.c.close, sa.Numeric(12, 2)).label('close'),
+                        sa.cast(tbl.c.high, sa.Numeric(10, 2)).label('high'),
+                        sa.cast(tbl.c.low, sa.Numeric(10, 3)).label('low'),
+                        sa.cast(tbl.c.volume, sa.Numeric(15, 0)).label('volume'),
+                        sa.cast(tbl.c.amount, sa.Numeric(15, 2)).label('amount'),
+                        sa.cast(tbl.c.pct, sa.Numeric(15, 2)).label('pct')])\
+                .where(sa.and_(tbl.c.trade_dt == dt, tbl.c.sid == asset.sid))
+            rp = self.engine.execute(orm)
+            arrays = [[r.trade_dt, r.open, r.close, r.high, r.low,
+                       r.volume, r.amount, r.pct] for r in rp.fetchall()]
+            kline = pd.DataFrame(arrays, columns=['trade_dt', 'open', 'close', 'high',
+                                                  'low', 'volume', 'amount', 'pct'])
+        else:
             orm = sa.select([
                         tbl.c.trade_dt,
                         sa.cast(tbl.c.open, sa.Numeric(10, 2)).label('open'),
@@ -132,14 +136,14 @@ class AssetSessionReader(BarReader):
                         sa.cast(tbl.c.amount, sa.Numeric(15, 2)).label('amount')])\
                 .where(sa.and_(tbl.c.trade_dt == dt, tbl.c.sid == asset.sid))
             rp = self.engine.execute(orm)
-            arrays = [[r.trade_dt, r.open, r.close, r.high, r.low, r.volume, r.amount] for r in
-                      rp.fetchall()]
+            arrays = [[r.trade_dt, r.open, r.close, r.high, r.low,
+                       r.volume, r.amount] for r in rp.fetchall()]
             kline = pd.DataFrame(arrays, columns=['trade_dt', 'open', 'close', 'high',
                                                   'low', 'volume', 'amount'])
-            if not kline.empty:
-                frame = self._adjust_frame_type(kline)
-                return frame.loc[0, fields]
-            return kline
+        if not kline.empty:
+            frame = self._adjust_frame_type(kline)
+            return frame.loc[0, fields]
+        return kline
 
     def get_stack_value(self, tbl_name, session):
         """
@@ -216,16 +220,16 @@ class AssetSessionReader(BarReader):
         return batch_arrays
 
 
-if __name__ == '__main__':
-
-    reader = AssetSessionReader()
-    asset = Equity('603612')
-    pct = reader.get_equity_pct('2020-08-25')
-    spot_value = reader.get_spot_value('2020-08-25', asset, ['open', 'high', 'low', 'close'])
-    print('spot_value', spot_value)
-    raw = reader.load_raw_arrays(['2020-08-10', '2020-09-04'], [asset], ['open', 'high', 'low', 'close'])
-    print('raw', raw)
-    sessions = ['2010-08-10', '2011-10-30']
-    his_close = reader.load_raw_arrays(sessions, [asset], ['open', 'high', 'low', 'close', 'volume', 'amount'])
-    print('test', his_close)
-
+# if __name__ == '__main__':
+#
+#     reader = AssetSessionReader()
+#     asset = Equity('603612')
+#     sessions = ['2020-08-10', '2020-09-04']
+#     pct = reader.get_equity_pctchange('2020-08-25')
+#     print('equity pct', pct)
+#     spot_value = reader.get_spot_value('2020-08-25', asset, ['open', 'high', 'low', 'close'])
+#     print('spot_value', spot_value)
+#     stack_value = reader.get_stack_value('equity', sessions)
+#     print('stack value', stack_value)
+#     his = reader.load_raw_arrays(sessions, [asset], ['open', 'high', 'low', 'close', 'volume', 'amount'])
+#     print('his array', his)

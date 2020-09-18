@@ -5,46 +5,7 @@ Created on Sat Feb 16 14:00:14 2019
 
 @author: python
 """
-from numpy import (
-    array_equal,
-    broadcast,
-    busday_count,
-    empty,
-    nan,
-    where,
-    newaxis
-)
-# announce_date , ex_date , pay_date
-
-
-def busday_count_mask_NaT(begindates, enddates, out=None):
-    """
-    Simple of numpy.busday_count that returns `float` arrays rather than int
-    arrays, and handles `NaT`s by returning `NaN`s where the inputs were `NaT`.
-
-    Doesn't support custom weekdays or calendars, but probably should in the
-    future.
-
-    See Also
-    --------
-    np.busday_count --- Mon Fri ( weekmaskstr or array_like of bool, optional)
-    """
-    if out is None:
-        out = empty(broadcast(begindates, enddates).shape, dtype=float)
-
-    beginmask = isnat(begindates)
-    endmask = isnat(enddates)
-
-    out = busday_count(
-        # Temporarily fill in non-NaT values.
-        where(beginmask, _notNaT, begindates),
-        where(endmask, _notNaT, enddates),
-        out=out,
-    )
-
-    # Fill in entries where either comparison was NaT with nan in the output.
-    out[beginmask | endmask] = nan
-    return out
+import numpy as np
 
 
 class BusinessDaysEvent(object):
@@ -65,10 +26,9 @@ class BusinessDaysEvent(object):
     Factors describing information about event data (e.g. earnings
     announcements, acquisitions, dividends, etc.).
     """
-
-
-class Driven(object):
-    """
-        select asset which has events occurred (investor interveiw | asset reconstruction |  share transfer |
-        equity private placement) --- 事件（比如举牌、增持、减持、股权转让、重组）
-    """
+    # numpy.busday_count(begindates, enddates, weekmask='1111100', holidays=[], busdaycal=None, out=None)
+    # Counts the number of valid days between begindates and enddates, not including the day of enddates.
+    #  [1,1,1,1,1,0,0]; a length-seven string, like ‘1111100’; or a string like “Mon Tue Wed Thu Fri Sat Sun”
+    # np.busday_count --- Mon Fri ( weekmaskstr or array_like of bool, optional)
+    # where(condition, x,y --- handles `NaT`s by returning `NaN`s where the inputs were `NaT`.
+    # announce_date , ex_date , pay_date (比如举牌、增持、减持、股权转让、重组）

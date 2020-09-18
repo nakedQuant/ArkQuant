@@ -8,10 +8,10 @@ Created on Tue Mar 12 15:37:47 2019
 import pandas as pd
 from _calendar.trading_calendar import calendar
 
-__all__ = ['Sample']
+__all__ = ['Freq']
 
 
-class Sample(object):
+class Freq(object):
     """
         every_day week_start week_end month_start month_end (specific trading day)
         # grouped_by_sid = source_df.groupby(["sid"])
@@ -24,7 +24,7 @@ class Sample(object):
     def __init__(self):
         self.sessions = [pd.Timestamp(s) for s in calendar.all_sessions]
 
-    def minute_rule(self, kwargs):
+    def minute_rules(self, kwargs):
         """
         :return:specific ticker , e,g --- 9:30,10:30
         """
@@ -57,7 +57,7 @@ class Sample(object):
 
 if __name__ == '__main__':
 
-    r = Sample()
+    r = Freq()
     print('length', len(r.sessions))
     min = r.minute_rule({'hour': 10, 'minute': 45})
     print('min', len(min), min)

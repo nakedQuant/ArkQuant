@@ -123,12 +123,12 @@ class SQLiteAdjustmentReader(object):
         return self.engine.dispose()
 
 
-if __name__ == '__main__':
-
-    reader = SQLiteAdjustmentReader()
-    adjustments = reader.load_pricing_adjustments(['2018-01-01', '2020-09-01'])
-    print('adjustments.keys', adjustments.keys())
-    # symbol_divdends = reader.load_divdends_for_sid('600061', '20200401')
-    # print('divdends', symbol_divdends)
-    # symbol_rights = reader.load_rights_for_sid('600061', '20200401')
-    # print('rights', symbol_rights)
+# if __name__ == '__main__':
+#
+#     reader = SQLiteAdjustmentReader()
+#     adjustments = reader.load_pricing_adjustments(['2018-01-01', '2020-09-01'])
+#     print('adjustments.keys', adjustments.keys())
+#     symbol_divdends = reader.load_divdends_for_sid('600061', '20200401')
+#     print('divdends', symbol_divdends)
+#     symbol_rights = reader.load_rights_for_sid('600061', '20200401')
+#     print('rights', symbol_rights)

@@ -42,6 +42,17 @@ class HistoryCompatibleAdjustments(object):
     def data_frequency(self):
         return self._reader.data_frequency
 
+    def _adapt_by_frequency(self, adjustments):
+        # print('adjustments', adjustments)
+        if self.data_frequency == 'minute':
+            def reformat(frame):
+                # minutes --- 14:29
+                frame.index = [int(pd.Timestamp(i).timestamp() + 15 * 60 * 60 - 60) for i in frame.index]
+                return frame
+            adjustments['divdends'] = valmap(lambda x: reformat(x), adjustments['divdends'])
+            adjustments['rights'] = valmap(lambda x: reformat(x), adjustments['rights'])
+        return adjustments
+
     @staticmethod
     def _calculate_divdends_for_sid(adjustment, data, sid):
         """
@@ -50,12 +61,10 @@ class HistoryCompatibleAdjustments(object):
            后复权：复权后价格=复权前价格×(1+流通股份变动比例)+现金红利
         """
         kline = data[sid]
-        # kline.index = [time.strftime('%Y-%m-%d %H-%M-%S', time.localtime(i)) for i in data['600000'].index]
-        kline.index = [datetime.datetime.utcfromtimestamp(i).strftime('%Y-%m-%d %H:%M') for i in data['600000'].index]
-        print('kline', kline)
+        # kline.index = [datetime.datetime.utcfromtimestamp(i).strftime('%Y-%m-%d %H:%M') for i in data['600000'].index]
         try:
             divdends = adjustment['divdends'][sid]
-            print('union', set(divdends.index) & set(kline.index))
+            print('divdends union', set(divdends.index) & set(kline.index))
             ex_close = kline['close'].reindex(index=divdends.index)
             qfq = (1 - divdends['bonus']/(10 * ex_close)) / \
                   (1 + (divdends['sid_bonus'] + divdends['sid_transfer']) / 10)
@@ -78,9 +87,8 @@ class HistoryCompatibleAdjustments(object):
             qfq = pd.Series(dtype=float)
         return qfq
 
-    def calculate_adjustments_for_sid(self, adjustment, data, sid):
+    def calculate_coef_for_sid(self, adjustment, data, sid):
         fq_divdends = self._calculate_divdends_for_sid(adjustment, data, sid)
-        # print('divdends', fq_divdends)
         fq_rights = self._calculate_rights_for_sid(adjustment, data, sid)
         # print('rights', fq_rights)
         fq = fq_divdends.append(fq_rights)
@@ -88,16 +96,6 @@ class HistoryCompatibleAdjustments(object):
         qfq = 1 / fq.cumprod()
         print('qfq', qfq)
         return qfq
-
-    def _adjust_by_frequency(self, adjustments):
-        # print('adjustments', adjustments)
-        if self.data_frequency == 'minute':
-            def reformat(frame):
-                frame.index = [int(pd.Timestamp(i).timestamp() + 15 * 60 * 60) for i in frame.index]
-                return frame
-            adjustments['divdends'] = valmap(lambda x: reformat(x), adjustments['divdends'])
-            adjustments['rights'] = valmap(lambda x: reformat(x), adjustments['rights'])
-        return adjustments
 
     def calculate_adjustments_in_sessions(self, sessions, assets):
         """
@@ -114,11 +112,11 @@ class HistoryCompatibleAdjustments(object):
         # 获取全部的分红除权配股数据
         adjustments = self._adjustments_reader.load_pricing_adjustments(sessions)
         # 基于data_frequency --- 调整adjustments
-        adapted_adjustments = self._adjust_by_frequency(adjustments)
+        adapted_adjustments = self._adapt_by_frequency(adjustments)
         # 获取对应的收盘价数据
         data = self.reader.load_raw_arrays(sessions, assets, ['open', 'high', 'low', 'close', 'volume', 'amount'])
         # 计算前复权系数
-        _calculate = partial(self.calculate_adjustments_for_sid, adjustment=adapted_adjustments, data=data)
+        _calculate = partial(self.calculate_coef_for_sid, adjustment=adapted_adjustments, data=data)
         for asset_obj in assets:
             sid = asset_obj.sid
             try:
@@ -181,7 +179,7 @@ class SlidingWindow(object):
         :param field: str or list
         :return: arrays which is adjusted by divdends and rights
         """
-        adjustments, raw_arrays = self._compatible_adjustment.calculate_adjustments_in_sessions(sessions, assets)
+        adjustments, frame_dcts = self._compatible_adjustment.calculate_adjustments_in_sessions(sessions, assets)
         adjusted_fields = list(set(field) & AdjustFields)
         if adjusted_fields:
             # 计算调整数据
@@ -189,20 +187,20 @@ class SlidingWindow(object):
             for asset in assets:
                 sid = asset.sid
                 try:
-                    raw = raw_arrays[sid]
+                    frame = frame_dcts[sid]
                     qfq = adjustments[sid]
-                    qfq = qfq.reindex(index=set(raw.index))
+                    qfq = qfq.reindex(index=set(frame.index))
                     qfq.sort_index(inplace=True)
                     qfq.fillna(method='bfill', inplace=True)
                     qfq.fillna(1.0, inplace=True)
-                    # print('full qfq', qfq)
-                    raw[adjusted_fields] = raw.loc[:, adjusted_fields].multiply(qfq, axis=0)
-                    adjust_arrays[sid] = raw[adjusted_fields]
+                    print('final qfq coef', qfq)
+                    frame[adjusted_fields] = frame.loc[:, adjusted_fields].multiply(qfq, axis=0)
+                    adjust_arrays[sid] = frame[adjusted_fields]
                     # print('adjust_raw', raw[adjusted_fields])
                 except KeyError:
                     adjust_arrays[sid] = pd.DataFrame()
         else:
-            adjust_arrays = raw_arrays
+            adjust_arrays = frame_dcts
         return adjust_arrays
 
 
@@ -223,10 +221,6 @@ class AdjustedDailyWindow(SlidingWindow):
     def frequency(self):
         return 'daily'
 
-    def get_equity_pctchange(self, dts):
-        frame_pct = self.reader.get_equity_pctchange(dts)
-        return frame_pct
-
 
 class AdjustedMinuteWindow(SlidingWindow):
     """
@@ -246,32 +240,37 @@ class AdjustedMinuteWindow(SlidingWindow):
         return 'minute'
 
 
-if __name__ == '__main__':
-
-    minute_reader = BcolzMinuteReader()
-    session_reader = AssetSessionReader()
-    adjust_reader = SQLiteAdjustmentReader()
-
-    asset = Equity('600000')
-    sessions = ['2005-01-10', '2005-01-11']
-    fields = ['open', 'close']
-    # his = HistoryCompatibleAdjustments(session_reader, adjust_reader)
-    # his.calculate_adjustments_in_sessions(['2017-08-10', '2020-10-30'], [asset])
-    # window_arrays = his.window_arrays(['2010-08-10', '2015-10-30'], [asset], ['open', 'close'])
-    # print('window_arrays', window_arrays)
-    # original = his.array(sessions, [asset], ['open', 'close'])
-    # print('original array', original)
-
-    # daily_adjust = AdjustedDailyWindow(session_reader, adjust_reader)
-    # close = daily_adjust.window_arrays(sessions, [asset], ['close'])
-    # print('daily adjust close', close)
-    # raw_close = daily_adjust.array(sessions, [asset], ['close'])
-    # print('raw_close', raw_close)
-
-    minute_adjust = AdjustedMinuteWindow(minute_reader, adjust_reader)
-    # minute_spot = minute_adjust.get_spot_value('2020-09-03', asset, fields)
-    # print('minute spot value', minute_spot)
-    # minute_array = minute_adjust.array(sessions, [asset], fields)
-    # print('minute_array', minute_array)
-    minute_window_array = minute_adjust.window_arrays(sessions, [asset], fields)
-    print('minute_window_array', minute_window_array)
+# if __name__ == '__main__':
+#
+#     minute_reader = BcolzMinuteReader()
+#     session_reader = AssetSessionReader()
+#     adjust_reader = SQLiteAdjustmentReader()
+#
+#     asset = Equity('600000')
+#     sessions = ['2005-01-10', '2010-01-11']
+#     fields = ['open', 'close']
+#     his_daily = HistoryCompatibleAdjustments(session_reader, adjust_reader)
+#     adjs, data = his_daily.calculate_adjustments_in_sessions(sessions, [asset])
+#     print('adj daily coef', adjs)
+#     print('daily data', data)
+#
+#     his_minute = HistoryCompatibleAdjustments(minute_reader, adjust_reader)
+#     adjs, data = his_minute.calculate_adjustments_in_sessions(sessions, [asset])
+#     print('adj minute coef', adjs)
+#     print('minute data', data)
+#
+#     daily_sliding_window = AdjustedDailyWindow(session_reader, adjust_reader)
+#     daily_spot_value = daily_sliding_window.get_spot_value('2020-09-03', asset, fields)
+#     print('daily spot value', daily_spot_value)
+#     daily_sliding = daily_sliding_window.window_arrays(sessions, [asset], fields)
+#     print('daily_sliding ', daily_sliding)
+#     daily_array = daily_sliding_window.array(sessions, [asset], fields)
+#     print('daily array', daily_array)
+#
+#     minute_sliding_window = AdjustedMinuteWindow(minute_reader, adjust_reader)
+#     minute_spot = minute_sliding_window.get_spot_value('2005-09-07', asset, fields)
+#     print('minute spot value', minute_spot)
+#     minute_array = minute_sliding_window.array(sessions, [asset], fields)
+#     print('minute_array', minute_array)
+#     minute_window_array = minute_sliding_window.window_arrays(sessions, [asset], fields)
+#     print('minute_window_array', minute_window_array)

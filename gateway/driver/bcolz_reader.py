@@ -85,14 +85,14 @@ class BcolzReader(BarReader):
         if not frame.empty:
             frame.set_index('ticker', inplace=True) if 'ticker' in frame.columns \
                 else frame.set_index('trade_dt', inplace=True)
-            print('index name', frame.index.name)
             # 调整系数  原来的系数有问题（10000） --- 100
             # inverse_ratio = 1 / meta['ohlc_ratio']
             inverse_ratio = 1 / OHLC_RATIO
             # print('original frame', frame)
             frame.loc[:, ['open', 'high', 'low', 'close']] = frame.loc[:, ['open', 'high', 'low', 'close']] * inverse_ratio
-            frame.index = [datetime.datetime.utcfromtimestamp(i).strftime('%Y-%m-%d %H:%M') for i in frame.index] \
-                if frame.index.name == 'ticker' else frame.index
+            # transform timestamp to structtime based on the utc (UTC只是比北京时间提前了8个小时)
+            # frame.index = [datetime.datetime.utcfromtimestamp(i).strftime('%Y-%m-%d %H:%M') for i in frame.index] \
+            #     if frame.index.name == 'ticker' else frame.index
         return frame
 
     def get_spot_value(self, asset, dt, fields):
@@ -110,7 +110,6 @@ class BcolzReader(BarReader):
         frame_dict = dict()
         for i, asset in enumerate(assets):
             out = self.get_value(asset.sid, sdate, edate)
-            print('out', out)
             frame_dict[asset.sid] = out.loc[:, columns]
         return frame_dict
 
@@ -152,7 +151,6 @@ class BcolzMinuteReader(BcolzReader):
         start_dts = transfer_to_timestamp(dt + ' 09:30:00')
         end_dts = transfer_to_timestamp(dt + ' 15:00:00')
         minutes = self.get_value(asset.sid, start_dts, end_dts)
-        print('minutes', minutes)
         return minutes.loc[:, fields]
 
 
@@ -190,12 +188,11 @@ class BcolzDailyReader(BcolzReader):
 
 if __name__ == '__main__':
 
-    session = ['2020-01-01', '2020-09-03']
+    session = ['2005-01-01', '2015-09-03']
     equity = Equity('600000')
     fields = ['open', 'close']
     minute_reader = BcolzMinuteReader()
+    spot_value = minute_reader.get_spot_value('2005-09-07', equity, fields)
+    print('spot_value', spot_value)
     raw = minute_reader.load_raw_arrays(session, [equity], fields)
     print('raw', raw)
-    spot_value = minute_reader.get_spot_value('2020-09-07', equity, fields)
-    print('spot_value', spot_value)
-

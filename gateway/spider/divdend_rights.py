@@ -98,8 +98,8 @@ class AdjustmentsWriter(Crawler):
         # 获取数据库的最新时点
         self._record_deadlines()
         # 获取所有股票
-        # equities = self._retrieve_assets_from_sqlite()['equity']
-        equities = ['000001']
+        equities = self._retrieve_assets_from_sqlite()['equity']
+        # equities = ['600000']
         self._writer_internal(equities)
         self.rerun()
 

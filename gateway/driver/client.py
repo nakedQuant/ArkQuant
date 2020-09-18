@@ -74,7 +74,6 @@ class TsClient:
         status.rename(columns={'symbol': 'sid', 'delist_date': 'last_traded'}, inplace=True)
         # 入库序列号存在重复
         status.index = range(len(status))
-        print(status)
         return status
 
 

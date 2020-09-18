@@ -116,7 +116,6 @@ class PercentileFilter(Filter):
     max_percentile : float [0.0, 1.0]
         The maxiumum percentile rank of an asset that will pass the filter.
     """
-
     def __new__(cls, min_percentile, max_percentile, mask):
         return super(PercentileFilter, cls).__new__(
             cls,
@@ -135,7 +134,6 @@ class PercentileFilter(Filter):
                 max_percentile=self._max_percentile,
                 upper_bound=100.0
             )
-        return super(PercentileFilter, self)._validate()
 
     def _compute(self, arrays, dates, assets, mask):
         """

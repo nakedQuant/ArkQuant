@@ -6,6 +6,7 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 import pandas as pd, pytz, numpy as np
+from weakref import WeakValueDictionary
 from datetime import datetime
 from dateutil import rrule
 from toolz import partition_all
@@ -21,6 +22,11 @@ class TradingCalendar (object):
         数据时间格式 %Y-%m-%d (price, splits, rights, ownership, holder, massive, unfreeze)
 
     """
+    # cache = WeakValueDictionary()
+    #
+    # def __new__(cls):
+    #     cls.cache
+
     def __init__(self):
         self.all_sessions = tsclient.to_ts_calendar('1990-01-01', '3000-01-01').values
 
@@ -51,7 +57,7 @@ class TradingCalendar (object):
         )
         april_4 = [d.strftime('%Y-%m-%d') for d in april_4]
         print('april_4', april_4)
-        non_trading_rules.update({'tomb': april_4})
+        non_trading_rules.update({'qingming': april_4})
 
         may_day = rrule.rrule(
             rrule.YEARLY,
@@ -81,6 +87,15 @@ class TradingCalendar (object):
         non_trading_rules['autumn'] = autumn
         return non_trading_rules
 
+    def get_trading_day_near_holiday(self, holiday_name, window, forward=True):
+        # forward --- 节日之前 ， 节日之后
+        if holiday_name not in Holiday:
+            raise ValueError('unidentified holiday name')
+        holiday_days = self.holiday_sessions[holiday_name]
+        idx_list = [np.searchsorted(self.all_sessions, t) for t in holiday_days]
+        trading_list = self.all_sessions[list(map(lambda x: x - window if forward else x + window, idx_list))]
+        return trading_list
+
     def _roll_forward(self, dt, window):
         """
         Given a date, align it to the _calendar of the pipe's domain.
@@ -88,7 +103,8 @@ class TradingCalendar (object):
 
         Parameters
         ----------
-        dt : pd.Timestamp
+        dt : str %Y-%m-%d
+        window : int negative
 
         Returns
         -------
@@ -96,11 +112,12 @@ class TradingCalendar (object):
         """
         if window == 0:
             return dt
-        # pos = self.all_sessions.searchsorted(dt.strftime('%Y-%m-%d'))
+        if isinstance(dt, pd.Timestamp):
+            dt = dt.strftime('%Y-%m-%d')
         pos = self.all_sessions.searchsorted(dt)
         try:
             loc = pos if self.all_sessions[pos] == dt else pos - 1
-            forward = self.all_sessions[loc + 1 - window]
+            forward = self.all_sessions[loc + window]
             # return pd.Timestamp(self.all_sessions[forward])
             return forward
         except IndexError:
@@ -114,48 +131,40 @@ class TradingCalendar (object):
             )
 
     def dt_window_size(self, dt, window):
-        if isinstance(dt, pd.Timestamp):
-            dt = dt.dt.strftime('%Y-%m-%d')
         pre = self._roll_forward(dt, window)
         return pre
 
-    def session_in_range(self, start_date, end_date, include=True):
+    def session_in_range(self, start_date, end_date):
         """
         :param start_date: pd.Timestamp
         :param end_date: pd.Timestamp
-        :param include: bool --- whether include end_date
-        :return: sessions
+        :return: sessions exclude end_date
         """
         if end_date < start_date:
             raise ValueError("End date %s cannot precede start date %s." %
                              (end_date.strftime("%Y-%m-%d"),
                               start_date.strftime("%Y-%m-%d")))
-        # idx_s = np.searchsorted(self.all_sessions, start_date.strftime('%Y-%m-%'))
-        # idx_e = np.searchsorted(self.all_sessions, end_date.strftime('%Y-%m-%'))
         idx_s = np.searchsorted(self.all_sessions, start_date)
         idx_e = np.searchsorted(self.all_sessions, end_date)
-        sessions = self.all_sessions[idx_s: idx_e + 1] if include \
-            else self.all_sessions[idx_s: idx_e]
+        sessions = self.all_sessions[idx_s: idx_e]
         return sessions
 
-    def session_in_window(self, end_date, window, include):
+    def session_in_window(self, end_date, window):
         """
         :param end_date: '%Y-%m-%d'
         :param window:  int
-        :param include: bool --- determin whether include end_date
         :return: sessions
         """
-        # assert window != 0, 'sessions means window is not equal with zero'
         if window == 0:
             return [end_date, end_date]
         start_date = self._roll_forward(end_date, window)
-        session_labels = self.session_in_range(start_date, end_date, include=include)
+        print('start_date', start_date)
+        session_labels = self.session_in_range(start_date, end_date)
         return session_labels
 
     @staticmethod
     def session_in_minutes(dt):
         dt = dt if isinstance(dt, (pd.Timestamp, datetime)) else pd.Timestamp(dt)
-        # return day minutes
         morning_session = pd.date_range(dt + pd.Timedelta(hours=9, minutes=30),
                                         dt+pd.Timedelta(hours=11, minutes=30),
                                         freq='%dminute' % 1)
@@ -164,6 +173,23 @@ class TradingCalendar (object):
                                       freq='%dminute' % 1)
         minutes_session = [morning_session] + [after_session]
         return minutes_session
+
+    def compute_range_chunks(self, start_date, end_date, chunk_size):
+        """Compute the start and end dates to run a pipe for.
+
+        Parameters
+        ----------
+        start_date : pd.Timestamp
+            The first date in the pipe.
+        end_date : pd.Timestamp
+            The last date in the pipe.
+        chunk_size : int or None
+            The size of the chunks to run. Setting this to None returns one chunk.
+        """
+        sessions = self.session_in_range(start_date, end_date)
+        return (
+            (r[0], r[-1]) for r in partition_all(chunk_size, sessions)
+        )
 
     @staticmethod
     def execution_time_from_open(sessions):
@@ -195,35 +221,6 @@ class TradingCalendar (object):
         close_tuple = self.excution_time_from_close(dts)
         o_c = zip(open_tuple, close_tuple)
         return o_c
-
-    def compute_range_chunks(self, start_date, end_date, chunk_size):
-        """Compute the start and end dates to run a pipe for.
-
-        Parameters
-        ----------
-        start_date : pd.Timestamp
-            The first date in the pipe.
-        end_date : pd.Timestamp
-            The last date in the pipe.
-        chunk_size : int or None
-            The size of the chunks to run. Setting this to None returns one chunk.
-        """
-        sessions = self.session_in_range(start_date, end_date)
-        return (
-            (r[0], r[-1]) for r in partition_all(chunk_size, sessions)
-        )
-
-    def get_trading_day_near_holiday(self, holiday_name, forward=True):
-        # forward --- 节日之前 ， 节日之后
-        if holiday_name not in Holiday:
-            raise ValueError('unidentified holiday name')
-        holiday_days = self.holiday_sessions[holiday_name]
-        idx_list = [np.searchsorted(self.all_sessions, t) for t in holiday_days]
-        if forward:
-            trading_list = self.all_sessions[list(map(lambda x: x - 1, idx_list))]
-        else:
-            trading_list = self.all_sessions[idx_list]
-        return trading_list
 
     @staticmethod
     def get_open_and_close(day):

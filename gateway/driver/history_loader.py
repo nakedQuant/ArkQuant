@@ -151,7 +151,7 @@ class HistoryLoader(ABC):
         return spot
 
     def get_stack_value(self, tbl, session):
-        stack = self.reader.get_stack_value(tbl, session)
+        stack = self.adjust_window.get_stack_value(tbl, session)
         return stack
 
     @abstractmethod
@@ -187,8 +187,8 @@ class HistoryLoader(ABC):
         asset_windows = {}
         needed_assets = []
         for asset_obj in assets:
-            print('blocks', self._window_blocks)
-            print('asset', asset_obj)
+            # print('blocks', self._window_blocks)
+            # print('asset', asset_obj)
             try:
                 cache_window = self._window_blocks.get(
                     asset_obj, dts)
@@ -218,11 +218,12 @@ class HistoryLoader(ABC):
         return asset_windows
 
     def window(self, assets, field, dts, window):
-        pre_dt = self.trading_calendar.dt_window_size(dts, window)
-        raw = self.adjust_window.array([pre_dt, dts], assets, field)
-        return raw
+        assert window < 0, 'to avoid forward prospective error'
+        sessions = self.trading_calendar.session_in_window(dts, window)
+        frame = self.adjust_window.array([min(sessions), max(sessions)], assets, field)
+        return frame
 
-    def history(self, assets, field, dts, window=None):
+    def history(self, assets, field, dts, window):
         """
         A window of pricing data with adjustments applied assuming that the
         end of the window is the day before the current nakedquant time.
@@ -245,16 +246,17 @@ class HistoryLoader(ABC):
         out : np.ndarray with shape(len(days between start, end), len(asset))
         """
         # 不包括当天数据
-        if window:
+        assert window < 0, 'to avoid forward prospective error'
+        if window != -1:
             pre_dt = self.trading_calendar.dt_window_size(dts, window)
-            print('pre_dt', pre_dt)
+            # print('pre_dt', pre_dt)
             block_arrays = self._ensure_sliding_windows(
                                             [pre_dt, dts],
                                             assets,
                                             field
                                             )
         else:
-             block_arrays = self.window(assets, field, dts, window=0)
+             block_arrays = self.window(assets, field, dts, window=-1)
         return block_arrays
 
 
@@ -285,24 +287,6 @@ class HistoryDailyLoader(HistoryLoader):
         slice_window = _window.reindex(sessions)
         return slice_window
 
-    def get_open_pct(self, assets, dts):
-        open_pct = dict()
-        pre_close = dict()
-        # 获取标的pct_change
-        frame = self.adjust_window.get_equity_pctchange(dts)
-        print('frame pct', frame.head())
-        kline = self.window(assets, ['open', 'high', 'low'], dts, 2)
-        print('kline', kline)
-        for asset in assets:
-            sid = asset.sid
-            daily = kline[sid]
-            pct = frame.loc[sid, 'pct']
-            print(sid, pct)
-            # pre_close[sid] = daily['close'][-1] / (1 + pct/100)
-            pre_close[sid] = 100 * (daily['high'][-1] - daily['low'][-1]) / pct
-            open_pct[sid] = daily['open'][-1] / pre_close[sid]
-        return open_pct, pre_close
-
 
 class HistoryMinuteLoader(HistoryLoader):
 
@@ -332,16 +316,28 @@ if __name__ == '__main__':
     adjustment_reader = SQLiteAdjustmentReader()
 
     asset = Equity('600000')
-    sessions = ['1995-01-10', '2005-10-30']
-    # sessions = ['2020-08-25', '2020-08-25']
+    sessions = ['2005-01-01', '2010-10-30']
+    fields = ['open', 'close']
     # daily_history = HistoryDailyLoader(session_reader, adjustment_reader)
-    # his_data = daily_history.history([asset], ['close', 'open'], sessions[0], window=30)
-    # his_data = daily_history.history([asset], ['close', 'open'], '2010-12-31')
-    # print('his', his_data)
+    # his_window_daily = daily_history.history([asset], fields, sessions[0], window=-30)
+    # print('history_window_daily', his_window_daily)
+    # his_daily = daily_history.history([asset], fields, '2010-12-31')
+    # print('his', his_daily)
+    # daily_spot_value = daily_history.get_spot_value('2005-09-07', asset, fields)
+    # print('daily_spot_value', daily_spot_value)
+    # daily_spot_value = daily_history.get_stack_value('equity', sessions)
+    # print('daily_spot_value', daily_spot_value)
+    # daily_open_pct = daily_history.get_open_pct([asset], '2005-09-07')
+    # print('daily_open_pct', daily_open_pct)
+
     minute_history = HistoryMinuteLoader(minute_reader, adjustment_reader)
-    his_data = minute_history.history([asset], ['close', 'open'], '2005-09-03', window=1000)
-    print('his_data', his_data)
-    # his_raw_data = minute_history.history([asset], ['close', 'open'], '2020-09-03')
-    # print('his_raw_data', his_raw_data)
-    # window_data = his_window_data = minute_history.window([asset], ['close', 'open'], '2020-09-03', 10)
-    # print('window_data', window_data)
+    # his_window_minute = minute_history.history([asset], ['close', 'open'], '2005-09-03', window=-1000)
+    # print('his_window_minute', his_window_minute)
+    his_minute = minute_history.history([asset], ['close', 'open'], '2005-09-08', -1)
+    print('his_minute', his_minute)
+    # minute_window = his_window_data = minute_history.window([asset], ['close', 'open'], '2005-09-07', -10)
+    # print('window_data', minute_window)
+    # minute_spot_value = minute_history.get_spot_value('2005-09-07', asset, fields)
+    # print('minute_spot_value', minute_spot_value)
+    # minute_stack_value = minute_history.get_stack_value('equity', sessions)
+    # print('minute_stack_value', minute_stack_value)

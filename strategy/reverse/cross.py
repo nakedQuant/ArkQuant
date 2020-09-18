@@ -25,7 +25,5 @@ class CrossReverse(Strategy):
         cross ret:
             1、对应的行业的过去每天收益率均值以及相对于最低的超额收益率序列
             2、计算当前时点数据的zscore
-
         --- 缺少行业分类数据（一级行业数据）
-
     """

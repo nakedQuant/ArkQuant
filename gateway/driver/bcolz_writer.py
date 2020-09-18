@@ -347,8 +347,8 @@ class BcolzDailyBarWriter(BcolzWriter):
         # print('df', df)
 
 
-if __name__ == '__main__':
-
-    tdx_dir = r'D:\通达信-1m\*'
-    w1 = BcolzMinuteBarWriter(tdx_dir)
-    w1.write()
+# if __name__ == '__main__':
+#
+#     tdx_dir = r'D:\通达信-1m\*'
+#     w1 = BcolzMinuteBarWriter(tdx_dir)
+#     w1.write()
