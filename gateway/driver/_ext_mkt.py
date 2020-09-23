@@ -4,69 +4,103 @@
 Created on Sun Feb 17 16:39:46 2019
 @author: python
 """
-import pandas as pd
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import pandas as pd, numpy as np, sqlalchemy as sa, datetime
+from gateway.database import engine, metadata
+from gateway.database.db_writer import db
+from gateway.driver.tools import unpack_df_to_component_dict
 
-# market value and vwap
+OWNERSHIP_TYPE = {'general': np.double,
+                  'float': np.double,
+                  'close': np.double}
+
+RENAME_COLUMNS = {'general': 'mkv',
+                  'float': 'mkv_cap',
+                  'strict': 'mkv_strict'}
 
 
 class MarketValue:
 
-    def __init__(self, mode):
-        self.frequency = mode
+    def __init__(self, daily=True):
+        self.mode = daily
 
-    def enroll_market_value(self,asset,sdate):
-        conn = self.db.db_init()
-        raw = self.bar.load_equity_info(asset)
-        # 将日期转为交易日
-        raw.loc[:, 'trade_dt'] = [t if self.bar.is_market_caledar(t) else self.bar.load_calendar_offset(t, 1) for t in
-                                  raw.loc[:, 'change_dt'].values]
+    @staticmethod
+    def _adjust_frame_type(df):
+        for col, col_type in OWNERSHIP_TYPE.items():
+            try:
+                df[col] = df[col].astype(col_type)
+            except KeyError:
+                pass
+            except TypeError:
+                raise TypeError('%s cannot mutate into %s' % (col, col_type))
+        return df
+
+    def _retrieve_ownership(self):
+        tbl = metadata.tables['ownership']
+        sql = sa.select([tbl.c.sid, tbl.c.ex_date, tbl.c.general, tbl.c.float])
+        # sql = sa.select([tbl.c.sid, tbl.c.ex_date, tbl.c.general, tbl.c.float]).where(tbl.c.sid == '000002')
+        rp = engine.execute(sql)
+        frame = pd.DataFrame([[r.sid, r.ex_date, r.general, r.float] for r in rp.fetchall()],
+                             columns=['sid', 'date', 'general', 'float'])
+        frame.set_index('sid', inplace=True)
+        frame.replace('--', 0.0, inplace=True)
+        frame = self._adjust_frame_type(frame)
+        unpack_frame = unpack_df_to_component_dict(frame)
+        return unpack_frame
+
+    # def _retrieve_array(self, sid):
+    #     edate = datetime.datetime.now().strftime('%Y-%m-%d')
+    #     sdate = edate if self.mode else '1990-01-01'
+    #     tbl = metadata.tables['equity_price']
+    #     sql = sa.select([tbl.c.trade_dt, tbl.c.sid, tbl.c.close]).\
+    #          where(tbl.c.trade_dt.between(sdate, edate))
+    #     rp = engine.execute(sql)
+    #     frame = pd.DataFrame([[r.trade_dt, r.sid, r.close] for r in rp.fetchall()],
+    #                          columns=['date', 'sid', 'close'])
+    #     frame = self._adjust_frame_type(frame)
+    #     frame.set_index('sid', inplace=True)
+    #     unpack_frame = unpack_df_to_component_dict(frame, 'date')
+    #     return unpack_frame
+
+    def _retrieve_array(self, sid):
+        edate = datetime.datetime.now().strftime('%Y-%m-%d')
+        sdate = edate if self.mode else '1990-01-01'
+        tbl = metadata.tables['equity_price']
+        sql = sa.select([tbl.c.trade_dt, tbl.c.close]).\
+            where(sa.and_(tbl.c.trade_dt.between(sdate, edate), tbl.c.sid == sid))
+        rp = engine.execute(sql)
+        frame = pd.DataFrame([[r.trade_dt, r.close] for r in rp.fetchall()],
+                             columns=['date', 'close'])
+        frame = self._adjust_frame_type(frame)
+        frame.set_index('date', inplace=True)
+        return frame.iloc[:, 0]
+
+    def calculate_mcap(self):
         """由于存在一个变动时点出现多条记录，保留最大total_assets的记录,先按照最大股本降序，保留第一个记录"""
-        raw.sort_values(by='total_assets', ascending=False, inplace=True)
-        raw.drop_duplicates(subset='trade_dt', keep='first', inplace=True)
-        raw.index = raw['trade_dt']
-        close = self.bar.load_stock_kline(sdate,self.edate, ['close'], asset)
-        if len(close) == 0:
-            print('code:%s has not kline' % asset)
-        else:
-            # 数据对齐
-            if self.frequency:
-                raw.sort_index(ascending=False, inplace=True)
-                raw = pd.DataFrame(raw.iloc[0, :]).T
-                raw.index = close.index
-            close.loc[:, 'total'] = raw.loc[:, 'total_assets']
-            close.loc[:, 'float'] = raw.loc[:, 'float_assets']
-            close.loc[:, 'strict'] = raw.loc[:, 'strict_assets']
-            close.loc[:, 'b_assets'] = raw.loc[:, 'b_assets']
-            close.loc[:, 'h_assets'] = raw.loc[:, 'h_assets']
-            close.fillna(method='ffill', inplace=True)
-            close.fillna(method='bfill', inplace=True)
-            # 计算不同类型市值
-            mkt = close.loc[:, 'total'] * close.loc[:, 'close']
-            cap = close.loc[:, 'float'] * close.loc[:, 'close']
-            strict = close.loc[:, 'strict'] * close.loc[:, 'close']
-            b = close.loc[:, 'b_assets'] * close.loc[:, 'close']
-            h = close.loc[:, 'h_assets'] * close.loc[:, 'close']
-            # 调整格式并入库
-            data = pd.DataFrame([mkt, cap, strict, b, h]).T
-            data.columns = ['mkt', 'cap', 'strict', 'foreign', 'hk']
-            data.loc[:, 'trade_dt'] = data.index
-            data.loc[:, 'code'] = asset
-            self.db.enroll('mkt_value', data, conn)
-            conn.close()
+        ownership = self._retrieve_ownership()
+        print('ownership', ownership)
+        for sid in set(ownership):
+            owner = ownership[sid]
+            owner.sort_values(by='general', ascending=False, inplace=True)
+            owner.drop_duplicates(subset='date', keep='first', inplace=True)
+            owner.set_index('date', inplace=True)
+            close = self._retrieve_array(sid)
+            print('close', close)
+            if close.empty:
+                print('%s close is empty' % sid)
+            else:
+                owner = owner.reindex(index=close.index)
+                owner.fillna(method='ffill', inplace=True)
+                owner.fillna(method='bfill', inplace=True)
+                mcap = owner.apply(lambda x: x * close)
+                mcap.loc[:, 'trade_dt'] = mcap.index
+                mcap.loc[:, 'sid'] = sid
+                mcap.loc[:, 'strict'] = mcap['general'] - mcap['float']
+                mcap.rename(columns=RENAME_COLUMNS, inplace=True)
+                print('mcap', mcap)
+                db.writer('m_cap', mcap)
 
-    def parallel(self):
-        basics = self.bar.load_ashare_basics()
-        assets = [item[0] for item in basics]
-        if self.frequency:
-            sdate = self.edate
-        else:
-            sdate = '1990-01-01'
-        with ThreadPoolExecutor(max_workers = 10) as executor:
-            f = []
-            for asset in assets:
-                print('asset',asset)
-                future = executor.submit(self.enroll_market_value, asset, sdate)
-                f.append(future)
-            for job in as_completed(f):
-                job.result()
+
+if __name__ == '__main__':
+
+    m = MarketValue(False)
+    m.calculate_mcap()

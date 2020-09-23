@@ -5,7 +5,7 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-import multiprocessing, datetime
+import multiprocessing
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from gateway.spider.asset_router import AssetRouterWriter
 from gateway.spider.bundle import BundlesWriter
@@ -27,9 +27,9 @@ class SyncSpider(object):
     def __init__(self, initialization=True):
         # initialize or daily
         self.n_jobs = multiprocessing.cpu_count()
-        self.pattern = 'initialize' if initialization else 'daily'
         bundle_writer = BundlesWriter(None if initialization else 1)
-        self._iterable = [bundle_writer, adjust_writer, ownership_writer]
+        self._iterable = [adjust_writer, bundle_writer, ownership_writer]
+        self._init_date = '2000-01-01' if initialization else None
 
     def __call__(self):
         # sync asset_router first
@@ -52,18 +52,17 @@ class SyncSpider(object):
                     # future_result = pool.submit(jb[0], *jb[1], **jb[2])
                     future = pool.submit(method)
                     future.add_done_callback(when_done)
-                    to_do.append(to_do)
+                    to_do.append(future)
                     # 线程处理
                 for f in as_completed(to_do):
                     f.result()
-        # execute event_writer
-        edate = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d')
-        sdate = '2000-01-01' if self.pattern == 'initialize' else edate
-        event_writer.writer(sdate, edate)
+        # update events
+        event_writer.writer(self._init_date)
 
 
 if __name__ == '__main__':
 
     # initialize
-    m = SyncSpider(initialization=True)
+    # m = SyncSpider(initialization=True)
+    m = SyncSpider(initialization=False)
     m()

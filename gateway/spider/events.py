@@ -46,108 +46,85 @@ MassiveFields = {'TDATE': 'declared_date',
 
 class EventWriter(Crawler):
 
-    def _writer_holder(self, *args):
-        """股票增持、减持、变动情况"""
-        deadline = self._retrieve_deadlines_from_sqlite('holder')
-        page = 1
-        while True:
-            url = ASSET_FUNDAMENTAL_URL['holder'] % page
-            try:
-                text = _parse_url(url, bs=False)
-            except Exception as e:
-                print('error %r' % e)
-                time.sleep(np.random.randint(5, 10))
-                text = _parse_url(url, bs=False)
-            match = re.search('\[(.*.)\]', text)
-            data = json.loads(match.group())
-            data = [item.split(',')[:-1] for item in data]
-            frame = pd.DataFrame(data, columns=HolderFields)
-            frame.loc[:, 'sid'] = frame['代码']
-            # '' -- 0.0
-            frame.replace(to_replace='', value=0.0, inplace=True)
-            holdings = frame[frame['declared_date'] > deadline.max()] if not deadline.empty else frame
-            print('holding', holdings.head())
-            if len(holdings) == 0:
-                break
-            db.writer('holder', holdings)
-            page = page + 1
-            time.sleep(np.random.randint(0, 3))
+    def _arbitrary_parser(self, url, encoding='gbk', direct=True):
+        try:
+            text = _parse_url(url, encoding=encoding, bs=False)
+        except Exception as e:
+            print('error %r' % e)
+            time.sleep(np.random.randint(5, 10))
+            self._arbitrary_parser(url, encoding=encoding, direct=direct)
+        else:
+            raw = json.loads(text) if direct else text
+            return raw
 
     def _writer_margin(self, *args):
         """获取市场全量融资融券"""
         deadline = self._retrieve_deadlines_from_sqlite('margin')
-        print('deadline', deadline)
+        print('margin deadline', deadline)
         page = 1
-        while True:
+        pages = 1
+        while page <= pages:
             req_url = ASSET_FUNDAMENTAL_URL['margin'] % page
+            text = self._arbitrary_parser(req_url)
             try:
-                raw = _parse_url(req_url, bs=False)
-                raw = json.loads(raw)
-            except Exception as e:
-                print(e)
-                time.sleep(np.random.randint(5, 10))
-                raw = _parse_url(req_url, bs=False)
-            if raw['result']['data']:
                 raw = [[item['DIM_DATE'], item['RZYE'], item['RZYEZB'], item['RQYE']]
-                       for item in raw['result']['data']]
+                       for item in text['result']['data']]
                 frame = pd.DataFrame(raw, columns=['declared_date', 'rzye', 'rzyezb', 'rqye'])
                 frame['declared_date'] = frame['declared_date'].apply(lambda x: pd.Timestamp(x).strftime('%Y-%m-%d'))
                 frame.loc[:, ['rzye', 'rqye']] = frame.loc[:, ['rzye', 'rqye']].div(1e8)
                 frame.fillna(0.0, inplace=True)
                 margin = frame[frame['declared_date'] > deadline] if deadline else frame
                 print('marign', margin.head())
+                if margin.empty:
+                    break
                 db.writer('margin', margin)
                 page = page + 1
+                pages = text['result']['pages']
+                print('margin pages', pages)
                 time.sleep(np.random.randint(0, 3))
-            else:
-                break
+            except Exception as e:
+                print('error', e)
 
     def _writer_massive(self, s_date, e_date):
         """
             获取时间区间内股票大宗交易，时间最好在一个月之内
         """
         deadline = self._retrieve_deadlines_from_sqlite('massive')
-        print('deadline', deadline.max())
+        print('massive deadline', deadline.max())
         page = 1
-        while True:
+        pages = 1
+        while page <= pages:
             url = ASSET_FUNDAMENTAL_URL['massive'].format(page=page, start=s_date, end=e_date)
+            data = self._arbitrary_parser(url, encoding='utf-8')
             try:
-                text = _parse_url(url, bs=False, encoding=None)
-            except Exception as e:
-                print('error %r' % e)
-                time.sleep(np.random.randint(5, 10))
-                text = _parse_url(url, bs=False)
-            data = json.loads(text)
-            if data['data'] and len(data['data']):
                 frame = pd.DataFrame(data['data'])
                 frame.rename(columns=MassiveFields, inplace=True)
-                # frame.loc[:, 'declared_date'] = frame['declared_date'].apply(lambda x: str(x)[:10])
                 frame['declared_date'] = frame['declared_date'].apply(lambda x: pd.Timestamp(x).strftime('%Y-%m-%d'))
                 frame.dropna(axis=0, how='all', inplace=True)
                 massive = frame[frame['declared_date'] > deadline.max()] if not deadline.empty else frame
+                if massive.empty:
+                    break
                 print('massive', massive.head())
                 db.writer('massive', massive)
                 page = page + 1
+                pages = data['pages']
+                print('massive pages', pages)
                 time.sleep(np.random.randint(0, 3))
-            else:
-                break
+            except Exception as e:
+                print('error', e)
 
     def _writer_release(self, s_date, e_date):
         """
             获取A股解禁数据
         """
         deadline = self._retrieve_deadlines_from_sqlite('unfreeze')
+        print('release deadline', deadline)
         page = 1
-        while True:
+        pages = 1
+        while page <= pages:
             url = ASSET_FUNDAMENTAL_URL['release'].format(page=page, start=s_date, end=e_date)
+            text = self._arbitrary_parser(url, encoding='utf-8')
             try:
-                text = _parse_url(url, encoding=None, bs=False)
-            except Exception as e:
-                print(e)
-                time.sleep(np.random.randint(5, 10))
-                text = _parse_url(url, bs=False)
-            text = json.loads(text)
-            if text['data'] and len(text['data']):
                 info = text['data']
                 data = [[item['gpdm'], item['ltsj'], item['xsglx'], item['zb']] for item in info]
                 # release_date --- declared_date
@@ -156,12 +133,48 @@ class EventWriter(Crawler):
                 frame['declared_date'] = frame['declared_date'].apply(lambda x: pd.Timestamp(x).strftime('%Y-%m-%d'))
                 frame.dropna(axis=0, how='all', inplace=True)
                 release = frame[frame['declared_date'] > deadline.max()] if not deadline.empty else frame
+                if release.empty:
+                    break
                 print('release', release.head())
+                release.replace('-', 0.0, inplace=True)
                 db.writer('unfreeze', release)
                 page = page + 1
+                pages = text['pages']
+                print('release pages', pages)
                 time.sleep(np.random.randint(0, 3))
-            else:
-                break
+            # else:
+            except Exception as e:
+                print('error', e)
+
+    def _writer_holder(self, *args):
+        """股票增持、减持、变动情况"""
+        deadline = self._retrieve_deadlines_from_sqlite('holder')
+        print('holder deadline', deadline)
+        page = 1
+        pages = 1
+        while page <= pages:
+            url = ASSET_FUNDAMENTAL_URL['holder'] % page
+            text = self._arbitrary_parser(url, direct=False)
+            try:
+                match = re.search('pages:(\d)*', text)
+                pages = int(re.split(':', match.group())[-1])
+                print('holder pages', pages)
+                match = re.search('\[(.*.)\]', text)
+                data = json.loads(match.group())
+                data = [item.split(',')[:-1] for item in data]
+                frame = pd.DataFrame(data, columns=HolderFields)
+                frame.loc[:, 'sid'] = frame['代码']
+                # '' -- 0.0
+                frame.replace(to_replace='', value=0.0, inplace=True)
+                holdings = frame[frame['declared_date'] > deadline.max()] if not deadline.empty else frame
+                if holdings.empty:
+                    break
+                print('holding', holdings.head())
+                db.writer('holder', holdings)
+                page = page + 1
+                time.sleep(np.random.randint(0, 3))
+            except Exception as e:
+                print('error', e)
 
     def _writer_internal(self, sdate, edate):
         threads = []
@@ -170,17 +183,23 @@ class EventWriter(Crawler):
             thread = Thread(target=method, args=(sdate, edate), name=method)
             thread.start()
             threads.append(thread)
-
+    # 出现thread --- result 为空
         for t in threads:
             print(t.name, t.is_alive())
-            t.join()
+            if t:
+                t.join()
 
-    def writer(self, sdate, edate):
+    def writer(self, sdate):
+        edate = time.strftime('%Y-%m-%d', time.localtime())
+        sdate = sdate if sdate else edate
         self._writer_internal(sdate, edate)
 
 
 # if __name__ == '__main__':
 #
 #     w = EventWriter()
-#     w.writer('2010-01-01', '2020-09-03')
-#     w._writer_margin()
+#     w._writer_margin('2000-01-01', '2020-09-18')
+#     w._writer_massive('2000-01-01', '2020-09-18')
+#     w._writer_release('2000-01-01', '2020-09-18')
+#     w._writer_holder('2000-01-01', '2020-09-18')
+#     w.writer('2000-01-01')

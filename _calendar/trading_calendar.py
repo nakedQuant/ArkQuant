@@ -117,7 +117,7 @@ class TradingCalendar (object):
         pos = self.all_sessions.searchsorted(dt)
         try:
             loc = pos if self.all_sessions[pos] == dt else pos - 1
-            forward = self.all_sessions[loc + window]
+            forward = self.all_sessions[loc - abs(window)]
             # return pd.Timestamp(self.all_sessions[forward])
             return forward
         except IndexError:

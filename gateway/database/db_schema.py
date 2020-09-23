@@ -434,6 +434,44 @@ ownership = sa.Table(
     sa.Column('h_float', sa.String(20)),
 )
 
+# 流通市值
+m_cap = sa.Table(
+    'm_cap',
+    metadata,
+    sa.Column(
+        'id',
+        sa.Integer,
+        default=0,
+        autoincrement=True
+    ),
+    sa.Column(
+        'sid',
+        sa.Integer,
+        nullable=False,
+        primary_key=True,
+    ),
+    sa.Column(
+        'trade_dt',
+        sa.String(10),
+        nullable=False,
+        primary_key=True
+    ),
+    sa.Column(
+        'mkv',
+        sa.Numeric(30, 10),
+        nullable=False
+    ),
+    sa.Column(
+        'mkv_cap',
+        sa.Numeric(30, 10),
+        nullable=False),
+    sa.Column(
+        'mkv_strict',
+        sa.Numeric(30, 10),
+        nullable=False
+    )
+)
+
 # 股东增减持
 holder = sa.Table(
     'holder',
@@ -550,43 +588,6 @@ margin = sa.Table(
     sa.Column('rqye', sa.Numeric(15, 8), nullable=False)
 )
 
-# 流通市值
-m_cap = sa.Table(
-    'm_cap',
-    metadata,
-    sa.Column(
-        'id',
-        sa.Integer,
-        default=0,
-        autoincrement=True
-    ),
-    sa.Column(
-        'sid',
-        sa.Integer,
-        unique=True,
-        nullable=False,
-        primary_key=True,
-    ),
-    sa.Column(
-        'trade_dt',
-        sa.String(10),
-        nullable=False,
-        primary_key=True),
-    sa.Column(
-        'mkv',
-        sa.Numeric(20, 5),
-        nullable=False
-    ),
-    sa.Column(
-        'mkv_cap',
-        sa.Numeric(20, 5),
-        nullable=False),
-    sa.Column(
-        'mkv_strict',
-        sa.Numeric(20, 5),
-        nullable=False
-    )
-)
 
 # 版本
 version_info = sa.Table(

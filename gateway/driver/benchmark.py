@@ -12,7 +12,7 @@ from gateway.driver import lookup_benchmark
 
 __all__ = [
     'get_benchmark_returns',
-    'get_alternative_returns'
+    'get_outer_returns'
 ]
 
 

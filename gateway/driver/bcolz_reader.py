@@ -186,13 +186,17 @@ class BcolzDailyReader(BcolzReader):
         return kline.loc[:, fields]
 
 
-# if __name__ == '__main__':
-#
-#     session = ['2005-01-01', '2015-09-03']
-#     equity = Equity('600000')
-#     fields = ['open', 'close']
-#     minute_reader = BcolzMinuteReader()
-#     spot_value = minute_reader.get_spot_value('2005-09-07', equity, fields)
-#     print('spot_value', spot_value)
-#     raw = minute_reader.load_raw_arrays(session, [equity], fields)
-#     print('raw', raw)
+if __name__ == '__main__':
+
+    session = ['2005-01-01', '2015-09-03']
+    equity = Equity('600000')
+    fields = ['open', 'close', 'volume']
+    minute_reader = BcolzMinuteReader()
+    spot_value = minute_reader.get_spot_value('2005-09-07', equity, fields)
+    spot_value.index = [datetime.datetime.utcfromtimestamp(i).strftime('%Y-%m-%d %H:%M') for i in spot_value.index]
+    print('spot_value', spot_value)
+    # t = spot_value['close'] * spot_value['volume'] / spot_value['volume'].sum()
+    # print('t', t.sum())
+    # raw = minute_reader.load_raw_arrays(session, [equity], fields)
+    raw = minute_reader.load_raw_arrays(['2005-09-05', '2005-09-07'], [equity], fields)
+    print('raw', raw)

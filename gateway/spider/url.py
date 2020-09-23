@@ -47,16 +47,14 @@ holder = 'http://data.eastmoney.com/DataCenter_V3/gdzjc.ashx?pagesize=50&page=%d
 
 massive = 'http://dcfm.eastmoney.com/em_mutisvcexpandinterface/api/js/get?type=DZJYXQ&' \
           'token=70f12f2f4f091e459a279469fe49eca5&cmd=&st=SECUCODE&sr=-1&p={page}&ps=50&' \
-          'js={{"data":(x)}}&filter=(Stype=%27EQA%27)(TDATE%3E=^{start}^%20and%20TDATE%3C=^{end}^)'
+          'js={{"pages":(tp), "data":(x)}}&filter=(Stype=%27EQA%27)(TDATE%3E=^{start}^%20and%20TDATE%3C=^{end}^)'
 
 release = 'http://dcfm.eastmoney.com/EM_MutiSvcExpandInterface/api/js/get?type=XSJJ_NJ_PC' \
           '&token=70f12f2f4f091e459a279469fe49eca5&st=kjjsl&sr=-1&p={page}&ps=10&filter=(mkt=)' \
-          '(ltsj%3E=^{start}^%20and%20ltsj%3C=^{end}^)&js={{"data":(x)}}'
+          '(ltsj%3E=^{start}^%20and%20ltsj%3C=^{end}^)&js={{"pages":(tp),"data":(x)}}'
 
 gross_url = 'http://data.eastmoney.com/cjsj/grossdomesticproduct.aspx?p=%d'
 
-# margin_url = 'http://api.dataide.eastmoney.com/data/get_rzrq_lshj?' \
-#              'orderby=dim_date&order=desc&pageindex=%d&pagesize=50'
 
 margin_url = 'http://datacenter.eastmoney.com/api/data/get?' \
              'type=RPTA_RZRQ_LSHJ&sty=ALL&source=WEB&st=dim_date&sr=-1&p=%d&ps=50'

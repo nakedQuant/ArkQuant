@@ -5,13 +5,13 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-import pandas as pd, datetime
+import pandas as pd
 from toolz import valmap
 from functools import partial
-from gateway.driver.bar_reader import AssetSessionReader
-from gateway.driver.bcolz_reader import BcolzMinuteReader
-from gateway.driver.adjustment_reader import SQLiteAdjustmentReader
-from gateway.asset.assets import Equity, Convertible, Fund
+# from gateway.driver.bar_reader import AssetSessionReader
+# from gateway.driver.bcolz_reader import BcolzMinuteReader
+# from gateway.driver.adjustment_reader import SQLiteAdjustmentReader
+# from gateway.asset.assets import Equity, Convertible, Fund
 
 
 __all__ = [
@@ -60,8 +60,9 @@ class HistoryCompatibleAdjustments(object):
            前复权：复权后价格=(复权前价格-现金红利)/(1+流通股份变动比例)
            后复权：复权后价格=复权前价格×(1+流通股份变动比例)+现金红利
         """
-        kline = data[sid]
         # kline.index = [datetime.datetime.utcfromtimestamp(i).strftime('%Y-%m-%d %H:%M') for i in data['600000'].index]
+
+        kline = data[sid]
         try:
             divdends = adjustment['divdends'][sid]
             print('divdends union', set(divdends.index) & set(kline.index))
@@ -124,20 +125,6 @@ class HistoryCompatibleAdjustments(object):
             except KeyError:
                 print('code: %s has not kline between session' % sid)
         return adjs, data
-
-    def array(self, dts, assets, fields):
-        """
-        :param dts:  list (length 2)
-        :param assets: list
-        :param fields: list
-        :return: unadjusted data
-        """
-        original = self._reader.load_raw_arrays(
-            dts,
-            assets,
-            fields
-        )
-        return original
 
 
 class SlidingWindow(object):

@@ -7,7 +7,7 @@ Created on Tue Mar 12 15:37:47 2019
 """
 import pandas as pd, json
 # from functools import lru_cache
-from gateway.asset.assets import Asset
+# from gateway.asset.assets import Asset
 from gateway.driver.tools import _parse_url
 from gateway.driver.client import tsclient
 from gateway.driver.resample import Freq
@@ -18,7 +18,8 @@ from gateway.driver.history_loader import (
     HistoryDailyLoader,
     HistoryMinuteLoader
 )
-from gateway.asset.assets import Equity, Fund, Convertible
+
+__all__ = ['DataPortal']
 
 
 class DataPortal(object):

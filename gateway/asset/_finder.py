@@ -303,22 +303,22 @@ class AssetFinder(object):
         return con_exchange
 
 
-if __name__ == '__main__':
-
-    finder = AssetFinder()
-    finder.synchronize_assets()
-    all = finder.retrieve_all()
-    assets = finder.retrieve_asset(['512690', '515110', '603612'])
-    equities = finder.lookup_bond_ownership_by_equity('603612')
-    tradeable = finder.can_be_traded('2020-08-25')
-    print('tradeable', tradeable)
-    fund_assets = finder.retrieve_type_assets('fund')
-    print('fund_assets', fund_assets)
-    dual_assets = finder.fuzzy_dual_equities()
-    print('dual_assets', dual_assets)
-    index_assets = AssetFinder.retrieve_index_symbols()
-    print('index_assets', index_assets)
-    suspend_assets = AssetFinder.suspend('2020-08-25')
-    print('suspend_assets', suspend_assets)
-    live_assets = finder.lifetimes(['2018-09-30', '2018-10-30'], 'equity')
-    print('live assets', live_assets)
+# if __name__ == '__main__':
+#
+#     finder = AssetFinder()
+#     finder.synchronize_assets()
+#     all = finder.retrieve_all()
+#     assets = finder.retrieve_asset(['512690', '515110', '603612'])
+#     equities = finder.lookup_bond_ownership_by_equity('603612')
+#     tradeable = finder.can_be_traded('2020-08-25')
+#     print('tradeable', tradeable)
+#     fund_assets = finder.retrieve_type_assets('fund')
+#     print('fund_assets', fund_assets)
+#     dual_assets = finder.fuzzy_dual_equities()
+#     print('dual_assets', dual_assets)
+#     index_assets = AssetFinder.retrieve_index_symbols()
+#     print('index_assets', index_assets)
+#     suspend_assets = AssetFinder.suspend('2020-08-25')
+#     print('suspend_assets', suspend_assets)
+#     live_assets = finder.lifetimes(['2018-09-30', '2018-10-30'], 'equity')
+#     print('live assets', live_assets)

@@ -23,7 +23,7 @@ def _parse_url(url, encoding='gbk', bs=True):
     header = {'User-Agent': UserAgent[np.random.randint(0, len(UserAgent)-1)]}
     proxy = {'http': ProxyIp[np.random.randint(0, len(ProxyIp) - 1)]}
     # delay in case of httpError
-    time.sleep(np.random.randint(2, 4))
+    time.sleep(np.random.randint(1, 3))
     if proxy:
         req = requests.get(url, headers=header, proxies=proxy, timeout=3)
     else:
@@ -36,14 +36,14 @@ def _parse_url(url, encoding='gbk', bs=True):
     return data
 
 
-def unpack_df_to_component_dict(stack, col):
+def unpack_df_to_component_dict(stack, col=None):
     """Returns the set of known tables in the adjustments file in DataFrame
     form.
 
     Parameters
     ----------
     stack : pd.DataFrame , stack
-
+    col : column used to set index
     Returns
     -------
     dfs : dict{str->DataFrame}
@@ -55,7 +55,7 @@ def unpack_df_to_component_dict(stack, col):
     for index, raw in stack.iterrows():
         unpack[index] = unpack[index].append(raw, ignore_index=True)
     # set trade_dt to index
-    _unpack = valmap(lambda x: x.set_index(col), unpack)
+    _unpack = valmap(lambda x: x.set_index(col), unpack) if col else unpack
     return _unpack
 
 

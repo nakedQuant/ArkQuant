@@ -41,10 +41,10 @@ class AdjustmentsWriter(Crawler):
         if len(text) == 1 and text[0] == '暂时没有数据！':
             print('------------code : %s has not 配股' % symbol, text[0])
         else:
-            delimeter = [item.split('\n')[1:-2] for item in text]
-            frame = pd.DataFrame(delimeter, columns=['declared_date', 'rights_bonus', 'rights_price',
-                                                     'benchmark_share', 'pay_date', 'ex_date',
-                                                     '缴款起始日', '缴款终止日', 'effective_date', '募集资金合计'])
+            sep_text = [item.split('\n')[1:-2] for item in text]
+            frame = pd.DataFrame(sep_text, columns=['declared_date', 'rights_bonus', 'rights_price',
+                                                    'benchmark_share', 'pay_date', 'ex_date',
+                                                    '缴款起始日', '缴款终止日', 'effective_date', '募集资金合计'])
             frame.loc[:, 'sid'] = symbol
             deadline = self.deadlines['equity_rights'].get(symbol, None)
             rights = frame[frame['declared_date'] > deadline] if deadline else frame
@@ -58,9 +58,9 @@ class AdjustmentsWriter(Crawler):
         if len(text) == 1 and text[0] == '暂时没有数据！':
             print('------------code : %s has not splits and divdend' % sid, text[0])
         else:
-            delimeter = [item.split('\n')[1:-2] for item in text]
-            frame = pd.DataFrame(delimeter, columns=['declared_date', 'sid_bonus', 'sid_transfer', 'bonus',
-                                                     'progress', 'pay_date', 'ex_date', 'effective_date'])
+            sep_text = [item.split('\n')[1:-2] for item in text]
+            frame = pd.DataFrame(sep_text, columns=['declared_date', 'sid_bonus', 'sid_transfer', 'bonus',
+                                                    'progress', 'pay_date', 'ex_date', 'effective_date'])
             frame.loc[:, 'sid'] = sid
             deadline = self.deadlines['equity_splits'].get(sid, None)
             divdends = frame[frame['declared_date'] > deadline] if deadline else frame

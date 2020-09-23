@@ -28,22 +28,35 @@ class BundlesWriter(Crawler):
     """
     def __init__(self, lmt):
         self.lmt = lmt if lmt else (datetime.datetime.now() - datetime.datetime(1990, 1, 1)).days
+        self._cache_deadlines = {}
         self.missed = defaultdict(set)
 
     @property
     def default(self):
         return ['trade_dt', 'open', 'close', 'high', 'low', 'volume', 'amount']
 
+    def retrieve_asset_deadlines(self):
+        for tbl in ['equity_price', 'fund_price', 'convertible_price']:
+            self._cache_deadlines[tbl] = self._retrieve_latest_from_sqlite(tbl)
+
     def _crawler(self, mapping, tbl, pct=False):
+        sid = mapping['sid']
         url = ASSETS_BUNDLES_URL[tbl].format(mapping['request_sid'], self.lmt)
         obj = _parse_url(url, bs=False)
         kline = json.loads(obj)['data']
-        print('kline', kline)
         cols = self.default + ['pct'] if pct else self.default
         if kline and len(kline['klines']):
             frame = pd.DataFrame([item.split(',') for item in kline['klines']],
                                  columns=cols)
-            frame.loc[:, 'sid'] = mapping['sid']
+            frame.loc[:, 'sid'] = sid
+            # 过滤
+            try:
+                deadline = self._cache_deadlines[tbl][sid]
+            except Exception as e:
+                print('error :%s raise from sid come to market today' % e)
+                deadline = None
+            # frame = frame[frame['trade_dt'] > self._cache_deadlines[tbl][sid]]
+            frame = frame[frame['trade_dt'] > deadline] if deadline else frame
             db.writer(tbl, frame)
 
     def request_equity_kline(self, sid):
@@ -119,6 +132,7 @@ class BundlesWriter(Crawler):
             self._writer_internal(missed)
             self.rerun()
         self.missed = defaultdict(list)
+        self._cache_deadlines = {}
 
     def _writer_internal(self, q):
         _main_func = partial(self._implement, q=q)
@@ -134,6 +148,8 @@ class BundlesWriter(Crawler):
             t.join()
 
     def writer(self):
+        self.retrieve_asset_deadlines()
+        print('_cache_deadlines', self._cache_deadlines)
         q = self._retrieve_assets_from_sqlite()
         self._writer_internal(q)
         print('failure bundles asset: %r' % self.missed)
@@ -142,9 +158,9 @@ class BundlesWriter(Crawler):
 
 # if __name__ == '__main__':
 #
-#     bundle = BundlesWriter(lmt=None)
+#     bundle = BundlesWriter(lmt=1)
 #     bundle.writer()
 #     # 琼民源A
-#     bundle.request_equity_kline('000508')
-#     bundle.request_convertible_kline('127021')
+#     bundle.request_equity_kline('688526')
+#     bundle.request_convertible_kline('113602')
 #     bundle.request_fund_kline('512760')

@@ -74,8 +74,7 @@ class OwnershipWriter(Crawler):
     def writer(self):
         # initialize deadline
         self.deadlines = self._retrieve_deadlines_from_sqlite('ownership')
-        # equities = self._retrieve_assets_from_sqlite()['equity']
-        equities = ['000012', '000002', '600109']
+        equities = self._retrieve_assets_from_sqlite()['equity']
         self._writer_internal(equities)
         self.rerun()
 

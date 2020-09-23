@@ -38,6 +38,7 @@ class Crawler(ABC):
         mapping = valmap(lambda x: list(x), grp)
         return mapping
 
+    # declared_date --- splits rights and ownership
     def _retrieve_deadlines_from_sqlite(self, tbl):
         table = self.metadata.tables[tbl]
         try:
@@ -51,6 +52,17 @@ class Crawler(ABC):
             ins = select([func.max(table.c.declared_date)])
             rp = self.engine.execute(ins)
             deadlines = rp.scalar()
+        return deadlines
+
+    # latest date for equity_price convertible_price fund_price
+    def _retrieve_latest_from_sqlite(self, tbl):
+        table = self.metadata.tables[tbl]
+        ins = select([func.max(table.c.trade_dt), table.c.sid])
+        ins = ins.group_by(table.c.sid)
+        rp = self.engine.execute(ins)
+        deadlines = pd.DataFrame(rp.fetchall(), columns=['trade_dt', 'sid'])
+        deadlines.set_index('sid', inplace=True)
+        deadlines = deadlines.iloc[:, 0]
         return deadlines
 
     @abstractmethod

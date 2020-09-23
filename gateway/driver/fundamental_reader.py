@@ -12,7 +12,7 @@ from gateway.driver.tools import _parse_url, unpack_df_to_component_dict
 from gateway.spider.url import ASSET_FUNDAMENTAL_URL
 from gateway.driver.bar_reader import BarReader
 from gateway.database import engine
-from gateway.asset.assets import Equity, Convertible, Fund
+# from gateway.asset.assets import Equity, Convertible, Fund
 
 
 __all__ = [
@@ -259,7 +259,7 @@ class GrossSessionReader(BarReader):
             page = page + 1
         return gross_value
 
-#
+
 # if __name__ == '__main__':
 #
 #     sessions = ['2020-01-01', '2020-09-10']

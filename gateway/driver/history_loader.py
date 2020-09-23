@@ -8,15 +8,14 @@ Created on Tue Mar 12 15:37:47 2019
 from abc import ABC, abstractmethod
 import numpy as np
 from _calendar.trading_calendar import calendar
-from gateway.driver.bar_reader import AssetSessionReader
-from gateway.driver.bcolz_reader import BcolzMinuteReader
-from gateway.driver.adjustment_reader import SQLiteAdjustmentReader
 from gateway.driver.adjustArray import (
                         AdjustedDailyWindow,
                         AdjustedMinuteWindow
                                         )
-from gateway.asset.assets import Equity, Convertible, Fund
-
+# from gateway.asset.assets import Equity, Convertible, Fund
+# from gateway.driver.bar_reader import AssetSessionReader
+# from gateway.driver.bcolz_reader import BcolzMinuteReader
+# from gateway.driver.adjustment_reader import SQLiteAdjustmentReader
 
 __all__ = [
     'HistoryMinuteLoader',
