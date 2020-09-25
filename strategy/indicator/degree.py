@@ -30,7 +30,7 @@ class MarketWidth(BaseFeature):
         ret = close - close.shift(1) - 1
         width = ret.apply(lambda x: sum(x > 0) / len(x), axis=1)
         # T -- minutes S -- second M -- month
-        width_windowed = width.resample('%dD' % window).mean()
+        width_windowed = width.resample('D' % window).mean()
         return width_windowed
 
     def compute(self, frame, kwargs):
@@ -82,8 +82,8 @@ class FeatureMO(BaseFeature):
         window = kwargs['window']
         close = frame.pivot(columns='sid', values='close')
         accumulate = (close - close.shift(1)).apply(lambda x: sum(x > 0) - sum(x < 0), axis=1)
-        mo_slow = EMA.calc_feature(accumulate, {'window': max(window)})
-        mo_fast = EMA.calc_feature(accumulate, {'window': min(window)})
+        mo_slow = EMA.compute(accumulate, {'window': max(window)})
+        mo_fast = EMA.compute(accumulate, {'window': min(window)})
         mo_ema = mo_slow - mo_fast[-mo_slow:]
         return mo_ema
 

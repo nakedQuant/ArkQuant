@@ -47,20 +47,6 @@ class MarketValue:
         unpack_frame = unpack_df_to_component_dict(frame)
         return unpack_frame
 
-    # def _retrieve_array(self, sid):
-    #     edate = datetime.datetime.now().strftime('%Y-%m-%d')
-    #     sdate = edate if self.mode else '1990-01-01'
-    #     tbl = metadata.tables['equity_price']
-    #     sql = sa.select([tbl.c.trade_dt, tbl.c.sid, tbl.c.close]).\
-    #          where(tbl.c.trade_dt.between(sdate, edate))
-    #     rp = engine.execute(sql)
-    #     frame = pd.DataFrame([[r.trade_dt, r.sid, r.close] for r in rp.fetchall()],
-    #                          columns=['date', 'sid', 'close'])
-    #     frame = self._adjust_frame_type(frame)
-    #     frame.set_index('sid', inplace=True)
-    #     unpack_frame = unpack_df_to_component_dict(frame, 'date')
-    #     return unpack_frame
-
     def _retrieve_array(self, sid):
         edate = datetime.datetime.now().strftime('%Y-%m-%d')
         sdate = edate if self.mode else '1990-01-01'

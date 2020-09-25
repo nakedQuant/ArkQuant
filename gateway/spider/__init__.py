@@ -39,10 +39,13 @@ class Crawler(ABC):
         return mapping
 
     # declared_date --- splits rights and ownership
-    def _retrieve_deadlines_from_sqlite(self, tbl):
+    def _retrieve_deadlines_from_sqlite(self, tbl, date_type='declared_date'):
         table = self.metadata.tables[tbl]
         try:
-            ins = select([func.max(table.c.declared_date), table.c.sid])
+            if date_type == 'declared_date':
+                ins = select([func.max(table.c.declared_date), table.c.sid])
+            else:
+                ins = select([func.max(table.c.ex_date), table.c.sid])
             ins = ins.group_by(table.c.sid)
             rp = self.engine.execute(ins)
             deadlines = pd.DataFrame(rp.fetchall(), columns=['declared_date', 'sid'])

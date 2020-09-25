@@ -105,6 +105,10 @@ class DataPortal(object):
         rights = self._adjustment_reader.load_rights_for_sid(asset.sid, trading_day)
         return rights
 
+    def get_mkv_value(self, sessions, assets, fields=None):
+        mkv = self._history_loader['daily'].get_mkv_value(sessions, assets, fields)
+        return mkv
+
     def get_spot_value(self, asset, dts, frequency, field):
         spot_value = self._history_loader[frequency].get_spot_value(dts, asset, field)
         return spot_value

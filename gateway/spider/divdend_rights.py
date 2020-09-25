@@ -31,7 +31,7 @@ class AdjustmentsWriter(Crawler):
             record the declared date of equities in mysql
         """
         for tbl in self.adjustment_tables:
-            self.deadlines[tbl] = self._retrieve_deadlines_from_sqlite(tbl)
+            self.deadlines[tbl] = self._retrieve_deadlines_from_sqlite(tbl, date_type='ex_date')
 
     def _parse_equity_rights(self, content, symbol):
         """配股"""
@@ -46,8 +46,11 @@ class AdjustmentsWriter(Crawler):
                                                     'benchmark_share', 'pay_date', 'ex_date',
                                                     '缴款起始日', '缴款终止日', 'effective_date', '募集资金合计'])
             frame.loc[:, 'sid'] = symbol
-            deadline = self.deadlines['equity_rights'].get(symbol, None)
-            rights = frame[frame['declared_date'] > deadline] if deadline else frame
+            # deadline = self.deadlines['equity_rights'].get(symbol, None)
+            # rights = frame[frame['declared_date'] > deadline] if deadline else frame
+            ex_deadline = self.deadlines['equity_rights'].get(symbol, None)
+            rights = frame[frame['ex_date'] > ex_deadline] if ex_deadline else frame
+            print('rights frame', frame)
             db.writer('equity_rights', rights)
 
     def _parse_equity_divdend(self, content, sid):
@@ -62,8 +65,10 @@ class AdjustmentsWriter(Crawler):
             frame = pd.DataFrame(sep_text, columns=['declared_date', 'sid_bonus', 'sid_transfer', 'bonus',
                                                     'progress', 'pay_date', 'ex_date', 'effective_date'])
             frame.loc[:, 'sid'] = sid
-            deadline = self.deadlines['equity_splits'].get(sid, None)
-            divdends = frame[frame['declared_date'] > deadline] if deadline else frame
+            # deadline = self.deadlines['equity_splits'].get(sid, None)
+            # divdends = frame[frame['declared_date'] > deadline] if deadline else frame
+            ex_deadline = self.deadlines['equity_splits'].get(sid, None)
+            divdends = frame[frame['ex_date'] > ex_deadline] if ex_deadline else frame
             db.writer('equity_splits', divdends)
 
     def _parser_writer(self, sid):
@@ -99,7 +104,6 @@ class AdjustmentsWriter(Crawler):
         self._record_deadlines()
         # 获取所有股票
         equities = self._retrieve_assets_from_sqlite()['equity']
-        # equities = ['600000']
         self._writer_internal(equities)
         self.rerun()
 

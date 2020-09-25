@@ -29,7 +29,7 @@ OwnershipFields = {'变动日期': 'ex_date',
 class OwnershipWriter(Crawler):
 
     def __init__(self):
-        self.deadlines = None
+        self.deadlines = {}
         self.missed = set()
 
     def _parse_equity_ownership(self, content, symbol):
@@ -46,8 +46,9 @@ class OwnershipWriter(Crawler):
         # 调整
         frame.loc[:, 'sid'] = symbol
         frame.index = range(len(frame))
-        deadline_date = self.deadlines.get(symbol, None)
-        equity = frame[frame['declared_date'] > deadline_date] if deadline_date else frame
+        ex_deadline = self.deadlines.get(symbol, None)
+        print('deadline_ex_date', ex_deadline)
+        equity = frame[frame['ex_date'] > ex_deadline] if ex_deadline else frame
         db.writer('ownership', equity)
 
     def rerun(self):
@@ -58,6 +59,7 @@ class OwnershipWriter(Crawler):
             self._writer_internal(missed)
             self.rerun()
         self.missed = set()
+        self.deadlines = {}
 
     def _writer_internal(self, equities):
         for sid in equities:
@@ -73,7 +75,8 @@ class OwnershipWriter(Crawler):
 
     def writer(self):
         # initialize deadline
-        self.deadlines = self._retrieve_deadlines_from_sqlite('ownership')
+        self.deadlines = self._retrieve_deadlines_from_sqlite('ownership', date_type='ex_date')
+        print('deadlines', self.deadlines)
         equities = self._retrieve_assets_from_sqlite()['equity']
         self._writer_internal(equities)
         self.rerun()

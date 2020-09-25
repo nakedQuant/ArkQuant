@@ -10,8 +10,7 @@ import numpy as np
 from _calendar.trading_calendar import calendar
 from gateway.driver.adjustArray import (
                         AdjustedDailyWindow,
-                        AdjustedMinuteWindow
-                                        )
+                        AdjustedMinuteWindow)
 # from gateway.asset.assets import Equity, Convertible, Fund
 # from gateway.driver.bar_reader import AssetSessionReader
 # from gateway.driver.bcolz_reader import BcolzMinuteReader
@@ -25,6 +24,7 @@ __all__ = [
 DefaultFields = frozenset(['open', 'high', 'low', 'close', 'amount', 'volume'])
 
 
+# cacheobject --- bar_reader
 class Expired(Exception):
     """
         mark a cacheobject has expired
@@ -276,6 +276,10 @@ class HistoryDailyLoader(HistoryLoader):
     @property
     def frequency(self):
         return 'daily'
+
+    def get_mkv_value(self, session, assets, fields):
+        mkv = self.adjust_window.get_mkv_value(session, assets, fields)
+        return mkv
 
     @staticmethod
     def _compute_slice_window(_window, dts):

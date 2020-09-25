@@ -22,15 +22,22 @@ class TradingCalendar (object):
         数据时间格式 %Y-%m-%d (price, splits, rights, ownership, holder, massive, unfreeze)
 
     """
-    # cache = WeakValueDictionary()
-    #
-    # def __new__(cls):
-    #     cls.cache
+    cache = WeakValueDictionary()
 
-    def __init__(self):
-        self.all_sessions = tsclient.to_ts_calendar('1990-01-01', '3000-01-01').values
+    def __new__(cls):
+        try:
+            instance = cls.cache['calendar']
+        except KeyError:
+            all_sessions = tsclient.to_ts_calendar('1990-01-01', '3000-01-01').values
+            # cls.cache['calendar'] = instance = super(TradingCalendar, cls).__new__(cls)._init(all_sessions)
+            # 继承方式调用 -- __new__ 方法（实例）
+            cls.cache['calendar'] = instance = super().__new__(cls)._init(all_sessions)
+        return instance
 
-    # @property
+    def _init(self, trading_days):
+        self.all_sessions = trading_days
+        return self
+
     def holiday_sessions(self):
         non_trading_rules = dict()
         tz = pytz.timezone('Asia/Shanghai')

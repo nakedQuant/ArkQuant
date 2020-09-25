@@ -24,10 +24,10 @@ ownership_writer = OwnershipWriter()
 
 class SyncSpider(object):
 
-    def __init__(self, initialization=True):
+    def __init__(self, initialization=True, default=1):
         # initialize or daily
         self.n_jobs = multiprocessing.cpu_count()
-        bundle_writer = BundlesWriter(None if initialization else 1)
+        bundle_writer = BundlesWriter(None if initialization else default)
         self._iterable = [adjust_writer, bundle_writer, ownership_writer]
         self._init_date = '2000-01-01' if initialization else None
 
@@ -64,5 +64,5 @@ if __name__ == '__main__':
 
     # initialize
     # m = SyncSpider(initialization=True)
-    m = SyncSpider(initialization=False)
+    m = SyncSpider(initialization=False, default=2)
     m()

@@ -208,6 +208,10 @@ class AdjustedDailyWindow(SlidingWindow):
     def frequency(self):
         return 'daily'
 
+    def get_mkv_value(self, session, assets, fields):
+        mkv = self.reader.get_mkv_value(session, assets, fields)
+        return mkv
+
 
 class AdjustedMinuteWindow(SlidingWindow):
     """
