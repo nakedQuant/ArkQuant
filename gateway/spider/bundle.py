@@ -131,6 +131,7 @@ class BundlesWriter(Crawler):
             # RuntimeError: Set changed size during iteration
             self._writer_internal(missed)
             self.rerun()
+        # reset
         self.missed = defaultdict(list)
         self._cache_deadlines = {}
 

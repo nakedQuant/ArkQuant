@@ -47,7 +47,7 @@ class OwnershipWriter(Crawler):
         frame.loc[:, 'sid'] = symbol
         frame.index = range(len(frame))
         ex_deadline = self.deadlines.get(symbol, None)
-        print('deadline_ex_date', ex_deadline)
+        print('ex_deadline', ex_deadline)
         equity = frame[frame['ex_date'] > ex_deadline] if ex_deadline else frame
         db.writer('ownership', equity)
 
@@ -58,6 +58,7 @@ class OwnershipWriter(Crawler):
             # RuntimeError: Set changed size during iteration
             self._writer_internal(missed)
             self.rerun()
+        # reset
         self.missed = set()
         self.deadlines = {}
 

@@ -64,5 +64,5 @@ if __name__ == '__main__':
 
     # initialize
     # m = SyncSpider(initialization=True)
-    m = SyncSpider(initialization=False, default=2)
+    m = SyncSpider(initialization=False)
     m()

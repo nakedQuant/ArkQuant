@@ -50,7 +50,6 @@ class AdjustmentsWriter(Crawler):
             # rights = frame[frame['declared_date'] > deadline] if deadline else frame
             ex_deadline = self.deadlines['equity_rights'].get(symbol, None)
             rights = frame[frame['ex_date'] > ex_deadline] if ex_deadline else frame
-            print('rights frame', frame)
             db.writer('equity_rights', rights)
 
     def _parse_equity_divdend(self, content, sid):
@@ -86,6 +85,7 @@ class AdjustmentsWriter(Crawler):
             self.rerun()
         # reset
         self.missed = set()
+        self.deadlines.clear()
 
     def _writer_internal(self, equities):
         for sid in equities:
@@ -96,19 +96,18 @@ class AdjustmentsWriter(Crawler):
                 self.missed.add(sid)
             else:
                 self.missed.discard(sid)
-        # reset dict
-        self.deadlines.clear()
 
     def writer(self):
         # 获取数据库的最新时点
         self._record_deadlines()
         # 获取所有股票
-        equities = self._retrieve_assets_from_sqlite()['equity']
+        # equities = self._retrieve_assets_from_sqlite()['equity']
+        equities = ['300432', '300430', '300428']
         self._writer_internal(equities)
         self.rerun()
 
 
-# if __name__ == '__main__':
-#
-#     w = AdjustmentsWriter()
-#     w.writer()
+if __name__ == '__main__':
+
+    w = AdjustmentsWriter()
+    w.writer()
