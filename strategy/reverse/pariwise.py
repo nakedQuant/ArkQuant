@@ -4,10 +4,6 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-from itertools import product
-from toolz import keyfilter
-import numpy as np
-from strategy.indicator.tseries import ADF
 
 
 class PairWise(object):
@@ -26,39 +22,6 @@ class PairWise(object):
             half = - np.log(2) / acf
         zscore = (nowdays - ratio_etf.mean()) / ratio_etf.std()
     """
-    def __init__(self, params):
-        self.params = params
-
-    @staticmethod
-    def _calculate_deviation(ratio, scale):
-        tunnel_upper = np.nanmean(ratio) + scale * np.nanstd(ratio)
-        tunnel_bottom = np.nanmean(ratio) - scale * np.nanstd(ratio)
-        if ratio[-1] > tunnel_upper:
-            return True, 'bottom'
-        elif ratio[-1] < tunnel_bottom:
-            return True, 'upper'
-        return False, None
-
-    def _compute(self, data, mask):
-        y, x = data.keys()
-        ratio = data[y]['close'] / data[x]['close']
-        status, lags = ADF.compute(ratio, self.params)
-        excess, direction = self._calculate_deviation(ratio, self.params['scale'])
-        if status and excess:
-            out = y if direction == 'upper' else x
-            return out
-        return False
-
-    def compute(self, data, mask):
-        product_sets = product(data.keys(), data.keys())
-        _mask = []
-        for count, tuples in enumerate(product_sets):
-            frame = keyfilter(lambda x: x in tuples, data)
-            result = self._compute(frame, mask)
-            _mask.append(result)
-        # filter
-        _mask = [sid for sid in _mask if sid]
-        return _mask
 
 
 class AHRatio(object):

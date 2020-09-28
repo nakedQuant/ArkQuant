@@ -6,7 +6,7 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 import json, re, pandas as pd, time, numpy as np
-from threading import Thread
+# from threading import Thread
 from gateway.spider import Crawler
 from gateway.database.db_writer import db
 from gateway.driver.tools import _parse_url
@@ -14,7 +14,7 @@ from gateway.spider.url import ASSET_FUNDAMENTAL_URL
 
 __all__ = ['EventWriter']
 
-EVENTS = frozenset(['holder', 'massive', 'release', 'margin'])
+EVENTS = frozenset(['margin', 'massive', 'release', 'holder'])
 
 # holder
 HolderFields = ['代码', '中文', '现价','涨幅', '股东', '方式', '变动股本', '占总流通比', '途径', '总持仓',
@@ -79,6 +79,7 @@ class EventWriter(Crawler):
                     break
                 db.writer('margin', margin)
                 page = page + 1
+                print('present margin page', page)
                 pages = text['result']['pages']
                 print('margin pages', pages)
                 time.sleep(np.random.randint(0, 3))
@@ -87,7 +88,7 @@ class EventWriter(Crawler):
 
     def _writer_massive(self, s_date, e_date):
         """
-            获取时间区间内股票大宗交易，时间最好在一个月之内
+            获取时间区间内股票大宗交易，时间最好在一个月之内, 缺失值 --- '—'
         """
         deadline = self._retrieve_deadlines_from_sqlite('massive')
         print('massive deadline', deadline.max())
@@ -95,11 +96,13 @@ class EventWriter(Crawler):
         pages = 1
         while page <= pages:
             url = ASSET_FUNDAMENTAL_URL['massive'].format(page=page, start=s_date, end=e_date)
+            # print('url', url)
             data = self._arbitrary_parser(url, encoding='utf-8')
             try:
                 frame = pd.DataFrame(data['data'])
                 frame.rename(columns=MassiveFields, inplace=True)
                 frame['declared_date'] = frame['declared_date'].apply(lambda x: pd.Timestamp(x).strftime('%Y-%m-%d'))
+                frame.replace('-', 0.0, inplace=True)
                 frame.dropna(axis=0, how='all', inplace=True)
                 massive = frame[frame['declared_date'] > deadline.max()] if not deadline.empty else frame
                 if massive.empty:
@@ -107,6 +110,7 @@ class EventWriter(Crawler):
                 print('massive', massive.head())
                 db.writer('massive', massive)
                 page = page + 1
+                print('present massive page', page)
                 pages = data['pages']
                 print('massive pages', pages)
                 time.sleep(np.random.randint(0, 3))
@@ -129,7 +133,6 @@ class EventWriter(Crawler):
                 data = [[item['gpdm'], item['ltsj'], item['xsglx'], item['zb']] for item in info]
                 # release_date --- declared_date
                 frame = pd.DataFrame(data, columns=['sid', 'declared_date', 'release_type', 'zb'])
-                # frame.loc[:, 'declared_date'] = frame['release_date'].apply(lambda x: str(x)[:10])
                 frame['declared_date'] = frame['declared_date'].apply(lambda x: pd.Timestamp(x).strftime('%Y-%m-%d'))
                 frame.dropna(axis=0, how='all', inplace=True)
                 release = frame[frame['declared_date'] > deadline.max()] if not deadline.empty else frame
@@ -139,6 +142,7 @@ class EventWriter(Crawler):
                 release.replace('-', 0.0, inplace=True)
                 db.writer('unfreeze', release)
                 page = page + 1
+                print('present release page', page)
                 pages = text['pages']
                 print('release pages', pages)
                 time.sleep(np.random.randint(0, 3))
@@ -164,7 +168,7 @@ class EventWriter(Crawler):
                 data = [item.split(',')[:-1] for item in data]
                 frame = pd.DataFrame(data, columns=HolderFields)
                 frame.loc[:, 'sid'] = frame['代码']
-                # '' -- 0.0
+                # '' -> 0.0
                 frame.replace(to_replace='', value=0.0, inplace=True)
                 holdings = frame[frame['declared_date'] > deadline.max()] if not deadline.empty else frame
                 if holdings.empty:
@@ -172,22 +176,28 @@ class EventWriter(Crawler):
                 print('holding', holdings.head())
                 db.writer('holder', holdings)
                 page = page + 1
+                print('present holder page', page)
                 time.sleep(np.random.randint(0, 3))
             except Exception as e:
                 print('error', e)
 
+    # def _writer_internal(self, sdate, edate):
+    #     threads = []
+    #     for method_name in EVENTS:
+    #         method = getattr(self, '_writer_%s' % method_name)
+    #         thread = Thread(target=method, args=(sdate, edate), name=method)
+    #         thread.start()
+    #         threads.append(thread)
+    # # 出现thread --- result 为空
+    #     for t in threads:
+    #         print(t.name, t.is_alive())
+    #         if t:
+    #             t.join()
+
     def _writer_internal(self, sdate, edate):
-        threads = []
         for method_name in EVENTS:
             method = getattr(self, '_writer_%s' % method_name)
-            thread = Thread(target=method, args=(sdate, edate), name=method)
-            thread.start()
-            threads.append(thread)
-    # 出现thread --- result 为空
-        for t in threads:
-            print(t.name, t.is_alive())
-            if t:
-                t.join()
+            method(sdate, edate)
 
     def writer(self, sdate):
         edate = time.strftime('%Y-%m-%d', time.localtime())
@@ -198,8 +208,4 @@ class EventWriter(Crawler):
 # if __name__ == '__main__':
 #
 #     w = EventWriter()
-#     w._writer_margin('2000-01-01', '2020-09-18')
-#     w._writer_massive('2000-01-01', '2020-09-18')
-#     w._writer_release('2000-01-01', '2020-09-18')
-#     w._writer_holder('2000-01-01', '2020-09-18')
 #     w.writer('2000-01-01')

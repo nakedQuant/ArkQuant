@@ -9,6 +9,8 @@ from gateway.database import engine, metadata
 from gateway.database.db_writer import db
 from gateway.driver.tools import unpack_df_to_component_dict
 
+__all__ = ['MarketValue']
+
 OWNERSHIP_TYPE = {'general': np.double,
                   'float': np.double,
                   'close': np.double}
@@ -21,7 +23,7 @@ RENAME_COLUMNS = {'general': 'mkv',
 class MarketValue:
 
     def __init__(self, daily=True):
-        self.mode = daily
+        self._init = daily
 
     @staticmethod
     def _adjust_frame_type(df):
@@ -36,8 +38,8 @@ class MarketValue:
 
     def _retrieve_ownership(self):
         tbl = metadata.tables['ownership']
-        sql = sa.select([tbl.c.sid, tbl.c.ex_date, tbl.c.general, tbl.c.float])
-        # sql = sa.select([tbl.c.sid, tbl.c.ex_date, tbl.c.general, tbl.c.float]).where(tbl.c.sid == '000002')
+        # sql = sa.select([tbl.c.sid, tbl.c.ex_date, tbl.c.general, tbl.c.float])
+        sql = sa.select([tbl.c.sid, tbl.c.ex_date, tbl.c.general, tbl.c.float]).where(tbl.c.sid == '000002')
         rp = engine.execute(sql)
         frame = pd.DataFrame([[r.sid, r.ex_date, r.general, r.float] for r in rp.fetchall()],
                              columns=['sid', 'date', 'general', 'float'])
@@ -49,7 +51,7 @@ class MarketValue:
 
     def _retrieve_array(self, sid):
         edate = datetime.datetime.now().strftime('%Y-%m-%d')
-        sdate = edate if self.mode else '1990-01-01'
+        sdate = '1990-01-01' if self._init else edate
         tbl = metadata.tables['equity_price']
         sql = sa.select([tbl.c.trade_dt, tbl.c.close]).\
             where(sa.and_(tbl.c.trade_dt.between(sdate, edate), tbl.c.sid == sid))
@@ -63,8 +65,8 @@ class MarketValue:
     def calculate_mcap(self):
         """由于存在一个变动时点出现多条记录，保留最大total_assets的记录,先按照最大股本降序，保留第一个记录"""
         ownership = self._retrieve_ownership()
-        print('ownership', ownership)
         for sid in set(ownership):
+            print('sid', sid)
             owner = ownership[sid]
             owner.sort_values(by='general', ascending=False, inplace=True)
             owner.drop_duplicates(subset='date', keep='first', inplace=True)
@@ -74,10 +76,14 @@ class MarketValue:
             if close.empty:
                 print('%s close is empty' % sid)
             else:
-                owner = owner.reindex(index=close.index)
-                owner.fillna(method='ffill', inplace=True)
-                owner.fillna(method='bfill', inplace=True)
-                mcap = owner.apply(lambda x: x * close)
+                re_owner = owner.reindex(index=close.index)
+                re_owner.sort_index(inplace=True)
+                re_owner.fillna(method='bfill', inplace=True)
+                re_owner.fillna(method='ffill', inplace=True)
+                # 当每日更新的时候re_owner(reindex 为None) --- 需要通过最近的日期来填充
+                re_owner = re_owner.fillna({'float': owner['float'][0], 'general': owner['general'][0]})
+                print('adjust owner', re_owner)
+                mcap = re_owner.apply(lambda x: x * close)
                 mcap.loc[:, 'trade_dt'] = mcap.index
                 mcap.loc[:, 'sid'] = sid
                 mcap.loc[:, 'strict'] = mcap['general'] - mcap['float']
@@ -86,7 +92,7 @@ class MarketValue:
                 db.writer('m_cap', mcap)
 
 
-if __name__ == '__main__':
-
-    m = MarketValue(False)
-    m.calculate_mcap()
+# if __name__ == '__main__':
+#
+#     m = MarketValue(False)
+#     m.calculate_mcap()

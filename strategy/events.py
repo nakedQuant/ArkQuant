@@ -5,7 +5,6 @@ Created on Sat Feb 16 14:00:14 2019
 
 @author: python
 """
-import numpy as np
 
 
 class BusinessDaysEvent(object):
@@ -32,3 +31,6 @@ class BusinessDaysEvent(object):
     # np.busday_count --- Mon Fri ( weekmaskstr or array_like of bool, optional)
     # where(condition, x,y --- handles `NaT`s by returning `NaN`s where the inputs were `NaT`.
     # announce_date , ex_date , pay_date (比如举牌、增持、减持、股权转让、重组）
+
+
+

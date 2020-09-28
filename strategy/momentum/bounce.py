@@ -4,8 +4,6 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-import numpy as np
-from toolz import keyfilter, valmap
 
 
 class Bound(object):
@@ -28,31 +26,3 @@ class Bound(object):
             3 剔除上市不满半年，退市日期不足一个月--- 如果一个股票即将退市，将有公告，避免的存活偏差
             4 借鉴斐波那契数列性质
     """
-    def __init__(self, params):
-        # fields ,window, threshold
-        self.params = params
-
-    def _compute(self, data, kwargs):
-        """
-        :param data: frame
-        :param kwargs:
-        :return:
-        """
-        window_data = data.iloc[-kwargs['window', :]]
-        ret = window_data['close'] - window_data['close'].shift(1)
-        peak = np.argmax(data['close'])
-        withdraw = (ret[-1] - ret[peak]) / ret[peak]
-        return withdraw
-
-    def compute(self, feed, mask):
-        # 过滤
-        data = keyfilter(lambda x: x in mask, feed)
-        kwargs = self.params.copy()
-        out = dict()
-        for sid, frame in data.items():
-            out[sid] = self._compute(frame, kwargs.pop('fields'))
-        # filter threshold
-        output = valmap(lambda x: x >= self.params['threshold'], out)
-        # assets list
-        _mask = list(output.keys())
-        return _mask

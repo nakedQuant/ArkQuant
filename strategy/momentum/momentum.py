@@ -29,22 +29,6 @@ class Momentum(object):
         分析全A股票进行统计分析，火种取栗 --- 在动量到达高点，介入等到动量下降一定到比例的阈值，卖出 --- 由于时间差
         output --- mask
     """
-    def __init__(self,
-                 params,
-                 universe_func):
-        self.params = params
-        self._universe_func = universe_func
-
-    def _compute(self, feed, mask):
-        frame = keyfilter(lambda x: x in mask, feed)
-        out = dict()
-        for sid, data in frame:
-            power = Power.compute(frame, self.params)
-            out[sid] = self._universe_func(power)
-        # filter
-        _mask = valmap(lambda x: x >= self.params['threshold'], out)
-        return list(_mask.keys())
-
 
 
 

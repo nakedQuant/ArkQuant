@@ -235,9 +235,9 @@ class AssetRouterWriter(Crawler):
         self._writer_internal()
 
 
-if __name__ == '__main__':
-
-    t = time.time()
-    router = AssetRouterWriter()
-    router.writer()
-    print('elapsed time : %f' % (time.time() - t))
+# if __name__ == '__main__':
+#
+#     t = time.time()
+#     router = AssetRouterWriter()
+#     router.writer()
+#     print('elapsed time : %f' % (time.time() - t))

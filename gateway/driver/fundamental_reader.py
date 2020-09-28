@@ -46,6 +46,8 @@ class MassiveSessionReader(BarReader):
                              columns=['bid_price', 'discount', 'bid_volume',
                                       'buyer', 'seller', 'cjeltszb'])
         massive_frame = frame.loc[:, fields] if fields else frame
+        # index -> 序列号
+        massive_frame.drop_duplicates(inplace=True, ignore_index=True)
         return massive_frame
 
     def load_raw_arrays(self, dts, assets, fields=None):
@@ -62,10 +64,11 @@ class MassiveSessionReader(BarReader):
         frame = pd.DataFrame(self.engine.execute(sql).fetchall(),
                              columns=['declared_date', 'sid', 'bid_price', 'discount',
                                       'bid_volume', 'buyer', 'seller', 'cjeltszb'])
-        sids = [obj.sid for obj in assets]
         frame.set_index('sid', inplace=True)
+        frame.drop_duplicates(inplace=True)
         frame_dct = unpack_df_to_component_dict(frame, 'declared_date')
         frame_dct = valmap(lambda x: x.loc[:, fields] if fields else x, frame_dct)
+        sids = [obj.sid for obj in assets]
         massive_frame = keyfilter(lambda x: x in sids, frame_dct)
         return massive_frame
 
@@ -87,6 +90,7 @@ class ReleaseSessionReader(BarReader):
         frame = pd.DataFrame(self.engine.execute(sql).fetchall(),
                              columns=['release_type', 'zb'])
         release_frame = frame.loc[:, fields] if fields else frame
+        release_frame.drop_duplicates(inplace=True, ignore_index=True)
         return release_frame
 
     def load_raw_arrays(self, dts, assets, fields=None):
@@ -101,6 +105,7 @@ class ReleaseSessionReader(BarReader):
                              columns=['sid', 'declared_date',
                                       'release_type', 'zb'])
         frame.set_index('sid', inplace=True)
+        frame.drop_duplicates(inplace=True)
         frame_dct = unpack_df_to_component_dict(frame, 'declared_date')
         frame_dct = valmap(lambda x: x.loc[:, fields] if fields else x, frame_dct)
         release_frame = keyfilter(lambda x: x in sids, frame_dct)
@@ -131,6 +136,7 @@ class HolderSessionReader(BarReader):
                              columns=['股东', '方式', '变动股本', '总持仓',
                                       '占总股本比例', '总流通股', '占总流通比例'])
         holder_frame = frame.loc[:, fields] if fields else frame
+        holder_frame.drop_duplicates(inplace=True, ignore_index=True)
         return holder_frame
 
     def load_raw_arrays(self, dts, assets, fields=None):
@@ -151,6 +157,7 @@ class HolderSessionReader(BarReader):
                              columns=['sid', 'declared_date', '股东', '方式', '变动股本',
                                       '总持仓', '占总股本比', '总流通股', '占流通比'])
         frame.set_index('sid', inplace=True)
+        frame.drop_duplicates(inplace=True)
         frame_dct = unpack_df_to_component_dict(frame, 'declared_date')
         frame_dct = valmap(lambda x: x.loc[:, fields] if fields else x, frame_dct)
         holder_frame = keyfilter(lambda x: x in sids, frame_dct)
@@ -185,6 +192,7 @@ class OwnershipSessionReader(BarReader):
                              columns=['declared_date', 'ex_date', 'general',
                                       'float', 'manager', 'strict'])
         ownership_frame = frame.loc[:, fields] if fields else frame
+        ownership_frame.drop_duplicates(inplace=True, ignore_index=True)
         return ownership_frame
 
     def load_raw_arrays(self, dts, assets, fields=None):
@@ -201,6 +209,7 @@ class OwnershipSessionReader(BarReader):
                              columns=['sid', 'declared_date', 'ex_date', 'general',
                                       'float', 'manager', 'strict'])
         frame.set_index('sid', inplace=True)
+        frame.drop_duplicates(inplace=True)
         frame_dct = unpack_df_to_component_dict(frame, 'declared_date')
         frame_dct = valmap(lambda x: x.loc[:, fields] if fields else x, frame_dct)
         ownership_frame = keyfilter(lambda x: x in sids, frame_dct)
@@ -229,6 +238,7 @@ class MarginSessionReader(BarReader):
         frame = pd.DataFrame(self.engine.execute(ins).fetchall(),
                              columns=['declared_date', 'rzye', 'rzyezb', 'rqye'])
         frame.set_index('declared_date', inplace=True)
+        frame.drop_duplicates(inplace=True)
         return frame
 
 

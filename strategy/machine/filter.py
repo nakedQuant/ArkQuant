@@ -174,7 +174,6 @@ class ArrayPredicate(Filter):
     params = ('op', 'opargs')
     window_length = 0
 
-    # @expect_types(term=Term, opargs=tuple)
     def __new__(cls, op, opargs):
         hash(opargs)  # fail fast if opargs isn't hashable.
         return super(ArrayPredicate, cls).__new__(

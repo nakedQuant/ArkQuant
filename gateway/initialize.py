@@ -12,6 +12,7 @@ from gateway.spider.bundle import BundlesWriter
 from gateway.spider.divdend_rights import AdjustmentsWriter
 from gateway.spider.ownership import OwnershipWriter
 from gateway.spider.events import EventWriter
+from gateway.driver._ext_mkt import MarketValue
 
 __all__ = ['SyncSpider']
 
@@ -30,6 +31,7 @@ class SyncSpider(object):
         bundle_writer = BundlesWriter(None if initialization else default)
         self._iterable = [adjust_writer, bundle_writer, ownership_writer]
         self._init_date = '2000-01-01' if initialization else None
+        self._mcap_writer = MarketValue(initialization)
 
     def __call__(self):
         # sync asset_router first
@@ -56,13 +58,13 @@ class SyncSpider(object):
                     # 线程处理
                 for f in as_completed(to_do):
                     f.result()
-        # update events
+        # # update events
         event_writer.writer(self._init_date)
+        # update m_cap
+        self._mcap_writer.calculate_mcap()
 
 
 if __name__ == '__main__':
 
-    # initialize
-    # m = SyncSpider(initialization=True)
     m = SyncSpider(initialization=False)
     m()

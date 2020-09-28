@@ -132,8 +132,8 @@ class BundlesWriter(Crawler):
             self._writer_internal(missed)
             self.rerun()
         # reset
-        self.missed = defaultdict(list)
-        self._cache_deadlines = {}
+        self.missed.clear()
+        self._cache_deadlines.clear()
 
     def _writer_internal(self, q):
         _main_func = partial(self._implement, q=q)

@@ -60,7 +60,7 @@ class OwnershipWriter(Crawler):
             self.rerun()
         # reset
         self.missed = set()
-        self.deadlines = {}
+        self.deadlines.clear()
 
     def _writer_internal(self, equities):
         for sid in equities:

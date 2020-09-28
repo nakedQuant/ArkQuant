@@ -101,13 +101,12 @@ class AdjustmentsWriter(Crawler):
         # 获取数据库的最新时点
         self._record_deadlines()
         # 获取所有股票
-        # equities = self._retrieve_assets_from_sqlite()['equity']
-        equities = ['300432', '300430', '300428']
+        equities = self._retrieve_assets_from_sqlite()['equity']
         self._writer_internal(equities)
         self.rerun()
 
 
-if __name__ == '__main__':
-
-    w = AdjustmentsWriter()
-    w.writer()
+# if __name__ == '__main__':
+#
+#     w = AdjustmentsWriter()
+#     w.writer()
