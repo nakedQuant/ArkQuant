@@ -38,8 +38,8 @@ class MarketValue:
 
     def _retrieve_ownership(self):
         tbl = metadata.tables['ownership']
-        # sql = sa.select([tbl.c.sid, tbl.c.ex_date, tbl.c.general, tbl.c.float])
-        sql = sa.select([tbl.c.sid, tbl.c.ex_date, tbl.c.general, tbl.c.float]).where(tbl.c.sid == '000002')
+        sql = sa.select([tbl.c.sid, tbl.c.ex_date, tbl.c.general, tbl.c.float])
+        # sql = sa.select([tbl.c.sid, tbl.c.ex_date, tbl.c.general, tbl.c.float]).where(tbl.c.sid == '000002')
         rp = engine.execute(sql)
         frame = pd.DataFrame([[r.sid, r.ex_date, r.general, r.float] for r in rp.fetchall()],
                              columns=['sid', 'date', 'general', 'float'])

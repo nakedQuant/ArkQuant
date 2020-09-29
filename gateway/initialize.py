@@ -58,7 +58,7 @@ class SyncSpider(object):
                     # 线程处理
                 for f in as_completed(to_do):
                     f.result()
-        # # update events
+        # update events
         event_writer.writer(self._init_date)
         # update m_cap
         self._mcap_writer.calculate_mcap()
@@ -66,5 +66,5 @@ class SyncSpider(object):
 
 if __name__ == '__main__':
 
-    m = SyncSpider(initialization=False)
+    m = SyncSpider(initialization=True)
     m()
