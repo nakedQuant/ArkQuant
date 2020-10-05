@@ -22,6 +22,8 @@ class PairWise(object):
             half = - np.log(2) / acf
         zscore = (nowdays - ratio_etf.mean()) / ratio_etf.std()
     """
+    def __init__(self, window):
+        self.window = window
 
 
 class AHRatio(object):
@@ -32,7 +34,6 @@ class AHRatio(object):
         2、标的为ETF50，--- 主要原因 ： ETF50成分股的大市值特征稳定性强由此算出的协整关系不易变动；而中、小市值的股票更加
            容易受到公告等突发事件的影响，大公司的对于突发事件的消化能力比较强而且频率较低（国内许多公募的基金持股）
         3、如果两个对数差序列存在协整检验，通过OLS获取系数，同时计算残差（价差）的z_score如果超过1或者N倍标准差，即买入
-
         由于AH价差过大，最好通过比率来定义反转， 但是用于竞价机制不一样导致分析结果存在不合理性
     """
 
@@ -51,4 +52,3 @@ class SLTrading(object):
         将具备协整关系的成分股组合买入，同时卖出对应ETF
         计算固定周期内对冲收益率，定期去更新_coint_test
     """
-

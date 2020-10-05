@@ -29,7 +29,7 @@ OwnershipFields = {'变动日期': 'ex_date',
 class OwnershipWriter(Crawler):
 
     def __init__(self):
-        self.deadlines = {}
+        self.deadlines = dict()
         self.missed = set()
 
     def _parse_equity_ownership(self, content, symbol):
@@ -60,7 +60,7 @@ class OwnershipWriter(Crawler):
             self.rerun()
         # reset
         self.missed = set()
-        self.deadlines.clear()
+        self.deadlines = dict()
 
     def _writer_internal(self, equities):
         for sid in equities:
@@ -75,7 +75,7 @@ class OwnershipWriter(Crawler):
                 self.missed.discard(sid)
 
     def writer(self):
-        # initialize deadline
+        # initialize deadline --- series
         self.deadlines = self._retrieve_deadlines_from_sqlite('ownership', date_type='ex_date')
         print('deadlines', self.deadlines)
         equities = self._retrieve_assets_from_sqlite()['equity']

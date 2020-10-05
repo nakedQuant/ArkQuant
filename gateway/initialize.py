@@ -35,29 +35,29 @@ class SyncSpider(object):
 
     def __call__(self):
         # sync asset_router first
-        router_writer.writer()
-
-        def when_done(r):
-            # 每一个进程结束后结果append到result中
-            # result.append(r.result())
-            print('future : %r finished' % r)
-
-        if self.n_jobs == 1:
-            for jb in self._iterable:
-                # result.append(jb[0](*jb[1], **jb[2]))
-                getattr(jb, 'writer')()
-        else:
-            with ThreadPoolExecutor(self.n_jobs) as pool:
-                to_do = []
-                for jb in self._iterable:
-                    method = getattr(jb, 'writer')
-                    # future_result = pool.submit(jb[0], *jb[1], **jb[2])
-                    future = pool.submit(method)
-                    future.add_done_callback(when_done)
-                    to_do.append(future)
-                    # 线程处理
-                for f in as_completed(to_do):
-                    f.result()
+        # router_writer.writer()
+        #
+        # def when_done(r):
+        #     # 每一个进程结束后结果append到result中
+        #     # result.append(r.result())
+        #     print('future : %r finished' % r)
+        #
+        # if self.n_jobs == 1:
+        #     for jb in self._iterable:
+        #         # result.append(jb[0](*jb[1], **jb[2]))
+        #         getattr(jb, 'writer')()
+        # else:
+        #     with ThreadPoolExecutor(self.n_jobs) as pool:
+        #         to_do = []
+        #         for jb in self._iterable:
+        #             method = getattr(jb, 'writer')
+        #             # future_result = pool.submit(jb[0], *jb[1], **jb[2])
+        #             future = pool.submit(method)
+        #             future.add_done_callback(when_done)
+        #             to_do.append(future)
+        #             # 线程处理
+        #         for f in as_completed(to_do):
+        #             f.result()
         # update events
         event_writer.writer(self._init_date)
         # update m_cap
@@ -66,5 +66,5 @@ class SyncSpider(object):
 
 if __name__ == '__main__':
 
-    m = SyncSpider(initialization=True)
+    m = SyncSpider(initialization=False)
     m()

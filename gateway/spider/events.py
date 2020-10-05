@@ -91,7 +91,7 @@ class EventWriter(Crawler):
             获取时间区间内股票大宗交易，时间最好在一个月之内, 缺失值 --- '—'
         """
         deadline = self._retrieve_deadlines_from_sqlite('massive')
-        print('massive deadline', deadline.max())
+        print('massive deadline', deadline)
         page = 1
         pages = 1
         while page <= pages:
