@@ -29,7 +29,7 @@ OwnershipFields = {'变动日期': 'ex_date',
 class OwnershipWriter(Crawler):
 
     def __init__(self):
-        self.deadlines = dict()
+        self.deadlines = None
         self.missed = set()
 
     def _parse_equity_ownership(self, content, symbol):
@@ -60,7 +60,6 @@ class OwnershipWriter(Crawler):
             self.rerun()
         # reset
         self.missed = set()
-        self.deadlines = dict()
 
     def _writer_internal(self, equities):
         for sid in equities:

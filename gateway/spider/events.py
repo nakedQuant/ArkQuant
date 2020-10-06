@@ -105,6 +105,7 @@ class EventWriter(Crawler):
                 frame.replace('-', 0.0, inplace=True)
                 frame.dropna(axis=0, how='all', inplace=True)
                 massive = frame[frame['declared_date'] > deadline.max()] if not deadline.empty else frame
+                print('frame', frame)
                 if massive.empty:
                     break
                 print('massive', massive.head())
