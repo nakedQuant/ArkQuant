@@ -30,7 +30,6 @@ class AdjustmentsWriter(Crawler):
         """
             record the declared date of equities in mysql
         """
-        self.deadlines.clear()
         for tbl in self.adjustment_tables:
             self.deadlines[tbl] = self._retrieve_deadlines_from_sqlite(tbl, date_type='ex_date')
 
@@ -86,7 +85,6 @@ class AdjustmentsWriter(Crawler):
             self.rerun()
         # reset
         self.missed = set()
-        # self.deadlines.clear()
 
     def _writer_internal(self, equities):
         for sid in equities:

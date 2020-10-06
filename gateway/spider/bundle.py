@@ -36,7 +36,6 @@ class BundlesWriter(Crawler):
         return ['trade_dt', 'open', 'close', 'high', 'low', 'volume', 'amount']
 
     def retrieve_asset_deadlines(self):
-        self._cache_deadlines.clear()
         for tbl in ['equity_price', 'fund_price', 'convertible_price']:
             self._cache_deadlines[tbl] = self._retrieve_latest_from_sqlite(tbl)
 
@@ -134,7 +133,6 @@ class BundlesWriter(Crawler):
             self.rerun()
         # reset
         self.missed.clear()
-        # self._cache_deadlines.clear()
 
     def _writer_internal(self, q):
         _main_func = partial(self._implement, q=q)
