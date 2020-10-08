@@ -14,7 +14,7 @@ from gateway.driver.resample import Freq
 from gateway.driver.bar_reader import AssetSessionReader
 from gateway.driver.bcolz_reader import BcolzMinuteReader
 from gateway.driver.adjustment_reader import SQLiteAdjustmentReader
-from gateway.driver.history_loader import (
+from gateway.driver.history import (
     HistoryDailyLoader,
     HistoryMinuteLoader
 )
