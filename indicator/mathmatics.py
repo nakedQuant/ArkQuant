@@ -5,7 +5,7 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 from sklearn.linear_model import LinearRegression
-import statsmodels.api as sm, numpy as np
+import statsmodels.api as sm, numpy as np, pandas as pd
 from scipy import integrate
 
 
@@ -14,7 +14,11 @@ def demean(row):
 
 
 def zoom(raw):
-    scale = (raw - raw.min()) / (raw.max() - raw.min())
+    if isinstance(raw, (pd.Series, pd.DataFrame)):
+        scale = (raw - raw.min()) / (raw.max() - raw.min())
+    else:
+        raw = np.array(raw)
+        scale = (raw - min(raw)) / (max(raw) - min(raw))
     return scale
 
 
@@ -99,7 +103,8 @@ def RankDistance(x, y):
 
 def _fit_poly(y, degree):
     # return n_array (dimension ascending = False) p(x) = p[0] * x**deg + ... + p[deg]
-    y.dropna(inplace=True)
+    if isinstance(y, pd.Series):
+        y.dropna(inplace=True)
     res = np.polyfit(range(len(y)), np.array(y), degree)
     return res[0]
 

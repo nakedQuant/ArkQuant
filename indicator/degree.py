@@ -5,14 +5,14 @@ Created on Sat Feb 16 14:00:14 2019
 
 @author: python
 """
-import numpy as np
+import numpy as np, pandas as pd
 from indicator import (
     BaseFeature,
     EMA,
     MA
 )
-from gateway.driver.data_portal import DataPortal
-from gateway.asset.assets import Equity, Convertible, Fund
+# from gateway.driver.data_portal import DataPortal
+# from gateway.asset.assets import Equity, Convertible, Fund
 
 ma = MA()
 ema = EMA()
@@ -102,44 +102,52 @@ class Trim(BaseFeature):
     """
        对阿姆斯指标平滑得出（(上涨股票数量10日加总) /（下跌股票数量10日加总）） / （对应的成交量）
     """
-    @staticmethod
-    def _calculate_trim(data):
-        close = data.pivot(columns='sid', values='close')
-        vol = data.pivot(columns='sid', values='volume')
-        sign = close > close.shift(1)
-        ratio = np.sum(sign) / np.sum(~sign)
-        trim = ratio * (vol[~sign].sum()).sum() / (vol[sign].sum()).sum()
-        return trim
-
     @classmethod
     def _calc_feature(cls, frame, kwargs):
         window = kwargs['window']
-        trim_windowed = frame.rolling(window=window).apply(cls._calculate_trim)
-        return trim_windowed
+        close = frame.pivot(columns='sid', values='close')
+        sign = close > close.shift(1)
+        print('sign', sign)
+        up = sign.sum(axis=1)
+        print('up', up)
+        down = up.map(lambda x: len(close.columns) - x)
+        print('down', down)
+        ratio_1 = up.rolling(window=window).sum() / down.rolling(window=window).sum()
+        vol = frame.pivot(columns='sid', values='volume')
+        vol_up = vol[sign].sum(axis=1)
+        vol_down = vol[~sign].sum(axis=1)
+        ratio_2 = vol_up.rolling(window=window).sum() / vol_down.rolling(window=window).sum()
+        trim = ratio_1 / ratio_2
+        return trim
 
     def compute(self, frame, kwargs):
         frame = feed.copy()
-        market_width = self._calc_feature(frame, kwargs)
-        return market_width
+        trim = self._calc_feature(frame, kwargs)
+        return trim
 
 
 class NHL(BaseFeature):
     """
       （创出52周新高的股票 - 52周新低的股票） + 昨天的指标值 10日MA来平滑指标
     """
-    @staticmethod
-    def _calculate_nhl(data):
-        pivot_close = data.pivot(columns='sid', values='close')
-        pivot_close.index = range(len(pivot_close))
-        idx_max = pivot_close.idxmax(axis=0)
-        idx_min = pivot_close.idxmin(axis=0)
-        nhl = (idx_max == len(data)).sum() - (idx_min == 0).sum()
+    @classmethod
+    def _calc(cls, frame):
+        frame.index = range(len(frame))
+        idx_max = frame.apply(lambda x: x.idxmax(), axis=0)
+        # print('idx_max', idx_max)
+        idx_min = frame.apply(lambda x: x.idxmin(), axis=0)
+        # print('idx_min', idx_min)
+        nhl = (idx_max == len(frame) - 1).sum() - (idx_min == 0).sum()
         return nhl
 
-    @classmethod
-    def _calc_feature(cls, frame, kwargs):
-        nhl_series = frame.rolling(window=kwargs['period']).apply(cls._calculate_nhl)
-        nhl_windowed = MA.compute(nhl_series, kwargs)
+    def _calc_feature(self, frame, kwargs):
+        close = frame.pivot(columns='sid', values='close')
+        close = close.astype('float64')
+        period = kwargs['period']
+        nhl = [self._calc(close.iloc[loc:loc+period, :]) for loc in range(len(close) - period +1)]
+        print('nhl', len(nhl), nhl)
+        nhl = pd.Series(nhl, index=close.index[-len(nhl):])
+        nhl_windowed = ma.compute(nhl, kwargs)
         return nhl_windowed
 
     def compute(self, frame, kwargs):
@@ -147,25 +155,26 @@ class NHL(BaseFeature):
         return nhl
 
 
-if __name__ == '__main__':
-
-    asset = Equity('600000')
-    session = '2015-01-01'
-    kw = {'window': 10}
-    portal = DataPortal()
-    feed = portal.get_stack_value('equity', session, 100, 'daily')
-    print('feed', feed)
-    # mw = MarketWidth().compute(feed, kw)
-    # print('mw', mw)
-    # sx = STIX().compute(feed, kw)
-    # print('sx', sx)
-    # ur = UDR().compute(feed, kw)
-    # print('ur', ur)
-    # kw = {'window': (5, 10)}
-    # fm = FeatureMO().compute(feed, kw)
-    # print('fm', fm)
-    kw = {'window': 10}
-    tm = Trim().compute(feed, kw)
-    print('tm', tm)
-    nhl = NHL().compute(feed, kw)
-    print('nhl', nhl)
+# if __name__ == '__main__':
+#
+#     asset = Equity('600000')
+#     session = '2015-01-01'
+#     kw = {'window': 10}
+#     portal = DataPortal()
+#     feed = portal.get_stack_value('equity', session, 100, 'daily')
+#     print('feed', feed)
+#     mw = MarketWidth().compute(feed, kw)
+#     print('mw', mw)
+#     sx = STIX().compute(feed, kw)
+#     print('sx', sx)
+#     ur = UDR().compute(feed, kw)
+#     print('ur', ur)
+#     kw = {'window': (5, 10)}
+#     fm = FeatureMO().compute(feed, kw)
+#     print('fm', fm)
+#     kw = {'window': 10}
+#     tm = Trim().compute(feed, kw)
+#     print('tm', tm)
+#     kw = {'window': 10, 'period': 30}
+#     nhl = NHL().compute(feed, kw)
+#     print('nhl', nhl)

@@ -265,7 +265,7 @@ class ExponentialWeightedMovingAverage(BaseFeature):
 #     session = '2015-01-01'
 #     kw = {'window': 10}
 #     portal = DataPortal()
-#     dct = portal.get_window([asset], session, 10, ['open', 'high', 'low', 'close'], 'daily')
+#     dct = portal.get_window([asset], session, 11, ['open', 'high', 'low', 'close'], 'daily')
 #     feed = dct[asset.sid]
 #     print('feed', feed)
 #     vma = VMA().compute(feed, kw)

@@ -12,8 +12,10 @@ from indicator import (
     EMA
 )
 from indicator.mathmatics import zoom, coef2deg, _fit_poly
-from gateway.driver.data_portal import DataPortal
-from gateway.asset.assets import Equity, Convertible, Fund
+# from gateway.driver.data_portal import DataPortal
+# from gateway.asset.assets import Equity, Convertible, Fund
+
+ema = EMA()
 
 
 class MedianFilter(BaseFeature):
@@ -43,16 +45,14 @@ class MMedianFilter(BaseFeature):
         缺点：测量速度较慢，和算术平均滤波法一样
     """
     @staticmethod
-    def _calculate_mmedian(data):
+    def _calc_mmedian(data):
         data.sort_values(ascending=True, inplace=True)
         mmedian = data[1:-1].mean()
         return mmedian
 
-    @classmethod
-    def _calc_feature(cls, feed, kwargs):
-        frame = feed.copy()
+    def _calc_feature(self, frame, kwargs):
         window = kwargs['window']
-        mmedian = frame.rolling(window=window).apply(cls._calculate_mmedian)
+        mmedian = frame.rolling(window=window).apply(self._calc_mmedian)
         return mmedian
 
 
@@ -60,11 +60,13 @@ class AmplitudeFilter(BaseFeature):
     """
         限幅波动 , 参考3Q法则
     """
-    @classmethod
-    def _calc_feature(cls, frame, kwargs):
+    def _calc_feature(self, frame, kwargs):
         upper = 3 * np.nanstd(frame) + np.nanmean(frame)
+        print('upper', upper)
         bottom = - 3 * np.nanstd(frame) + np.nanmean(frame)
-        tunnel = np.clip(np.array(frame.values()), bottom, upper)
+        print('bottom', bottom)
+        tunnel = np.clip(np.array(frame.values), bottom, upper)
+        print('tunnel', tunnel)
         df = pd.Series(tunnel, index=frame.index)
         return df
 
@@ -103,10 +105,8 @@ class GaussianFilter(BaseFeature):
         guassian = np.exp(- x ** 2 / (2 * theta ** 2)) / (np.sqrt(2 * np.math.pi) * theta)
         return guassian
 
-    @classmethod
-    def _calc_feature(cls, feed, kwargs):
-        frame = feed.copy()
-        func = partial(cls._calculate_guassian, theta=frame.std())
+    def _calc_feature(self, frame, kwargs):
+        func = partial(self._calculate_guassian, theta=frame.std())
         guassian = pd.Series([func(x) for x in np.array(frame)], index=frame.index)
         return guassian
 
@@ -115,11 +115,8 @@ class Detrend(BaseFeature):
     """
         剔除趋势,基于高次方拟合,短期的degree =0 ，默认
     """
-    _degree = 0
-
-    @classmethod
-    def _calc_feature(cls, frame, kwargs):
-        _coef = _fit_poly(range(1, len(frame) + 1), frame, degree=kwargs['degree'])
+    def _calc_feature(self, frame, kwargs):
+        _coef = _fit_poly(frame, kwargs['degree'])
         detrend = frame - _coef * np.array(range(1, len(frame) + 1))
         return detrend
 
@@ -129,6 +126,7 @@ class RegRatio(BaseFeature):
     @classmethod
     def _calc_feature(cls, frame, kwargs):
         window = kwargs['window']
+        degree = kwargs['degree']
         upper = frame['high'].rolling(window=window).mean()
         bottom = frame['low'].rolling(window=window).mean()
         close = frame['close'].rolling(window=window).mean()
@@ -137,6 +135,11 @@ class RegRatio(BaseFeature):
         close_deg = coef2deg(_fit_poly(zoom(close), 0))
         deg_ratio = (upper_deg - close_deg)/(upper_deg - bottom_deg)
         return deg_ratio
+
+    def compute(self, feed, kwargs):
+        frame = feed.copy()
+        reg = self._calc_feature(frame, kwargs)
+        return reg
 
 
 class Resistence(BaseFeature):
@@ -153,15 +156,19 @@ class Resistence(BaseFeature):
     @classmethod
     def _calc_feature(cls, feed, kwargs):
         frame = feed.copy()
-        window = kwargs['window']
-        ema_h = EMA.compute(frame['high'], window)
-        ema_l = EMA.compute(frame['low'], window)
+        ema_h = ema.compute(frame['high'], kwargs)
+        ema_l = ema.compute(frame['low'], kwargs)
         ema_h_coef = _fit_poly(zoom(ema_h), 0)
         ema_l_coef = _fit_poly(zoom(ema_l), 0)
         diverse = frame['high'].max() - frame['low'].min()
         tunnel_upper = frame['high'].max() + ema_h_coef * diverse
         tunnel_bottom = frame['low'].min() + ema_l_coef * diverse
         return tunnel_upper, tunnel_bottom
+
+    def compute(self, feed, kwargs):
+        frame = feed.copy()
+        resistence = self._calc_feature(frame, kwargs)
+        return resistence
 
 
 class Golden(BaseFeature):
@@ -173,11 +180,11 @@ class Golden(BaseFeature):
     '''
     _fibonaci = frozenset([0.191, 0.382, 0.5, 0.618, 0.809])
 
-    @classmethod
-    def _calc_feature(cls, feed, kwargs):
+    def _calc_feature(self, feed, kwargs):
         frame = feed.copy()
         retrace = (1 - frame.min()) / frame.max()
-        resistence = (1 - cls._fibonaci[cls._fibonaci > abs(retrace)][0]) * frame.max()
+        fib = np.array(list(self._fibonaci))
+        resistence = (1 - fib[fib > abs(retrace)][0]) * frame.max()
         return resistence
 
 
@@ -191,29 +198,30 @@ class EMD(BaseFeature):
         raise NotImplementedError()
 
 
-if __name__ == '__main__':
-
-    asset = Equity('600000')
-    session = '2015-01-01'
-    kw = {'window': 10}
-    portal = DataPortal()
-    dct = portal.get_window([asset], session, 10, ['open', 'high', 'low', 'close'], 'daily')
-    feed = dct[asset.sid]
-    median = MedianFilter().compute(feed, kw)
-    print('median', median)
-    mmedian = MMedianFilter().compute(feed, kw)
-    print('mmedian', mmedian)
-    amplitude = AmplitudeFilter().compute(feed, kw)
-    print('amplitude', amplitude)
-    guassian = GaussianFilter().compute(feed, kw)
-    print('guassian', guassian)
-    detrend = Detrend().compute(feed, kw)
-    print('detrend', detrend)
-    reg = RegRatio().compute(feed, kw)
-    print('reg', reg)
-    resistence = Resistence().compute(feed, kw)
-    print('resistence', resistence)
-    golden = Golden().compute(feed, kw)
-    print('golden', golden)
-    emd = EMD().compute(feed, kw)
-    print('emd', emd)
+# if __name__ == '__main__':
+#
+#     asset = Equity('600000')
+#     session = '2015-01-01'
+#     kw = {'window': 10, 'degree': 1}
+#     portal = DataPortal()
+#     dct = portal.get_window([asset], session, 100, ['open', 'high', 'low', 'close'], 'daily')
+#     feed = dct[asset.sid]
+#     print('feed', feed)
+#     median = MedianFilter().compute(feed, kw)
+#     print('median', median)
+#     mmedian = MMedianFilter().compute(feed, kw)
+#     print('mmedian', mmedian)
+#     amplitude = AmplitudeFilter().compute(feed, kw)
+#     print('amplitude', amplitude)
+#     guassian = GaussianFilter().compute(feed, kw)
+#     print('guassian', guassian)
+#     detrend = Detrend().compute(feed, kw)
+#     print('detrend', detrend)
+#     reg = RegRatio().compute(feed, kw)
+#     print('reg', reg)
+#     resistence = Resistence().compute(feed, kw)
+#     print('resistence', resistence)
+#     golden = Golden().compute(feed, kw)
+#     print('golden', golden)
+#     emd = EMD().compute(feed, kw)
+#     print('emd', emd)
