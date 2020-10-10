@@ -75,7 +75,7 @@ class BcolzReader(BarReader):
             start = transfer_to_timestamp(sdate)
             print('start', sdate, start)
             assert meta['end_session'] >= start, ('%r exceed metadata end_session' % start)
-            end = transfer_to_timestamp(edate)
+            end = transfer_to_timestamp(edate) + 15 * 60 * 60
             print('end', edate, end)
             condition = '({0} <= ticker) & (ticker <= {1})'.format(start, end)
         else:

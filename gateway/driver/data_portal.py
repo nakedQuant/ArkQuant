@@ -113,8 +113,8 @@ class DataPortal(object):
         spot_value = self._history_loader[frequency].get_spot_value(dts, asset, field)
         return spot_value
 
-    def get_stack_value(self, tbl, session, frequency):
-        stack = self._history_loader[frequency].get_stack_value(tbl, session)
+    def get_stack_value(self, tbl, dt, length, frequency):
+        stack = self._history_loader[frequency].get_stack_value(tbl, dt, length)
         return stack
 
     def get_open_pct(self, asset, dt):

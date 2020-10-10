@@ -124,7 +124,7 @@ class TradingCalendar (object):
         pos = self.all_sessions.searchsorted(dt)
         try:
             loc = pos if self.all_sessions[pos] == dt else pos - 1
-            forward = self.all_sessions[loc - abs(window)]
+            forward = self.all_sessions[loc - abs(window) + 1]
             # return pd.Timestamp(self.all_sessions[forward])
             return forward
         except IndexError:
@@ -165,7 +165,6 @@ class TradingCalendar (object):
         if window == 0:
             return [end_date, end_date]
         start_date = self._roll_forward(end_date, window)
-        print('start_date', start_date)
         session_labels = self.session_in_range(start_date, end_date)
         return session_labels
 

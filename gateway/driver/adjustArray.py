@@ -141,8 +141,8 @@ class SlidingWindow(object):
         spot_value = self.reader.get_spot_value(dt, asset, fields)
         return spot_value
 
-    def get_stack_value(self, tbl, session):
-        stack = self.reader.get_stack_value(tbl, session)
+    def get_stack_value(self, tbl, sessions):
+        stack = self.reader.get_stack_value(tbl, sessions)
         return stack
 
     def array(self, dts, assets, fields):

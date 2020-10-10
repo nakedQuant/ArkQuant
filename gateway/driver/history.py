@@ -6,7 +6,7 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 from abc import ABC, abstractmethod
-import numpy as np, datetime
+import numpy as np, pandas as pd
 from _calendar.trading_calendar import calendar
 from gateway.driver.adjustArray import (
                         AdjustedDailyWindow,
@@ -149,8 +149,9 @@ class HistoryLoader(ABC):
         spot = self.adjust_window.get_spot_value(dt, asset, fields)
         return spot
 
-    def get_stack_value(self, tbl, session):
-        stack = self.adjust_window.get_stack_value(tbl, session)
+    def get_stack_value(self, tbl, dt, window):
+        sdate = self.trading_calendar.dt_window_size(dt, window)
+        stack = self.adjust_window.get_stack_value(tbl, [sdate, dt])
         return stack
 
     @abstractmethod
@@ -185,7 +186,8 @@ class HistoryLoader(ABC):
         """
         asset_windows = {}
         needed_assets = []
-        session = self.trading_calendar.dt_window_size(dts, window)
+        sdate = self.trading_calendar.dt_window_size(dts, window)
+        session = [sdate, dts]
         # original window
         orig_window = self.window(assets, fields, dts, window)
         for asset_obj in assets:
@@ -201,9 +203,13 @@ class HistoryLoader(ABC):
                 needed_assets.append(asset_obj)
             else:
                 slice_window = self._compute_slice_window(cache_window, session)
+                print('slice_window', slice_window['close'].iloc[-1])
                 slice_orig = orig_window[asset_obj.sid]
                 slice_orig.sort_index(inplace=True)
-                ratio = slice_orig['close'][-1] / slice_window['close'][-1]
+                print('slice_orig', slice_orig['close'].iloc[-1])
+                # series index
+                ratio = slice_orig['close'].iloc[-1] / slice_window['close'].iloc[-1]
+                print('ratio', ratio)
                 asset_windows[asset_obj.sid] = slice_window.loc[:, fields] * ratio
 
         if needed_assets:
@@ -223,9 +229,14 @@ class HistoryLoader(ABC):
         return asset_windows
 
     def window(self, assets, field, dts, window):
-        assert window < 0, 'to avoid forward prospective error'
-        sessions = self.trading_calendar.session_in_window(dts, window)
-        frame = self.adjust_window.array([min(sessions), max(sessions)], assets, field)
+        if window == -1:
+            frame = dict()
+            date = self.trading_calendar.dt_window_size(dts, -1)
+            for asset in assets:
+                frame[asset.sid] = self.get_spot_value(date, asset, field)
+        else:
+            sessions = self.trading_calendar.session_in_window(dts, window)
+            frame = self.adjust_window.array([min(sessions), max(sessions)], assets, field)
         return frame
 
     def history(self, assets, field, dts, window):
@@ -260,7 +271,7 @@ class HistoryLoader(ABC):
                                             window
                                             )
         else:
-             block_arrays = self.window(assets, field, dts, window=-1)
+             block_arrays = self.window(assets, field, dts, window)
         return block_arrays
 
 
@@ -310,9 +321,11 @@ class HistoryMinuteLoader(HistoryLoader):
 
     @staticmethod
     def _compute_slice_window(_window, dts):
-        s_ticker = datetime.datetime.strptime(dts[0], '%Y-%m-%d').timestamp()
-        e_ticker = datetime.datetime.strptime(dts[-1], '%Y-%m-%d').timestamp()
-        ticker = np.clip(np.array(_window.index), s_ticker, e_ticker)
+        print('dts', dts)
+        s_timestamp = pd.Timestamp(dts[0]).timestamp()
+        e_timestamp = pd.Timestamp(dts[1]).timestamp()
+        _idn = np.array(_window.index)
+        ticker = _idn[(_idn >= int(s_timestamp)) & (_idn <= int(e_timestamp))]
         _slice_window = _window.reindex(ticker)
         _slice_window.sort_index(inplace=True)
         return _slice_window
@@ -328,25 +341,24 @@ class HistoryMinuteLoader(HistoryLoader):
 #     sessions = ['2005-01-01', '2010-10-30']
 #     fields = ['open', 'close']
 #     daily_history = HistoryDailyLoader(session_reader, adjustment_reader)
-#     his_window_daily = daily_history.history([asset], fields, sessions[0], window=-30)
+#     his_window_daily = daily_history.history([asset], fields, sessions[0], window=-300)
 #     print('history_window_daily', his_window_daily)
-#     his_daily = daily_history.history([asset], fields, '2010-12-31')
-#     print('his', his_daily)
+#     test_his_window_daily = daily_history.history([asset], fields, '2004-04-10', window=-70)
+#     print('test_his_window_daily', test_his_window_daily)
 #     daily_spot_value = daily_history.get_spot_value('2005-09-07', asset, fields)
 #     print('daily_spot_value', daily_spot_value)
 #     daily_spot_value = daily_history.get_stack_value('equity', sessions)
 #     print('daily_spot_value', daily_spot_value)
-#     daily_open_pct = daily_history.get_open_pct([asset], '2005-09-07')
-#     print('daily_open_pct', daily_open_pct)
 #
 #     minute_history = HistoryMinuteLoader(minute_reader, adjustment_reader)
 #     his_window_minute = minute_history.history([asset], ['close', 'open'], '2005-09-03', window=-1000)
 #     print('his_window_minute', his_window_minute)
+#     test_his_window_minute = minute_history.history([asset], ['close', 'open'], '2005-08-03', window=-900)
+#     print('test_his_window_minute', test_his_window_minute)
 #     his_minute = minute_history.history([asset], ['close', 'open'], '2005-09-08', -1)
 #     print('his_minute', his_minute)
 #     minute_window = his_window_data = minute_history.window([asset], ['close', 'open'], '2005-09-07', -10)
 #     print('window_data', minute_window)
 #     minute_spot_value = minute_history.get_spot_value('2005-09-07', asset, fields)
 #     print('minute_spot_value', minute_spot_value)
-#     minute_stack_value = minute_history.get_stack_value('equity', sessions)
-#     print('minute_stack_value', minute_stack_value)
+

@@ -11,6 +11,47 @@ from numpy import (
     nan,
     nanpercentile
 )
+from functools import partial
+import pandas as pd, numpy as np
+
+int64_dtype = np.dtype('int64')
+METHOD_OF_CATEGORY = frozenset(['bins', 'quantiles'])
+
+
+def validate_type_method(raw, kwargs):
+    if len(np.unique(raw.dtypes)) - 1:
+        raise TypeError('the dtype of raw must be the same')
+    if kwargs['method'] in METHOD_OF_CATEGORY and kwargs['bins']:
+        assert True, ('expect method in %r,but received %s'
+                      % (METHOD_OF_CATEGORY, kwargs['method']))
+
+
+class Classifier(object):
+
+    missing_value = [None, np.nan, np.NaN, np.NAN]
+
+    def __setattr__(self, key, value):
+        raise NotImplementedError
+
+    # 基于integer encode
+    def auto_encode(self, raw, **kwargs):
+        validate_type_method(raw, kwargs)
+        # Return a contiguous flattened array
+        non_unique = set(np.ravel(raw)) - set(self.missing_value)
+        bin = kwargs['bins']
+        encoding = pd.cut(non_unique, bins=bin, labes=range(len(bin)))
+        return zip(non_unique, encoding)
+
+    @staticmethod
+    # func --- integer
+    def custom_encode(data, encoding_function, **kwargs):
+        if kwargs:
+            encoding_map = partial(encoding_function, **kwargs)
+        else:
+            encoding_map = encoding_function
+        # otypes --- type
+        encoding = np.vectorize(encoding_map, otypes=[int64_dtype])(data)
+        return zip(data, encoding)
 
 
 def is_missing(data, missing_value):
@@ -185,3 +226,62 @@ class ArrayPredicate(Filter):
     def _compute(self, arrays, dates, assets, mask):
         params = self.params
         return params['op'](arrays, *params['opargs']) & mask
+
+
+class BusinessDaysEvent(object):
+    """
+    Abstract class for business days since a previous event.
+    Returns the number of **business days** (not trading days!) since
+    the most recent event date for each asset.
+
+    This doesn't use trading days for symmetry with
+    BusinessDaysUntilNextEarnings.
+
+    asset which announced or will announce the event today will produce a
+    value of 0.0. asset that announced the event on the previous business
+    day will produce a value of 1.0.
+
+    asset for which the event date is `NaT` will produce a value of `NaN`.
+
+    Factors describing information about event data (e.g. earnings
+    announcements, acquisitions, dividends, etc.).
+
+    Dividend.com is a financial services website focused on providing comprehensive dividend stock research information.
+    The company uses their proprietary DARS™, or Dividend Advantage Rating System, to rank nearly 1,600 dividend-paying
+    stocks across five distinct criteria: relative strength, overall yield attractiveness, dividend reliability,
+    dividend uptrend, and earnings growth.
+
+    Automatic Trendline Detection
+    Support and Resistance Visualizations
+    Automatic Fibonacci Retracements
+    Manual Trendline Tuning Mode
+    Automated Candlestick Pattern Detection
+    Automated Price Gap Detection
+
+    trade via volatity
+
+    波动率 --- 并非常数，均值回复，聚集，存在长期记忆性的
+    大收益率会发生的相对频繁 --- 存在后续的波动
+    在大多数市场中，波动率与收益率呈现负相关，在股票市场中的最为明显
+    波动率和成交量之间存在很强的正相关性
+    波动率分布接近正太分布
+
+    基于大类过滤
+    标的 --- 按照市值排明top 10% 标的标的集合 --- 度量周期的联动性
+    a 计算每个月的月度收益率，筛选出10%集合 / 12的个数，
+    b 获取每个月的集合 --- 作为当月的强周期集合
+    c 基于技术指标等技术获取对应的标的
+
+    1、序列中基于中位数的性质更加能代表趋势动向
+    2、预警指标的出现股票集中，容易出现后期的大黑马，由此推导出异动逻辑以及在持续性
+    3、统计套利:(pt > pt-1) / (pt-1 > m) 概率为75% 引发的思考(close - pre_high)
+
+    """
+    # numpy.busday_count(begindates, enddates, weekmask='1111100', holidays=[], busdaycal=None, out=None)
+    # Counts the number of valid days between begindates and enddates, not including the day of enddates.
+    #  [1,1,1,1,1,0,0]; a length-seven string, like ‘1111100’; or a string like “Mon Tue Wed Thu Fri Sat Sun”
+    # np.busday_count --- Mon Fri ( weekmaskstr or array_like of bool, optional)
+    # where(condition, x,y --- handles `NaT`s by returning `NaN`s where the inputs were `NaT`.
+    # announce_date , ex_date , pay_date (比如举牌、增持、减持、股权转让、重组）
+
+

@@ -61,7 +61,7 @@ class SyncSpider(object):
         # update m_cap
         self._mcap_writer.calculate_mcap()
         # update events
-        # event_writer.writer(self._init_date)
+        event_writer.writer(self._init_date)
 
 
 if __name__ == '__main__':

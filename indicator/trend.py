@@ -7,11 +7,13 @@ Created on Sat Feb 16 14:00:14 2019
 """
 import pandas as pd, numpy as np
 from functools import partial
-from strategy.indicator import (
+from indicator import (
     BaseFeature,
     EMA
 )
-from strategy.indicator.mathmatics import zoom, coef2deg, _fit_poly
+from indicator.mathmatics import zoom, coef2deg, _fit_poly
+from gateway.driver.data_portal import DataPortal
+from gateway.asset.assets import Equity, Convertible, Fund
 
 
 class MedianFilter(BaseFeature):
@@ -187,3 +189,31 @@ class EMD(BaseFeature):
     @classmethod
     def _calc_feature(cls, feed, kwargs):
         raise NotImplementedError()
+
+
+if __name__ == '__main__':
+
+    asset = Equity('600000')
+    session = '2015-01-01'
+    kw = {'window': 10}
+    portal = DataPortal()
+    dct = portal.get_window([asset], session, 10, ['open', 'high', 'low', 'close'], 'daily')
+    feed = dct[asset.sid]
+    median = MedianFilter().compute(feed, kw)
+    print('median', median)
+    mmedian = MMedianFilter().compute(feed, kw)
+    print('mmedian', mmedian)
+    amplitude = AmplitudeFilter().compute(feed, kw)
+    print('amplitude', amplitude)
+    guassian = GaussianFilter().compute(feed, kw)
+    print('guassian', guassian)
+    detrend = Detrend().compute(feed, kw)
+    print('detrend', detrend)
+    reg = RegRatio().compute(feed, kw)
+    print('reg', reg)
+    resistence = Resistence().compute(feed, kw)
+    print('resistence', resistence)
+    golden = Golden().compute(feed, kw)
+    print('golden', golden)
+    emd = EMD().compute(feed, kw)
+    print('emd', emd)

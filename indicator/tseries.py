@@ -7,7 +7,7 @@ Created on Sat Feb 16 14:00:14 2019
 """
 from statsmodels.tsa.stattools import adfuller, coint, pacf, acf
 import numpy as np, pandas as pd
-from strategy.indicator import BaseFeature
+from indicator import BaseFeature
 
 
 class ADF(BaseFeature):
@@ -167,3 +167,39 @@ class PCA(BaseFeature):
         redeigvect = eigvect[:, eigvalind]
         reconmat = meanremoved * redeigvect * redeigvect.T + meanval
         return reconmat
+
+
+class PairWise(object):
+    """
+        不同ETF之间的配对交易 ；相当于个股来讲更加具有稳定性
+        1、价格比率交易（不具备协整关系，但是具有优势）
+        2、计算不同ETF的比率的平稳性(不具备协整关系，但是具有优势）
+        3、平稳性 --- 协整检验
+        4、半衰期 ： -log2/r --- r为序列的相关系数
+        单位根检验、协整模型
+        pval = ADF.calc_feature(ratio_etf)
+        coef = _fit_statsmodel(np.array(raw_y), np.array(raw_x))
+        residual = raw_y - raw_x * coef
+        acf = ACF.calc_feature(ratio_etf)[0]
+        if pval <= 0.05 and acf < 0:
+            half = - np.log(2) / acf
+        zscore = (nowdays - ratio_etf.mean()) / ratio_etf.std()
+    """
+    def __init__(self, window):
+        self.window = window
+
+
+class SLTrading(object):
+    """
+        主要针对于ETF或者其他的自定义指数
+        度量动量配对交易策略凸优化(Convex Optimization)
+        1、etf 国内可以卖空
+        2、构建一个协整关系的组合与etf 进行多空交易
+        逻辑：
+        1、以ETF50为例，找出成分股中与指数具备有协整关系的成分股
+        2、买入具备协整关系的股票集，并卖出ETF50指数
+        3、如果考虑到交易成本，微弱的价差刚好覆盖成本，没有利润空间
+        筛选etf成分股中与指数具备有协整关系的成分股
+        将具备协整关系的成分股组合买入，同时卖出对应ETF
+        计算固定周期内对冲收益率，定期去更新_coint_test
+    """

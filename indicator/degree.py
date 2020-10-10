@@ -6,11 +6,16 @@ Created on Sat Feb 16 14:00:14 2019
 @author: python
 """
 import numpy as np
-from strategy.indicator import (
+from indicator import (
     BaseFeature,
     EMA,
     MA
 )
+from gateway.driver.data_portal import DataPortal
+from gateway.asset.assets import Equity, Convertible, Fund
+
+ma = MA()
+ema = EMA()
 
 
 class MarketWidth(BaseFeature):
@@ -30,8 +35,10 @@ class MarketWidth(BaseFeature):
         ret = close - close.shift(1) - 1
         width = ret.apply(lambda x: sum(x > 0) / len(x), axis=1)
         # T -- minutes S -- second M -- month
-        width_windowed = width.resample('D' % window).mean()
-        return width_windowed
+        # width_windowed = width.resample('D' % window).mean()
+        # width_windowed = width.rolling(window=window).mean()
+        # return width_windowed
+        return width
 
     def compute(self, frame, kwargs):
         market_width = self._calc_feature(frame, kwargs)
@@ -44,9 +51,8 @@ class STIX(BaseFeature):
     """
     @classmethod
     def _calc_feature(cls, frame, kwargs):
-        window = kwargs['window']
-        width = MarketWidth.compute(frame, window)
-        stix = EMA.compute(width, {window: 22})
+        width = MarketWidth().compute(frame, kwargs)
+        stix = ema.compute(width, kwargs)
         return stix
 
     def compute(self, frame, kwargs):
@@ -82,9 +88,9 @@ class FeatureMO(BaseFeature):
         window = kwargs['window']
         close = frame.pivot(columns='sid', values='close')
         accumulate = (close - close.shift(1)).apply(lambda x: sum(x > 0) - sum(x < 0), axis=1)
-        mo_slow = EMA.compute(accumulate, {'window': max(window)})
-        mo_fast = EMA.compute(accumulate, {'window': min(window)})
-        mo_ema = mo_slow - mo_fast[-mo_slow:]
+        mo_slow = np.array(ema.compute(accumulate, {'window': max(window)}))
+        mo_fast = np.array(ema.compute(accumulate, {'window': min(window)}))
+        mo_ema = mo_slow - mo_fast[-len(mo_slow):]
         return mo_ema
 
     def compute(self, frame, kwargs):
@@ -106,13 +112,13 @@ class Trim(BaseFeature):
         return trim
 
     @classmethod
-    def _calc_feature(cls, feed, kwargs):
-        frame = feed.copy()
+    def _calc_feature(cls, frame, kwargs):
         window = kwargs['window']
         trim_windowed = frame.rolling(window=window).apply(cls._calculate_trim)
         return trim_windowed
 
     def compute(self, frame, kwargs):
+        frame = feed.copy()
         market_width = self._calc_feature(frame, kwargs)
         return market_width
 
@@ -139,3 +145,27 @@ class NHL(BaseFeature):
     def compute(self, frame, kwargs):
         nhl = self._calc_feature(frame, kwargs)
         return nhl
+
+
+if __name__ == '__main__':
+
+    asset = Equity('600000')
+    session = '2015-01-01'
+    kw = {'window': 10}
+    portal = DataPortal()
+    feed = portal.get_stack_value('equity', session, 100, 'daily')
+    print('feed', feed)
+    # mw = MarketWidth().compute(feed, kw)
+    # print('mw', mw)
+    # sx = STIX().compute(feed, kw)
+    # print('sx', sx)
+    # ur = UDR().compute(feed, kw)
+    # print('ur', ur)
+    # kw = {'window': (5, 10)}
+    # fm = FeatureMO().compute(feed, kw)
+    # print('fm', fm)
+    kw = {'window': 10}
+    tm = Trim().compute(feed, kw)
+    print('tm', tm)
+    nhl = NHL().compute(feed, kw)
+    print('nhl', nhl)

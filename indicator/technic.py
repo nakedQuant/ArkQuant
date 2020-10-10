@@ -5,15 +5,21 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 import pandas as pd, numpy as np
-from strategy.indicator import (
+from indicator import (
      BaseFeature,
      MA,
      SMA,
      EMA,
-     NEMA,
      ExponentialMovingAverage
 )
-from strategy.indicator.mathmatics import zoom
+from indicator.mathmatics import zoom
+# from gateway.driver._ext_vwap import  VWAP
+# from gateway.driver.data_portal import DataPortal
+# from gateway.asset.assets import Equity, Convertible, Fund
+
+ema = EMA()
+sma = SMA()
+ma = MA()
 
 
 class TEMA(BaseFeature):
@@ -21,10 +27,13 @@ class TEMA(BaseFeature):
         三重指数移动平均 --- 3 * EMA - 3 * EMA的EMA + EMA的EMA的EMA
     """
     def _calc_feature(self, frame, kwargs):
-        ema = EMA.compute(frame, kwargs)
-        ema_2 = NEMA.compute(frame, kwargs.update({'recursion': 2}))
-        ema_3 = NEMA.compute(frame, kwargs.update({'recursion': 3}))
-        tema = 3 * ema[-len(ema_3):] - ema_2[-len(ema_3):] + ema_3
+        kw = kwargs.copy()
+        ema_1 = np.array(ema.compute(frame, kw))
+        kw.update({'recursion': 2})
+        ema_2 = np.array(ema.compute(frame, kw))
+        kw.update({'recursion': 3})
+        ema_3 = np.array(ema.compute(frame, kw))
+        tema = 3 * ema_1[-len(ema_3):] - ema_2[-len(ema_3):] + ema_3
         return tema
 
 
@@ -33,9 +42,11 @@ class DEMA(BaseFeature):
         双指数移动平均线，一个单指数移动平均线和一个双指数移动平均线 : 2 * n日EMA - n日EMA的EMA
     """
     def _calc_feature(self, frame, kwargs):
-        ema = EMA.compute(frame,  kwargs)
-        ema_2 = NEMA.compute(frame, kwargs.update({'recursion': 2}))
-        dema = 2 * ema[-len(ema_2):] - ema_2
+        kw = kwargs.copy()
+        ema_1 = np.array(ema.compute(frame,  kw))
+        kw.update({'recursion': 2})
+        ema_2 = np.array(ema.compute(frame, kw))
+        dema = 2 * ema_1[-len(ema_2):] - ema_2
         return dema
 
 
@@ -54,36 +65,10 @@ class IMI(BaseFeature):
             imi = - np.inf
         return imi
 
-    def compute(self, frame, kwargs):
+    def compute(self, feed, kwargs):
+        frame = feed.copy()
         imi = self._calc_feature(frame, kwargs)
         return imi
-
-
-class RAVI(BaseFeature):
-    """
-        区间运动辨识指数（RAVI）7日的SMA与65 天的SMA之差占65天的SMA绝对值，一般来讲，RAVI被限制在3 % 以下，市场做区间运动
-    """
-    def _calc_feature(self, frame, kwargs):
-        window = kwargs['window']
-        assert isinstance(window, (tuple, list)), 'two different windows needed'
-        short = SMA.compute(frame, {'window': min(window)})
-        long = SMA.compute(frame, {'window': max(window)})
-        ravi_windowed = (short - long) / long
-        return ravi_windowed
-
-
-class DMA(BaseFeature):
-    """
-        DMA: 收盘价的短期平均与长期平均的差得DMA；DMA的M日平均为AMA;
-        DMA与AMA比较判断交易方向,参数：12、50、14
-    """
-    @classmethod
-    def _calc_feature(cls, frame, kwargs):
-        window = kwargs['window']
-        short = MA.compute(frame, {'window': min(window)})
-        long = MA.compute(frame, {'window': max(window)})
-        dma_windowed = short[-len(long):] - long
-        return dma_windowed
 
 
 class ER(BaseFeature):
@@ -99,57 +84,10 @@ class ER(BaseFeature):
     def _calc_feature(self, frame, kwargs):
         window = kwargs['window']
         displacement = frame - frame.shift(window)
-        distance = abs(frame.diff()).rolling(window=window).sum()
+        distance = np.abs(frame.diff()).rolling(window=window).sum()
         er_windowed = displacement / distance
+        print('er_window', len(er_windowed))
         return er_windowed
-
-
-class AMA(ExponentialMovingAverage):
-    """
-        指数平滑公式：EMA(i) = Price(i) * SC + EMA(i - 1) * (1 - SC),SC = 2 / (n + 1) ― EMA平滑常数
-        对于快速市场平滑比必须是关于EMA的2周期(fast SC = 2 / (2 + 1) = 0.6667), 而无趋势EMA周期必须等于30(
-        slow SC = 2 / (30 + 1) = 0.06452)
-        新的变化中的平滑常量为SSC（成比例的平滑常量）:
-        SSC(i) = (ER(i) * (fast SC - slow SC) + slow SC
-        AMA(i) = AMA(i - 1) * (1 - SSC(i) ^ 2) + Price(i) * (SSC(i) ^ 2)
-    """
-    @staticmethod
-    def _calculate_weights(frame, kwargs):
-        er_windowed = ER.compute(frame, kwargs)
-        fast_sc = 2 / (kwargs['fast'] + 1)
-        slow_sc = 2 / (kwargs['slow'] + 1)
-        ssc = er_windowed * (fast_sc - slow_sc) + slow_sc
-        return ssc
-
-    def _calc_feature(self, frame, kwargs):
-        exponential_weights = self.adjust_weights(frame, kwargs)
-        window = kwargs['window']
-        array = np.array(frame)
-        out = [np.average(array[:loc][-window:], axis=0, weights=exponential_weights[:loc][-window:])
-               for loc in range(window, len(array))]
-        return out
-
-
-class VEMA(ExponentialMovingAverage):
-    """
-        变量移动平均线基于数据系列的波动性而调整百分比的指数移动平均线
-        (SM * VR） *收盘价 + （1 - SM * VR） * （昨天）MA
-        SM = 2 / (n + 1);
-        VR可以采用钱德勒摆动指标绝对值 / 100
-    """
-    @staticmethod
-    def _calculate_weights(frame, window):
-        rolling_std = frame.rolling(window=window).std()
-        rates = rolling_std * 2 / (window + 1)
-        return rates
-
-    def _calc_feature(self, frame, kwargs):
-        window = kwargs['window']
-        exponential_weights = self.adjust_weights(frame, window)
-        array = np.array(frame)
-        out = [np.average(array[:loc][-window:], axis=0, weights=exponential_weights[:loc][-window:])
-               for loc in range(window, len(array))]
-        return out
 
 
 class CMO(BaseFeature):
@@ -157,7 +95,8 @@ class CMO(BaseFeature):
         钱德动量摆动指标 归一化
         Su(上涨日的收盘价之差之和） Sd(下跌日的收盘价之差的绝对值之和） (Su - Sd) / (Su + Sd)
     """
-    def _calc_feature(self, frame, kwargs):
+    @staticmethod
+    def _calc(frame):
         data = (frame - frame.min())/(frame.max() - frame.min())
         data_diff = data - data.shift(1)
         su = data[data_diff > 0].sum()
@@ -165,30 +104,30 @@ class CMO(BaseFeature):
         cmo = (su + sd) / (su - sd)
         return cmo
 
-    def compute(self, frame, kwargs):
-        cmo = self._calc_feature(frame['close'], kwargs)
+    def _calc_feature(self, frame, kwargs):
+        cmo = frame.rolling(window=kwargs['window']).apply(self._calc)
         return cmo
 
 
-class Vidya(ExponentialMovingAverage):
+class Gap(BaseFeature):
     """
-        变量指数动态平均线技术指标(VIDYA): 计算平均周期动态变化的指数移动平均线(EMA)
-        平均周期取决于市场波动情况；振荡器(CMO) /100
-        CMO值用作平滑因素EMA比率
+        gap : 低开上破昨日收盘价（preclose > open and close > preclose）
+              高开高走 (open > preclose and close > open)
+        gap power :delta vol * gap
+        逻辑:
+        1、统计出现次数
+        2、计算跳空能量
     """
-    @staticmethod
-    def _calculate_weights(frame, window):
-        cmo = CMO.compute(frame, window)
-        vidya_ratio = cmo * 2 / (window + 1)
-        return vidya_ratio
-
     def _calc_feature(self, frame, kwargs):
-        window = kwargs['window']
-        exponential_weights = self.adjust_weights(frame, window)
-        array = np.array(frame)
-        out = [np.average(array[:loc][-window:], axis=0, weights=exponential_weights[:loc][-window:])
-               for loc in range(window, len(array))]
-        return out
+        frame['delta_vol'] = frame['volume'] - frame['volume'].shift(1)
+        frame['gap'] = (frame['close'] - frame['close'].shift(1)) / (frame['open'] - frame['close'].shift(1)) - 1
+        gap_power = frame['gap'] * frame['delta_vol'] * np.sign(frame['close'] - frame['close'].shift(1))
+        return gap_power
+
+    def compute(self, feed, kwargs):
+        frame = feed.copy()
+        gap = self._calc_feature(frame, kwargs)
+        return gap
 
 
 class Jump(BaseFeature):
@@ -210,31 +149,11 @@ class Jump(BaseFeature):
         power = power_up - power_down
         return power
 
-    def compute(self, frame, kwargs):
+    def compute(self, feed, kwargs):
         window = kwargs['window']
+        frame = feed.copy()
         jump = self._calc_feature(frame, window)
         return jump
-
-
-class Gap(BaseFeature):
-    """
-        gap : 低开上破昨日收盘价（preclose > open and close > preclose）
-              高开高走 (open > preclose and close > open)
-        gap power :delta vol * gap
-        逻辑:
-        1、统计出现次数
-        2、计算跳空能量
-    """
-    def _calc_feature(self, frame, kwargs):
-        frame['pre_close'] = frame['close'].shift(1)
-        frame['delta_vol'] = frame['volume'] - frame['volume'].shift(1)
-        frame['gap'] = (frame['close'] - frame['pre_close']) / (frame['open'] - frame['pre_close']) - 1
-        gap_power = frame['gap'] * frame['delta_vol'] * np.sign(frame['close'] - frame['pre_close'])
-        return gap_power
-
-    def compute(self, frame, kwargs):
-        gap = self._calc_feature(frame, kwargs)
-        return gap
 
 
 class Power(BaseFeature):
@@ -252,7 +171,8 @@ class Power(BaseFeature):
         power = frame['volume'] * (frame['close'] - frame['vwap']) / frame['amount']
         return power
 
-    def compute(self, frame, kwargs):
+    def compute(self, feed, kwargs):
+        frame = feed.copy()
         power = self._calc_feature(frame, kwargs)
         return power
 
@@ -265,7 +185,8 @@ class BreakPower(BaseFeature):
         power = frame['volume'] * (frame['close'] - frame['high'].shift(1)) / frame['close'].shift(1)
         return power
 
-    def compute(self, frame, kwargs):
+    def compute(self, feed, kwargs):
+        frame = feed.copy()
         brk_power = self._calc_feature(frame, kwargs)
         return brk_power
 
@@ -296,13 +217,15 @@ class MassIndex(BaseFeature):
     @classmethod
     def _calc_feature(cls, frame, kwargs):
         high_low = frame['high'] - frame['low']
-        ema = EMA.compute(high_low, kwargs)
-        ema_2 = NEMA.compute(high_low, kwargs.update({'recursion': 2}))
-        mass = ema[-len(ema_2):] - ema_2
+        ema_1 = np.array(ema.compute(high_low, kwargs))
+        kwargs.update({'recursion': 2})
+        ema_2 = np.array(ema.compute(high_low, kwargs))
+        mass = ema_1[-len(ema_2):] - ema_2
         return mass
 
     def compute(self, feed, kwargs):
-        mass_index = self._calc_feature(feed, kwargs)
+        frame = feed.copy()
+        mass_index = self._calc_feature(frame, kwargs)
         return mass_index
 
 
@@ -312,8 +235,8 @@ class Dpo(BaseFeature):
     """
     def _calc_feature(self, feed, kwargs):
         window = int(kwargs['window']/2) + 1
-        ma = MA.compute(feed, {'window': window})
-        dpo_window = feed - ma
+        moving = ma.compute(feed, {'window': window})
+        dpo_window = feed[-len(moving):] - moving
         return dpo_window
 
 
@@ -327,7 +250,8 @@ class RVI(BaseFeature):
         return rvi
 
     def compute(self, feed, kwargs):
-        rvi = self._calc_feature(feed, kwargs)
+        frame = feed.copy()
+        rvi = self._calc_feature(frame, kwargs)
         return rvi
 
 
@@ -343,7 +267,8 @@ class RI(BaseFeature):
         return ri_windowed
 
     def compute(self, feed, kwargs):
-        ri = self._calc_feature(feed, kwargs)
+        frame = feed.copy()
+        ri = self._calc_feature(frame, kwargs)
         return ri
 
 
@@ -359,7 +284,8 @@ class Stochastic(BaseFeature):
         return stochastic
 
     def compute(self, feed, kwargs):
-        stochastic_momentum = self._calc_feature(feed, kwargs)
+        frame = feed.copy()
+        stochastic_momentum = self._calc_feature(frame, kwargs)
         return stochastic_momentum
 
 
@@ -368,10 +294,15 @@ class SMI(BaseFeature):
         stochastic momentum index 随意摆动指收盘价相对于近期的最高价 / 最低价区间的位置进行两次EMA平滑
     """
     def _calc_feature(self, feed, kwargs):
+        smi = Stochastic().compute(feed, kwargs)
         kwargs.update({'recursion': 2})
-        smi = Stochastic.compute(feed, kwargs)
-        smi_ema = NEMA.compute(smi, kwargs)
+        smi_ema = ema.compute(smi, kwargs)
         return smi_ema
+
+    def compute(self, feed, kwargs):
+        frame = feed.copy()
+        smi = self._calc_feature(frame, kwargs)
+        return smi
 
 
 class RPower(BaseFeature):
@@ -383,12 +314,13 @@ class RPower(BaseFeature):
     """
     def _calc_feature(self, feed, kwargs):
         frame = feed.copy()
-        rvi = RVI.compute(feed, kwargs)
+        rvi = RVI().compute(feed, kwargs)
         delta_vol = frame['volume'].diff()
         momentum = (rvi ** 2) * delta_vol
         return momentum
 
-    def compute(self, frame, kwargs):
+    def compute(self, feed, kwargs):
+        frame = feed.copy()
         rpower = self._calc_feature(frame, kwargs)
         return rpower
 
@@ -411,42 +343,29 @@ class DPower(BaseFeature):
         return momentum
 
     def compute(self, feed, kwargs):
-        dpower = self._calc_feature(feed, kwargs)
+        frame = feed.copy()
+        dpower = self._calc_feature(frame, kwargs)
         return dpower
 
 
-class MAO(BaseFeature):
+class MFI(BaseFeature):
     """
-        MA oscillator 价格摆动， 短期MA / 长期MA的百分比
-    """
-    @classmethod
-    def _calc_feature(cls, frame, kwargs):
-        window = kwargs['window']
-        assert isinstance(window, (tuple, list)), 'different frequency window needed'
-        ma_short = MA.compute(frame, {'window': min(window)})
-        ma_long = MA.calc_feature(frame, {'window': max(window)})
-        mao = ma_short / ma_long
-        return mao
-
-
-class MFI_(BaseFeature):
-    """
-        公式：（最高价 - 最低价） / 成交量
-        衡量 每单位成交量的价格变动来衡量价格变动的效率
-        类别：
-            green(MFI和成交量都之前增加)
-            fade(MFI和成交量比以前减少)
-            fake(成交量减少和MFI增加)
-            squat(成交量增加，但是MFI下降)
+        price = （最高价 + 最低价 + 收盘价） / 3  ; 货币流量 = price * 成交量  ; 货币比率 = 正的货币流量 / 负的货币流量
+        货币流量指标 = 100（1 - 1 /（1 + 货币比率））
+        如果price大于preprice 正流入 ，否则为流出
     """
     def _calc_feature(self, frame, kwargs):
-        window = kwargs['window']
-        mfi = (frame['high'] - frame['low']) / frame['volume']
-        mfi_window = mfi.rolling(window=window).mean()
-        return mfi_window
+        avg = frame.loc[:, ['high', 'low', 'close']].mean(axis=1)
+        signal = avg > avg.shift(1)
+        positive = avg[signal] * frame['volume'][signal]
+        negative = avg[~signal] * frame['volume'][~signal]
+        ratio = positive.sum() / negative.sum()
+        mfi = 100 * (1 - 1 / (1 + ratio))
+        return mfi
 
     def compute(self, feed, kwargs):
-        mfi = self._calc_feature(feed, kwargs)
+        frame = feed.copy()
+        mfi = self._calc_feature(frame, kwargs)
         return mfi
 
 
@@ -472,35 +391,17 @@ class VCK(BaseFeature):
         蔡金波动率 = （ hl平均值 - n期前的hl平均值 ） / n期前的hl平均值
     """
     @classmethod
-    def calc_feature(cls, frame, kwargs):
-        window = kwargs['window']
+    def _calc_feature(cls, frame, kwargs):
         hl = frame['high'] - frame['low']
-        ema = EMA.compute(hl, window)
-        vck = ema / ema.shift(window) - 1
+        ema_1 = np.array(ema.compute(hl, kwargs))
+        window = kwargs['window']
+        vck = ema_1[window:] / ema_1[:len(ema_1) - window] - 1
         return vck
 
-
-class PVT(ExponentialMovingAverage):
-    """
-        价量趋势指标，累积成交量: pvi(t) = pvi(t - 1) + （收盘价 - 前期收盘价） / 前期收盘价 * pvi
-        pvi为初始交易量
-    """
-    @staticmethod
-    def _calculate_weights(frame, window):
-        rates = frame['close'] / frame['close'].shift(1) -1
-        return rates
-
-    def _calc_feature(self, frame, kwargs):
-        window = kwargs['window']
-        exponential_weights = self.adjust_weights(window)
-        array = np.array(frame)
-        out = [np.average(array[:loc][-window:], axis=0, weights=exponential_weights[:loc][-window:])
-               for loc in range(window, len(array))]
-        return out
-
     def compute(self, feed, kwargs):
-        pvt = self._calc_feature(feed, kwargs)
-        return pvt
+        frame = feed.copy()
+        vck = self._calc_feature(frame, kwargs)
+        return vck
 
 
 class Rsi(BaseFeature):
@@ -517,10 +418,11 @@ class Rsi(BaseFeature):
         dif = np.diff(data, axis=0)
         ups = np.nanmean(np.clip(dif, 0, np.inf), axis=0)
         downs = abs(np.nanmean(np.clip(dif, -np.inf, 0), axis=0))
-        return np.evaluate(
+        # eval (expression, globals , locals)
+        return eval(
             "100 - (100 / (1 + (ups / downs)))",
-            local_dict={'ups': ups, 'downs': downs},
-            global_dict={})
+            {}, {'ups': ups, 'downs': downs}
+           )
 
     def _calc_feature(self, frame, kwargs):
         window = kwargs['window']
@@ -536,8 +438,10 @@ class Aroon(BaseFeature):
     """
     @staticmethod
     def _calculate(data):
-        max_point = data.idxmax()
-        min_point = data.idxmin()
+        # reset
+        data.index = range(len(data))
+        max_point = data.index[data.idxmax()]
+        min_point = data.index[data.idxmin()]
         try:
             rate = (len(data) - max_point) / (max_point - min_point)
         except ZeroDivisionError:
@@ -545,8 +449,7 @@ class Aroon(BaseFeature):
         return rate
 
     def _calc_feature(self, frame, kwargs):
-        window = kwargs['window']
-        aroon = frame.rolling(window).apply(self._calculate)
+        aroon = frame.rolling(kwargs['window']).apply(self._calculate)
         return aroon
 
 
@@ -570,7 +473,8 @@ class WAD(BaseFeature):
         return wad_windowed
 
     def compute(self, feed, kwargs):
-        wad = self._calc_feature(feed, kwargs)
+        frame = feed.copy()
+        wad = self._calc_feature(frame, kwargs)
         return wad
 
 
@@ -588,32 +492,6 @@ class WR(BaseFeature):
         return wr
 
 
-class DMI(BaseFeature):
-    """
-    DMI中的时间区间变化受到价格波动的控制，在平稳的市场较多的时间区间数，在活跃的市场采取较少的时间区间数
-    时间区间数 = 14 / 波动性指标 波动性指标 = 收盘价5日标准差除以收盘价5日标准差10日移动平均数
-    """
-    def _calc_feature(self, frame, kwargs):
-        window = kwargs['window']
-        std = frame.rolling(window=min(window)).std()
-        std_ma = std.rolling(window=max(window)).mean()
-        dmi = std / std_ma
-        return dmi
-
-
-class VO(BaseFeature):
-    """
-    成交量提供给定价格运动的交易密集程度，高成交量水平是顶部特征，在底部之前也会因为恐慌而放大
-    VO（volume oscillator)  vol的短期移动平均值与长期移动平均值之差的比率
-    """
-    def _calc_feature(self, frame, kwargs):
-        window = kwargs['window']
-        short = MA.compute(frame, {'window': min(window)})
-        long = MA.compute(frame, {'window': max(window)})
-        vo = short / long
-        return vo
-
-
 class SO(BaseFeature):
     """
         随机：共同分布的随机变量的无穷过程。随意摆动指标：收盘价相对于给定时间内价格区间的位置
@@ -627,7 +505,8 @@ class SO(BaseFeature):
         return so
 
     def compute(self, feed, kwargs):
-        so = self._calc_feature(feed, kwargs)
+        frame = feed.copy()
+        so = self._calc_feature(frame, kwargs)
         return so
 
 
@@ -643,43 +522,28 @@ class ADX(BaseFeature):
         MDI: DMM * 100 / TR1;
         ADX: SMA(ABS(MDI - PDI) / (MDI + PDI) * 100, N, 1)
     """
-    def _calc_feature(self, frame, kwargs):
-        window = kwargs['window']
+    @staticmethod
+    def _calc(frame, kwargs):
         dmp = frame['high'] - frame['high'].shift(1)
         dmm = frame['low'].shift(1) - frame['low']
         dmp_sign = (dmp > 0) & (dmp > dmm)
         dmm_sign = (dmm > 0) & (dmp < dmm)
         dmp[~dmp_sign] = 0
         dmm[~dmm_sign] = 0
-        pdi = SMA.calc_feature(dmp, window)
-        mdi = SMA.calc_feature(dmm, window)
+        pdi = np.array(sma._calc_feature(dmp, kwargs))
+        mdi = np.array(sma._calc_feature(dmm, kwargs))
         return pdi, mdi
 
     def _calc_feature(self, frame, kwargs):
-        window = kwargs['window']
-        pdi, mdi = self._calc_feature(frame, window)
+        pdi, mdi = self._calc(frame, kwargs)
         out = 100 * (mdi - pdi)/(mdi + pdi)
-        adx = SMA.compute(out, kwargs)
+        adx = sma._calc_feature(out, kwargs)
         return adx
 
-
-class MFI(BaseFeature):
-    """
-        price = （最高价 + 最低价 + 收盘价） / 3  ; 货币流量 = price * 成交量  ; 货币比率 = 正的货币流量 / 负的货币流量
-        货币流量指标 = 100（1 - 1 /（1 + 货币比率））
-        如果price大于preprice 正流入 ，否则为流出
-    """
-    def _calc_feature(self, frame, kwargs):
-        avg = frame.loc[:, ['high', 'low', 'close']].mean(axis=1)
-        signal = avg > avg.shift(1)
-        positive = avg[signal] * frame['volume'][signal]
-        negative = frame[~signal] * frame['volume'][~signal]
-        mfi = positive.sum() / negative.sum()
-        return mfi
-
-    def compute(self, feed, kwargs):
-        mfi = self._calc_feature(feed, kwargs)
-        return mfi
+    def compute(self,feed, kwargs):
+        frame = feed.copy()
+        adx = self._calc_feature(frame, kwargs)
+        return adx
 
 
 class TRIX(BaseFeature):
@@ -689,34 +553,33 @@ class TRIX(BaseFeature):
     """
     @classmethod
     def _calc_feature(cls, feed, kwargs):
-        ema_windowed = EMA.compute(feed, kwargs)
-        trix_windowed = 100 * (ema_windowed / ema_windowed.shift(1) - 1)
+        ema_windowed = np.array(ema.compute(feed, kwargs))
+        trix_windowed = 100 * (ema_windowed[1:] / ema_windowed[:-1] - 1)
         return trix_windowed
 
 
-class KVO(BaseFeature):
+class PVT(ExponentialMovingAverage):
     """
-        成交量动力 = V * abs(2 * DM / CM  - 1 ) *T * 100
-        V为成交量，DM每日度量值（最高价减去最低价） CM（DM的累积度量值），
-        T趋势（high low close 的均值与前一天的均值比较大于为1 ，否则 - 1）
-        KVO : 成交量动力的34指数移动平均线减去55的指数移动平均线
+        价量趋势指标，累积成交量: pvi(t) = pvi(t - 1) + （收盘价 - 前期收盘价） / 前期收盘价 * pvi
+        pvi为初始交易量
     """
-    def _calc_feature(self, frame):
-        frame.loc[:, 'signal'] = -1
-        dm = frame['high'] - frame['low']
-        cm = dm.cumsum()
-        avg = frame.loc[:, ['high', 'low', 'close']].mean(axis=1)
-        frame['signal'][avg > avg.shift(1)] = 1
-        vo = frame['volume'] * abs(2 * frame / cm - 1) * frame['signal'] * 100
-        return vo
 
-    def _calc_feature(self, feed, kwargs):
-        window = kwargs['window']
-        vo = self._calc_feature(feed)
-        short = EMA.compute(vo, {'window': min(window)})
-        long = EMA.compute(vo, {'window': max(window)})
-        kvo = short[-len(long):] - long
-        return kvo
+    @staticmethod
+    def _calc(frame, kwargs):
+        rates = frame['close'] / frame['close'].shift(1) - 1
+        return rates
+
+    def _calc_feature(self, frame, kwargs):
+        ratio = self._calc(frame, kwargs)
+        ratio = ratio.fillna(1.0)
+        delta = ratio * frame['volume']
+        pvt = delta.cumsum()
+        return pvt
+
+    def compute(self, feed, kwargs):
+        frame = feed.copy()
+        pvt = self._calc_feature(frame, kwargs)
+        return pvt
 
 
 class KDJ(BaseFeature):
@@ -739,8 +602,130 @@ class KDJ(BaseFeature):
         return kdj
 
     def compute(self, feed, kwargs):
-        kdj = self._calc_feature(feed, kwargs)
+        frame = feed.copy()
+        kdj = self._calc_feature(frame, kwargs)
         return kdj
+
+
+class CurveScorer(BaseFeature):
+    """
+        intergrate under curve
+        input : array or series
+        output : float --- area under curve
+        logic : if the triangle area exceed curve area means positive
+    """
+    @classmethod
+    def _calc_feature(cls, frame, kwargs):
+        _normalize = zoom(frame)
+        width = len(_normalize)
+        area = np.trapz(np.array(_normalize), np.array(range(1, width + 1)))
+        ratio = area / width
+        return ratio
+
+
+# dual window
+class RAVI(BaseFeature):
+    """
+        区间运动辨识指数（RAVI）7日的SMA与65 天的SMA之差占65天的SMA绝对值，一般来讲，RAVI被限制在3 % 以下，市场做区间运动
+    """
+
+    def _calc_feature(self, frame, kwargs):
+        window = kwargs['window']
+        assert isinstance(window, (tuple, list)), 'two different windows needed'
+        short = np.array(sma.compute(frame, {'window': min(window)}))
+        long = np.array(sma.compute(frame, {'window': max(window)}))
+        ravi_windowed = (short[-len(long):] - long) / long
+        return ravi_windowed
+
+
+class DMI(BaseFeature):
+    """
+    DMI中的时间区间变化受到价格波动的控制，在平稳的市场较多的时间区间数，在活跃的市场采取较少的时间区间数
+    时间区间数 = 14 / 波动性指标 波动性指标 = 收盘价5日标准差除以收盘价5日标准差10日移动平均数
+    """
+    def _calc_feature(self, frame, kwargs):
+        window = kwargs['window']
+        std = frame.rolling(window=min(window)).std()
+        std_ma = std.rolling(window=max(window)).mean()
+        dmi = std / std_ma
+        return dmi
+
+
+class DMA(BaseFeature):
+    """
+        DMA: 收盘价的短期平均与长期平均的差得DMA；DMA的M日平均为AMA;
+        DMA与AMA比较判断交易方向,参数：12、50、14
+    """
+
+    @classmethod
+    def _calc_feature(cls, frame, kwargs):
+        window = kwargs['window']
+        short = ma.compute(frame, {'window': min(window)})
+        long = ma.compute(frame, {'window': max(window)})
+        dma_windowed = short[-len(long):] - long
+        return dma_windowed
+
+
+class VO(BaseFeature):
+    """
+    成交量提供给定价格运动的交易密集程度，高成交量水平是顶部特征，在底部之前也会因为恐慌而放大
+    VO（volume oscillator)  vol的短期移动平均值与长期移动平均值之差的比率
+    """
+    def _calc_feature(self, frame, kwargs):
+        window = kwargs['window']
+        short = ma.compute(frame, {'window': min(window)})
+        long = ma.compute(frame, {'window': max(window)})
+        vo = short / long
+        return vo
+
+
+class MAO(BaseFeature):
+    """
+        MA oscillator 价格摆动， 短期MA / 长期MA的百分比
+    """
+
+    @classmethod
+    def _calc_feature(cls, frame, kwargs):
+        window = kwargs['window']
+        ma_short = ma.compute(frame, {'window': min(window)})
+        ma_long = ma.compute(frame, {'window': max(window)})
+        mao = ma_short / ma_long
+        return mao
+
+
+class KVO(BaseFeature):
+    """
+        成交量动力 = V * abs(2 * DM / CM  - 1 ) *T * 100
+        V为成交量，DM每日度量值（最高价减去最低价） CM（DM的累积度量值），
+        T趋势（high low close 的均值与前一天的均值比较大于为1 ，否则 - 1）
+        KVO : 成交量动力的34指数移动平均线减去55的指数移动平均线
+    """
+    @staticmethod
+    def _calc(frame):
+        frame.loc[:, 'signal'] = -1
+        print('frame', frame)
+        dm = frame['high'] - frame['low']
+        cm = dm.cumsum()
+        print('cm', cm)
+        avg = frame.loc[:, ['high', 'low', 'close']].mean(axis=1)
+        frame.loc[avg > avg.shift(1), 'signal'] = 1
+        print('frame - signal', frame)
+        vo = frame['volume'] * abs(2 * dm / cm - 1) * frame['signal'] * 100
+        print('vo', vo)
+        return vo
+
+    def _calc_feature(self, feed, kwargs):
+        window = kwargs['window']
+        vo = self._calc(feed)
+        short = np.array(ema.compute(vo, {'window': min(window)}))
+        long = np.array(ema.compute(vo, {'window': max(window)}))
+        kvo = short[-len(long):] - long
+        return kvo
+
+    def compute(self, feed, kwargs):
+        frame = feed.copy()
+        kvo = self._calc_feature(frame, kwargs)
+        return kvo
 
 
 class Macd(BaseFeature):
@@ -771,28 +756,199 @@ class Macd(BaseFeature):
              MACD以大角度变化，表示快的移动平均线和慢的移动平均线的差距非常迅速的拉开表示转变
     """
     @classmethod
-    def _calc_feature(cls, feed, kwargs):
-        frame = feed.copy()
+    def _calc_feature(cls, frame, kwargs):
         window = kwargs['window']
-        fast_ema = EMA.calc_feature(frame, {'window': max(window)})
-        slow_ema = EMA.calc_feature(frame, {'window': min(window)})
-        dif = fast_ema - slow_ema
-        dea = EMA.calc_feature(dif, {'window': kwargs['period']})
-        macd = dif - dea
+        slow_ema = np.array(ema.compute(frame, {'window': max(window)}))
+        fast_ema = np.array(ema.compute(frame, {'window': min(window)}))
+        dif = fast_ema[-len(slow_ema):] - slow_ema
+        dea = ema.compute(dif, {'window': kwargs['period']})
+        macd = dif[-len(dea):] - dea
         return macd
 
 
-class CurveScorer(BaseFeature):
+# transform ema
+class AMA(ExponentialMovingAverage):
     """
-        intergrate under curve
-        input : array or series
-        output : float --- area under curve
-        logic : if the triangle area exceed curve area means positive
+        指数平滑公式：EMA(i) = Price(i) * SC + EMA(i - 1) * (1 - SC),SC = 2 / (n + 1) ― EMA平滑常数
+        对于快速市场平滑比必须是关于EMA的2周期(fast SC = 2 / (2 + 1) = 0.6667), 而无趋势EMA周期必须等于30(
+        slow SC = 2 / (30 + 1) = 0.06452)
+        新的变化中的平滑常量为SSC（成比例的平滑常量）:
+        SSC(i) = (ER(i) * (fast SC - slow SC) + slow SC
+        AMA(i) = AMA(i - 1) * (1 - SSC(i) ^ 2) + Price(i) * (SSC(i) ^ 2)
     """
-    @classmethod
-    def _calc_feature(cls, frame, kwargs):
-        _normalize = zoom(frame)
-        width = len(_normalize)
-        area = np.trapz(np.array(_normalize), np.array(range(1, width + 1)))
-        ratio = area / width
-        return ratio
+
+    @staticmethod
+    def _calculate_weights(frame, kwargs):
+        er_windowed = ER().compute(frame, kwargs)
+        print('er', er_windowed)
+        fast_sc = 2 / (kwargs['fast'] + 1)
+        slow_sc = 2 / (kwargs['slow'] + 1)
+        ssc = er_windowed * (fast_sc - slow_sc) + slow_sc
+        print('ssc', ssc)
+        return ssc
+
+    def _calc_feature(self, frame, kwargs):
+        exponential_weights = self._calculate_weights(frame, kwargs)
+        print('exponential_weights', exponential_weights)
+        window = kwargs['window']
+        array = np.array(frame)
+        out = [np.average(array[loc: loc+window:], axis=0,  weights=self._reformat_wgt(exponential_weights[loc: loc + window]))
+               for loc in range(window, len(array) - window)]
+        return out
+
+
+class VEMA(ExponentialMovingAverage):
+    """
+        变量移动平均线基于数据系列的波动性而调整百分比的指数移动平均线
+        (SM * VR） *收盘价 + （1 - SM * VR） * （昨天）MA
+        SM = 2 / (n + 1);
+        VR可以采用钱德勒摆动指标绝对值 / 100
+    """
+
+    @staticmethod
+    def _calculate_weights(frame, window):
+        rolling_std = frame.rolling(window=window).std()
+        rates = rolling_std * 2 / (window + 1)
+        rates = rates * 2 / (window + 1)
+        return rates
+
+    def _calc_feature(self, frame, kwargs):
+        window = kwargs['window']
+        exponential_weights = self._calculate_weights(frame, window)
+        print('exponential_weights', exponential_weights)
+        array = np.array(frame)
+        out = [np.average(array[loc: loc+window], axis=0, weights=self._reformat_wgt(exponential_weights[loc: loc + window]))
+               for loc in range(window, len(array) - window)]
+        return out
+
+
+class Vidya(ExponentialMovingAverage):
+    """
+        变量指数动态平均线技术指标(VIDYA): 计算平均周期动态变化的指数移动平均线(EMA)
+        平均周期取决于市场波动情况；振荡器(CMO) /100
+        CMO值用作平滑因素EMA比率
+    """
+    @staticmethod
+    def _calculate_weights(frame, kwargs):
+        cmo = CMO().compute(frame, kwargs)
+        vidya_ratio = cmo * 2 / (kwargs['window'] + 1)
+        return vidya_ratio
+
+    def _calc_feature(self, frame, kwargs):
+        exponential_weights = self._calculate_weights(frame, kwargs)
+        print('exponential_weights', exponential_weights)
+        array = np.array(frame)
+        window = kwargs['window']
+        out = [np.average(array[loc: loc+window], axis=0,  weights=self._reformat_wgt(exponential_weights[loc: loc + window]))
+               for loc in range(window, len(array))]
+        return out
+
+
+# if __name__ == '__main__':
+#
+#     asset = Equity('600000')
+#     session = '2015-01-01'
+#     kw = {'window': 10}
+#     portal = DataPortal()
+#     dct = portal.get_window([asset], session, 100, ['open', 'high', 'low', 'close', 'volume', 'amount'], 'daily')
+#     # vwap
+#     minute_vwap = VWAP()
+#     vwap_dct = minute_vwap.calculate(session, 100, [asset])
+#     vwap = vwap_dct[asset.sid]
+#     vwap.index = vwap.index.strftime('%Y-%m-%d')
+#     print('vwap', vwap)
+#     feed = dct[asset.sid]
+#     feed.loc[:, 'vwap'] = vwap
+#     print('feed', feed)
+#     missing = set(feed.index) - set(vwap.index)
+#     print('missing', missing)
+#     tema = TEMA().compute(feed, kw)
+#     print('tema', tema)
+#     dema = DEMA().compute(feed, kw)
+#     print('dema', dema)
+#     imi = IMI().compute(feed, kw)
+#     print('imi', imi)
+#     er = ER().compute(feed, kw)
+#     print('er', er)
+#     cmo = CMO().compute(feed, kw)
+#     print('cmo', cmo)
+#     jump = Jump().compute(feed, kw)
+#     print('jump', jump)
+#     gap = Gap().compute(feed, kw)
+#     print('gap', gap)
+#     power = Power().compute(feed, kw)
+#     print('power', power)
+#     breakpower = BreakPower().compute(feed, kw)
+#     print('breakpower', breakpower)
+#     speed = Speed().compute(feed, kw)
+#     print('speed', speed)
+#     massindex = MassIndex().compute(feed, kw)
+#     print('massindex', massindex)
+#     dpo = Dpo().compute(feed, kw)
+#     print('dpo', dpo)
+#     rvi = RVI().compute(feed, kw)
+#     print('rvi', rvi)
+#     ri = RI().compute(feed, kw)
+#     print('ri', ri)
+#     stochastic = Stochastic().compute(feed, kw)
+#     print('stochastic', stochastic)
+#     smi = SMI().compute(feed, kw)
+#     print('smi', smi)
+#     rpower = RPower().compute(feed, kw)
+#     print('rpower', rpower)
+#     dpower = DPower().compute(feed, kw)
+#     print('dpower', dpower)
+#     mfi = MFI().compute(feed, kw)
+#     print('mfi', mfi)
+#     vhf = VHF().compute(feed, kw)
+#     print('vhf', vhf)
+#     vck = VCK().compute(feed, kw)
+#     print('vck', vck)
+#     rsi = Rsi().compute(feed, kw)
+#     print('rsi', rsi)
+#     aroon = Aroon().compute(feed, kw)
+#     print('aroon', aroon)
+#     wad = WAD().compute(feed, kw)
+#     print('wad', wad)
+#     wr = WR().compute(feed, kw)
+#     print('wr', wr)
+#     so = SO().compute(feed, kw)
+#     print('so', so)
+#     adx = ADX().compute(feed, kw)
+#     print('adx', adx)
+#     trix = TRIX().compute(feed, kw)
+#     print('trix', trix)
+#     pvt = PVT().compute(feed, kw)
+#     print('pvt', pvt)
+#     kdj = KDJ().compute(feed, kw)
+#     print('kdj', kdj)
+#     scorer = CurveScorer().compute(feed, kw)
+#     print('scorer', scorer)
+#
+#     # dual window
+#     kw = {'window': (5, 10)}
+#     ravi = RAVI().compute(feed, kw)
+#     print('ravi', ravi)
+#     dmi = DMI().compute(feed, kw)
+#     print('dmi', dmi)
+#     dma = DMA().compute(feed, kw)
+#     print('dma', dma)
+#     vo = VO().compute(feed, kw)
+#     print('vo', vo)
+#     mao = MAO().compute(feed, kw)
+#     print('mao', mao)
+#     kvo = KVO().compute(feed, kw)
+#     print('kvo', kvo)
+#     kw = {'window': (12, 26), 'period': 9}
+#     macd = Macd().compute(feed, kw)
+#     print('macd', macd)
+#
+#     # transform ema
+#     kw = {'window': 10, 'fast': 2, 'slow': 30}
+#     ama = AMA().compute(feed, kw)
+#     print('ama', ama)
+#     kw = {'window': 10}
+#     vema = VEMA().compute(feed, kw)
+#     print('vema', vema)
+#     vidya = Vidya().compute(feed, kw)
+#     print('vidya', vidya)

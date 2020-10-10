@@ -6,6 +6,8 @@ Created on Tue Mar 12 15:37:47 2019
 """
 from abc import ABC, abstractmethod
 import numpy as np, pandas as pd
+# from gateway.driver.data_portal import DataPortal
+# from gateway.asset.assets import Equity, Convertible, Fund
 
 __all__ = ['VMA',
            'TR',
@@ -30,7 +32,7 @@ class BaseFeature(ABC):
         frame = feed.copy()
         if isinstance(frame, pd.DataFrame):
             out = dict()
-            for col in frame.columns():
+            for col in frame.columns:
                 out[col] = self._calc_feature(frame[col], kwargs)
         else:
             out = self._calc_feature(frame, kwargs)
@@ -79,8 +81,11 @@ class TR(BaseFeature):
 class ATR(BaseFeature):
 
     def _calc_feature(self, frame, kwargs):
+        pass
+
+    def compute(self, frame, kwargs):
+        tr = TR.compute(frame, kwargs)
         window = kwargs['window']
-        tr = TR.compute(frame)
         atr = tr.rolling(window=window).mean()
         return atr
 
@@ -106,10 +111,121 @@ class WS(BaseFeature):
         return ws
 
 
+class ExponentialMovingAverage(BaseFeature):
+    """
+        序列 p1 ,p2 ,p3, p4, p5,（对应系数 a0, a1 ,a2, a3, a4 ,a5) --- pn ; e1 = (1- a1)e0 + a1 * p1 , e2 = (1 - a2)*e1 + a2 * p2 , 进行展开
+        e0 = 0.0 --- 初始值假设为0 或者 增加一个可变的增量（而增量的系数为(1- a1)(1- a2)(1- a3)）
+         e.g. --- EMA(i) = Price(i) * SC + EMA(i - 1) * (1 - SC),SC = 2 / (n + 1) ― EMA平滑常数
+         ---   当系数固化时基于递归方式，但是如果系数是动态变化的需要调整逻辑调整
+    """
+    @staticmethod
+    def _calculate_weights(frame, kwargs):
+        raise NotImplementedError()
+
+    def _reformat_wgt(self, weights):
+        p = weights.copy()
+        p = 1 - p
+        p = list(p)
+        p.reverse()
+        p.insert(0, 1)
+        prod_p = list(np.cumprod(p)[:-1])
+        prod_p.reverse()
+        decay_rates = np.array(prod_p) * weights
+        return decay_rates
+
+    # def _format_wgt(self, frame, length):
+    #     weights = self._calculate_weights(frame, length)
+    #     p = weights.copy()
+    #     p = 1 - p
+    #     p = list(p)
+    #     p.reverse()
+    #     p.insert(0, 1)
+    #     prod_p = list(np.cumprod(p)[:-1])
+    #     prod_p.reverse()
+    #     decay_rates = np.array(prod_p) * weights
+    #     return decay_rates
+
+    def _calc_feature(self, frame, kwargs):
+        recursion = kwargs.get('recursion', 1)
+        ema_weights = self._calculate_weights(frame, kwargs)
+        exponential_weights = self._reformat_wgt(ema_weights)
+        # print('exponential_weights', exponential_weights)
+        window = kwargs['window']
+        out = frame
+        # dimension = kwargs.get('dimension', 1)
+        dimension = 1
+        while dimension <= recursion:
+            out = [np.average(np.array(out)[:loc][-window:], axis=0, weights=exponential_weights)
+                   for loc in range(window, len(out)+1)]
+            dimension = dimension + 1
+        return out
+
+
+class EMA(ExponentialMovingAverage, BaseFeature):
+    """
+        a = 2 / (n + 1) --- 系数序列都是一样的
+        reduce(lambda x, y: x * weight + y * (1 - weight), np.array(frame)
+        注意点 --- 比如EMA10 ， 初始为10个交易日之前的数据，考虑范围放大为20，这样计算出来的指标精确度会有所提高，更加平滑 --- weight (离现在时点越近权重越高）
+    """
+    @staticmethod
+    def _calculate_weights(frame, kwargs):
+        window = kwargs['window']
+        rate = 2 / (window - 1)
+        return np.full(window, rate, np.float)
+
+
+class SMA(ExponentialMovingAverage, BaseFeature):
+    """
+        SMA区别 wgt = (window/2 +1)/window
+    """
+    @staticmethod
+    def _calculate_weights(frame, kwargs):
+        window = kwargs['window']
+        weight = (window / 2 + 1) / window
+        decay_rates = np.full(window, weight, np.float)
+        return decay_rates
+
+
+class AEMA(ExponentialMovingAverage, BaseFeature):
+    """
+        AEMA changes according to the time 权重为（1-a) ** i 按照时间的推移权重指数变化
+    """
+    @staticmethod
+    def _calculate_weights(frame, kwargs):
+        window = kwargs['window']
+        decay_rate = 2 / (window + 1)
+        ewm_weight = np.full(window, decay_rate, np.float64) ** np.arange(window, 0, -1)
+        return ewm_weight
+
+
+class Decay(ExponentialMovingAverage, BaseFeature):
+    """
+        half life --- aema
+    """
+    @staticmethod
+    def _calculate_weights(frame, kwargs):
+        window = kwargs['window']
+        decay_rate = np.exp(np.log(.5) * 2 / window)
+        decay_weight = np.full(window, decay_rate, np.float) ** np.arange(window, 0, -1)
+        return decay_weight
+
+
+class Centre(ExponentialMovingAverage, BaseFeature):
+    """
+        centre dis --- aema
+    """
+    @staticmethod
+    def _calculate_weights(frame, kwargs):
+        window = kwargs['window']
+        centre_mass = 1.0 - (1.0 / (1.0 + window))
+        decay_rate = np.full(window, centre_mass, np.float) ** np.arange(window, 0, -1)
+        return decay_rate
+
+
 class ExponentialWeightedMovingAverage(BaseFeature):
 
     @staticmethod
-    def calculate_weight(window, func):
+    def _calculate_weights(kwargs):
         """
         Build a weight vector for an exponentially-weighted statistic.
 
@@ -128,111 +244,48 @@ class ExponentialWeightedMovingAverage(BaseFeature):
         -------
         weights : ndarray[float64]
         """
+        window = kwargs['window']
+        func = kwargs['func']
         decay_rate = func(window)
         return np.full(window, decay_rate, np.float64) ** np.arange(window, 0, -1)
 
     def _calc_feature(self, feed, kwargs):
         frame = feed.copy()
+        exponential_weights = self._calculate_weights(kwargs)
+        print('exponential_weights', exponential_weights)
         window = kwargs['window']
-        func = kwargs['func']
-        exponential_weights = self.calculate_weight(window, func)
-        out = [np.average(frame[-window: loc,], axis=0, weights=exponential_weights)
-               for loc in range(window, len(frame))]
+        out = [np.average(frame[:loc][-window:], axis=0, weights=exponential_weights)
+               for loc in range(window, len(frame)+1)]
         return out
 
 
-class ExponentialMovingAverage(BaseFeature):
-    """
-        序列 p1 ,p2 ,p3, p4, p5,（对应系数 a0, a1 ,a2, a3, a4 ,a5) --- pn ; e1 = (1- a1)e0 + a1 * p1 , e2 = (1 - a2)*e1 + a2 * p2 , 进行展开
-        e0 = 0.0 --- 初始值假设为0 或者 增加一个可变的增量（而增量的系数为(1- a1)(1- a2)(1- a3)）
-         e.g. --- EMA(i) = Price(i) * SC + EMA(i - 1) * (1 - SC),SC = 2 / (n + 1) ― EMA平滑常数
-         ---   当系数固化时基于递归方式，但是如果系数是动态变化的需要调整逻辑调整
-    """
-    @staticmethod
-    def _calculate_weights(frame, window):
-        raise NotImplementedError()
-
-    def adjust_weights(self, frame, window):
-        weights = np.array(self._calculate_weights(frame, window))
-        p = weights.copy()
-        p = 1 - p
-        p.reverse()
-        p.insert(0, 1)
-        prod_p = np.cumprod(p)[:-1]
-        prod_p.reverse()
-        decay_rates = prod_p * weights
-        return decay_rates
-
-    def _calc_feature(self, frame, kwargs):
-        dimension = kwargs.get('kwargs', 1)
-        recursion = kwargs.get('recursion', 1)
-        while dimension <= recursion:
-            window = kwargs['window']
-            exponential_weights = self.adjust_weights(frame, window)
-            array = np.array(frame)
-            out = [np.average(array[:loc][-window:], axis=0, weights=exponential_weights)
-                   for loc in range(window, len(array))]
-            dimension = dimension + 1
-            self._calc_feature(out, kwargs)
-        return out
-
-
-class EMA(ExponentialMovingAverage, BaseFeature):
-    """
-        a = 2 / (n + 1) --- 系数序列都是一样的
-        reduce(lambda x, y: x * weight + y * (1 - weight), np.array(frame)
-        注意点 --- 比如EMA10 ， 初始为10个交易日之前的数据，考虑范围放大为20，这样计算出来的指标精确度会有所提高，更加平滑 --- weight (离现在时点越近权重越高）
-    """
-    @staticmethod
-    def _calculate_weights(frame, window):
-        rate = 2 / (window - 1)
-        return np.full(window, rate, np.float)
-
-
-class NEMA(EMA):
-    def compute(self, feed, kwargs):
-        assert kwargs['recursion'] > 1, 'multi dimension ema'
-
-
-class AEMA(ExponentialMovingAverage, BaseFeature):
-    """
-        AEMA changes according to the time 权重为（1-a) ** i 按照时间的推移权重指数变化
-    """
-    @staticmethod
-    def _calculate_weights(frame, window):
-        decay_rate = 2 / (window + 1)
-        ewm_weight = np.full(window, decay_rate, np.float64) ** np.arange(window, 0, -1)
-        return ewm_weight
-
-
-class SMA(ExponentialMovingAverage, BaseFeature):
-    """
-        SMA区别 wgt = (window/2 +1)/window
-    """
-    @staticmethod
-    def _calculate_weights(window):
-        weight = (window / 2 + 1) / window
-        decay_rates = np.full(window, weight, np.float)
-        return decay_rates
-
-
-class Decay(ExponentialMovingAverage, BaseFeature):
-    """
-        half life --- aema
-    """
-    @staticmethod
-    def _calculate_weights(window):
-        decay_rate = np.exp(np.log(.5) * 2 / window)
-        decay_weight = np.full(window, decay_rate, np.float) ** np.arange(window, 0, -1)
-        return decay_weight
-
-
-class Centre(ExponentialMovingAverage, BaseFeature):
-    """
-        centre dis --- aema
-    """
-    @staticmethod
-    def calculate_weight(window):
-        centre_mass = 1.0 - (1.0 / (1.0 + window))
-        decay_rate = np.full(window, centre_mass, np.float) ** np.arange(window, 0, -1)
-        return decay_rate
+# if __name__ == '__main__':
+#
+#     asset = Equity('600000')
+#     session = '2015-01-01'
+#     kw = {'window': 10}
+#     portal = DataPortal()
+#     dct = portal.get_window([asset], session, 10, ['open', 'high', 'low', 'close'], 'daily')
+#     feed = dct[asset.sid]
+#     print('feed', feed)
+#     vma = VMA().compute(feed, kw)
+#     print('vma', vma)
+#     tr = TR().compute(feed, kw)
+#     print('tr', tr)
+#     atr = ATR().compute(feed, kw)
+#     print('atr', atr)
+#     ma = MA().compute(feed, kw)
+#     print('ma', ma)
+#     ema = EMA().compute(feed, kw)
+#     print('ema', ema)
+#     sma = SMA().compute(feed, kw)
+#     print('sma', sma)
+#     aema = AEMA().compute(feed, kw)
+#     print('aema', aema)
+#     decay = Decay().compute(feed, kw)
+#     print('decay', decay)
+#     centre = Centre().compute(feed, kw)
+#     print('centre', centre)
+#     kw.update({'func': lambda x: 2/x})
+#     ewma = ExponentialWeightedMovingAverage().compute(feed, kw)
+#     print('ewma', ewma)
