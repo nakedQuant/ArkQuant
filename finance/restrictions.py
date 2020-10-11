@@ -61,59 +61,6 @@ class Restrictions(ABC):
         return UnionRestrictions([self, other_restriction])
 
 
-class UnionRestrictions(Restrictions):
-    """
-    A union of a number of sub restrictions.
-
-    Parameters
-    ----------
-    sub_restrictions : iterable of Restrictions (but not _UnionRestrictions)
-        The Restrictions to be added together
-
-    Notes
-    -----
-    - Consumers should not construct instances of this class directly, but
-      instead use the `|` operator to combine restrictions
-    """
-
-    def __new__(cls, sub_restrictions):
-        # Filter out NoRestrictions and deal with resulting cases involving
-        # one or zero sub_restrictions
-        sub_restrictions = [
-            r for r in sub_restrictions if not isinstance(r, NoRestrictions)
-        ]
-        if len(sub_restrictions) == 0:
-            return NoRestrictions()
-        elif len(sub_restrictions) == 1:
-            return sub_restrictions[0]
-
-        new_instance = super(UnionRestrictions, cls).__new__(cls)
-        new_instance.sub_restrictions = sub_restrictions
-        return new_instance
-
-    def __or__(self, other_restriction):
-        """
-        Overrides the base implementation for combining two restrictions, of
-        which the left side is a _UnionRestrictions.
-        """
-        # Flatten the underlying sub restrictions of _UnionRestrictions
-        if isinstance(other_restriction, UnionRestrictions):
-            new_sub_restrictions = \
-                self.sub_restrictions + other_restriction.sub_restrictions
-        else:
-            new_sub_restrictions = self.sub_restrictions + [other_restriction]
-        return UnionRestrictions(new_sub_restrictions)
-
-    def is_restricted(self, assets, dt):
-        if isinstance(assets, Asset):
-            return assets if len(set(r.is_restricted(assets, dt)
-                                     for r in self.sub_restrictions)) == 1 else None
-        return reduce(
-            operator.and_,
-            (r.is_restricted(assets, dt) for r in self.sub_restrictions)
-        )
-
-
 class NoRestrictions(Restrictions):
     """
     A no-op restrictions that contains no restrictions.
@@ -204,3 +151,56 @@ class AfterRestrictions(object):
     """
     def is_restricted(self, assets, dt):
         raise NotImplementedError()
+
+
+class UnionRestrictions(Restrictions):
+    """
+    A union of a number of sub restrictions.
+
+    Parameters
+    ----------
+    sub_restrictions : iterable of Restrictions (but not _UnionRestrictions)
+        The Restrictions to be added together
+
+    Notes
+    -----
+    - Consumers should not construct instances of this class directly, but
+      instead use the `|` operator to combine restrictions
+    """
+
+    def __new__(cls, sub_restrictions):
+        # Filter out NoRestrictions and deal with resulting cases involving
+        # one or zero sub_restrictions
+        sub_restrictions = [
+            r for r in sub_restrictions if not isinstance(r, NoRestrictions)
+        ]
+        if len(sub_restrictions) == 0:
+            return NoRestrictions()
+        elif len(sub_restrictions) == 1:
+            return sub_restrictions[0]
+
+        new_instance = super(UnionRestrictions, cls).__new__(cls)
+        new_instance.sub_restrictions = sub_restrictions
+        return new_instance
+
+    def __or__(self, other_restriction):
+        """
+        Overrides the base implementation for combining two restrictions, of
+        which the left side is a _UnionRestrictions.
+        """
+        # Flatten the underlying sub restrictions of _UnionRestrictions
+        if isinstance(other_restriction, UnionRestrictions):
+            new_sub_restrictions = \
+                self.sub_restrictions + other_restriction.sub_restrictions
+        else:
+            new_sub_restrictions = self.sub_restrictions + [other_restriction]
+        return UnionRestrictions(new_sub_restrictions)
+
+    def is_restricted(self, assets, dt):
+        if isinstance(assets, Asset):
+            return assets if len(set(r.is_restricted(assets, dt)
+                                     for r in self.sub_restrictions)) == 1 else None
+        return reduce(
+            operator.and_,
+            (r.is_restricted(assets, dt) for r in self.sub_restrictions)
+        )

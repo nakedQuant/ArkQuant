@@ -53,7 +53,7 @@ class EventLoader(PipelineLoader):
         columns = ['declared_date','sid','bid_price','discount','bid_volume','buyer','seller','cleltszb']
         --- 主要折价率和每天大宗交易暂流通市值的比例 ，第一种清仓式出货， 第二种资金对导接力
     """
-    def __init__(self,terms):
+    def __init__(self, terms):
         domains = [term.domain for term in terms]
         self.pipeline_domain = self._resolve_domains(domains, True)
 

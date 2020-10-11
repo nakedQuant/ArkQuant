@@ -9,15 +9,17 @@ from gateway.driver.fundamental_reader import (
                         MassiveSessionReader,
                         ReleaseSessionReader,
                         HolderSessionReader,
-                        StructureSessionReader,
+                        OwnershipSessionReader,
                         GrossSessionReader,
                         MarginSessionReader
                                             )
+
+
 EVENT = {
         'massive': MassiveSessionReader(),
         'release': ReleaseSessionReader(),
         'holder': HolderSessionReader(),
-        'structure': StructureSessionReader(),
+        'ownership': OwnershipSessionReader(),
         'gross': GrossSessionReader(),
         'margin': MarginSessionReader()
         }

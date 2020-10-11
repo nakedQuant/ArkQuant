@@ -7,6 +7,7 @@ Created on Tue Mar 12 15:37:47 2019
 """
 import uuid, networkx as nx
 from toolz import valfilter
+from pipe.term import NotSpecific
 
 
 class TermGraph(object):
@@ -44,8 +45,11 @@ class TermGraph(object):
             )
         self.graph.add_node(term)
         for dependency in term.dependencies:
-            self._add_to_graph(dependency)
-            self.graph.add_edge(dependency, term)
+            if dependency == NotSpecific:
+                pass
+            else:
+                self._add_to_graph(dependency)
+                self.graph.add_edge(dependency, term)
 
     @property
     def outputs(self):
@@ -85,7 +89,7 @@ class TermGraph(object):
         ------
         terms which need to decref
         """
-        refcounts = dict(self.graph.in_degree())
+        refcounts = dict(self.graph.in_degree)
         nodes = valfilter(lambda x: x == 0, refcounts)
         for node in nodes:
             self.graph.remove_node(node)

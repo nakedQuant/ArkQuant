@@ -12,11 +12,17 @@ from indicator import (
      EMA,
      ExponentialMovingAverage
 )
-from indicator.mathmatics import zoom
+from utils.mathmatics import zoom
 # from gateway.driver._ext_vwap import  VWAP
 # from gateway.driver.data_portal import DataPortal
 # from gateway.asset.assets import Equity, Convertible, Fund
 
+__all__ = ['TEMA', 'DEMA', 'IMI', 'ER', 'CMO', 'Jump', 'Gap', 'Power', 'BreakPower', 'Speed', 'MassIndex',
+           'Dpo', 'RVI', 'RI', 'Stochastic', 'SMI', 'RPower', 'DPower', 'MFI', 'VHF', 'VCK', 'Rsi', 'Aroon',
+           'WAD', 'WR', 'SO', 'ADX', 'TRIX', 'PVT', 'KDJ', 'CurveScorer', 'RAVI', 'DMI', 'DMA', 'VO', 'MAO',
+           'KVO', 'Macd', 'AMA', 'VEMA', 'Vidya']
+
+# init
 ema = EMA()
 sma = SMA()
 ma = MA()
@@ -757,9 +763,8 @@ class Macd(BaseFeature):
     """
     @classmethod
     def _calc_feature(cls, frame, kwargs):
-        window = kwargs['window']
-        slow_ema = np.array(ema.compute(frame, {'window': max(window)}))
-        fast_ema = np.array(ema.compute(frame, {'window': min(window)}))
+        slow_ema = np.array(ema.compute(frame, {'window': kwargs['slow']}))
+        fast_ema = np.array(ema.compute(frame, {'window': kwargs['fast']}))
         dif = fast_ema[-len(slow_ema):] - slow_ema
         dea = ema.compute(dif, {'window': kwargs['period']})
         macd = dif[-len(dea):] - dea

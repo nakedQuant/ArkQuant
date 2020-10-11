@@ -32,10 +32,10 @@ from finance.slippage import NoSlippage
 from gateway.asset.assets import Equity
 from gateway.driver.benchmark import (
     get_benchmark_returns,
-    get_alternative_returns
+    get_foreign_benchmark_returns
 )
 from gateway.driver.data_portal import DataPortal
-from gateway.driver.resample import Sample
+from gateway.driver.resample import Freq
 from gens.clock import MinuteSimulationClock
 from gens.tradesimulation import AlgorithmSimulator
 from pipe.engine import SimplePipelineEngine
@@ -146,7 +146,7 @@ class TradingAlgorithm(object):
                  # blotter --- transform order to transaction , delay --- means transfer put to call
                  delay=None,
                  blotter_class=None,
-                 # pipeline API
+                 # pipe API
                  scripts=None,
                  alternatives=10,
                  allow_righted=False,
@@ -336,7 +336,7 @@ class TradingAlgorithm(object):
         if benchmark in benchmark_symbols:
             returns = get_benchmark_returns(benchmark)
         else:
-            returns = get_alternative_returns(benchmark)
+            returns = get_foreign_benchmark_returns(benchmark)
         return returns.loc[self.sim_params.sessions, :]
 
     def _create_clock(self):
@@ -756,3 +756,8 @@ class TradingAlgorithm(object):
                    blotter=repr(self.blotter)
                    # recorded_vars=repr(self.recorded_vars))
                    )
+
+
+if __name__ == '__main__':
+
+    trading = TradingAlgorithm()

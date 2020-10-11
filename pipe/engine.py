@@ -11,7 +11,11 @@ from multiprocessing import Pool
 from itertools import chain
 from abc import ABC, abstractmethod
 from pipe.loader.loader import PricingLoader
-from finance.restrictions import UnionRestrictions
+from finance.restrictions import UnionRestrictions, NoRestrictions
+from pipe.term import Term
+from pipe.pipeline import Pipeline
+from gateway.asset._finder import AssetFinder
+from gateway.driver.data_portal import DataPortal
 
 __all__ = [
     'SimplePipelineEngine',
@@ -25,8 +29,12 @@ class Engine(ABC):
         --- engine process should be automatic without much manual interface
     """
     def _init(self, pipelines):
-        inner_terms = chain([pipeline.terms for pipeline in pipelines])
-        inner_pickers = chain([pipeline.ump_terms for pipeline in pipelines])
+        inner_terms = list(chain([pipeline.terms for pipeline in pipelines]))
+        print('inner_terms', inner_terms)
+        inner_pickers = list(chain([pipeline.ump_terms for pipeline in pipelines if pipeline._ump_picker]))
+        print('inner_picker', inner_pickers)
+        test = inner_terms[0] + inner_pickers
+        print('test', test)
         engine_terms = set(inner_terms + inner_pickers)
         # get_loader
         _get_loader = PricingLoader(engine_terms, self.data_portal)
@@ -67,17 +75,6 @@ class Engine(ABC):
         history_metadata = self._get_loader.load_pipeline_arrays(dts, default_mask)
         return default_mask, history_metadata, traded_positions, remove_positions, dts, capital
 
-    @staticmethod
-    def resolve_pipeline_final(outputs):
-        # to find out the final asset of each pipe , notice ---  NamedPipe list
-        # group by pipe name
-        sample_by_pipe = groupby(lambda x: x.event.name, outputs)
-        # priority 0 --- high ,diminish by increase number
-        group_sorted = valmap(lambda x: x.sort(key=lambda k: k.priority), sample_by_pipe)
-        # namedPipe --- event priority
-        finals = valmap(lambda x: x[0].event.asset if x else None, group_sorted)
-        return finals
-
     def _run_pipeline(self, pipeline, metadata, mask):
         """
         ----------
@@ -106,6 +103,17 @@ class Engine(ABC):
             outputs = chain(* results)
         # return pipe_name : asset
         yield self.resolve_pipeline_final(outputs)
+
+    @staticmethod
+    def resolve_pipeline_final(outputs):
+        # to find out the final asset of each pipe , notice ---  NamedPipe list
+        # group by pipe name
+        sample_by_pipe = groupby(lambda x: x.event.name, outputs)
+        # priority 0 --- high ,diminish by increase number
+        group_sorted = valmap(lambda x: x.sort(key=lambda k: k.priority), sample_by_pipe)
+        # namedPipe --- event priority
+        finals = valmap(lambda x: x[0].event.asset if x else None, group_sorted)
+        return finals
 
     @staticmethod
     def _run_ump(ump_pipe, position, metadata):
@@ -223,7 +231,7 @@ class SimplePipelineEngine(Engine):
                  pipelines,
                  asset_finder,
                  data_portal,
-                 restrictions,
+                 restrictions=[NoRestrictions],
                  alternatives=10,
                  allow_righted=False,
                  allowed_violation=True):
@@ -234,7 +242,7 @@ class SimplePipelineEngine(Engine):
         self.alternatives = alternatives
         self.allowed_righted = allow_righted
         self.allowed_violation = allowed_violation
-        self.pipelines, self._get_loader = self._init(pipelines)
+        self.pipelines, self._get_loader = self._init([pipelines])
 
     @staticmethod
     def resolve_conflicts(calls, puts, holdings):
@@ -276,3 +284,20 @@ class NoEngineRegistered(Exception):
     Raised if a user tries to call pipeline_output in an algorithm that hasn't
     set up a pipe engine.
     """
+
+
+if __name__ == '__main__':
+
+    kw = {'window': (5, 10)}
+    cross_term = Term('cross', kw)
+    print('sma_term', cross_term)
+    kw = {'window': 10, 'fast': 12, 'slow': 26, 'period': 9}
+    break_term = Term('break', kw, cross_term)
+    terms = [cross_term, break_term]
+    # init
+    pipeline = Pipeline(terms)
+    print('pipeline', pipeline)
+    asset_finder = AssetFinder()
+    data_portal = DataPortal()
+    engine = SimplePipelineEngine(pipeline, asset_finder, data_portal)
+    print('engine', engine)

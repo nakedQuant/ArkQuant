@@ -12,7 +12,7 @@ from gateway.driver import lookup_benchmark
 
 __all__ = [
     'get_benchmark_returns',
-    'get_outer_returns'
+    'get_foreign_benchmark_returns'
 ]
 
 
@@ -37,7 +37,7 @@ def get_benchmark_returns(sid):
         return returns
 
 
-def get_outer_returns(index_name):
+def get_foreign_benchmark_returns(index_name):
     """
         dt --- 1990-01-01
     """

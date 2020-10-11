@@ -40,31 +40,6 @@ class ADF(BaseFeature):
         return status, lag
 
 
-class Coint(BaseFeature):
-    """
-        协整检验 --- coint_similar(协整关系)
-            1、筛选出相关性的两个标的 ，
-            2、判断序列是否平稳 --- 数据差分进行处理
-            3、协整模块
-        Coint 返回值三个如下:
-            coint_t: float t - statistic of unit - root test on residuals
-            pvalue: float MacKinnon's approximate p-value based on MacKinnon (1994)
-            crit_value: dict Critical  values for the test statistic at the 1 %, 5 %, and 10 % levels.
-        Coint 参数：
-            statsmodels.tsa.stattools.coint(y0，y1，trend ='c'，method ='aeg'，maxlag = None，autolag ='aic'，
-    """
-    @classmethod
-    def _calc_feature(cls, feed, kwargs):
-        y, x = feed.values()
-        result = coint(y, x)
-        return result[0], result[-1]
-
-    def compute(self, frame, kwargs):
-        assert isinstance(frame, (tuple, list)) and len(frame) == 2, 'need x,y to calculate Coint'
-        coint = self._calc_feature(frame, kwargs)
-        return coint
-
-
 class ACF(BaseFeature):
     """
         statsmodels.tsa.stattools.acf(x, unbiased=False, nlags=40, qstat=False, fft=None, alpha=None)
@@ -167,6 +142,31 @@ class PCA(BaseFeature):
         redeigvect = eigvect[:, eigvalind]
         reconmat = meanremoved * redeigvect * redeigvect.T + meanval
         return reconmat
+
+
+class Coint(BaseFeature):
+    """
+        协整检验 --- coint_similar(协整关系)
+            1、筛选出相关性的两个标的 ，
+            2、判断序列是否平稳 --- 数据差分进行处理
+            3、协整模块
+        Coint 返回值三个如下:
+            coint_t: float t - statistic of unit - root test on residuals
+            pvalue: float MacKinnon's approximate p-value based on MacKinnon (1994)
+            crit_value: dict Critical  values for the test statistic at the 1 %, 5 %, and 10 % levels.
+        Coint 参数：
+            statsmodels.tsa.stattools.coint(y0，y1，trend ='c'，method ='aeg'，maxlag = None，autolag ='aic'，
+    """
+    @classmethod
+    def _calc_feature(cls, feed, kwargs):
+        y, x = feed.values()
+        result = coint(y, x)
+        return result[0], result[-1]
+
+    def compute(self, frame, kwargs):
+        assert isinstance(frame, (tuple, list)) and len(frame) == 2, 'need x,y to calculate Coint'
+        coint = self._calc_feature(frame, kwargs)
+        return coint
 
 
 class PairWise(object):

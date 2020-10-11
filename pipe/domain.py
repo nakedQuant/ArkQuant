@@ -5,6 +5,8 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
+from toolz import valfilter
+
 __all__ = ['Domain', 'infer_domain']
 
 
@@ -46,8 +48,16 @@ class Domain(object):
 
 
 def infer_domain(kwargs):
-    fields = kwargs.get('fields', ['open', 'high', 'low', 'close', 'amount', 'volume'])
-    assert 'window' not in kwargs, 'strategy must need window args'
-    window = kwargs['window'] if isinstance(kwargs['window'], int) else max(kwargs['window'])
-    domain = Domain(fields, window)
+    kw = kwargs.copy()
+    # infer domain via params
+    domain_fields = kw.pop('fields', ['open', 'high', 'low', 'close', 'amount', 'volume'])
+    assert 'window' in kwargs, 'strategy must need window args'
+    window = kw.pop('window') if isinstance(kw['window'], int) else max(kw.pop('window'))
+    # 所有int类型最大值
+    kw_filter = valfilter(lambda x: isinstance(x, int), kw)
+    if kw_filter:
+        domain_window = max(max(kw_filter.values()), window)
+    else:
+        domain_window = window
+    domain = Domain(domain_fields, domain_window)
     return domain

@@ -5,8 +5,10 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-from pipe.term import Term
 import numpy as np
+from pipe.term import Term
+
+__all__ = ['UmpPickers']
 
 
 class UmpPickers(object):
@@ -26,19 +28,14 @@ class UmpPickers(object):
     def _validate_features(self, features):
         for feature in features:
             assert isinstance(feature, Term), 'must term type'
-            if feature.dtype != bool:
-                raise Exception('bool term needed for ump')
         self._poll_pickers = features
 
     @property
     def pickers(self):
         return self._poll_pickers
 
-    def __setattr__(self, key, value):
-        raise NotImplementedError
-
     def _evaluate_for_position(self, position, metadata):
-        votes = [picker.compute([position.asset], metadata)
+        votes = [picker.withdraw(metadata[position.asset])
                  for picker in self.pickers]
         if np.all(votes):
             return position
@@ -47,3 +44,16 @@ class UmpPickers(object):
     def evaluate(self, position, metadata):
         vote = self._evaluate_for_position(position, metadata)
         return vote
+
+
+if __name__ == '__main__':
+
+    kw = {'window': (5, 10)}
+    cross_term = Term('cross', kw)
+    print('sma_term', cross_term)
+    kw = {'window': 10, 'fast': 12, 'slow': 26, 'period': 9}
+    break_term = Term('break', kw, cross_term)
+    terms = [cross_term, break_term]
+    # init
+    ump = UmpPickers(terms)
+    print('ump', ump)

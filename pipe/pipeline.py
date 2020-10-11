@@ -13,6 +13,8 @@ from pipe.term import Term, NotSpecific
 from pipe.graph import TermGraph
 from pipe import Event, NamedPipe
 
+__all__ = ['Pipeline']
+
 
 class Pipeline(object):
     """
@@ -23,7 +25,7 @@ class Pipeline(object):
     """
     __slots__ = ['_terms_store', 'graph', '_workspace', '_ump_picker']
 
-    def __init__(self, terms, ump_picker):
+    def __init__(self, terms, ump_picker=None):
         self._terms_store = terms
         # last item --- finalTerm
         self._workspace = OrderedDict()
@@ -78,17 +80,14 @@ class Pipeline(object):
             raise TypeError(e)
         return self
 
-    def __setattr__(self, key, value):
-        raise NotImplementedError
-
     def _load_term(self, term, default_mask):
         if term.dependencies != NotSpecific:
             # 将节点的依赖筛选出来
             dependence_masks = keyfilter(lambda x: x in term.dependencies,
-                                     self._workspace)
+                                         self._workspace)
             # 将依赖的交集作为节点的input
             input_mask = reduce(lambda x, y: set(x) & set(y),
-                                   dependence_masks.values())
+                                dependence_masks.values())
         else:
             input_mask = default_mask
         return input_mask
@@ -101,12 +100,12 @@ class Pipeline(object):
         # return in_degree == 0 nodes
         decref_nodes = self.graph.decref_dependencies()
         for node in decref_nodes:
-            _mask = self._load_term(node, mask)
-            output = node.compute(_mask, metadata)
+            node_mask = self._load_term(node, mask)
+            output = node.compute(node_mask, metadata)
             self._workspace[node] = output
         self._decref_recursive(metadata, mask)
 
-    def _inner_decref_recursive(self, metadata, mask):
+    def _decref_dependence(self, metadata, mask):
         """
         Return a topologically-sorted list of the terms in ``self`` which
         need to be computed.
@@ -127,6 +126,17 @@ class Pipeline(object):
         self._initialize_workspace()
         self._decref_recursive(metadata, mask)
 
+    def to_execution_plan(self, metadata, alternative, mask):
+        """
+            to execute pipe logic
+        """
+        try:
+            self._decref_dependence(metadata, mask)
+        except Exception as e:
+            print('error means graph decrease to top occur %s' % e)
+        result = self._finalize(alternative)
+        return result
+
     def _finalize(self, alternative):
         """将pipeline.name --- outs"""
         final = self._workspace.popitem(last=True).values()
@@ -135,20 +145,22 @@ class Pipeline(object):
                    in enumerate(final[:alternative])]
         return outputs
 
-    def to_execution_plan(self, metadata, alternative, mask):
-        """
-            to execute pipe logic
-        """
-        try:
-            self._inner_decref_recursive(metadata, mask)
-        except Exception as e:
-            print('error means graph decrease to top occur %s' % e)
-        result = self._finalize(alternative)
-        return result
-
     def to_withdraw_plan(self, position, metadata):
         """
             to execute ump_picker logic
         """
         out = self._ump_picker.evaluate(position, metadata)
         return out
+
+
+if __name__ == '__main__':
+
+    kw = {'window': (5, 10)}
+    cross_term = Term('cross', kw)
+    print('sma_term', cross_term)
+    kw = {'window': 10, 'fast': 12, 'slow': 26, 'period': 9}
+    break_term = Term('break', kw, cross_term)
+    terms = [cross_term, break_term]
+    # init
+    pipeline = Pipeline(terms)
+    print('pipeline', pipeline)

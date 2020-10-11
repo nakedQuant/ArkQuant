@@ -9517,12 +9517,12 @@ from dateutil.relativedelta import relativedelta
 # operate.itemgetter (return a callable that uses method __getitem__())
 # rsplit 从右往左 参数 sep(默认为所有空字符) count=count（sep）
 
-# def attach_pipeline(self, pipeline, name, chunks=None, eager=True):
+# def attach_pipeline(self, pipe, name, chunks=None, eager=True):
 #     """Register a Pipeline to be computed at the start of each day.
 #
 #     Parameters
 #     ----------
-#     pipeline : Pipeline
+#     pipe : Pipeline
 #         The Pipeline to have computed.
 #     name : str
 #         The name of the Pipeline.
@@ -9552,7 +9552,7 @@ from dateutil.relativedelta import relativedelta
 #
 #     if name in self._pipelines:
 #         raise DuplicatePipelineName(name=name)
-#     return pipeline
+#     return pipe
 
 # def _sync_last_sale_prices(self, dt=None):
 #     """Sync the last sale prices on the metrics tracker to a given
@@ -10689,3 +10689,42 @@ print(test)
 #     elif is_datetime(data) and isnat(missing_value):
 #         return isnat(data)
 #     return data == missing_value
+
+# def _downsampled_type(self, *args, **kwargs):
+#     """
+#     The expression type to return from self.downsample().
+#     """
+#     raise NotImplementedError(
+#         "downsampling is not yet implemented "
+#         "for instances of %s." % type(self).__name__
+#     )
+#
+# def downsample(self, frequency):
+#     """
+#     Make a term that computes from ``self`` at lower-than-daily frequency.
+#
+#     Parameters
+#     ----------
+#     {frequency}
+#     """
+#     return self._downsampled_type(term=self, frequency=frequency)
+
+# import os, glob
+#
+# p = os.path.abspath('__file__')
+# print('p', p)
+# dir = os.path.dirname(p)
+# print('dir', dir)
+# base = os.path.basename(p)
+# print('base', base)
+# p_dir = os.getcwd()
+# print('now directory', p_dir)
+# test = os.path.split(os.getcwd())
+# print('test', test)
+# target = os.path.join(os.path.split(os.getcwd())[0], 'signal')
+# print('target', target)
+# files = os.path.join(target, '*')
+# p = glob.glob(target + os.sep + 'cross.py')
+# print('p', p)
+# files = glob.glob('signal/*')
+# print('files', files)
