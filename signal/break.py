@@ -14,6 +14,8 @@ from signal import Signal
 
 class Break(Signal):
 
+    _name = 'Break'
+
     def __init__(self, params):
         # p --- window fast slow period
         self.p = params

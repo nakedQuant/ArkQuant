@@ -28,9 +28,17 @@ class Domain(object):
         else:
             return self._fields
 
+    @domain_field.setter
+    def domain_field(self, val):
+        self._fields = val
+
     @property
     def domain_window(self):
         return self._window
+
+    @domain_window.setter
+    def domain_window(self, window):
+        self._window = window
 
     def all_session(self, s_date, e_date):
         sessions = self.trading_calendar.session_in_range(s_date, e_date)
@@ -39,7 +47,9 @@ class Domain(object):
     def __or__(self, other):
         if isinstance(other, Domain):
             fields = set(self.domain_field) | set(other.domain_field)
+            print('fields', fields)
             max_window = max(self.domain_window, other.domain_window)
+            print('max_window', max_window)
             self.domain_field = fields
             self.domain_window = max_window
         else:
@@ -61,3 +71,15 @@ def infer_domain(kwargs):
         domain_window = window
     domain = Domain(domain_fields, domain_window)
     return domain
+
+
+if __name__ == '__main__':
+
+    kw = {'window': (5, 10)}
+    domain_1 = Domain(['close'], 2)
+    domain_2 = Domain(['open'], 20)
+    # domain = domain_1 | domain_2
+    # print('domain', domain.domain_window, domain.domain_field)
+    # print('domain_1', domain_1.domain_window, domain_1.domain_field)
+    domain_1 | domain_2
+    print('domain_1', domain_1.domain_window, domain_1.domain_field)

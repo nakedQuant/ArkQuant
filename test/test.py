@@ -10728,3 +10728,6 @@ print(test)
 # print('p', p)
 # files = glob.glob('signal/*')
 # print('files', files)
+# LRU 缓存只在当你想要重用之前计算的结果时使用
+from functools import lru_cache
+

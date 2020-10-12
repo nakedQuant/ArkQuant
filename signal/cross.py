@@ -13,6 +13,8 @@ from signal import Signal
 
 class Cross(Signal):
 
+    _name = 'Cross'
+
     def __init__(self, params):
         self.p = params
         self.ma = MA()

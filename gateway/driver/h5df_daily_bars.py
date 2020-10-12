@@ -92,6 +92,13 @@ from gateway.driver import DEFAULT_SCALING_FACTORS
 VERSION = 0
 FIELDS = ['open', 'high', 'low', 'close', 'volume', 'amount']
 
+__all__ = [
+    'HDF5DailyBarWriter',
+    'HDF5DailyBarReader',
+    'H5MinuteWriter',
+    'H5MinuteReader'
+]
+
 
 def convert_price_with_scaling_factor(a, scaling_factor):
     conversion_factor = (1.0 / scaling_factor)
@@ -259,13 +266,13 @@ class HDF5DailyBarReader(object):
 
         self._postprocessors = {
             'open': partial(convert_price_with_scaling_factor,
-                          scaling_factor=self._read_scaling_factor('open')),
+                            scaling_factor=self._read_scaling_factor('open')),
             'high': partial(convert_price_with_scaling_factor,
-                          scaling_factor=self._read_scaling_factor('high')),
+                            scaling_factor=self._read_scaling_factor('high')),
             'low': partial(convert_price_with_scaling_factor,
-                         scaling_factor=self._read_scaling_factor('low')),
+                           scaling_factor=self._read_scaling_factor('low')),
             'close': partial(convert_price_with_scaling_factor,
-                           scaling_factor=self._read_scaling_factor('close')),
+                             scaling_factor=self._read_scaling_factor('close')),
             'volume': lambda a: a,
         }
 
@@ -426,11 +433,3 @@ class H5MinuteReader(object):
     def read(self, dts, sids):
         panel = self._panel[sids, dts, :]
         return panel.iteritems()
-
-
-__all__ = [
-    'HDF5DailyBarWriter',
-    'HDF5DailyBarReader',
-    'H5MinuteWriter',
-    'H5MinuteReader'
-]

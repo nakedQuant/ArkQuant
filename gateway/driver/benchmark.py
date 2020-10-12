@@ -50,12 +50,14 @@ def get_foreign_benchmark_returns(index_name):
                                 'high', 'low', 'turnover'])
     kline.set_index('trade_dt', inplace=True)
     kline.sort_index(inplace=True)
+    kline = kline.astype('float64')
     returns = kline['close'] / kline['close'].shift(1) - 1
     return returns
 
 
 # if __name__ == '__main__':
 #
-#     rets = get_benchmark_returns('000001')
-#     print('ret', rets)
-#    outer_ret = get_outer_returns()
+#     ret = get_benchmark_returns('000001')
+#     print('ret', ret)
+#     _ret = get_foreign_benchmark_returns('道琼斯')
+#     print('foreign', _ret)

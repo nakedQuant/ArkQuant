@@ -12,7 +12,7 @@ from gateway.driver.tools import _parse_url, unpack_df_to_component_dict
 from gateway.spider.url import ASSET_FUNDAMENTAL_URL
 from gateway.driver.bar_reader import BarReader
 from gateway.database import engine
-# from gateway.asset.assets import Equity, Convertible, Fund
+from gateway.asset.assets import Equity, Convertible, Fund
 
 
 __all__ = [
@@ -34,7 +34,7 @@ class MassiveSessionReader(BarReader):
     def data_frequency(self):
         return 'daily'
 
-    def get_spot_value(self, asset, dt, fields=None):
+    def get_spot_value(self, dt, asset, fields=None):
         table = self.metadata['massive']
         sql = select([cast(table.c.bid_price, Numeric(10, 2)),
                       cast(table.c.discount, Numeric(10, 5)),
@@ -51,6 +51,7 @@ class MassiveSessionReader(BarReader):
         return massive_frame
 
     def load_raw_arrays(self, dts, assets, fields=None):
+        sids = [a.sid for a in assets]
         # 获取数据
         table = self.metadata.tables['massive']
         sql = select([table.c.declared_date,
@@ -68,7 +69,6 @@ class MassiveSessionReader(BarReader):
         frame.drop_duplicates(inplace=True)
         frame_dct = unpack_df_to_component_dict(frame, 'declared_date')
         frame_dct = valmap(lambda x: x.loc[:, fields] if fields else x, frame_dct)
-        sids = [obj.sid for obj in assets]
         massive_frame = keyfilter(lambda x: x in sids, frame_dct)
         return massive_frame
 
@@ -82,7 +82,7 @@ class ReleaseSessionReader(BarReader):
     def data_frequency(self):
         return 'daily'
 
-    def get_spot_value(self, asset, dt, fields=None):
+    def get_spot_value(self, dt, asset, fields=None):
         table = self.metadata.tables['unfreeze']
         sql = select([table.c.release_type,
                       cast(table.c.zb, Numeric(10, 5))]).\
@@ -94,7 +94,7 @@ class ReleaseSessionReader(BarReader):
         return release_frame
 
     def load_raw_arrays(self, dts, assets, fields=None):
-        sids = [asset.sid for asset in assets]
+        sids = [a.sid for a in assets]
         table = self.metadata.tables['unfreeze']
         sql = select([table.c.sid,
                       table.c.declared_date,
@@ -121,7 +121,7 @@ class HolderSessionReader(BarReader):
     def data_frequency(self):
         return 'daily'
 
-    def get_spot_value(self, asset, dt, fields=None):
+    def get_spot_value(self, dt, asset, fields=None):
         """股东持仓变动"""
         table = self.metadata.tables['holder']
         sql = select([table.c.股东,
@@ -141,7 +141,7 @@ class HolderSessionReader(BarReader):
 
     def load_raw_arrays(self, dts, assets, fields=None):
         """股东持仓变动"""
-        sids = [obj.sid for obj in assets]
+        sids = [a.sid for a in assets]
         table = self.metadata.tables['holder']
         sql = select([table.c.sid,
                       table.c.declared_date,
@@ -173,7 +173,7 @@ class OwnershipSessionReader(BarReader):
     def data_frequency(self):
         return 'daily'
 
-    def get_spot_value(self, asset, dt, fields=None):
+    def get_spot_value(self, dt, asset, fields=None):
         """
             extra information about asset --- equity structure
             股票的总股本、流通股本，公告日期,变动日期结构
@@ -196,7 +196,7 @@ class OwnershipSessionReader(BarReader):
         return ownership_frame
 
     def load_raw_arrays(self, dts, assets, fields=None):
-        sids = [obj.sid for obj in assets]
+        sids = [a.sid for a in assets]
         table = self.metadata.tables['ownership']
         ins = sa.select([table.c.sid,
                          table.c.declared_date,
@@ -225,10 +225,10 @@ class MarginSessionReader(BarReader):
     def data_frequency(self):
         return 'daily'
 
-    def get_spot_value(self, dt):
+    def get_spot_value(self, dt, asset, fields=None):
         raise NotImplementedError('get_values is deprescated ,use load_raw_arrays method')
 
-    def load_raw_arrays(self, dts):
+    def load_raw_arrays(self, dts, assets, fields=None):
         table = self.metadata.tables['margin']
         ins = sa.select([table.c.declared_date,
                          table.c.rzye,
@@ -247,10 +247,10 @@ class GrossSessionReader(BarReader):
     def __init__(self, url=None):
         self._url = url if url else ASSET_FUNDAMENTAL_URL['gross']
 
-    def get_spot_value(self, asset, dt, field=None):
+    def get_spot_value(self, dt, asset, field=None):
         raise NotImplementedError('get_values is deprescated by gpd ,use load_raw_arrays method')
 
-    def load_raw_arrays(self):
+    def load_raw_arrays(self, dts, assets, fields=None):
         """获取GDP数据"""
         page = 1
         gross_value = pd.DataFrame()
@@ -270,25 +270,25 @@ class GrossSessionReader(BarReader):
         return gross_value
 
 
-# if __name__ == '__main__':
-#
-#     sessions = ['2020-01-01', '2020-09-10']
-#     asset = [Equity('000001')]
-#     massive = MassiveSessionReader()
-#     m = massive.load_raw_arrays(sessions, asset)
-#     print('massive', m)
-#     release = ReleaseSessionReader()
-#     r = release.load_raw_arrays(sessions, asset)
-#     print('release', r)
-#     holder = HolderSessionReader()
-#     h = holder.load_raw_arrays(sessions, asset)
-#     print('holder', h)
-#     ownership = OwnershipSessionReader()
-#     o = ownership.load_raw_arrays(sessions, asset)
-#     print('ownership', o)
-#     marign = MarginSessionReader()
-#     margin_data = marign.load_raw_arrays(sessions)
-#     print('margin', margin_data)
-#     gdp = GrossSessionReader()
-#     g = gdp.load_raw_arrays()
-#     print('gdp', g)
+if __name__ == '__main__':
+
+    sessions = ['2020-03-25', '2020-05-01']
+    asset = [Equity('600000')]
+    massive = MassiveSessionReader()
+    m = massive.load_raw_arrays(sessions, asset)
+    print('massive', m)
+    release = ReleaseSessionReader()
+    r = release.load_raw_arrays(sessions, asset)
+    print('release', r)
+    holder = HolderSessionReader()
+    h = holder.load_raw_arrays(sessions, asset)
+    print('holder', h)
+    ownership = OwnershipSessionReader()
+    o = ownership.load_raw_arrays(sessions, asset)
+    print('ownership', o)
+    marign = MarginSessionReader()
+    margin_data = marign.load_raw_arrays(sessions, None)
+    print('margin', margin_data)
+    gdp = GrossSessionReader()
+    g = gdp.load_raw_arrays(sessions, None)
+    print('gdp', g)

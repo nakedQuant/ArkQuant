@@ -2,6 +2,8 @@
 Base class for Pipeline API data loaders.
 """
 from abc import ABC, abstractmethod
+import copy
+from pipe.loader import EVENT
 
 
 class PipelineLoader(ABC):
@@ -22,9 +24,12 @@ class PipelineLoader(ABC):
 
         The default implementation is a no-op.
         """
-        pipeline_domain = domains[0].copy()
+        pipeline_domain = copy.deepcopy(domains[0])
+        # print('copy test', domains[0], pipeline_domain)
         for domain in domains[1:]:
-            pipeline_domain = pipeline_domain | domain
+            pipeline_domain | domain
+        # print('before domains', domains[0].domain_window)
+        # print('pipeline_domain', pipeline_domain.domain_window)
         return pipeline_domain
 
     @classmethod
@@ -35,15 +40,15 @@ class PipelineLoader(ABC):
         ``previous_value_columns``.
         """
         event_type = domain.domain_field
-        missing = set(event_type) - cls.EVENT_OP_NAME
+        missing = set(event_type) - set(EVENT)
         if missing:
             raise ValueError(
                 "EventsLoader missing required columns {missing}.\n"
                 "Got Columns: {received}\n"
                 "Expected Columns: {required}".format(
                     missing=sorted(missing),
-                    received=sorted(event_type),
-                    required=sorted(cls.EVENT_OP_NAME),
+                    received=set(event_type),
+                    required=set(EVENT),
                 )
             )
         return True

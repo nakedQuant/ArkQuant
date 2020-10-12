@@ -30,7 +30,7 @@ class Pipeline(object):
         # last item --- finalTerm
         self._workspace = OrderedDict()
         self.graph = self._init_graph()
-        self._ump_picker = ump_picker
+        self._ump_picker = ump_picker if ump_picker else terms
 
     @property
     def name(self):

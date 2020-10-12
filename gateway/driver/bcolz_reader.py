@@ -5,11 +5,11 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-import pandas as pd, bcolz, os, datetime
+import pandas as pd, bcolz, os
 from gateway.driver.bar_reader import BarReader
 from gateway.driver.tools import transfer_to_timestamp
 from gateway.driver import BcolzDir, OHLC_RATIO
-from gateway.asset.assets import Equity
+# from gateway.asset.assets import Equity
 
 __all__ = [
     'BcolzDailyReader',
@@ -95,7 +95,7 @@ class BcolzReader(BarReader):
             #     if frame.index.name == 'ticker' else frame.index
         return frame
 
-    def get_spot_value(self, asset, dt, fields):
+    def get_spot_value(self, dt, asset, fields):
         raise NotImplementedError()
 
     def get_stack_value(self, tbl_name, session):
@@ -186,17 +186,18 @@ class BcolzDailyReader(BcolzReader):
         return kline.loc[:, fields]
 
 
-if __name__ == '__main__':
-
-    session = ['2005-01-01', '2015-09-03']
-    equity = Equity('600000')
-    fields = ['open', 'close', 'volume']
-    minute_reader = BcolzMinuteReader()
-    spot_value = minute_reader.get_spot_value('2005-09-07', equity, fields)
-    spot_value.index = [datetime.datetime.utcfromtimestamp(i).strftime('%Y-%m-%d %H:%M') for i in spot_value.index]
-    print('spot_value', spot_value)
-    # t = spot_value['close'] * spot_value['volume'] / spot_value['volume'].sum()
-    # print('t', t.sum())
-    # raw = minute_reader.load_raw_arrays(session, [equity], fields)
-    raw = minute_reader.load_raw_arrays(['2005-09-05', '2005-09-07'], [equity], fields)
-    print('raw', raw)
+# if __name__ == '__main__':
+#
+#     session = ['2005-01-01', '2015-09-03']
+#     equity = Equity('600000')
+#     fields = ['open', 'close', 'volume']
+#     minute_reader = BcolzMinuteReader()
+#     spot_value = minute_reader.get_spot_value('2005-09-07', equity, fields)
+#     import datetime
+#     spot_value.index = [datetime.datetime.utcfromtimestamp(i).strftime('%Y-%m-%d %H:%M') for i in spot_value.index]
+#     print('spot_value', spot_value)
+#     t = spot_value['close'] * spot_value['volume'] / spot_value['volume'].sum()
+#     print('t', t.sum())
+#     raw = minute_reader.load_raw_arrays(session, [equity], fields)
+#     raw = minute_reader.load_raw_arrays(['2005-09-05', '2005-09-07'], [equity], fields)
+#     print('raw', raw)

@@ -33,9 +33,10 @@ class Engine(ABC):
         print('inner_terms', inner_terms)
         inner_pickers = list(chain([pipeline.ump_terms for pipeline in pipelines if pipeline._ump_picker]))
         print('inner_picker', inner_pickers)
-        test = inner_terms[0] + inner_pickers
-        print('test', test)
-        engine_terms = set(inner_terms + inner_pickers)
+        if inner_pickers:
+            engine_terms = set(inner_terms[0] + inner_pickers)
+        else:
+            engine_terms = set(inner_terms[0])
         # get_loader
         _get_loader = PricingLoader(engine_terms, self.data_portal)
         return pipelines, _get_loader

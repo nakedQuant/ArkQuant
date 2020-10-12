@@ -17,7 +17,7 @@ from functools import partial
 from toolz import groupby, valmap
 from gateway.database import engine, metadata
 from gateway.driver.tools import unpack_df_to_component_dict
-from gateway.asset.assets import Equity, Convertible, Fund
+# from gateway.asset.assets import Equity, Convertible, Fund
 
 KLINE_COLUMNS_TYPE = {
             'open': np.double,
@@ -42,7 +42,7 @@ class BarReader(ABC):
         return metadata
 
     @abstractmethod
-    def get_spot_value(self, asset, dt, fields):
+    def get_spot_value(self, dt, asset,  fields):
         """
         Retrieve the value at the given coordinates.
 
@@ -111,8 +111,9 @@ class AssetSessionReader(BarReader):
             orm = sa.select([tbl.c.trade_dt, tbl.c.sid, tbl.c.mkv, tbl.c.mkv_cap, tbl.c.mkv_strict]).\
                 where(sa.and_(tbl.c.trade_dt.between(sdate, edate), tbl.c.sid == asset.sid))
             rp = self.engine.execute(orm)
-            frame = pd.DataFrame([[r.trade_dt, r.sid, r.mkv, r.mkv_cap, r.mkv_strict] for r in rp.fetchall()],
-                                 columns=['trade_dt', 'sid', 'mkv', 'mkv_cap', 'mkv_strict'])
+            frame = pd.DataFrame([[r.trade_dt, r.mkv, r.mkv_cap, r.mkv_strict] for r in rp.fetchall()],
+                                 columns=['trade_dt', 'mkv', 'mkv_cap', 'mkv_strict'])
+            frame.set_index('trade_dt', inplace=True)
             frame = frame.loc[:, fields] if fields else frame
             mkv_dct[asset.sid] = frame
         return mkv_dct
@@ -235,18 +236,16 @@ class AssetSessionReader(BarReader):
         return batch_arrays
 
 
-if __name__ == '__main__':
-
-    reader = AssetSessionReader()
-    asset = Equity('603612')
-    sessions = ['2020-08-10', '2020-09-04']
-    # pct = reader.get_equity_pctchange('2020-08-25')
-    # print('equity pct', pct)
-    # spot_value = reader.get_spot_value('2020-08-25', asset, ['open', 'high', 'low', 'close'])
-    # print('spot_value', spot_value)
-    # stack_value = reader.get_stack_value('equity', sessions)
-    # print('stack value', stack_value)
-    # his = reader.load_raw_arrays(sessions, [asset], ['open', 'high', 'low', 'close', 'volume', 'amount'])
-    # print('his array', his)
-    mkv = reader.get_mkv_value(sessions, [asset])
-    print('mkv', mkv)
+# if __name__ == '__main__':
+#
+#     reader = AssetSessionReader()
+#     asset = Equity('603612')
+#     sessions = ['2020-08-10', '2020-09-04']
+#     spot_value = reader.get_spot_value('2020-08-25', asset, ['open', 'high', 'low', 'close'])
+#     print('spot_value', spot_value)
+#     stack_value = reader.get_stack_value('equity', sessions)
+#     print('stack value', stack_value)
+#     his = reader.load_raw_arrays(sessions, [asset], ['open', 'high', 'low', 'close', 'volume', 'amount'])
+#     print('his array', his)
+#     mkv = reader.get_mkv_value(sessions, [asset], ['mkv_cap'])
+#     print('mkv', mkv)

@@ -6,6 +6,7 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 import glob, os
+from toolz import valmap
 from weakref import WeakValueDictionary
 from pipe.domain import infer_domain
 
@@ -40,43 +41,38 @@ class Term(object):
     default_type = (tuple,)
     _term_cache = WeakValueDictionary()
     namespace = dict()
-    base_dir = os.path.join(os.path.split(os.getcwd())[0], 'signal')
+    # base_dir = os.path.join(os.path.split(os.getcwd())[0], 'signal')
+    base_dir = '/Users/python/Library/Mobile Documents/com~apple~CloudDocs/nakedquant/signal'
 
-    # __slots__ = ['domain', 'dependence', 'signal', '_subclass_called_validate']
+    # __slots__ = ['domain', 'dependencies', 'signal', '_subclass_called_validate']
 
     def __new__(cls,
                 script,
                 params,
-                dependence=NotSpecific
+                dependencies=NotSpecific
                 ):
         # p = cls._pop_params(params)
         p = cls._hash_params(params)
         # 设立身份属性防止重复产生实例
-        identity = cls._static_identity(script, p, dependence)
+        identity = cls._static_identity(script, p, dependencies)
         try:
             return cls._term_cache[identity]
         except KeyError:
-            new_instance = cls._term_cache[identity] = super(Term, cls).__new__(cls)._init(script, p, dependence)
+            new_instance = cls._term_cache[identity] = super(Term, cls).__new__(cls)._init(script, p, dependencies)
             print('new_instance', new_instance.domain.domain_window)
             return new_instance
 
-    # @staticmethod
-    # def _pop_params(kwargs):
-    #     window = kwargs['window']
-    #     fields = kwargs.get('fields', ('open', 'high', 'low', 'close', 'volume', 'amount', 'vwap'))
-    #     p = (('window', window), ('fields', fields))
-    #     return p
-
     @staticmethod
     def _hash_params(kwargs):
+        kwargs = valmap(lambda x: tuple(x) if isinstance(x, list) else x, kwargs)
         hash_params = tuple(zip(kwargs.keys(), kwargs.values()))
         return hash_params
 
     @classmethod
-    def _static_identity(cls, ins, domain, dependence):
-        return (ins, domain, dependence)
+    def _static_identity(cls, ins, domain, dependencies):
+        return (ins, domain, dependencies)
 
-    def _init(self, script, p, dependence):
+    def _init(self, script, p, dependencies):
         """
             __new__已经初始化后，不需要在__init__里面调用
             Noop constructor to play nicely with our caching __new__.  Subclasses
@@ -108,7 +104,7 @@ class Term(object):
         del self._subclass_called_validate
         # infer domain
         self.domain = infer_domain(params)
-        self.dependencies = dependence if isinstance(dependence, (list, tuple)) else [dependence]
+        self.dependencies = dependencies if isinstance(dependencies, (list, tuple)) else [dependencies]
         return self
 
     def _validate(self):
@@ -170,7 +166,7 @@ class Term(object):
         ).format(
             type=type(self).__name__,
             # args=', '.join([k for i, k in self.__dict__]),
-            args=self.__dict__)
+            args=self.signal._name)
 
     def recursive_repr(self):
         """A short repr to use when recursively rendering terms with inputs.
@@ -186,5 +182,5 @@ if __name__ == '__main__':
     print('sma_term', cross_term)
     kw = {'window': 10, 'fast': 12, 'slow': 26, 'period': 9}
     break_term = Term('break', kw, cross_term)
-    print(break_term.dependence)
+    print(break_term.dependencies)
 

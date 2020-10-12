@@ -180,14 +180,15 @@ class SlidingWindow(object):
                     qfq.sort_index(inplace=True)
                     qfq.fillna(method='bfill', inplace=True)
                     qfq.fillna(1.0, inplace=True)
-                    print('final qfq coef', qfq)
+                    # print('final qfq coef', qfq)
                     frame[adjusted_fields] = frame.loc[:, adjusted_fields].multiply(qfq, axis=0)
-                    adjust_arrays[sid] = frame[adjusted_fields]
-                    # print('adjust_raw', raw[adjusted_fields])
+                    # adjust_arrays[sid] = frame[adjusted_fields]
+                    adjust_arrays[sid] = frame
                 except KeyError:
                     adjust_arrays[sid] = pd.DataFrame()
         else:
             adjust_arrays = frame_dcts
+
         return adjust_arrays
 
 

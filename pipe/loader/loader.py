@@ -5,27 +5,35 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-from .base import PipelineLoader
+from pipe.loader.base import PipelineLoader
 from _calendar.trading_calendar import calendar
 from pipe.loader import EVENT
+from gateway.driver.data_portal import DataPortal
+from pipe.term import Term
+from gateway.asset.assets import Equity
+
+__all__ = ['PricingLoader', 'EventLoader']
+
+# init portal
+portal = DataPortal()
 
 
 class PricingLoader(PipelineLoader):
 
-    def __init__(self, terms, data_portal):
+    def __init__(self, terms):
         """
             A pipe for loading daily adjusted qfq live OHLCV data.
             terms --- pipe terms and ump terms
         """
         domains = [term.domain for term in terms]
         self.pipeline_domain = self._resolve_domains(domains)
-        self._data_portal = data_portal
 
     def load_pipeline_arrays(self, dts, assets, data_frequency):
-        fields = self.pipeline_domain.fields
-        window = self.pipeline_domain.window
-        adjust_kline = self._data_portal.history(self,
-                                                 assets,
+        fields = list(self.pipeline_domain.domain_field)
+        print('loader fields', fields)
+        window = - abs(self.pipeline_domain.domain_window)
+        print('loader window', window)
+        adjust_kline = portal.get_history_window(assets,
                                                  dts,
                                                  window,
                                                  fields,
@@ -57,15 +65,36 @@ class EventLoader(PipelineLoader):
         domains = [term.domain for term in terms]
         self.pipeline_domain = self._resolve_domains(domains, True)
 
-    def load_pipeline_arrays(self, dts, assets, data_frequency='daily'):
-        if data_frequency == 'minute':
-            raise ValueError('event data only be daily frequency')
+    def load_pipeline_arrays(self, dt, assets, data_frequency='daily'):
+        assert data_frequency == 'daily', 'event has not minutes'
         event_mappings = dict()
-        fields = self.pipeline_domain.fields
-        window = self.pipeline_domain.window
-        assert set(fields).issubset(set(EVENT)), ValueError('unknown event')
-        sessions = calendar.session_in_window(dts, window, include=False)
+        fields = list(self.pipeline_domain.domain_field)
+        window = self.pipeline_domain.domain_window
+        sdate = calendar.dt_window_size(dt, - window)
         for field in fields:
-            raw = EVENT[field].load_raw_arrays(self, sessions, assets)
+            raw =  EVENT[field].load_raw_arrays([sdate, dt], assets)
             event_mappings[field] = raw
         return event_mappings
+
+
+if __name__ == '__main__':
+
+    asset = [Equity('600000')]
+    date = '2020-09-30'
+    kw_p = {'window': (5, 10), 'fields': ['close']}
+    cross_term_p = Term('cross', kw_p)
+    kw_p_1 = {'window': 10, 'fast': 12, 'slow': 26, 'period': 9, 'fields': ['high', 'amount']}
+    break_term_p = Term('break', kw_p_1, cross_term_p)
+    terms = [break_term_p, cross_term_p]
+    pricing = PricingLoader(terms)
+    kline = pricing.load_pipeline_arrays(date, asset, 'daily')
+    print('kline', kline)
+    kw = {'window': (5, 10), 'fields': ['massive', 'release']}
+    cross_term = Term('cross', kw)
+    kw = {'window': 10, 'fast': 12, 'slow': 26, 'period': 9, 'fields': ['ownership', 'holder']}
+    break_term = Term('break', kw, cross_term)
+    terms = [break_term, cross_term]
+    event = EventLoader(terms)
+    event_kline = event.load_pipeline_arrays(date, asset)
+    print('event_kline', event_kline)
+

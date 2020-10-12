@@ -347,7 +347,7 @@ class HistoryMinuteLoader(HistoryLoader):
 #     print('test_his_window_daily', test_his_window_daily)
 #     daily_spot_value = daily_history.get_spot_value('2005-09-07', asset, fields)
 #     print('daily_spot_value', daily_spot_value)
-#     daily_spot_value = daily_history.get_stack_value('equity', sessions)
+#     daily_spot_value = daily_history.get_stack_value('equity', sessions[0], window=-70)
 #     print('daily_spot_value', daily_spot_value)
 #
 #     minute_history = HistoryMinuteLoader(minute_reader, adjustment_reader)

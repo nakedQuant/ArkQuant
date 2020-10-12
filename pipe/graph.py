@@ -6,8 +6,11 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 import uuid, networkx as nx
+import matplotlib.pyplot as plt
 from toolz import valfilter
-from pipe.term import NotSpecific
+from pipe.term import NotSpecific, Term
+
+__all__ = ['TermGraph']
 
 
 class TermGraph(object):
@@ -94,3 +97,27 @@ class TermGraph(object):
         for node in nodes:
             self.graph.remove_node(node)
         return nodes
+
+    def draw(self):
+        # plt.subplot(121)
+        # nx.draw(self.graph)
+        # plt.subplot(122)
+        # nx.draw(self.graph, pos=nx.circular_layout(self.graph),
+        #         node_color='r', edge_color='b')
+        nx.draw_networkx(self.graph, pos=nx.circular_layout(self.graph),
+                         node_color='r', edge_color='b')
+        plt.show()
+
+
+if __name__ == '__main__':
+
+    kw = {'window': (5, 10)}
+    cross_term = Term('cross', kw)
+    print('sma_term', cross_term)
+    kw = {'window': 10, 'fast': 12, 'slow': 26, 'period': 9}
+    break_term = Term('break', kw, cross_term)
+    terms = [cross_term, break_term]
+    # init
+    graph = TermGraph(terms)
+    # print('graph', list(graph.ordered()))
+    graph.draw()
