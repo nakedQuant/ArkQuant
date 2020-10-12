@@ -82,6 +82,7 @@ asset_router = sa.Table(
         sa.String(6),
         default='CH'
     ),
+    extend_existing=True,
 )
 
 # status table intend to sync asset_router last_traded
@@ -114,7 +115,8 @@ equity_status = sa.Table(
     sa.Column(
         'status',
         sa.String(5)
-    )
+    ),
+    extend_existing=True
 )
 
 
@@ -164,6 +166,7 @@ equity_basics = sa.Table(
         sa.Text,
         nullable=False
     ),
+    extend_existing=True
 )
 
 #  --- 主要考虑流动性和折价空间, 强赎就是半路就赎回了，转债价格超过130的，大部分都满足强赎条件了， 有的可转债可以没回售条款比如金融行业（中行)
@@ -234,6 +237,7 @@ convertible_basics = sa.Table(
         sa.Text,
         # nullable=False
     ),
+    extend_existing=True
 )
 
 equity_price = sa.Table(
@@ -264,6 +268,7 @@ equity_price = sa.Table(
     sa.Column('volume', sa.Integer, nullable=False),
     sa.Column('amount', sa.Numeric(20, 5), nullable=False),
     sa.Column('pct', sa.Numeric(10, 5), nullable=False),
+    extend_existing=True
 
 )
 
@@ -294,6 +299,7 @@ convertible_price = sa.Table(
     sa.Column('close', sa.Numeric(10, 5), nullable=False),
     sa.Column('volume', sa.Integer, nullable=False),
     sa.Column('amount', sa.Numeric(20, 5), nullable=False),
+    extend_existing=True
 )
 
 fund_price = sa.Table(
@@ -322,6 +328,7 @@ fund_price = sa.Table(
     sa.Column('close', sa.Numeric(10, 5), nullable=False),
     sa.Column('volume', sa.Integer, nullable=False),
     sa.Column('amount', sa.Numeric(20, 5), nullable=False),
+    extend_existing=True
 )
 
 equity_splits = sa.Table(
@@ -357,6 +364,7 @@ equity_splits = sa.Table(
     sa.Column('bonus', sa.Numeric(15, 10)),
     # 实施 | 不分配
     sa.Column('progress', sa.Text),
+    extend_existing=True
     )
 
 # 配股
@@ -386,6 +394,7 @@ equity_rights = sa.Table(
     sa.Column('effective_date', sa.String(10)),
     sa.Column('rights_bonus', sa.Integer),
     sa.Column('rights_price', sa.Numeric(10, 5)),
+    extend_existing=True
 )
 
 # 股权结构 --- 由于数据问题存在declared_date ex_date 一致的情况（000012， 000002，600109）增加约束条件流通股和限制股
@@ -432,6 +441,7 @@ ownership = sa.Table(
     sa.Column('b_float', sa.String(20)),
     sa.Column('b_strict', sa.String(20)),
     sa.Column('h_float', sa.String(20)),
+    extend_existing=True
 )
 
 # 流通市值
@@ -469,7 +479,8 @@ m_cap = sa.Table(
         'mkv_strict',
         sa.Numeric(30, 10),
         nullable=False
-    )
+    ),
+    extend_existing=True
 )
 
 # 股东增减持
@@ -500,7 +511,8 @@ holder = sa.Table(
     sa.Column('总持仓', sa.Numeric(20, 5), nullable=False),
     sa.Column('占总股本比', sa.Numeric(10, 5), nullable=False),
     sa.Column('总流通股', sa.Numeric(20, 5), nullable=False),
-    sa.Column('占流通比', sa.Numeric(10, 5), nullable=False)
+    sa.Column('占流通比', sa.Numeric(10, 5), nullable=False),
+    extend_existing=True
 )
 
 # 股东大宗交易
@@ -534,6 +546,7 @@ massive = sa.Table(
     sa.Column('seller', sa.Text, nullable=False),
     # 成交总额/流通市值
     sa.Column('cjeltszb', sa.Numeric(20, 18), nullable=False),
+    extend_existing=True
 )
 
 # 解禁数据 release作为mysql关键字 switch to ban_lift
@@ -561,7 +574,8 @@ unfreeze = sa.Table(
     ),
     sa.Column('release_type', sa.Text, nullable=False),
     # 解禁市值占解禁前流动市值比例
-    sa.Column('zb', sa.Numeric(20, 18), nullable=False)
+    sa.Column('zb', sa.Numeric(20, 18), nullable=False),
+    extend_existing=True
 )
 
 # 市场融资融券数据
@@ -585,7 +599,8 @@ margin = sa.Table(
     # 融资余额占流通市值比
     sa.Column('rzyezb', sa.Numeric(12, 10), nullable=False),
     # 融券余额
-    sa.Column('rqye', sa.Numeric(15, 8), nullable=False)
+    sa.Column('rqye', sa.Numeric(15, 8), nullable=False),
+    extend_existing=True
 )
 
 
@@ -606,7 +621,8 @@ version_info = sa.Table(
         nullable=False,
     ),
     # This constraint ensures a single entry in this table
-    sa.CheckConstraint('id <= 1')
+    sa.CheckConstraint('id <= 1'),
+    extend_existing=True
 )
 
 asset_db_table_names = frozenset([

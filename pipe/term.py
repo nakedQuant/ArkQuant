@@ -41,8 +41,8 @@ class Term(object):
     default_type = (tuple,)
     _term_cache = WeakValueDictionary()
     namespace = dict()
-    # base_dir = os.path.join(os.path.split(os.getcwd())[0], 'signal')
-    base_dir = '/Users/python/Library/Mobile Documents/com~apple~CloudDocs/nakedquant/signal'
+    # base_dir = '/Users/python/Library/Mobile Documents/com~apple~CloudDocs/nakedquant/signal'
+    base_dir = os.path.join(os.path.split(os.getcwd())[0], 'signal')
 
     # __slots__ = ['domain', 'dependencies', 'signal', '_subclass_called_validate']
 

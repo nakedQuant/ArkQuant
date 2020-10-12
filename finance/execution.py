@@ -119,3 +119,9 @@ class StopLimitOrder(ExecutionStyle):
 
     def get_stop_price_ratio(self):
         return self.stop_pct
+
+
+if __name__ == '__main__':
+
+    m_ord = MarketOrder()
+    print('market order', m_ord)

@@ -12,6 +12,7 @@ from functools import reduce
 from pipe.term import Term, NotSpecific
 from pipe.graph import TermGraph
 from pipe import Event, NamedPipe
+from pipe.ump import  UmpPickers
 
 __all__ = ['Pipeline']
 
@@ -23,14 +24,14 @@ class Pipeline(object):
         b. withdraw logic of pipe --- instance of ump_picker
         c. pipe --- ump_picker
     """
-    __slots__ = ['_terms_store', 'graph', '_workspace', '_ump_picker']
+    __slots__ = ['_terms_store', 'graph', '_workspace', '_ump']
 
     def __init__(self, terms, ump_picker=None):
         self._terms_store = terms
         # last item --- finalTerm
         self._workspace = OrderedDict()
         self.graph = self._init_graph()
-        self._ump_picker = ump_picker if ump_picker else terms
+        self._ump = UmpPickers(ump_picker) if ump_picker else UmpPickers(terms)
 
     @property
     def name(self):
@@ -42,7 +43,7 @@ class Pipeline(object):
 
     @property
     def ump_terms(self):
-        return self._ump_picker.pickers
+        return self._ump.pickers
 
     def _initialize_workspace(self):
         self._workspace = OrderedDict
@@ -149,7 +150,7 @@ class Pipeline(object):
         """
             to execute ump_picker logic
         """
-        out = self._ump_picker.evaluate(position, metadata)
+        out = self._ump.evaluate(position, metadata)
         return out
 
 

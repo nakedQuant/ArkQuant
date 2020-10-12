@@ -58,3 +58,9 @@ class MarketImpact(SlippageModel):
         """
         slippage = self.func(alpha)
         return slippage
+
+
+if __name__ == '__main__':
+
+    slippage = FixedBasisPointSlippage()
+    print('slippage', slippage)

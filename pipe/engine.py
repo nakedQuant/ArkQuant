@@ -15,7 +15,6 @@ from finance.restrictions import UnionRestrictions, NoRestrictions
 from pipe.term import Term
 from pipe.pipeline import Pipeline
 from gateway.asset._finder import AssetFinder
-from gateway.driver.data_portal import DataPortal
 
 __all__ = [
     'SimplePipelineEngine',
@@ -31,14 +30,12 @@ class Engine(ABC):
     def _init(self, pipelines):
         inner_terms = list(chain([pipeline.terms for pipeline in pipelines]))
         print('inner_terms', inner_terms)
-        inner_pickers = list(chain([pipeline.ump_terms for pipeline in pipelines if pipeline._ump_picker]))
+        inner_pickers = list(chain([pipeline.ump_terms for pipeline in pipelines]))
         print('inner_picker', inner_pickers)
-        if inner_pickers:
-            engine_terms = set(inner_terms[0] + inner_pickers)
-        else:
-            engine_terms = set(inner_terms[0])
+        engine_terms = set(inner_terms[0] + inner_pickers[0])
+        print('engine_terms', engine_terms)
         # get_loader
-        _get_loader = PricingLoader(engine_terms, self.data_portal)
+        _get_loader = PricingLoader(engine_terms)
         return pipelines, _get_loader
 
     def _compute_default(self, ledger):
@@ -231,12 +228,10 @@ class SimplePipelineEngine(Engine):
     def __init__(self,
                  pipelines,
                  asset_finder,
-                 data_portal,
                  restrictions=[NoRestrictions],
                  alternatives=10,
                  allow_righted=False,
                  allowed_violation=True):
-        self.data_portal = data_portal
         self.asset_finder = asset_finder
         # SecurityListRestrictions  AvailableRestrictions
         self.restricted_rules = UnionRestrictions(restrictions)
@@ -289,6 +284,7 @@ class NoEngineRegistered(Exception):
 
 if __name__ == '__main__':
 
+    asset_finder = AssetFinder()
     kw = {'window': (5, 10)}
     cross_term = Term('cross', kw)
     print('sma_term', cross_term)
@@ -298,7 +294,5 @@ if __name__ == '__main__':
     # init
     pipeline = Pipeline(terms)
     print('pipeline', pipeline)
-    asset_finder = AssetFinder()
-    data_portal = DataPortal()
-    engine = SimplePipelineEngine(pipeline, asset_finder, data_portal)
+    engine = SimplePipelineEngine(pipeline, asset_finder)
     print('engine', engine)

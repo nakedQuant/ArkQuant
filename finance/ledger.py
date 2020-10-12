@@ -9,7 +9,10 @@ import pandas as pd, numpy as np, warnings
 from finance.portfolio import Portfolio
 from finance._protocol import Account, MutableView
 from finance.position_tracker import PositionTracker
-from risk.alert import UnionRisk, PortfolioRisk
+from risk.alert import UnionRisk, PositionDrawRisk
+from trade.sim_params import create_simulation_parameters
+
+__all__ = ['Ledger']
 
 
 class Ledger(object):
@@ -75,7 +78,7 @@ class Ledger(object):
 
     def _process_dividends(self):
         """ splits and divdend"""
-        left_cash = self.position_tracker.handle_spilts()
+        left_cash = self.position_tracker.handle_splits()
         self._cash_flow(left_cash)
 
     def start_of_session(self, session_ix):
@@ -194,3 +197,10 @@ class Ledger(object):
     def get_expired_positions(self, dts):
         expires = self._cleanup_expired_assets(dts)
         return expires
+
+
+if __name__ == '__main__':
+
+    sim_params = create_simulation_parameters()
+    ledger = Ledger(sim_params)
+    print('ledger', ledger)

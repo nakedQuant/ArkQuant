@@ -8,6 +8,10 @@ Created on Tue Mar 12 15:37:47 2019
 import numpy as np, pandas as pd
 from finance._protocol import InnerPosition, Position as ProtocolPosition
 from _calendar.trading_calendar import calendar
+from pipe import Event
+from gateway.asset.assets import Equity
+
+__all__ = ['Position']
 
 
 class Position(object):
@@ -126,3 +130,11 @@ class Position(object):
             'last_sale_price': self.last_sale_price,
             'created_by': self.name
             }
+
+
+if __name__ == '__main__':
+
+    asset = Equity('600000')
+    event = Event(asset, 'pipeline')
+    p = Position(event)
+    print('position', p)

@@ -7,6 +7,11 @@ Created on Tue Mar 12 15:37:47 2019
 """
 from enum import Enum
 import uuid
+from pipe import Event
+from gateway.asset.assets import Equity
+from finance.slippage import NoSlippage
+
+__all__ = ['Order']
 
 
 class OrderType(Enum):
@@ -27,7 +32,16 @@ class Order(object):
 
     __slots__ = ['event', 'price', 'amount', 'created_dt', 'direction', 'execution_style', 'slippage_model']
 
-    def __init__(self, event, price, amount, ticker, direction, style, slippage_model):
+    def __init__(self, event, price, amount, ticker, direction, style, slippage_model=NoSlippage):
+        """
+        :param event: namedtuple(asset name) --- asset which is triggered by the name of pipeline
+        :param price: float64
+        :param amount: int (restriction)
+        :param ticker: price which triggered by ticker
+        :param direction: buy or sell
+        :param style: order enum
+        :param slippage_model: slippage
+        """
         self.event = event
         self.price = price
         self.amount = amount
@@ -100,11 +114,20 @@ class Order(object):
         """
         String representation for this object.
         """
-        return "Order(%s)" % self.to_dict().__repr__()
+        return "Order(%r)" % self.to_dict()
 
     def __getstate__(self):
         """ pickle -- __getstate__ , __setstate__"""
-        return self.__dict__()
+        return self.__dict__
 
-    def __setattr__(self, key, value):
-        raise NotImplementedError()
+
+if __name__ == '__main__':
+    asset = Equity('600000')
+    event = Event(asset, 'pipeline')
+    price = 9.59
+    amount = 10000
+    ticker = '2020-10-12 14:42'
+    direction = 'buy'
+    style = 'lmt'
+    order = Order(event, price, amount, ticker, direction, style)
+    print('order', order)

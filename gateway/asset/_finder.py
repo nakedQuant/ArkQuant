@@ -7,7 +7,7 @@ Created on Tue Mar 12 15:37:47 2019
 """
 import pandas as pd, sqlalchemy as sa, json
 from itertools import chain
-from toolz import keyfilter, valfilter, groupby, partition
+from toolz import keyfilter, valfilter, groupby
 from functools import partial
 from collections import defaultdict
 from gateway.database import engine, metadata

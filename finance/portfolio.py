@@ -9,6 +9,8 @@ import pandas as pd
 from utils.wrapper import _deprecated_getitem_method
 from _calendar.trading_calendar import calendar
 
+__all__ = ['Portfolio']
+
 
 class Portfolio(object):
     """Object providing read-only access to current portfolio state.
@@ -23,8 +25,8 @@ class Portfolio(object):
         Dict-like object containing information about currently-held positions.
 
     """
-    __slots__ = ['start_cash', 'portfolio_value', '_cash_flow', 'pnl', 'returns',
-                 'utility', 'positions', 'portfolio_daily_returns']
+    # __slots__ = ['start_cash', 'portfolio_value', 'positions_values', '_cash_flow', 'pnl', 'returns',
+    #              'utility', 'positions', 'portfolio_daily_returns']
 
     def __init__(self, capital_base=0.0):
         self.portfolio_value = capital_base
@@ -44,7 +46,7 @@ class Portfolio(object):
 
     @cash_flow.setter
     def cash_flow(self, capital):
-        return capital
+        self._cash_flow = capital
 
     def __getattr__(self, item):
         return self.__slots__[item]
@@ -89,3 +91,9 @@ class Portfolio(object):
 
     def record_value(self, session_ix):
         self.portfolio_daily_value[session_ix] = self.portfolio_value
+
+
+if __name__ == '__main__':
+
+    portfolio = Portfolio()
+    print('portfolio', portfolio)

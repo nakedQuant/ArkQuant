@@ -10,6 +10,8 @@ from functools import reduce
 import pandas as pd, operator
 from gateway.asset.assets import Asset
 from _calendar.trading_calendar import calendar
+from gateway.asset._finder import AssetFinder
+
 
 __all__ = [
     'UnionRestrictions',
@@ -204,3 +206,10 @@ class UnionRestrictions(Restrictions):
             operator.and_,
             (r.is_restricted(assets, dt) for r in self.sub_restrictions)
         )
+
+
+if __name__ == '__main__':
+
+    finder = AssetFinder()
+    restriction = SecurityListRestrictions(finder)
+    print('restriction', restriction)

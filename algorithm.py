@@ -25,8 +25,8 @@ from finance.control import (
 )
 from finance.execution import MarketOrder
 from finance.ledger import Ledger
-from finance.oms.blotter import SimulationBlotter
-from finance.oms.creator import OrderCreator
+from finance.broker.blotter import SimulationBlotter
+from finance.broker.creator import OrderCreator
 from finance.restrictions import NoRestrictions, UnionRestrictions
 from finance.slippage import NoSlippage
 from gateway.asset.assets import Equity
@@ -745,7 +745,7 @@ class TradingAlgorithm(object):
     initialized={initialized},
     slippage_models={slippage_models},
     commission_models={commission_models},
-    oms={oms},
+    broker={broker},
     recorded_vars={recorded_vars})
 """.strip().format(class_name=self.__class__.__name__,
                    capital_base=self.sim_params.capital_base,

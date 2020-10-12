@@ -5,6 +5,8 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
+from pipe import Event
+from gateway.asset.assets import Equity
 
 
 class Transaction(object):
@@ -66,3 +68,15 @@ def create_transaction(order, commission):
         cost=cost
     )
     return transaction
+
+
+if __name__ == '__main__':
+
+    asset = Equity('600000')
+    event = Event(asset, 'pipeline')
+    amount = 10000
+    price = 9.61
+    cost = 40
+    dt = '2020-10-12 14:59'
+    txn = Transaction(event, amount, price, cost, dt)
+    print('txn', txn)

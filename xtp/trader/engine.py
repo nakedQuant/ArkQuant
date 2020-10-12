@@ -335,7 +335,7 @@ class OmsEngine(BaseEngine):
 
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine):
         """"""
-        super(OmsEngine, self).__init__(main_engine, event_engine, "oms")
+        super(OmsEngine, self).__init__(main_engine, event_engine, "broker")
 
         self.ticks: Dict[str, TickData] = {}
         self.orders: Dict[str, OrderData] = {}

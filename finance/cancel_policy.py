@@ -9,6 +9,8 @@ from abc import ABC, abstractmethod
 import numpy as np
 from _calendar.trading_calendar import calendar
 
+__all__ = ['ComposedCancel', 'EODCancel', 'NeverCancel', 'ExtraCancel']
+
 
 class CancelPolicy(ABC):
     """
@@ -90,3 +92,8 @@ class ExtraCancel(CancelPolicy):
         # 保证file update
         black_list = self._load_file()
         return order.asset in black_list
+
+
+if __name__ == '__main__':
+
+    no_cancel = NeverCancel()

@@ -5,9 +5,11 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-from abc import ABC,abstractmethod
+from abc import ABC, abstractmethod
 import numpy as np, pandas as pd
 from functools import lru_cache
+
+__all__ = ['NoCommission', 'Commission']
 
 
 class CommissionModel(ABC):
@@ -85,3 +87,9 @@ class Commission(CommissionModel):
         rate = self.calculate_rate(order.asset, direction, order.ticker)
         txn_cost = capital * rate if capital > base_capital else base_capital * rate
         return txn_cost
+
+
+if __name__ == '__main__':
+
+    commission = Commission()
+    print('commission', commission)

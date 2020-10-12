@@ -8,14 +8,16 @@ Created on Tue Mar 12 15:37:47 2019
 from collections import defaultdict, OrderedDict
 from functools import partial
 from finance.position import Position
+from gateway.driver.data_portal import DataPortal
+
+__all__ = ['PositionTracker']
 
 
 class PositionTracker(object):
     """
         track the change of position
     """
-    def __init__(self,
-                 data_portal):
+    def __init__(self, data_portal):
         self.data_portal = data_portal
         self.positions = OrderedDict()
         # 根据时间记录关闭的交易
@@ -113,3 +115,10 @@ class PositionTracker(object):
         """
         rights = self.data_portal.load_rights_for_sid(asset.sid, dt)
         return rights
+
+
+if __name__ == '__main__':
+
+    data_portal = DataPortal()
+    tracker = PositionTracker(data_portal)
+    print('tracker', tracker)

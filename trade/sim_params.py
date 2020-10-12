@@ -171,7 +171,7 @@ def create_simulation_parameters(year=2006,
                                  capital_base=float("1.0e5"),
                                  num_days=None,
                                  data_frequency='daily',
-                                 emission_rate='daily',
+                                 # emission_rate='daily',
                                  trading_calendar=None):
 
     if not trading_calendar:
@@ -196,7 +196,7 @@ def create_simulation_parameters(year=2006,
         end_session=end,
         capital_base=capital_base,
         data_frequency=data_frequency,
-        emission_rate=emission_rate,
+        # emission_rate=emission_rate,
         trading_calendar=trading_calendar,
     )
 

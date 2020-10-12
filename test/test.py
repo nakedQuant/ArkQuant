@@ -2669,10 +2669,10 @@
 #         组合不同算法---策略
 #         返回 --- Order对象
 #     """
-#     def __init__(self,algo_mappings,data_portal,oms,assign_policy):
+#     def __init__(self,algo_mappings,data_portal,broker,assign_policy):
 #         self.data_portal = data_portal
 #         self.postion_allocation = assign_policy
-#         self.oms = oms
+#         self.broker = broker
 #         self.loaders = [self.get_loader_class(key,args) for key,args in algo_mappings.items()]
 #
 #     @staticmethod
@@ -2733,19 +2733,19 @@
 #         assets_of_exit = self.compute_withdraw(dt)
 #         positions = metrics_tracker.positions
 #         if assets_of_exit:
-#             [self.oms.order(asset,
+#             [self.broker.order(asset,
 #                                 positions[asset].amount)
 #                                 for asset in assets_of_exit]
-#             cleanup_transactions,additional_commissions = self.oms.get_transaction(self.data_portal)
+#             cleanup_transactions,additional_commissions = self.broker.get_transaction(self.data_portal)
 #             return cleanup_transactions,additional_commissions
 #
 #     def get_layout(self,dt,metrics_tracker):
 #         asset = self.compute_algorithm(dt,metrics_tracker)
 #         avaiable_cash = metrics_tracker.portfolio.cash
-#         [self.oms.order(asset,
+#         [self.broker.order(asset,
 #                             self._calculate_order_amount(asset,dt,avaiable_cash))
 #                             for asset in asset]
-#         transactions,new_commissions = self.oms.get_transaction(self.data_portal)
+#         transactions,new_commissions = self.broker.get_transaction(self.data_portal)
 #         return transactions,new_commissions
 #
 #
@@ -5259,7 +5259,7 @@ from six.moves.urllib_error import HTTPError
 #         for dts in tick_interval:
 #             # 根据设立时间去定义订单
 #             order = TickerOrder(asset,dts,min_base_cost)
-#             self.oms(order, eager=True)
+#             self.broker(order, eager=True)
 #
 #     def call(self, capital, asset,raw,min_base_cost):
 #         """执行前固化的订单买入计划"""
@@ -5277,7 +5277,7 @@ from six.moves.urllib_error import HTTPError
 #     def _infer_order(self,capital_dct):
 #         """基于时点执行买入订单,时间为进行入OMS系统的时间 --- 为了衔接卖出与买入"""
 #         orders = [RealtimeOrder(asset,capital) for asset,capital in capital_dct]
-#         self.oms(orders)
+#         self.broker(orders)
 #
 #     def _put_impl(self,position,raw,min_base_cost):
 #         """按照市价竞价"""
@@ -5762,20 +5762,20 @@ from six.moves.urllib_error import HTTPError
 #     # Remove open orders for any sids that have reached their auto close
 #     # date. These orders get processed immediately because otherwise they
 #     # would not be processed until the first bar of the next day.
-#     oms = algo.oms
+#     broker = algo.broker
 #     assets_to_cancel = [
-#         asset for asset in oms.open_orders
+#         asset for asset in broker.open_orders
 #         if past_auto_close_date(asset)
 #     ]
 #     for asset in assets_to_cancel:
-#         oms.cancel_all_orders_for_asset(asset)
+#         broker.cancel_all_orders_for_asset(asset)
 #
 #     # Make a copy here so that we are not modifying the list that is being
 #     # iterated over.
-#     for order in copy(oms.new_orders):
+#     for order in copy(broker.new_orders):
 #         if order.status == ORDER_STATUS.CANCELLED:
 #             metrics_tracker.process_order(order)
-#             oms.new_orders.remove(order)
+#             broker.new_orders.remove(order)
 
 # cash_utilization = 1 - (cash_blance /capital_blance).mean()
 
@@ -8123,10 +8123,10 @@ from itertools import product
 #         1.判断已经持仓是否卖出
 #         2.基于持仓限制确定是否执行买入操作
 #     """
-#     def __init__(self,algo_mappings,data_portal,oms,assign_policy):
+#     def __init__(self,algo_mappings,data_portal,broker,assign_policy):
 #         self.data_portal = data_portal
 #         self.postion_allocation = assign_policy
-#         self.oms = oms
+#         self.broker = broker
 #         self.loaders = [self.get_loader_class(key,args) for key,args in algo_mappings.items()]
 #
 #     @staticmethod
@@ -8187,19 +8187,19 @@ from itertools import product
 #         assets_of_exit = self.compute_withdraw(dt)
 #         positions = metrics_tracker.positions
 #         if assets_of_exit:
-#             [self.oms.order(asset,
+#             [self.broker.order(asset,
 #                                 positions[asset].amount)
 #                                 for asset in assets_of_exit]
-#             cleanup_transactions,additional_commissions = self.oms.get_transaction(self.data_portal)
+#             cleanup_transactions,additional_commissions = self.broker.get_transaction(self.data_portal)
 #             return cleanup_transactions,additional_commissions
 #
 #     def get_layout(self,dt,metrics_tracker):
 #         asset = self.compute_algorithm(dt,metrics_tracker)
 #         avaiable_cash = metrics_tracker.portfolio.cash
-#         [self.oms.order(asset,
+#         [self.broker.order(asset,
 #                             self._calculate_order_amount(asset,dt,avaiable_cash))
 #                             for asset in asset]
-#         transactions,new_commissions = self.oms.get_transaction(self.data_portal)
+#         transactions,new_commissions = self.broker.get_transaction(self.data_portal)
 #         return transactions,new_commissions
 #
 #     def _pop_params(cls, kwargs):
@@ -8435,20 +8435,20 @@ from itertools import product
 #             # called every tick (minute or day).
 #             algo.on_dt_changed(dt_to_use)
 #
-#             oms = algo.oms
+#             broker = algo.broker
 #
 #             # handle any transactions and commissions coming out new orders
 #             # placed in the last bar
 #             new_transactions, new_commissions, closed_orders = \
-#                 oms.get_transactions(current_data)
+#                 broker.get_transactions(current_data)
 #
-#             oms.prune_orders(closed_orders)
+#             broker.prune_orders(closed_orders)
 #
 #             for transaction in new_transactions:
 #                 metrics_tracker.process_transaction(transaction)
 #
 #                 # since this order was modified, record it
-#                 order = oms.orders[transaction.order_id]
+#                 order = broker.orders[transaction.order_id]
 #                 metrics_tracker.process_order(order)
 #
 #             for commission in new_commissions:
@@ -8456,10 +8456,10 @@ from itertools import product
 #
 #             handle_data(algo, current_data, dt_to_use)
 #
-#             # grab any new orders from the oms, then clear the list.
+#             # grab any new orders from the broker, then clear the list.
 #             # this includes cancelled orders.
-#             new_orders = oms.new_orders
-#             oms.new_orders = []
+#             new_orders = broker.new_orders
+#             broker.new_orders = []
 #
 #             # if we have any new orders, record them so that we know
 #             # in what perf period they were placed.
@@ -8486,14 +8486,14 @@ from itertools import product
 #             # handle any splits that impact any positions or any open orders.
 #             assets_we_care_about = (
 #                 viewkeys(metrics_tracker.positions) |
-#                 viewkeys(algo.oms.open_orders)
+#                 viewkeys(algo.broker.open_orders)
 #             )
 #
 #             if assets_we_care_about:
 #                 splits = data_portal.get_splits(assets_we_care_about,
 #                                                 midnight_dt)
 #                 if splits:
-#                     algo.oms.process_splits(splits)
+#                     algo.broker.process_splits(splits)
 #                     metrics_tracker.handle_splits(splits)
 #
 #         def on_exit():
@@ -8516,7 +8516,7 @@ from itertools import product
 #
 #             if algo.data_frequency == 'minute':
 #                 def execute_order_cancellation_policy():
-#                     algo.oms.execute_cancel_policy(SESSION_END)
+#                     algo.broker.execute_cancel_policy(SESSION_END)
 #
 #                 def calculate_minute_capital_changes(dt):
 #                     # process any capital changes that came between the last
@@ -8595,20 +8595,20 @@ from itertools import product
 #         # Remove open orders for any sids that have reached their auto close
 #         # date. These orders get processed immediately because otherwise they
 #         # would not be processed until the first bar of the next day.
-#         oms = algo.oms
+#         broker = algo.broker
 #         assets_to_cancel = [
-#             asset for asset in oms.open_orders
+#             asset for asset in broker.open_orders
 #             if past_auto_close_date(asset)
 #         ]
 #         for asset in assets_to_cancel:
-#             oms.cancel_all_orders_for_asset(asset)
+#             broker.cancel_all_orders_for_asset(asset)
 #
 #         # Make a copy here so that we are not modifying the list that is being
 #         # iterated over.
-#         for order in copy(oms.new_orders):
+#         for order in copy(broker.new_orders):
 #             if order.status == ORDER_STATUS.CANCELLED:
 #                 metrics_tracker.process_order(order)
-#                 oms.new_orders.remove(order)
+#                 broker.new_orders.remove(order)
 #
 #     def _get_daily_message(self, dt, algo, metrics_tracker):
 #         """
@@ -8790,20 +8790,20 @@ from dateutil.relativedelta import relativedelta
 #     # called every tick (minute or day).
 #     algo.on_dt_changed(dt_to_use)
 #
-#     oms = algo.oms
+#     broker = algo.broker
 #
 #     # handle any transactions and commissions coming out new orders
 #     # placed in the last bar
 #     new_transactions, new_commissions, closed_orders = \
-#         oms.get_transactions(current_data)
+#         broker.get_transactions(current_data)
 #
-#     oms.prune_orders(closed_orders)
+#     broker.prune_orders(closed_orders)
 #
 #     for transaction in new_transactions:
 #         metrics_tracker.process_transaction(transaction)
 #
 #         # since this order was modified, record it
-#         order = oms.orders[transaction.order_id]
+#         order = broker.orders[transaction.order_id]
 #         metrics_tracker.process_order(order)
 #
 #     for commission in new_commissions:
@@ -8811,10 +8811,10 @@ from dateutil.relativedelta import relativedelta
 #
 #     handle_data(algo, current_data, dt_to_use)
 #
-#     # grab any new orders from the oms, then clear the list.
+#     # grab any new orders from the broker, then clear the list.
 #     # this includes cancelled orders.
-#     new_orders = oms.new_orders
-#     oms.new_orders = []
+#     new_orders = broker.new_orders
+#     broker.new_orders = []
 #
 #     # if we have any new orders, record them so that we know
 #     # in what perf period they were placed.
@@ -8841,14 +8841,14 @@ from dateutil.relativedelta import relativedelta
 #     # handle any splits that impact any positions or any open orders.
 #     assets_we_care_about = (
 #         viewkeys(metrics_tracker.positions) |
-#         viewkeys(algo.oms.open_orders)
+#         viewkeys(algo.broker.open_orders)
 #     )
 #
 #     if assets_we_care_about:
 #         splits = data_portal.get_splits(assets_we_care_about,
 #                                         midnight_dt)
 #         if splits:
-#             algo.oms.process_splits(splits)
+#             algo.broker.process_splits(splits)
 #             metrics_tracker.handle_splits(splits)
 #
 

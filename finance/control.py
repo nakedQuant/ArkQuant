@@ -185,3 +185,9 @@ class LongOnly(TradingControl):
         holding_amount = sum([p.amount for p in portfolio.positions if p.sid == asset.sid])
         if holding_amount + amount < 0:
             self.handle_violation(asset, amount, algo_datetime)
+
+
+if __name__ == '__main__':
+
+    control = MaxOrderSize()
+    print('control', control)
