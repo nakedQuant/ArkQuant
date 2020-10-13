@@ -10,12 +10,14 @@ import numpy as np, pandas as pd
 from functools import lru_cache
 from abc import ABC, abstractmethod
 from finance.order import Order
-from finance.broker import OrderData
+from broker import OrderData
 from finance.cancel_policy import ComposedCancel
-from utils.dt_utilty import locate_pos
+from util.dt_utilty import locate_pos
+
+__all__ = ['OrderSimulation']
 
 
-class BaseCreator(ABC):
+class BaseSimulation(ABC):
     """
         1 存在价格笼子
         2 无跌停限制但是存在竞价机制（10%基准价格），以及临时停盘制度
@@ -58,7 +60,7 @@ class BaseCreator(ABC):
         raise NotImplementedError()
 
 
-class OrderCreator(BaseCreator):
+class OrderSimulation(BaseSimulation):
     """
         capital or amount --- transform to Order object
         a. calculate amount to determin size
@@ -243,3 +245,8 @@ class OrderCreator(BaseCreator):
         # simulate transactions
         final_orders = self._finalize(orders, order_data)
         return final_orders
+
+
+if __name__ == '__main__':
+
+    order_creator = OrderSimulation()

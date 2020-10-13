@@ -8,16 +8,18 @@ Created on Tue Mar 12 15:37:47 2019
 import pandas as pd, numpy as np
 from finance.transaction import create_transaction
 
+__all__ = ['BlotterSimulation']
 
-class SimulationBlotter(object):
+
+class BlotterSimulation(object):
     """
         transform orders which are simulated by gen module to transactions
         撮合成交逻辑基于时间或者价格
     """
     def __init__(self,
-                 generator,
+                 gen,
                  sim_delay=1):
-        self._creator = generator
+        self._creator = gen
         self.delay = sim_delay
 
     def create_bulk_transactions(self, orders):
@@ -94,3 +96,8 @@ class SimulationBlotter(object):
         # 计算效率
         # c_utility = sum([txn.amount for txn in c_transactions]) / sum(c_sizes)
         return p_transactions, c_transactions
+
+
+if __name__ == '__main__':
+
+    blotter = BlotterSimulation()

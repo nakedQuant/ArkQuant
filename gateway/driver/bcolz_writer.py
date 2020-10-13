@@ -8,7 +8,7 @@ Created on Tue Mar 12 15:37:47 2019
 import struct, pandas as pd, bcolz, numpy as np, os, glob
 from abc import ABC, abstractmethod
 from gateway.driver import BcolzDir, OHLC_RATIO, Num
-from utils.dt_utilty import normalize_date
+from util.dt_utilty import normalize_date
 
 BcolzMinuteFields = ['ticker', 'open', 'high', 'low', 'close', 'amount', 'volume']
 BcolzDailyFields = ['trade_dt', 'open', 'high', 'low', 'close', 'amount', 'volume']

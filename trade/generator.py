@@ -10,7 +10,7 @@ from multiprocessing import Pool
 from functools import partial
 
 
-class Broker(object):
+class Generator(object):
     """
         combine simpleEngine and blotter module
         engine --- asset --- orders --- transactions

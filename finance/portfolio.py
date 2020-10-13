@@ -6,7 +6,7 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 import pandas as pd
-from utils.wrapper import _deprecated_getitem_method
+from util.wrapper import _deprecated_getitem_method
 from _calendar.trading_calendar import calendar
 
 __all__ = ['Portfolio']
@@ -38,7 +38,7 @@ class Portfolio(object):
         self.positions = None
         self._cash_flow = 0.0
         self.start_cash = capital_base - self.cash_flow
-        self.portfolio_daily_value = pd.Series([], index=calendar.all_sessions)
+        self.portfolio_daily_value = pd.Series(index=calendar.all_sessions, dtype='float64')
 
     @property
     def cash_flow(self):

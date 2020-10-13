@@ -12,7 +12,7 @@ from indicator import (
      EMA,
      ExponentialMovingAverage
 )
-from utils.mathmatics import zoom
+from util.mathmatics import zoom
 # from gateway.driver._ext_vwap import  VWAP
 # from gateway.driver.data_portal import DataPortal
 # from gateway.asset.assets import Equity, Convertible, Fund

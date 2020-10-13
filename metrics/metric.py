@@ -8,7 +8,7 @@ Created on Sun Feb 17 16:11:34 2019
 import numpy as np, operator as op
 from toolz import groupby
 from gateway.driver.benchmark import get_benchmark_returns
-from risk.metrics.exposure import alpha_beta_aligned
+from metrics.exposure import alpha_beta_aligned
 
 
 class _ConstantCumulativeRiskMetric(object):

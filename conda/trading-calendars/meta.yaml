@@ -40,7 +40,7 @@ requirements:
 test:
   imports:
     - trading_calendars
-    - trading_calendars.utils
+    - trading_calendars.util
 
 about:
   home: https://github.com/quantopian/trading_calendars

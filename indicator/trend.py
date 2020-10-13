@@ -11,7 +11,7 @@ from indicator import (
     BaseFeature,
     EMA
 )
-from utils.mathmatics import zoom, coef2deg, _fit_poly
+from util.mathmatics import zoom, coef2deg, _fit_poly
 # from gateway.driver.data_portal import DataPortal
 # from gateway.asset.assets import Equity, Convertible, Fund
 

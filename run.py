@@ -7,7 +7,7 @@ Created on Sun Feb 17 16:11:34 2019
 """
 import os, sys, click
 from .algorithm import TradingAlgorithm
-from trade.sim_params import SimulationParameters
+from trade.params import SimulationParameters
 
 __all__ = ['run_algorithm']
 

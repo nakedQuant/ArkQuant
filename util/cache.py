@@ -10,7 +10,7 @@ from distutils import dir_util
 from shutil import rmtree, move
 from tempfile import mkdtemp, NamedTemporaryFile
 import os, pickle, errno, pandas as pd
-from utils.paths import ensure_directory
+from util.paths import ensure_directory
 
 
 class DummyMapping(object):
@@ -168,7 +168,7 @@ class working_file(object):
     @property
     def path(self):
         """Alias for ``name`` to be consistent with
-        :class:`~zipline.utils.cache.working_dir`.
+        :class:`~zipline.util.cache.working_dir`.
         """
         return self._tmpfile.name
 

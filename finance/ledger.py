@@ -10,7 +10,7 @@ from finance.portfolio import Portfolio
 from finance._protocol import Account, MutableView
 from finance.position_tracker import PositionTracker
 from risk.alert import UnionRisk, PositionDrawRisk
-from trade.sim_params import create_simulation_parameters
+from trade.params import create_simulation_parameters
 
 __all__ = ['Ledger']
 
@@ -25,12 +25,10 @@ class Ledger(object):
     __slots__ = ['_portfolio', 'position_tracker', '_processed_transaction', '_previous_total_returns',
                  '_dirty_portfolio', '_synchronized', 'daily_returns_series', 'risk_alert']
 
-    def __init__(self,
-                 sim_params,
-                 risk_models):
+    def __init__(self, sim_params, risk_models):
         """构建可变、不可变的组合、账户"""
         self._portfolio = MutableView(Portfolio(sim_params.capital_base))
-        self.daily_returns_series = pd.Series(np.nan, index=sim_params.sessions)
+        self.daily_returns_series = pd.Series(0.0, index=sim_params.sessions)
         self.position_tracker = PositionTracker()
         self.risk_alert = UnionRisk(risk_models)
         self._processed_transaction = []
@@ -201,6 +199,8 @@ class Ledger(object):
 
 if __name__ == '__main__':
 
+
+    risk = PositionDrawRisk(withdraw=0.2)
     sim_params = create_simulation_parameters()
-    ledger = Ledger(sim_params)
+    ledger = Ledger(sim_params, risk)
     print('ledger', ledger)

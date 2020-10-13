@@ -8,8 +8,8 @@ Created on Sun Feb 17 16:11:34 2019
 import pandas as pd , numpy as np
 from scipy.stats import linregress
 from collections import OrderedDict
-from risk.metrics.utility import _to_pandas, annualization_factor, _adjust_returns, roll
-from risk.metrics.analyzers import annual_return
+from metrics.utility import _to_pandas, annualization_factor, _adjust_returns, roll
+from metrics.analyzers import annual_return
 
 
 def rsquared(x, y):

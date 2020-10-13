@@ -506,7 +506,7 @@
 # #         for subject in self.__subjects:
 # #             if not subject.eof():
 # #                 eof = False
-# #                 smallestDateTime = utils.safe_min(smallestDateTime, subject.peekDateTime())
+# #                 smallestDateTime = util.safe_min(smallestDateTime, subject.peekDateTime())
 # #
 # #         # Dispatch realtime subjects and those subjects with the lowest datetime.
 # #         if not eof:
@@ -9481,7 +9481,7 @@ from dateutil.relativedelta import relativedelta
 #     return selector
 
 """
-    trading_calendar: zipline.utils._calendar.exchange_calendar.TradingCalendar
+    trading_calendar: zipline.util._calendar.exchange_calendar.TradingCalendar
         The _calendar instance used to provide minute->session information.
     first_trading_day : pd.Timestamp
         The first trading day for the nakedquant.
@@ -10730,4 +10730,10 @@ print(test)
 # print('files', files)
 # LRU 缓存只在当你想要重用之前计算的结果时使用
 from functools import lru_cache
+
+# chop off any minutes or hours on the given start and end dates,
+# as we only support session labels here (and we represent session
+# labels as midnight UTC).
+# self._start_session = normalize_date(start_session)
+# self._end_session = normalize_date(end_session)
 

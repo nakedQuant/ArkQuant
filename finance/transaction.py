@@ -11,7 +11,7 @@ from gateway.asset.assets import Equity
 
 class Transaction(object):
 
-    __slots__ = ['event', 'amount', 'price', 'created_dt']
+    __slots__ = ['event', 'amount', 'price', 'cost', 'created_dt']
 
     def __init__(self, event, amount, price, cost, dt):
         self.event = event
@@ -23,14 +23,14 @@ class Transaction(object):
     def __repr__(self):
         template = (
             "{cls}(asset={asset}, dt={dt},"
-            " amount={amount},created_by={created_by}, direction={direction}, price={price}, dt={dt})"
+            " amount={amount},created_by={created_by}, price={price}, dt={dt})"
         )
         return template.format(
             cls=type(self).__name__,
             asset=self.event.asset,
             amount=self.amount,
             created_by=self.event.name,
-            direction=self.direction,
+            # direction=self.direction,
             price=self.price,
             dt=self.created_dt,
         )
@@ -38,8 +38,8 @@ class Transaction(object):
     def __getitem__(self, attr):
         return self.__dict__[attr]
 
-    def __setattr__(self, key, value):
-        raise NotImplementedError('immutable object')
+    # def __setattr__(self, key, value):
+    #     raise NotImplementedError('immutable object')
 
     def __getstate__(self):
         """

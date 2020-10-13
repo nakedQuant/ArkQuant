@@ -6,7 +6,7 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 from gateway.asset.assets import Asset
-from utils.wrapper import _deprecated_getitem_method
+from util.wrapper import _deprecated_getitem_method
 
 __all__ = [
     'MutableView',
@@ -30,7 +30,7 @@ class MutableView(object):
     __slots__ = ['_mutable_view_obj']
 
     def __init__(self, ob):
-        object.__setattr__(self, '_mutable_view_ob', ob)
+        object.__setattr__(self, '_mutable_view_obj', ob)
 
     def __getattr__(self, item):
         return getattr(self._mutable_view_ob, item)
@@ -43,7 +43,7 @@ class MutableView(object):
         return '%s(%r)' % (type(self).__name__, self._mutable_view_ob)
 
 
-class InnerPosition:
+class InnerPosition(object):
     """The real values of a position.
 
     This exists to be owned by both a

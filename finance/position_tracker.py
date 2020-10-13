@@ -12,13 +12,16 @@ from gateway.driver.data_portal import DataPortal
 
 __all__ = ['PositionTracker']
 
+# init data_portal
+data_portal = DataPortal()
+
 
 class PositionTracker(object):
     """
         track the change of position
     """
-    def __init__(self, data_portal):
-        self.data_portal = data_portal
+    def __init__(self):
+        self.portal = data_portal
         self.positions = OrderedDict()
         # 根据时间记录关闭的交易
         self.record_closed_position = defaultdict(list)
@@ -40,7 +43,7 @@ class PositionTracker(object):
             根据深圳证券交易所交易规则，投资者的红股在R+3日自动到账，并可进行交易，股息在R+5日自动到账，
             持股超过1年：税负5%;持股1个月至1年：税负10%;持股1个月以内：税负20%新政实施后，上市公司会先按照5%的最低税率代缴红利税
         """
-        dividend = self.data_portal.load_divdends_for_sid(asset, dt)
+        dividend = self.portal.get_dividends_for_asset(asset, dt)
         try:
             amount_ratio = (dividend['sid_bonus'] + dividend['sid_transfer']) / 10
             cash_ratio = dividend['bonus'] / 10
@@ -86,12 +89,12 @@ class PositionTracker(object):
             position.last_sync_date = dt
 
     def sync_last_prices(self):
-        """update last_sale_price of position"""
+        """update last_sale_price of position --- 第二天更新仓位"""
         get_price = partial(
-                            self.data_portal.get_window_data,
+                            self.portal.get_window,
                             dt=self.update_sync_date,
                             field='close',
-                            days_in_window=0,
+                            days_in_window=-1,
                             frequency='daily'
                             )
         last_sync_prices = get_price(assets=set(self.positions))
@@ -113,12 +116,11 @@ class PositionTracker(object):
             配股机制有点复杂 ， freeze capital
             如果不缴纳款，自动放弃到期除权相当于亏损,在股权登记日卖出，一般的配股缴款起止日为5个交易日
         """
-        rights = self.data_portal.load_rights_for_sid(asset.sid, dt)
+        rights = self.portal.get_rights_for_asset(asset, dt)
         return rights
 
 
 if __name__ == '__main__':
 
-    data_portal = DataPortal()
-    tracker = PositionTracker(data_portal)
+    tracker = PositionTracker()
     print('tracker', tracker)

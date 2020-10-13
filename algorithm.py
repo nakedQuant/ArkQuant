@@ -25,8 +25,8 @@ from finance.control import (
 )
 from finance.execution import MarketOrder
 from finance.ledger import Ledger
-from finance.broker.blotter import SimulationBlotter
-from finance.broker.creator import OrderCreator
+from broker import SimulationBlotter
+from broker.oms import OrderCreator
 from finance.restrictions import NoRestrictions, UnionRestrictions
 from finance.slippage import NoSlippage
 from gateway.asset.assets import Equity
@@ -35,21 +35,20 @@ from gateway.driver.benchmark import (
     get_foreign_benchmark_returns
 )
 from gateway.driver.data_portal import DataPortal
-from gateway.driver.resample import Freq
 from gens.clock import MinuteSimulationClock
 from gens.tradesimulation import AlgorithmSimulator
 from pipe.engine import SimplePipelineEngine
 from risk.allocation import Equal
-from trade.broke import Broker
-from risk.metrics import default_metrics
-from risk.metrics.tracker import MetricsTracker
+from trade.generator import Broker
+from metrics import default_metrics
+from metrics import MetricsTracker
 from risk.alert import UnionRisk, NoRisk
 from risk.manual import PortfolioRisk, Manual
-from utils.api_support import (
+from util.api_support import (
     ZiplineAPI,
 )
-from utils.events import EventManager, Event, Always
-from utils.wrapper import  api_method
+from util.events import EventManager, Event, Always
+from util.wrapper import  api_method
 
 __all__ = ['TradingAlgorithm']
 
@@ -716,10 +715,10 @@ class TradingAlgorithm(object):
         func : callable
             The function to execute when the rule is triggered. ``func`` should
             have the same signature as ``handle_data``.
-        date_rule : zipline.utils.events.EventRule, optional
+        date_rule : zipline.util.events.EventRule, optional
             Rule for the dates on which to execute ``func``. If not
             passed, the function will run every trading day.
-        time_rule : zipline.utils.events.EventRule, optional
+        time_rule : zipline.util.events.EventRule, optional
             Rule for the time at which to execute ``func``. If not passed, the
             function will execute at the end of the first market minute of the
             day.

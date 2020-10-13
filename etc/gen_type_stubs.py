@@ -18,8 +18,8 @@ def main():
         from zipline.finance.cancel_policy import CancelPolicy
         from zipline.pipe import Pipeline
         from zipline.protocol import Order
-        from zipline.utils.events import EventRule
-        from zipline.utils.security_list import SecurityList
+        from zipline.util.events import EventRule
+        from zipline.util.security_list import SecurityList
 
 
         """))

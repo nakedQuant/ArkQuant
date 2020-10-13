@@ -129,7 +129,7 @@ class Parallel(object):
 
 class ApplyAsyncResult(object):
     """An object that boxes results for calls to
-    :meth:`~zipline.utils.pool.SequentialPool.apply_async`.
+    :meth:`~zipline.util.pool.SequentialPool.apply_async`.
 
     Parameters
     ----------
@@ -162,7 +162,7 @@ class ApplyAsyncResult(object):
 
         Notes
         -----
-        In the :class:`~zipline.utils.pool.SequentialPool` case, this is always
+        In the :class:`~zipline.util.pool.SequentialPool` case, this is always
         ``True``.
         """
         return True
@@ -172,9 +172,9 @@ class ApplyAsyncResult(object):
 
         Notes
         -----
-        In the :class:`~zipline.utils.pool.SequentialPool` case, this is a nop
+        In the :class:`~zipline.util.pool.SequentialPool` case, this is a nop
         because the function is computed eagerly in the same thread as the
-        call to :meth:`~zipline.utils.pool.SequentialPool.apply_async`.
+        call to :meth:`~zipline.util.pool.SequentialPool.apply_async`.
         """
         pass
 

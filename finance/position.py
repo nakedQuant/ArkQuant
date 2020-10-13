@@ -35,7 +35,7 @@ class Position(object):
         )
         self.inner_position = inner
         self.event = event
-        self.position_returns = pd.Series([], index=calendar.all_sessions)
+        self.position_returns = pd.Series(index=calendar.all_sessions, dtype='float64')
         self._closed = False
 
     @property
@@ -63,8 +63,8 @@ class Position(object):
     def __getattr__(self, item):
         return getattr(self.inner_position, item)
 
-    def __setattr__(self, key, value):
-        setattr(self.inner_position, key, value)
+    # def __setattr__(self, key, value):
+    #     setattr(self.inner_position, key, value)
 
     def handle_split(self, amount_ratio, cash_ratio):
         """

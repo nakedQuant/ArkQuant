@@ -7,7 +7,7 @@ Created on Tue Mar 12 15:37:47 2019
 """
 import os, inspect, numpy as np, pandas as pd, logging
 from copy import deepcopy
-from utils.wrapper import  ignore_pandas_nan_categorical_warning
+from util.wrapper import  ignore_pandas_nan_categorical_warning
 
 
 def vectorized_is_element(array, choices):
