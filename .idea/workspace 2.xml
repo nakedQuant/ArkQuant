@@ -1,0 +1,1734 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="58776063-90bb-4b63-9ec1-a830de419d63" name="Default Changelist" comment="revise pipeline (ump) and finance module">
+      <change afterPath="$PROJECT_DIR$/broker/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/broker/blotter.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/broker/oms.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/metrics/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/metrics/analyzers.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/metrics/exposure.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/metrics/metric.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/metrics/similarity.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/metrics/tearsheet.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/metrics/tracker.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/metrics/utility.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/trade/params.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/algorithm.py" beforeDir="false" afterPath="$PROJECT_DIR$/algorithm.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/conda/trading-calendars/meta.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/conda/trading-calendars/meta.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/etc/gen_type_stubs.py" beforeDir="false" afterPath="$PROJECT_DIR$/etc/gen_type_stubs.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/finance/_protocol.py" beforeDir="false" afterPath="$PROJECT_DIR$/finance/_protocol.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/finance/broker/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/finance/broker/blotter.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/finance/broker/creator.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/finance/ledger.py" beforeDir="false" afterPath="$PROJECT_DIR$/finance/ledger.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/finance/portfolio.py" beforeDir="false" afterPath="$PROJECT_DIR$/finance/portfolio.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/finance/position.py" beforeDir="false" afterPath="$PROJECT_DIR$/finance/position.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/finance/position_tracker.py" beforeDir="false" afterPath="$PROJECT_DIR$/finance/position_tracker.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/finance/transaction.py" beforeDir="false" afterPath="$PROJECT_DIR$/finance/transaction.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gateway/driver/bcolz_writer.py" beforeDir="false" afterPath="$PROJECT_DIR$/gateway/driver/bcolz_writer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gens/tradesimulation.py" beforeDir="false" afterPath="$PROJECT_DIR$/gens/tradesimulation.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/indicator/technic.py" beforeDir="false" afterPath="$PROJECT_DIR$/indicator/technic.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/indicator/trend.py" beforeDir="false" afterPath="$PROJECT_DIR$/indicator/trend.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/risk/metrics/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/risk/metrics/analyzers.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/risk/metrics/exposure.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/risk/metrics/metric.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/risk/metrics/similarity.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/risk/metrics/tearsheet.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/risk/metrics/tracker.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/risk/metrics/utility.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/run.py" beforeDir="false" afterPath="$PROJECT_DIR$/run.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/database/sqlite_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/database/sqlite_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/trade/__doc__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/trade/algo_threading.py" beforeDir="false" afterPath="$PROJECT_DIR$/util/algo_threading.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/trade/broke.py" beforeDir="false" afterPath="$PROJECT_DIR$/trade/generator.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/trade/sim_params.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/util/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/api_support.py" beforeDir="false" afterPath="$PROJECT_DIR$/util/api_support.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/argcheck.py" beforeDir="false" afterPath="$PROJECT_DIR$/util/argcheck.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/boost.py" beforeDir="false" afterPath="$PROJECT_DIR$/util/boost.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/cache.py" beforeDir="false" afterPath="$PROJECT_DIR$/util/cache.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/context_tricks.py" beforeDir="false" afterPath="$PROJECT_DIR$/util/context_tricks.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/dt_utilty.py" beforeDir="false" afterPath="$PROJECT_DIR$/util/dt_utilty.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/dtype_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/util/dtype_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/events.py" beforeDir="false" afterPath="$PROJECT_DIR$/util/events.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/extensions.py" beforeDir="false" afterPath="$PROJECT_DIR$/util/extensions.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/formatting.py" beforeDir="false" afterPath="$PROJECT_DIR$/util/formatting.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/input_validation.py" beforeDir="false" afterPath="$PROJECT_DIR$/util/input_validation.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/math_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/util/math_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/mathmatics.py" beforeDir="false" afterPath="$PROJECT_DIR$/util/mathmatics.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/paths.py" beforeDir="false" afterPath="$PROJECT_DIR$/util/paths.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/preprocess.py" beforeDir="false" afterPath="$PROJECT_DIR$/util/preprocess.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/progress.py" beforeDir="false" afterPath="$PROJECT_DIR$/util/progress.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/register.py" beforeDir="false" afterPath="$PROJECT_DIR$/util/register.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/remove.py" beforeDir="false" afterPath="$PROJECT_DIR$/util/remove.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/schedule.py" beforeDir="false" afterPath="$PROJECT_DIR$/util/schedule.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/utility.py" beforeDir="false" afterPath="$PROJECT_DIR$/util/utility.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/weak_ref.py" beforeDir="false" afterPath="$PROJECT_DIR$/util/weak_ref.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/wrapper.py" beforeDir="false" afterPath="$PROJECT_DIR$/util/wrapper.py" afterDir="false" />
+    </list>
+    <list id="7e0d8154-6bf2-4e3d-8473-25cd0283845c" name="Revert &quot;拆分graph和simulation&quot;" comment="Revert &quot;拆分graph和simulation&quot;&#10;&#10;This reverts commit 0540e3bc" />
+    <list id="ea7d37a4-fa11-4274-a24d-954c4999d61e" name="Revert: 拆分graph和simulation" comment="" />
+    <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="DatabaseView">
+    <option name="SHOW_INTERMEDIATE" value="true" />
+    <option name="GROUP_DATA_SOURCES" value="true" />
+    <option name="GROUP_SCHEMA" value="true" />
+    <option name="GROUP_CONTENTS" value="false" />
+    <option name="SORT_POSITIONED" value="false" />
+    <option name="SHOW_EMPTY_GROUPS" value="false" />
+    <option name="AUTO_SCROLL_FROM_SOURCE" value="false" />
+    <option name="HIDDEN_KINDS">
+      <set />
+    </option>
+    <expand />
+    <select />
+  </component>
+  <component name="FileEditorManager">
+    <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/trade/params.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="1405">
+              <caret line="97" column="9" selection-start-line="97" selection-start-column="9" selection-end-line="97" selection-end-column="9" />
+              <folding>
+                <element signature="e#108#127#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/test/test.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="663">
+              <caret line="10737" column="49" selection-start-line="10737" selection-start-column="49" selection-end-line="10737" selection-end-column="49" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/gens/tradesimulation.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="629">
+              <caret line="117" selection-start-line="117" selection-end-line="117" />
+              <folding>
+                <element signature="e#109#128#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/broker/blotter.py">
+          <provider selected="true" editor-type-id="text-editor" />
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/broker/oms.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="240">
+              <caret line="16" column="27" selection-start-line="16" selection-start-column="27" selection-end-line="16" selection-end-column="27" />
+              <folding>
+                <element signature="e#109#136#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/trade/generator.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="-177">
+              <caret line="12" column="15" selection-start-line="12" selection-start-column="15" selection-end-line="12" selection-end-column="15" />
+              <folding>
+                <element signature="e#109#136#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/run.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state>
+              <folding>
+                <element signature="e#108#129#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/metrics/analyzers.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="-1051">
+              <folding>
+                <element signature="e#108#140#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/finance/ledger.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="180">
+              <caret line="12" column="53" lean-forward="true" selection-start-line="12" selection-end-line="13" />
+              <folding>
+                <element signature="e#109#151#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/opt/grid.py">
+          <provider selected="true" editor-type-id="text-editor" />
+        </entry>
+      </file>
+    </leaf>
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Jupyter Notebook" />
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
+  <component name="FindInProjectRecents">
+    <findStrings>
+      <find>defaultdict</find>
+      <find>resize_rule</find>
+      <find>lru_cache</find>
+      <find>_pricing_reader</find>
+      <find>_get_history_sliding_window</find>
+      <find>asset_finder</find>
+      <find>get_fetcher_assets</find>
+      <find>get_all_assets</find>
+      <find>resample_rule</find>
+      <find>transfer_to_timestamp</find>
+      <find>stochastic</find>
+      <find>datetime</find>
+      <find>sema</find>
+      <find>holiday_sessions</find>
+      <find>ExponentialMovingAverage</find>
+      <find>PVT</find>
+      <find>SMI</find>
+      <find>VCK</find>
+      <find>MFI</find>
+      <find>gap</find>
+      <find>ER</find>
+      <find>_format_wgt</find>
+      <find>cmo</find>
+      <find>_calculate_weights</find>
+      <find>ins_logic</find>
+      <find>zoom</find>
+      <find>LinearRegression</find>
+      <find>sm</find>
+      <find>Asset</find>
+      <find>data_portal</find>
+    </findStrings>
+    <replaceStrings>
+      <replace />
+    </replaceStrings>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="IdeDocumentHistory">
+    <option name="CHANGED_PATHS">
+      <list>
+        <option value="$PROJECT_DIR$/signal/__init__.py" />
+        <option value="$PROJECT_DIR$/../zipline-master/zipline/pipeline/term.py" />
+        <option value="$PROJECT_DIR$/indicator/technic.py" />
+        <option value="$PROJECT_DIR$/signal/test.py" />
+        <option value="$PROJECT_DIR$/utils/mathmatics.py" />
+        <option value="$PROJECT_DIR$/pipeline/term.py" />
+        <option value="$PROJECT_DIR$/pipeline/domain.py" />
+        <option value="$PROJECT_DIR$/algorithm.py" />
+        <option value="$PROJECT_DIR$/pipe/loader/__init__.py" />
+        <option value="$PROJECT_DIR$/signal/break.py" />
+        <option value="$PROJECT_DIR$/signal/cross.py" />
+        <option value="$PROJECT_DIR$/pipe/graph.py" />
+        <option value="$PROJECT_DIR$/pipe/domain.py" />
+        <option value="$PROJECT_DIR$/pipe/loader/base.py" />
+        <option value="$PROJECT_DIR$/gateway/driver/fundamental_reader.py" />
+        <option value="$PROJECT_DIR$/pipe/loader/loader.py" />
+        <option value="$PROJECT_DIR$/gateway/driver/bcolz_reader.py" />
+        <option value="$PROJECT_DIR$/gateway/driver/adjustArray.py" />
+        <option value="$PROJECT_DIR$/gateway/driver/adjustment_reader.py" />
+        <option value="$PROJECT_DIR$/gateway/driver/history.py" />
+        <option value="$PROJECT_DIR$/gateway/driver/data_portal.py" />
+        <option value="$PROJECT_DIR$/gateway/driver/h5df_daily_bars.py" />
+        <option value="$PROJECT_DIR$/gateway/driver/aggregator.py" />
+        <option value="$PROJECT_DIR$/gateway/driver/benchmark.py" />
+        <option value="$PROJECT_DIR$/pipe/term.py" />
+        <option value="$PROJECT_DIR$/gateway/database/db_schema.py" />
+        <option value="$PROJECT_DIR$/pipe/ump.py" />
+        <option value="$PROJECT_DIR$/pipe/pipeline.py" />
+        <option value="$PROJECT_DIR$/pipe/engine.py" />
+        <option value="$PROJECT_DIR$/gateway/database/__init__.py" />
+        <option value="$PROJECT_DIR$/gateway/asset/_finder.py" />
+        <option value="$PROJECT_DIR$/pipe/__init__.py" />
+        <option value="$PROJECT_DIR$/finance/order.py" />
+        <option value="$PROJECT_DIR$/finance/cancel_policy.py" />
+        <option value="$PROJECT_DIR$/finance/commission.py" />
+        <option value="$PROJECT_DIR$/finance/control.py" />
+        <option value="$PROJECT_DIR$/finance/execution.py" />
+        <option value="$PROJECT_DIR$/finance/restrictions.py" />
+        <option value="$PROJECT_DIR$/finance/slippage.py" />
+        <option value="$PROJECT_DIR$/finance/transaction.py" />
+        <option value="$PROJECT_DIR$/finance/position.py" />
+        <option value="$PROJECT_DIR$/gateway/driver/bar_reader.py" />
+        <option value="$PROJECT_DIR$/test/test.py" />
+        <option value="$PROJECT_DIR$/trade/sim_params.py" />
+        <option value="$PROJECT_DIR$/finance/portfolio.py" />
+        <option value="$PROJECT_DIR$/finance/ledger.py" />
+        <option value="$PROJECT_DIR$/finance/_protocol.py" />
+        <option value="$PROJECT_DIR$/finance/position_tracker.py" />
+        <option value="$PROJECT_DIR$/gens/tradesimulation.py" />
+        <option value="$PROJECT_DIR$/trade/body.py" />
+        <option value="$PROJECT_DIR$/broker/oms.py" />
+      </list>
+    </option>
+  </component>
+  <component name="ProjectConfigurationFiles">
+    <option name="files">
+      <list>
+        <option value="$PROJECT_DIR$/.idea/vcs.xml" />
+        <option value="$PROJECT_DIR$/.idea/modules.xml" />
+        <option value="$PROJECT_DIR$/.idea/other.xml" />
+      </list>
+    </option>
+  </component>
+  <component name="ProjectFrameBounds" extendedState="6">
+    <option name="x" value="1" />
+    <option name="y" value="23" />
+    <option name="width" value="1440" />
+    <option name="height" value="832" />
+  </component>
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectView">
+    <navigator proportions="" version="1">
+      <foldersAlwaysOnTop value="true" />
+    </navigator>
+    <panes>
+      <pane id="ProjectPane">
+        <subPane>
+          <expand>
+            <path>
+              <item name="pxtrade" type="b2602c69:ProjectViewProjectNode" />
+              <item name="nakedquant" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="pxtrade" type="b2602c69:ProjectViewProjectNode" />
+              <item name="nakedquant" type="462c0819:PsiDirectoryNode" />
+              <item name="_calendar" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="pxtrade" type="b2602c69:ProjectViewProjectNode" />
+              <item name="nakedquant" type="462c0819:PsiDirectoryNode" />
+              <item name="broker" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="pxtrade" type="b2602c69:ProjectViewProjectNode" />
+              <item name="nakedquant" type="462c0819:PsiDirectoryNode" />
+              <item name="finance" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="pxtrade" type="b2602c69:ProjectViewProjectNode" />
+              <item name="nakedquant" type="462c0819:PsiDirectoryNode" />
+              <item name="metrics" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="pxtrade" type="b2602c69:ProjectViewProjectNode" />
+              <item name="nakedquant" type="462c0819:PsiDirectoryNode" />
+              <item name="opt" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="pxtrade" type="b2602c69:ProjectViewProjectNode" />
+              <item name="nakedquant" type="462c0819:PsiDirectoryNode" />
+              <item name="risk" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="pxtrade" type="b2602c69:ProjectViewProjectNode" />
+              <item name="nakedquant" type="462c0819:PsiDirectoryNode" />
+              <item name="signal" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="pxtrade" type="b2602c69:ProjectViewProjectNode" />
+              <item name="nakedquant" type="462c0819:PsiDirectoryNode" />
+              <item name="test" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="pxtrade" type="b2602c69:ProjectViewProjectNode" />
+              <item name="nakedquant" type="462c0819:PsiDirectoryNode" />
+              <item name="trade" type="462c0819:PsiDirectoryNode" />
+            </path>
+          </expand>
+          <select />
+        </subPane>
+      </pane>
+      <pane id="Scope" />
+    </panes>
+  </component>
+  <component name="PropertiesComponent">
+    <property name="ASKED_SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
+    <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="add_unversioned_files" value="$PROJECT_DIR$/gateway/spider/__init__.py&#10;true" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />
+    <property name="nodejs_npm_path_reset_for_default_project" value="true" />
+    <property name="settings.editor.selected.configurable" value="configurable.group.project" />
+  </component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$" />
+      <recent name="$PROJECT_DIR$/utils" />
+      <recent name="$PROJECT_DIR$/finance" />
+      <recent name="$PROJECT_DIR$/signal" />
+      <recent name="$PROJECT_DIR$/indicator" />
+    </key>
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/strategy/extra" />
+      <recent name="$PROJECT_DIR$/strategy/indicator" />
+      <recent name="$PROJECT_DIR$/web" />
+      <recent name="$PROJECT_DIR$/gateway/driver" />
+      <recent name="$PROJECT_DIR$/gateway/database" />
+    </key>
+  </component>
+  <component name="RunDashboard">
+    <option name="ruleStates">
+      <list>
+        <RuleState>
+          <option name="name" value="ConfigurationTypeDashboardGroupingRule" />
+        </RuleState>
+        <RuleState>
+          <option name="name" value="StatusDashboardGroupingRule" />
+        </RuleState>
+      </list>
+    </option>
+  </component>
+  <component name="RunManager" selected="Python.tradesimulation">
+    <configuration default="true" type="DjangoTestsConfigurationType">
+      <module name="nkquant" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="TARGET" value="" />
+      <option name="SETTINGS_FILE" value="" />
+      <option name="CUSTOM_SETTINGS" value="false" />
+      <option name="USE_OPTIONS" value="false" />
+      <option name="OPTIONS" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration default="true" type="PyBehaveRunConfigurationType" factoryName="Behave">
+      <module name="nkquant" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="ADDITIONAL_ARGS" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration default="true" type="PyLettuceRunConfigurationType" factoryName="Lettuce">
+      <module name="nkquant" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="ADDITIONAL_ARGS" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration default="true" type="PythonConfigurationType" factoryName="Python">
+      <module name="nkquant" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="true" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="bundle" type="PythonConfigurationType" factoryName="Python">
+      <module name="nkquant" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/gateway/spider" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/gateway/spider/bundle.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="execution" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="nkquant" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/finance" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/finance/execution.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="true" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="initialize" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="nkquant" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/gateway" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/gateway/initialize.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="true" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="ledger" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="nkquant" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/finance" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/finance/ledger.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="sim_params" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="nkquant" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/trade" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/trade/params.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="true" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="tradesimulation" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="nkquant" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/gens" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/gens/tradesimulation.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration default="true" type="Python.FlaskServer">
+      <module name="nkquant" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="launchJavascriptDebuger" value="false" />
+      <method v="2" />
+    </configuration>
+    <configuration default="true" type="Tox" factoryName="Tox">
+      <module name="nkquant" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <method v="2" />
+    </configuration>
+    <configuration default="true" type="tests" factoryName="Doctests">
+      <module name="nkquant" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="" />
+      <option name="CLASS_NAME" value="" />
+      <option name="METHOD_NAME" value="" />
+      <option name="FOLDER_NAME" value="" />
+      <option name="TEST_TYPE" value="TEST_SCRIPT" />
+      <option name="PATTERN" value="" />
+      <option name="USE_PATTERN" value="false" />
+      <method v="2" />
+    </configuration>
+    <configuration default="true" type="tests" factoryName="Nosetests">
+      <module name="nkquant" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="_new_regexPattern" value="&quot;&quot;" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;&quot;" />
+      <option name="_new_targetType" value="&quot;PATH&quot;" />
+      <method v="2" />
+    </configuration>
+    <list>
+      <item itemvalue="Python.bundle" />
+      <item itemvalue="Python.initialize" />
+      <item itemvalue="Python.ledger" />
+      <item itemvalue="Python.execution" />
+      <item itemvalue="Python.sim_params" />
+      <item itemvalue="Python.tradesimulation" />
+    </list>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python.tradesimulation" />
+        <item itemvalue="Python.sim_params" />
+        <item itemvalue="Python.ledger" />
+        <item itemvalue="Python.execution" />
+        <item itemvalue="Python.initialize" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SvnConfiguration">
+    <configuration />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="58776063-90bb-4b63-9ec1-a830de419d63" name="Default Changelist" comment="" />
+      <changelist id="ea7d37a4-fa11-4274-a24d-954c4999d61e" name="Revert: 拆分graph和simulation" comment="" />
+      <created>1585879054817</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1585879054817</updated>
+      <workItem from="1585879056681" duration="10027000" />
+      <workItem from="1586303712957" duration="2283000" />
+      <workItem from="1586480340938" duration="416567000" />
+      <workItem from="1588917974224" duration="808000" />
+      <workItem from="1588919543266" duration="1889000" />
+      <workItem from="1588922423667" duration="230968000" />
+      <workItem from="1589806503418" duration="300027000" />
+      <workItem from="1592804485595" duration="33000" />
+      <workItem from="1592805321794" duration="69815000" />
+      <workItem from="1593233978480" duration="366329000" />
+      <workItem from="1594698679280" duration="605806000" />
+      <workItem from="1597127997296" duration="135674000" />
+      <workItem from="1597652285684" duration="388938000" />
+      <workItem from="1599058857037" duration="4197000" />
+      <workItem from="1599100761349" duration="4812000" />
+      <workItem from="1599130737426" duration="98413000" />
+      <workItem from="1599440178664" duration="18682000" />
+      <workItem from="1599469732259" duration="226284000" />
+      <workItem from="1601213931818" duration="27929000" />
+      <workItem from="1601355607889" duration="138398000" />
+    </task>
+    <task id="LOCAL-00039" summary="对finance的order对象，以及gen，blotter进行重大调整">
+      <created>1596898021020</created>
+      <option name="number" value="00039" />
+      <option name="presentableId" value="LOCAL-00039" />
+      <option name="project" value="LOCAL" />
+      <updated>1596898021020</updated>
+    </task>
+    <task id="LOCAL-00040" summary="调整了controls finance trade gateWay模块">
+      <created>1597059048295</created>
+      <option name="number" value="00040" />
+      <option name="presentableId" value="LOCAL-00040" />
+      <option name="project" value="LOCAL" />
+      <updated>1597059048295</updated>
+    </task>
+    <task id="LOCAL-00041" summary="基于algorithm对整个模块进行调整">
+      <created>1597134856391</created>
+      <option name="number" value="00041" />
+      <option name="presentableId" value="LOCAL-00041" />
+      <option name="project" value="LOCAL" />
+      <updated>1597134856391</updated>
+    </task>
+    <task id="LOCAL-00042" summary="对pipe进行重构 ，Event(asset, name)替换asset对整个工程修改； 研究term修改适配策略">
+      <created>1597249225784</created>
+      <option name="number" value="00042" />
+      <option name="presentableId" value="LOCAL-00042" />
+      <option name="project" value="LOCAL" />
+      <updated>1597249225784</updated>
+    </task>
+    <task id="LOCAL-00043" summary="对pipe里面的term进行修改，不可更改对象，纳入dependence ； term计算节点主要策略文件以及依赖限定不同的term ,组合不同的pipeline ； 剩下的借鉴zipline对pipe模块进行调整完善">
+      <created>1597282326878</created>
+      <option name="number" value="00043" />
+      <option name="presentableId" value="LOCAL-00043" />
+      <option name="project" value="LOCAL" />
+      <updated>1597282326878</updated>
+    </task>
+    <task id="LOCAL-00044" summary=" 完善trade.metrics模块以及调整对应的finance">
+      <created>1597310634339</created>
+      <option name="number" value="00044" />
+      <option name="presentableId" value="LOCAL-00044" />
+      <option name="project" value="LOCAL" />
+      <updated>1597310634339</updated>
+    </task>
+    <task id="LOCAL-00045" summary="对应metric进行修改，主要完善algorithm模块">
+      <created>1597334780679</created>
+      <option name="number" value="00045" />
+      <option name="presentableId" value="LOCAL-00045" />
+      <option name="project" value="LOCAL" />
+      <updated>1597334780679</updated>
+    </task>
+    <task id="LOCAL-00046" summary="修改gateway.db_schema 模块 ， 调整结构">
+      <created>1597393419100</created>
+      <option name="number" value="00046" />
+      <option name="presentableId" value="LOCAL-00046" />
+      <option name="project" value="LOCAL" />
+      <updated>1597393419100</updated>
+    </task>
+    <task id="LOCAL-00047" summary="调整gateway database 模块">
+      <created>1597410905968</created>
+      <option name="number" value="00047" />
+      <option name="presentableId" value="LOCAL-00047" />
+      <option name="project" value="LOCAL" />
+      <updated>1597410905968</updated>
+    </task>
+    <task id="LOCAL-00048" summary="增加risk模块，梳理了关于仓位，以及组合净值预警问题以及处理方法">
+      <created>1597680706824</created>
+      <option name="number" value="00048" />
+      <option name="presentableId" value="LOCAL-00048" />
+      <option name="project" value="LOCAL" />
+      <updated>1597680706824</updated>
+    </task>
+    <task id="LOCAL-00049" summary="增加manual模块 ， 同时修改了调整了risk , ledger等模块 ，">
+      <created>1597752978258</created>
+      <option name="number" value="00049" />
+      <option name="presentableId" value="LOCAL-00049" />
+      <option name="project" value="LOCAL" />
+      <updated>1597752978258</updated>
+    </task>
+    <task id="LOCAL-00050" summary="strategy模块重构 并调整适配term以及pipeline">
+      <created>1597981947263</created>
+      <option name="number" value="00050" />
+      <option name="presentableId" value="LOCAL-00050" />
+      <option name="project" value="LOCAL" />
+      <updated>1597981947263</updated>
+    </task>
+    <task id="LOCAL-00051" summary="修改utils模块 以及 整改strategy">
+      <created>1598191312831</created>
+      <option name="number" value="00051" />
+      <option name="presentableId" value="LOCAL-00051" />
+      <option name="project" value="LOCAL" />
+      <updated>1598191312831</updated>
+    </task>
+    <task id="LOCAL-00052" summary="基于strategy对pipe进行调整适配">
+      <created>1598231399676</created>
+      <option name="number" value="00052" />
+      <option name="presentableId" value="LOCAL-00052" />
+      <option name="project" value="LOCAL" />
+      <updated>1598231399676</updated>
+    </task>
+    <task id="LOCAL-00053" summary="对应 strategy模块内的文件进行相关调整，适配">
+      <created>1598263886783</created>
+      <option name="number" value="00053" />
+      <option name="presentableId" value="LOCAL-00053" />
+      <option name="project" value="LOCAL" />
+      <updated>1598263886783</updated>
+    </task>
+    <task id="LOCAL-00054" summary="对应 strategy模块内的文件进行相关调整，适配">
+      <created>1598263938961</created>
+      <option name="number" value="00054" />
+      <option name="presentableId" value="LOCAL-00054" />
+      <option name="project" value="LOCAL" />
+      <updated>1598263938961</updated>
+    </task>
+    <task id="LOCAL-00055" summary="修改项目名称 测试git地址是否正确">
+      <created>1598265973575</created>
+      <option name="number" value="00055" />
+      <option name="presentableId" value="LOCAL-00055" />
+      <option name="project" value="LOCAL" />
+      <updated>1598265973575</updated>
+    </task>
+    <task id="LOCAL-00056" summary="执行gateway里面的asset_writer --- 争取把assets更新模块打通">
+      <created>1598276688308</created>
+      <option name="number" value="00056" />
+      <option name="presentableId" value="LOCAL-00056" />
+      <option name="project" value="LOCAL" />
+      <updated>1598276688308</updated>
+    </task>
+    <task id="LOCAL-00057" summary="通过靠谱的代理IP以及header组合外加休息时间实现爬取数据">
+      <created>1598356787506</created>
+      <option name="number" value="00057" />
+      <option name="presentableId" value="LOCAL-00057" />
+      <option name="project" value="LOCAL" />
+      <updated>1598356787506</updated>
+    </task>
+    <task id="LOCAL-00058" summary="通过靠谱的代理IP以及header组合外加休息时间实现爬取数据">
+      <created>1598671853966</created>
+      <option name="number" value="00058" />
+      <option name="presentableId" value="LOCAL-00058" />
+      <option name="project" value="LOCAL" />
+      <updated>1598671853966</updated>
+    </task>
+    <task id="LOCAL-00059" summary="spider经过测试OK">
+      <created>1598671994203</created>
+      <option name="number" value="00059" />
+      <option name="presentableId" value="LOCAL-00059" />
+      <option name="project" value="LOCAL" />
+      <updated>1598671994203</updated>
+    </task>
+    <task id="LOCAL-00060" summary="调整spider">
+      <created>1598880771337</created>
+      <option name="number" value="00060" />
+      <option name="presentableId" value="LOCAL-00060" />
+      <option name="project" value="LOCAL" />
+      <updated>1598880771339</updated>
+    </task>
+    <task id="LOCAL-00061" summary="重构了spider所有模块， 增加一个initialize以及rerun">
+      <created>1598974493418</created>
+      <option name="number" value="00061" />
+      <option name="presentableId" value="LOCAL-00061" />
+      <option name="project" value="LOCAL" />
+      <updated>1598974493418</updated>
+    </task>
+    <task id="LOCAL-00062" summary="校验证爬虫数据（修改内部逻辑）以及重构dbwriter">
+      <created>1599036632180</created>
+      <option name="number" value="00062" />
+      <option name="presentableId" value="LOCAL-00062" />
+      <option name="project" value="LOCAL" />
+      <updated>1599036632183</updated>
+    </task>
+    <task id="LOCAL-00063" summary="验证数据解决bug --- replace(method='pad')注意, 变相解决了线程超上线的问题(cannot create new thread)">
+      <created>1599146394153</created>
+      <option name="number" value="00063" />
+      <option name="presentableId" value="LOCAL-00063" />
+      <option name="project" value="LOCAL" />
+      <updated>1599146394154</updated>
+    </task>
+    <task id="LOCAL-00064" summary="验证gateway.driver所有接口 --- 好累啊，改的太多了">
+      <created>1599405297098</created>
+      <option name="number" value="00064" />
+      <option name="presentableId" value="LOCAL-00064" />
+      <option name="project" value="LOCAL" />
+      <updated>1599405297098</updated>
+    </task>
+    <task id="LOCAL-00065" summary="关于daily的接口验证结束">
+      <created>1599471999427</created>
+      <option name="number" value="00065" />
+      <option name="presentableId" value="LOCAL-00065" />
+      <option name="project" value="LOCAL" />
+      <updated>1599471999427</updated>
+    </task>
+    <task id="LOCAL-00066" summary="调整resample module">
+      <created>1599473503757</created>
+      <option name="number" value="00066" />
+      <option name="presentableId" value="LOCAL-00066" />
+      <option name="project" value="LOCAL" />
+      <updated>1599473503757</updated>
+    </task>
+    <task id="LOCAL-00067" summary="测试完善了Sample module">
+      <created>1599484327345</created>
+      <option name="number" value="00067" />
+      <option name="presentableId" value="LOCAL-00067" />
+      <option name="project" value="LOCAL" />
+      <updated>1599484327346</updated>
+    </task>
+    <task id="LOCAL-00068" summary="测试并验证data_portal的daily模块，并梳理了data_portal冗余接口">
+      <created>1599537232411</created>
+      <option name="number" value="00068" />
+      <option name="presentableId" value="LOCAL-00068" />
+      <option name="project" value="LOCAL" />
+      <updated>1599537232412</updated>
+    </task>
+    <task id="LOCAL-00069" summary="测试并验证data_portal --- open_pct 接口 ，--- 引出了精度问题">
+      <created>1599541227481</created>
+      <option name="number" value="00069" />
+      <option name="presentableId" value="LOCAL-00069" />
+      <option name="project" value="LOCAL" />
+      <updated>1599541227481</updated>
+    </task>
+    <task id="LOCAL-00070" summary="优化并修改了data_portal 并 重构了technic">
+      <created>1599811363085</created>
+      <option name="number" value="00070" />
+      <option name="presentableId" value="LOCAL-00070" />
+      <option name="project" value="LOCAL" />
+      <updated>1599811363086</updated>
+    </task>
+    <task id="LOCAL-00071" summary="修改了strategy模块并调整了gateway增加了get_stack_value(tbl, session)接口">
+      <created>1600089379409</created>
+      <option name="number" value="00071" />
+      <option name="presentableId" value="LOCAL-00071" />
+      <option name="project" value="LOCAL" />
+      <updated>1600089379409</updated>
+    </task>
+    <task id="LOCAL-00072" summary="data_portal接口基于strategy完全测试了一次">
+      <created>1600419296715</created>
+      <option name="number" value="00072" />
+      <option name="presentableId" value="LOCAL-00072" />
+      <option name="project" value="LOCAL" />
+      <updated>1600419296716</updated>
+    </task>
+    <task id="LOCAL-00073" summary="修改strategy">
+      <created>1600422662643</created>
+      <option name="number" value="00073" />
+      <option name="presentableId" value="LOCAL-00073" />
+      <option name="project" value="LOCAL" />
+      <updated>1600422662643</updated>
+    </task>
+    <task id="LOCAL-00074" summary="修改gateway， 并增加vwap和mkv模块">
+      <created>1600905308448</created>
+      <option name="number" value="00074" />
+      <option name="presentableId" value="LOCAL-00074" />
+      <option name="project" value="LOCAL" />
+      <updated>1600905308449</updated>
+    </task>
+    <task id="LOCAL-00075" summary="修改gateway,">
+      <created>1601026500727</created>
+      <option name="number" value="00075" />
+      <option name="presentableId" value="LOCAL-00075" />
+      <option name="project" value="LOCAL" />
+      <updated>1601026500727</updated>
+    </task>
+    <task id="LOCAL-00076" summary="修改initialize模块中的bug">
+      <created>1601098601862</created>
+      <option name="number" value="00076" />
+      <option name="presentableId" value="LOCAL-00076" />
+      <option name="project" value="LOCAL" />
+      <updated>1601098601862</updated>
+    </task>
+    <task id="LOCAL-00077" summary="修改initialize模块中,并验证spider里面的Events">
+      <created>1601301960318</created>
+      <option name="number" value="00077" />
+      <option name="presentableId" value="LOCAL-00077" />
+      <option name="project" value="LOCAL" />
+      <updated>1601301960318</updated>
+    </task>
+    <task id="LOCAL-00078" summary="修改_ext_mkt">
+      <created>1601338387929</created>
+      <option name="number" value="00078" />
+      <option name="presentableId" value="LOCAL-00078" />
+      <option name="project" value="LOCAL" />
+      <updated>1601338387929</updated>
+    </task>
+    <task id="LOCAL-00079" summary="修改events 和 ownership">
+      <created>1601890397999</created>
+      <option name="number" value="00079" />
+      <option name="presentableId" value="LOCAL-00079" />
+      <option name="project" value="LOCAL" />
+      <updated>1601890398000</updated>
+    </task>
+    <task id="LOCAL-00080" summary="修改spider">
+      <created>1601975190852</created>
+      <option name="number" value="00080" />
+      <option name="presentableId" value="LOCAL-00080" />
+      <option name="project" value="LOCAL" />
+      <updated>1601975190852</updated>
+    </task>
+    <task id="LOCAL-00081" summary="修改spider">
+      <created>1601975698771</created>
+      <option name="number" value="00081" />
+      <option name="presentableId" value="LOCAL-00081" />
+      <option name="project" value="LOCAL" />
+      <updated>1601975698771</updated>
+    </task>
+    <task id="LOCAL-00082" summary="revise history">
+      <created>1602171031533</created>
+      <option name="number" value="00082" />
+      <option name="presentableId" value="LOCAL-00082" />
+      <option name="project" value="LOCAL" />
+      <updated>1602171031533</updated>
+    </task>
+    <task id="LOCAL-00083" summary="revise indicator and gateway">
+      <created>1602311649240</created>
+      <option name="number" value="00083" />
+      <option name="presentableId" value="LOCAL-00083" />
+      <option name="project" value="LOCAL" />
+      <updated>1602311649240</updated>
+    </task>
+    <task id="LOCAL-00084" summary="revise indicator">
+      <created>1602322438102</created>
+      <option name="number" value="00084" />
+      <option name="presentableId" value="LOCAL-00084" />
+      <option name="project" value="LOCAL" />
+      <updated>1602322438102</updated>
+    </task>
+    <task id="LOCAL-00085" summary="revise pipe and test engine module">
+      <created>1602420970998</created>
+      <option name="number" value="00085" />
+      <option name="presentableId" value="LOCAL-00085" />
+      <option name="project" value="LOCAL" />
+      <updated>1602420970998</updated>
+    </task>
+    <task id="LOCAL-00086" summary="pipeloader via data_portal successfully ; test domain term graph  pipeline engine">
+      <created>1602479190202</created>
+      <option name="number" value="00086" />
+      <option name="presentableId" value="LOCAL-00086" />
+      <option name="project" value="LOCAL" />
+      <updated>1602479190203</updated>
+    </task>
+    <task id="LOCAL-00087" summary="revise pipeline (ump) and finance module">
+      <created>1602487429200</created>
+      <option name="number" value="00087" />
+      <option name="presentableId" value="LOCAL-00087" />
+      <option name="project" value="LOCAL" />
+      <updated>1602487429201</updated>
+    </task>
+    <option name="localTasksCounter" value="88" />
+    <servers />
+  </component>
+  <component name="TestHistory">
+    <history-entry file="Doctests_in_test - 2020.05.08 at 22h 29m 03s.xml">
+      <configuration name="Doctests in test" configurationId="tests" />
+    </history-entry>
+  </component>
+  <component name="TimeTrackingManager">
+    <option name="totallyTimeSpent" value="3047879000" />
+  </component>
+  <component name="TodoView">
+    <todo-panel id="selected-file">
+      <is-autoscroll-to-source value="true" />
+    </todo-panel>
+    <todo-panel id="all">
+      <are-packages-shown value="true" />
+      <is-autoscroll-to-source value="true" />
+    </todo-panel>
+  </component>
+  <component name="ToolWindowManager">
+    <frame x="1" y="24" width="1440" height="832" extended-state="6" />
+    <editor active="true" />
+    <layout>
+      <window_info id="Structure" order="0" sideWeight="0.50280374" side_tool="true" weight="0.2811159" />
+      <window_info id="Favorites" order="1" side_tool="true" />
+      <window_info active="true" content_ui="combo" id="Project" order="2" sideWeight="0.49719626" visible="true" weight="0.24248926" />
+      <window_info anchor="bottom" id="Message" order="0" />
+      <window_info anchor="bottom" id="Find" order="1" weight="0.32972974" />
+      <window_info anchor="bottom" id="Run" order="2" sideWeight="0.49356222" weight="0.33783785" />
+      <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
+      <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
+      <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
+      <window_info anchor="bottom" id="TODO" order="6" weight="0.32837838" />
+      <window_info anchor="bottom" id="Docker" order="7" show_stripe_button="false" />
+      <window_info anchor="bottom" id="Version Control" order="8" sideWeight="0.49928468" weight="0.53918916" />
+      <window_info anchor="bottom" id="Database Changes" order="9" />
+      <window_info anchor="bottom" id="Event Log" order="10" sideWeight="0.5007153" side_tool="true" weight="0.5635135" />
+      <window_info anchor="bottom" id="Terminal" order="11" weight="0.32972974" />
+      <window_info anchor="bottom" id="Python Console" order="12" sideWeight="0.49928468" weight="0.42027026" />
+      <window_info anchor="bottom" id="Messages" order="13" />
+      <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
+      <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
+      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
+      <window_info anchor="right" id="SciView" order="3" weight="0.3297568" />
+      <window_info anchor="right" id="Database" order="4" weight="0.3297568" />
+      <window_info anchor="right" x="0" y="0" width="310" height="632" id="Documentation" order="5" side_tool="true" weight="0.3297568" />
+    </layout>
+    <layout-to-restore>
+      <window_info id="Structure" order="0" sideWeight="0.50280374" side_tool="true" weight="0.2811159" />
+      <window_info id="Favorites" order="1" side_tool="true" />
+      <window_info active="true" content_ui="combo" id="Project" order="2" sideWeight="0.49719626" visible="true" weight="0.24248926" />
+      <window_info anchor="bottom" id="Message" order="0" />
+      <window_info anchor="bottom" id="Find" order="1" weight="0.32972974" />
+      <window_info anchor="bottom" id="Run" order="2" sideWeight="0.49356222" weight="0.36891893" />
+      <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
+      <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
+      <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
+      <window_info anchor="bottom" id="TODO" order="6" weight="0.32837838" />
+      <window_info anchor="bottom" id="Docker" order="7" show_stripe_button="false" />
+      <window_info anchor="bottom" id="Version Control" order="8" sideWeight="0.49928468" weight="0.53918916" />
+      <window_info anchor="bottom" id="Database Changes" order="9" />
+      <window_info anchor="bottom" id="Event Log" order="10" sideWeight="0.5064378" side_tool="true" weight="0.38108107" />
+      <window_info anchor="bottom" id="Terminal" order="11" weight="0.32972974" />
+      <window_info anchor="bottom" id="Python Console" order="12" weight="0.527027" />
+      <window_info anchor="bottom" id="Messages" order="13" />
+      <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
+      <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
+      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
+      <window_info anchor="right" id="SciView" order="3" weight="0.3297568" />
+      <window_info anchor="right" id="Database" order="4" weight="0.3297568" />
+      <window_info anchor="right" x="0" y="0" width="310" height="632" id="Documentation" order="5" side_tool="true" weight="0.3297568" />
+    </layout-to-restore>
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="1" />
+  </component>
+  <component name="Vcs.Log.History.Properties">
+    <option name="COLUMN_ORDER">
+      <list>
+        <option value="0" />
+        <option value="2" />
+        <option value="3" />
+        <option value="1" />
+      </list>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <ignored-roots>
+      <path value="$PROJECT_DIR$" />
+    </ignored-roots>
+    <MESSAGE value="校验证爬虫数据（修改内部逻辑）以及重构dbwriter" />
+    <MESSAGE value="验证数据解决bug --- replace(method='pad')注意, 变相解决了线程超上线的问题(cannot create new thread)" />
+    <MESSAGE value="验证gateway.driver所有接口 --- 好累啊，改的太多了" />
+    <MESSAGE value="关于daily的接口验证结束" />
+    <MESSAGE value="调整resample module" />
+    <MESSAGE value="测试完善了Sample module" />
+    <MESSAGE value="测试并验证data_portal的daily模块，并梳理了data_portal冗余接口" />
+    <MESSAGE value="测试并验证data_portal --- open_pct 接口 ，--- 引出了精度问题" />
+    <MESSAGE value="优化并修改了data_portal 并 重构了technic" />
+    <MESSAGE value="修改了strategy模块并调整了gateway增加了get_stack_value(tbl, session)接口" />
+    <MESSAGE value="data_portal接口基于strategy完全测试了一次" />
+    <MESSAGE value="修改strategy" />
+    <MESSAGE value="修改gateway， 并增加vwap和mkv模块" />
+    <MESSAGE value="修改gateway," />
+    <MESSAGE value="修改initialize模块中的bug" />
+    <MESSAGE value="修改initialize模块中,并验证spider里面的Events" />
+    <MESSAGE value="修改_ext_mkt" />
+    <MESSAGE value="修改events 和 ownership" />
+    <MESSAGE value="修改spider" />
+    <MESSAGE value="revise history" />
+    <MESSAGE value="revise indicator and gateway" />
+    <MESSAGE value="revise indicator" />
+    <MESSAGE value="revise pipe and test engine module" />
+    <MESSAGE value="pipeloader via data_portal successfully ; test domain term graph  pipeline engine" />
+    <MESSAGE value="revise pipeline (ump) and finance module" />
+    <option name="LAST_COMMIT_MESSAGE" value="revise pipeline (ump) and finance module" />
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/simulation$asset.coverage" NAME="asset Coverage Results" MODIFIED="1588921881587" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateWay/assets" />
+    <SUITE FILE_PATH="coverage/pxtrade$test.coverage" NAME="test Coverage Results" MODIFIED="1598947379510" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway/spider" />
+    <SUITE FILE_PATH="coverage/pxtrade$transfer.coverage" NAME="transfer Coverage Results" MODIFIED="1599527302659" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/components" />
+    <SUITE FILE_PATH="coverage/pxtrade$kline.coverage" NAME="kline Coverage Results" MODIFIED="1598433612040" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway/spider" />
+    <SUITE FILE_PATH="coverage/pxtrade$bundles.coverage" NAME="bundles Coverage Results" MODIFIED="1599057871876" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway/spider" />
+    <SUITE FILE_PATH="coverage/pxtrade$gpd.coverage" NAME="gpd Coverage Results" MODIFIED="1597247619522" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/trade/metrics" />
+    <SUITE FILE_PATH="coverage/simulation$db_migration.coverage" NAME="db_migration Coverage Results" MODIFIED="1588916091952" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateWay/driver" />
+    <SUITE FILE_PATH="coverage/pxtrade$similarity.coverage" NAME="similarity Coverage Results" MODIFIED="1597247638095" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/trade/metrics" />
+    <SUITE FILE_PATH="coverage/pxtrade$commission.coverage" NAME="commission Coverage Results" MODIFIED="1597240882532" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/finance" />
+    <SUITE FILE_PATH="coverage/pxtrade$db_writer.coverage" NAME="db_writer Coverage Results" MODIFIED="1599469818069" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway/database" />
+    <SUITE FILE_PATH="coverage/pxtrade$cross.coverage" NAME="cross Coverage Results" MODIFIED="1598055735984" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/strategy" />
+    <SUITE FILE_PATH="coverage/pxtrade$position_tracker.coverage" NAME="position_tracker Coverage Results" MODIFIED="1602495197913" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/finance" />
+    <SUITE FILE_PATH="coverage/pxtrade$slippage.coverage" NAME="slippage Coverage Results" MODIFIED="1597240950618" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/finance" />
+    <SUITE FILE_PATH="coverage/pxtrade$tracker.coverage" NAME="tracker Coverage Results" MODIFIED="1597247713583" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/trade/metrics" />
+    <SUITE FILE_PATH="coverage/pxtrade$history.coverage" NAME="history Coverage Results" MODIFIED="1602205220975" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway/driver" />
+    <SUITE FILE_PATH="coverage/pxtrade$fundamental_reader.coverage" NAME="fundamental_reader Coverage Results" MODIFIED="1602477169684" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway/driver" />
+    <SUITE FILE_PATH="coverage/pxtrade$engine.coverage" NAME="engine Coverage Results" MODIFIED="1602483962806" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/pipe" />
+    <SUITE FILE_PATH="coverage/pxtrade$asset_router.coverage" NAME="asset_router Coverage Results" MODIFIED="1599136533269" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway/spider" />
+    <SUITE FILE_PATH="coverage/pxtrade$ump.coverage" NAME="ump Coverage Results" MODIFIED="1602420450916" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/pipe" />
+    <SUITE FILE_PATH="coverage/pxtrade$trading_calendar.coverage" NAME="trading_calendar Coverage Results" MODIFIED="1600231107940" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/_calendar" />
+    <SUITE FILE_PATH="coverage/pxtrade$_finder.coverage" NAME="_finder Coverage Results" MODIFIED="1599366012087" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway/asset" />
+    <SUITE FILE_PATH="coverage/pxtrade$exposure.coverage" NAME="exposure Coverage Results" MODIFIED="1597247610703" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/trade/metrics" />
+    <SUITE FILE_PATH="coverage/pxtrade$execution.coverage" NAME="execution Coverage Results" MODIFIED="1597240894975" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/finance" />
+    <SUITE FILE_PATH="coverage/simulation$to_file.coverage" NAME="to_file Coverage Results" MODIFIED="1588916208741" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateWay/driver" />
+    <SUITE FILE_PATH="coverage/simulation$adjustments.coverage" NAME="adjustments Coverage Results" MODIFIED="1589274987075" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateWay/driver" />
+    <SUITE FILE_PATH="coverage/pxtrade$mathmatics.coverage" NAME="mathmatics Coverage Results" MODIFIED="1602417229848" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
+    <SUITE FILE_PATH="coverage/simulation$orm_core.coverage" NAME="orm_core Coverage Results" MODIFIED="1588204745527" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateWay/driver" />
+    <SUITE FILE_PATH="coverage/simulation$reader.coverage" NAME="reader Coverage Results" MODIFIED="1589447338568" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateWay/driver" />
+    <SUITE FILE_PATH="coverage/pxtrade$degree.coverage" NAME="degree Coverage Results" MODIFIED="1602320837023" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/indicator" />
+    <SUITE FILE_PATH="coverage/simulation$filter.coverage" NAME="filter Coverage Results" MODIFIED="1589771732286" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/algorithm/pipeline/loader" />
+    <SUITE FILE_PATH="coverage/pxtrade$release.coverage" NAME="release Coverage Results" MODIFIED="1598585575668" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway/spider/event" />
+    <SUITE FILE_PATH="coverage/pxtrade$_protocol.coverage" NAME="_protocol Coverage Results" MODIFIED="1597305844132" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/finance" />
+    <SUITE FILE_PATH="coverage/pxtrade$spider_test.coverage" NAME="spider_test Coverage Results" MODIFIED="1599568125161" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway/spider" />
+    <SUITE FILE_PATH="coverage/simulation$assetFiner.coverage" NAME="assetFiner Coverage Results" MODIFIED="1588921816638" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateWay/assets" />
+    <SUITE FILE_PATH="coverage/pxtrade$ownership.coverage" NAME="ownership Coverage Results" MODIFIED="1600160495274" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway/spider" />
+    <SUITE FILE_PATH="coverage/pxtrade$domain.coverage" NAME="domain Coverage Results" MODIFIED="1590565822080" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/pipeline" />
+    <SUITE FILE_PATH="coverage/pxtrade$smtp.coverage" NAME="smtp Coverage Results" MODIFIED="1598001833787" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/components" />
+    <SUITE FILE_PATH="coverage/pxtrade$massive.coverage" NAME="massive Coverage Results" MODIFIED="1598584388795" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway/spider/event" />
+    <SUITE FILE_PATH="coverage/pxtrade$tools.coverage" NAME="tools Coverage Results" MODIFIED="1598507868566" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway/driver" />
+    <SUITE FILE_PATH="coverage/simulation$benchmark.coverage" NAME="benchmark Coverage Results" MODIFIED="1588915934214" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateWay/driver" />
+    <SUITE FILE_PATH="coverage/pxtrade$graph.coverage" NAME="graph Coverage Results" MODIFIED="1602468230986" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/pipe" />
+    <SUITE FILE_PATH="coverage/pxtrade$loader.coverage" NAME="loader Coverage Results" MODIFIED="1602477428287" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/pipe/loader" />
+    <SUITE FILE_PATH="coverage/simulation$data_portal.coverage" NAME="data_portal Coverage Results" MODIFIED="1588923400002" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateWay/driver" />
+    <SUITE FILE_PATH="coverage/simulation$spider.coverage" NAME="spider Coverage Results" MODIFIED="1589448364391" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateWay/spider" />
+    <SUITE FILE_PATH="coverage/pxtrade$exec.coverage" NAME="exec Coverage Results" MODIFIED="1590564517696" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test" />
+    <SUITE FILE_PATH="coverage/pxtrade$trend.coverage" NAME="trend Coverage Results" MODIFIED="1602322295669" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/indicator" />
+    <SUITE FILE_PATH="coverage/simulation$networkx.coverage" NAME="networkx Coverage Results" MODIFIED="1587025561881" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Test" />
+    <SUITE FILE_PATH="coverage/pxtrade$technic.coverage" NAME="technic Coverage Results" MODIFIED="1602309485192" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/indicator" />
+    <SUITE FILE_PATH="coverage/pxtrade$metric.coverage" NAME="metric Coverage Results" MODIFIED="1597247627904" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/trade/metrics" />
+    <SUITE FILE_PATH="coverage/pxtrade$resample.coverage" NAME="resample Coverage Results" MODIFIED="1599484217212" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway/driver" />
+    <SUITE FILE_PATH="coverage/simulation$ts.coverage" NAME="ts Coverage Results" MODIFIED="1588917311348" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateWay/spider" />
+    <SUITE FILE_PATH="coverage/pxtrade$history_loader.coverage" NAME="history_loader Coverage Results" MODIFIED="1600230794145" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway/driver" />
+    <SUITE FILE_PATH="coverage/pxtrade$control.coverage" NAME="control Coverage Results" MODIFIED="1597240889543" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/finance" />
+    <SUITE FILE_PATH="coverage/simulation$preprocess.coverage" NAME="preprocess Coverage Results" MODIFIED="1588989835508" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
+    <SUITE FILE_PATH="coverage/pxtrade$events_test.coverage" NAME="events_test Coverage Results" MODIFIED="1600831671877" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway/spider" />
+    <SUITE FILE_PATH="coverage/pxtrade$holder.coverage" NAME="holder Coverage Results" MODIFIED="1598579748027" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway/spider/event" />
+    <SUITE FILE_PATH="coverage/pxtrade$extra.coverage" NAME="extra Coverage Results" MODIFIED="1598671784101" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway/spider" />
+    <SUITE FILE_PATH="coverage/pxtrade$pipeline.coverage" NAME="pipeline Coverage Results" MODIFIED="1602464451117" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/pipe" />
+    <SUITE FILE_PATH="coverage/simulation$test__1_.coverage" NAME="test (1) Coverage Results" MODIFIED="1588987564875" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
+    <SUITE FILE_PATH="coverage/simulation$security_list.coverage" NAME="security_list Coverage Results" MODIFIED="1588916200860" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateWay/driver" />
+    <SUITE FILE_PATH="coverage/simulation$trading_calendar.coverage" NAME="trading_calendar Coverage Results" MODIFIED="1588916219348" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateWay/driver" />
+    <SUITE FILE_PATH="coverage/simulation$Doctests_in_test.coverage" NAME="Doctests in test Coverage Results" MODIFIED="1588948143537" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
+    <SUITE FILE_PATH="coverage/pxtrade$data_portal.coverage" NAME="data_portal Coverage Results" MODIFIED="1602477676293" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway/driver" />
+    <SUITE FILE_PATH="coverage/pxtrade$tearsheet.coverage" NAME="tearsheet Coverage Results" MODIFIED="1597247653940" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/trade/metrics" />
+    <SUITE FILE_PATH="coverage/pxtrade$clock.coverage" NAME="clock Coverage Results" MODIFIED="1597241230902" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gens" />
+    <SUITE FILE_PATH="coverage/pxtrade$benchmark.coverage" NAME="benchmark Coverage Results" MODIFIED="1602479071207" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway/driver" />
+    <SUITE FILE_PATH="coverage/pxtrade$client.coverage" NAME="client Coverage Results" MODIFIED="1599273243433" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway/driver" />
+    <SUITE FILE_PATH="coverage/pxtrade$bcolz_reader.coverage" NAME="bcolz_reader Coverage Results" MODIFIED="1600230995815" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway/driver" />
+    <SUITE FILE_PATH="coverage/pxtrade$b_1.coverage" NAME="b_1 Coverage Results" MODIFIED="1593333453618" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/../../../Containers/com.tencent.xinWeChat/Data/Library/Application Support/com.tencent.xinWeChat/2.0b4.0.9/fbe8e227aec4c2a9ffc81d025619c72b/Message/MessageTemp/65f77037b5eb883213c5db5c6cb11831/File" />
+    <SUITE FILE_PATH="coverage/simulation$db_schema.coverage" NAME="db_schema Coverage Results" MODIFIED="1588916162570" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateWay/driver" />
+    <SUITE FILE_PATH="coverage/pxtrade$creator.coverage" NAME="creator Coverage Results" MODIFIED="1597370683075" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/finance/oms" />
+    <SUITE FILE_PATH="coverage/pxtrade$position.coverage" NAME="position Coverage Results" MODIFIED="1602495172472" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/finance" />
+    <SUITE FILE_PATH="coverage/pxtrade$broke.coverage" NAME="broke Coverage Results" MODIFIED="1597240851742" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/trade" />
+    <SUITE FILE_PATH="coverage/pxtrade$tdx_test.coverage" NAME="tdx_test Coverage Results" MODIFIED="1593388157992" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateWay/driver/tdx" />
+    <SUITE FILE_PATH="coverage/pxtrade$adjustment_reader.coverage" NAME="adjustment_reader Coverage Results" MODIFIED="1599566529341" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway/driver" />
+    <SUITE FILE_PATH="coverage/pxtrade$tradesimulation.coverage" NAME="tradesimulation Coverage Results" MODIFIED="1602596240586" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gens" />
+    <SUITE FILE_PATH="coverage/pxtrade$blotter.coverage" NAME="blotter Coverage Results" MODIFIED="1597240823940" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/finance/oms" />
+    <SUITE FILE_PATH="coverage/pxtrade$asset_writer.coverage" NAME="asset_writer Coverage Results" MODIFIED="1598951329807" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway/database" />
+    <SUITE FILE_PATH="coverage/pxtrade$db_schema.coverage" NAME="db_schema Coverage Results" MODIFIED="1600160487850" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway/database" />
+    <SUITE FILE_PATH="coverage/pxtrade$order.coverage" NAME="order Coverage Results" MODIFIED="1597240831193" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/finance/oms" />
+    <SUITE FILE_PATH="coverage/pxtrade$term.coverage" NAME="term Coverage Results" MODIFIED="1602418904766" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/pipe" />
+    <SUITE FILE_PATH="coverage/pxtrade$adjustArray.coverage" NAME="adjustArray Coverage Results" MODIFIED="1600168179027" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway/driver" />
+    <SUITE FILE_PATH="coverage/pxtrade$test__1_.coverage" NAME="test (1) Coverage Results" MODIFIED="1596097240146" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/finance" />
+    <SUITE FILE_PATH="coverage/pxtrade$asset_spider.coverage" NAME="asset_spider Coverage Results" MODIFIED="1598514888615" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway/spider" />
+    <SUITE FILE_PATH="coverage/simulation$base.coverage" NAME="base Coverage Results" MODIFIED="1589162955837" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateWay/driver/loaders" />
+    <SUITE FILE_PATH="coverage/pxtrade$transaction.coverage" NAME="transaction Coverage Results" MODIFIED="1602487652820" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/finance" />
+    <SUITE FILE_PATH="coverage/simulation$event_rule.coverage" NAME="event_rule Coverage Results" MODIFIED="1589010797398" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
+    <SUITE FILE_PATH="coverage/pxtrade$asset_db_schema.coverage" NAME="asset_db_schema Coverage Results" MODIFIED="1597400070634" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway/asset" />
+    <SUITE FILE_PATH="coverage/simulation$pricing_loader.coverage" NAME="pricing_loader Coverage Results" MODIFIED="1589336613636" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/algorithm/pipeline/loader" />
+    <SUITE FILE_PATH="coverage/simulation$adjusted_array.coverage" NAME="adjusted_array Coverage Results" MODIFIED="1589336064721" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateWay/driver" />
+    <SUITE FILE_PATH="coverage/pxtrade$engine__1_.coverage" NAME="engine (1) Coverage Results" MODIFIED="1597236244623" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/pipe" />
+    <SUITE FILE_PATH="coverage/pxtrade$analyzers.coverage" NAME="analyzers Coverage Results" MODIFIED="1597247513629" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/trade/metrics" />
+    <SUITE FILE_PATH="coverage/pxtrade$divdend_rights.coverage" NAME="divdend_rights Coverage Results" MODIFIED="1600160746115" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway/spider" />
+    <SUITE FILE_PATH="coverage/pxtrade$events.coverage" NAME="events Coverage Results" MODIFIED="1600831979251" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway/spider" />
+    <SUITE FILE_PATH="coverage/pxtrade$_ext_mkt.coverage" NAME="_ext_mkt Coverage Results" MODIFIED="1600855087399" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway/driver" />
+    <SUITE FILE_PATH="coverage/pxtrade$ledger.coverage" NAME="ledger Coverage Results" MODIFIED="1602497792010" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/finance" />
+    <SUITE FILE_PATH="coverage/pxtrade$uility.coverage" NAME="uility Coverage Results" MODIFIED="1597247735498" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/trade/metrics" />
+    <SUITE FILE_PATH="coverage/pxtrade$sma_crossover.coverage" NAME="sma_crossover Coverage Results" MODIFIED="1602159636852" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/../backtrader-master/backtrader/strategies" />
+    <SUITE FILE_PATH="coverage/pxtrade$__init__.coverage" NAME="__init__ Coverage Results" MODIFIED="1602322399115" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/indicator" />
+    <SUITE FILE_PATH="coverage/simulation$db_writer.coverage" NAME="db_writer Coverage Results" MODIFIED="1589526691375" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateWay/driver" />
+    <SUITE FILE_PATH="coverage/pxtrade$initialize.coverage" NAME="initialize Coverage Results" MODIFIED="1602229889675" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway" />
+    <SUITE FILE_PATH="coverage/pxtrade$bundle.coverage" NAME="bundle Coverage Results" MODIFIED="1600820933323" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway/spider" />
+    <SUITE FILE_PATH="coverage/pxtrade$database.coverage" NAME="database Coverage Results" MODIFIED="1597409075566" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway/database" />
+    <SUITE FILE_PATH="coverage/simulation$test.coverage" NAME="test Coverage Results" MODIFIED="1589423910583" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test" />
+    <SUITE FILE_PATH="coverage/pxtrade$assets.coverage" NAME="assets Coverage Results" MODIFIED="1599287244232" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway/asset" />
+    <SUITE FILE_PATH="coverage/simulation$exec.coverage" NAME="exec Coverage Results" MODIFIED="1586837424834" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Test" />
+    <SUITE FILE_PATH="coverage/pxtrade$bar_reader.coverage" NAME="bar_reader Coverage Results" MODIFIED="1600156541562" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway/driver" />
+    <SUITE FILE_PATH="coverage/pxtrade$test__2_.coverage" NAME="test (2) Coverage Results" MODIFIED="1596769667957" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateWay/driver/spider/events" />
+    <SUITE FILE_PATH="coverage/pxtrade$cancel_policy.coverage" NAME="cancel_policy Coverage Results" MODIFIED="1597240874581" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/finance" />
+    <SUITE FILE_PATH="coverage/pxtrade$algorithm.coverage" NAME="algorithm Coverage Results" MODIFIED="1597740679286" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/pxtrade$restrictions.coverage" NAME="restrictions Coverage Results" MODIFIED="1597240944372" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/finance" />
+    <SUITE FILE_PATH="coverage/pxtrade$base.coverage" NAME="base Coverage Results" MODIFIED="1598342587288" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gateway/spider" />
+    <SUITE FILE_PATH="coverage/pxtrade$gen.coverage" NAME="gen Coverage Results" MODIFIED="1597240816887" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/finance/oms" />
+    <SUITE FILE_PATH="coverage/pxtrade$__init____1_.coverage" NAME="__init__ (1) Coverage Results" MODIFIED="1597990745207" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/components/parallel" />
+  </component>
+  <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/gateway/driver/h5df_daily_bars.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-3911">
+          <caret line="99" column="1" selection-start-line="99" selection-start-column="1" selection-end-line="99" selection-end-column="1" />
+          <folding>
+            <element signature="e#1687#1716#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/gateway/driver/__init__.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="480">
+          <caret line="32" column="20" selection-start-line="32" selection-start-column="17" selection-end-line="32" selection-end-column="20" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/gateway/driver/aggregator.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="150">
+          <caret line="10" selection-start-line="10" selection-end-line="10" />
+          <folding>
+            <element signature="e#109#144#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pipe/domain.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="258">
+          <caret line="62" column="34" selection-start-line="62" selection-start-column="28" selection-end-line="62" selection-end-column="34" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pipe/graph.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="214">
+          <caret line="49" column="43" selection-start-line="49" selection-start-column="31" selection-end-line="49" selection-end-column="43" />
+          <folding>
+            <element signature="e#109#136#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../../../Python/3.7/lib/python/site-packages/sqlalchemy/sql/schema.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="278">
+          <caret line="488" selection-start-line="488" selection-end-line="488" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pipe/ump.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-171">
+          <caret line="10" column="22" selection-start-line="10" selection-start-column="12" selection-end-line="10" selection-end-column="22" />
+          <folding>
+            <element signature="e#109#127#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/gateway/driver/benchmark.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="615">
+          <caret line="63" lean-forward="true" selection-start-line="63" selection-end-line="63" />
+          <folding>
+            <element signature="e#113#151#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/gateway/database/db_schema.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="9345">
+          <caret line="624" column="4" selection-start-line="624" selection-start-column="4" selection-end-line="624" selection-end-column="4" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/gateway/database/__init__.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="585">
+          <caret line="39" lean-forward="true" selection-start-line="39" selection-end-line="39" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/gateway/asset/_finder.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="4491">
+          <caret line="305" selection-start-line="305" selection-start-column="2" selection-end-line="323" selection-end-column="39" />
+          <folding>
+            <element signature="e#109#152#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pipe/term.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1912">
+          <caret line="157" lean-forward="true" selection-start-line="157" selection-end-line="157" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pipe/engine.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="445">
+          <caret line="286" column="32" selection-start-line="286" selection-start-column="32" selection-end-line="286" selection-end-column="32" />
+          <folding>
+            <element signature="e#109#153#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pipe/__init__.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="150">
+          <caret line="10" column="40" lean-forward="true" selection-start-line="10" selection-start-column="40" selection-end-line="10" selection-end-column="40" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pipe/pipeline.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="151">
+          <caret line="156" column="26" lean-forward="true" selection-start-line="156" selection-end-line="157" />
+          <folding>
+            <element signature="e#109#120#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/finance/cancel_policy.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="90">
+          <caret line="16" column="47" lean-forward="true" selection-start-line="16" selection-start-column="47" selection-end-line="16" selection-end-column="47" />
+          <folding>
+            <element signature="e#109#144#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/finance/commission.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="130">
+          <caret line="62" column="59" lean-forward="true" selection-start-line="62" selection-start-column="59" selection-end-line="62" selection-end-column="59" />
+          <folding>
+            <element signature="e#109#144#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/finance/control.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="149">
+          <caret line="178" column="27" lean-forward="true" selection-start-line="178" selection-start-column="27" selection-end-line="178" selection-end-column="27" />
+          <folding>
+            <element signature="e#109#144#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/finance/restrictions.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="29">
+          <caret line="192" column="71" lean-forward="true" selection-start-line="192" selection-start-column="71" selection-end-line="192" selection-end-column="71" />
+          <folding>
+            <element signature="e#109#144#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/finance/slippage.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="48">
+          <caret line="29" column="18" lean-forward="true" selection-start-line="29" selection-start-column="18" selection-end-line="29" selection-end-column="18" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/finance/transaction.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="142">
+          <caret line="72" selection-start-line="72" selection-end-line="73" />
+          <folding>
+            <element signature="e#109#131#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/finance/order.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-128">
+          <caret line="105" column="36" lean-forward="true" selection-start-line="9" selection-end-line="10" selection-end-column="39" />
+          <folding>
+            <element signature="e#109#130#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/algorithm.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="870">
+          <caret line="731" lean-forward="true" selection-start-line="731" selection-end-line="731" />
+          <folding>
+            <element signature="e#109#128#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/util/algo_threading.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="135">
+          <caret line="9" column="27" lean-forward="true" selection-start-line="9" selection-start-column="27" selection-end-line="9" selection-end-column="27" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/gateway/driver/adjustment_reader.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="212">
+          <caret line="66" lean-forward="true" selection-start-line="66" selection-end-line="66" />
+          <folding>
+            <element signature="e#109#127#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/gateway/driver/adjustArray.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-1512">
+          <caret line="27" column="34" lean-forward="true" selection-start-line="27" selection-start-column="34" selection-end-line="27" selection-end-column="34" />
+          <folding>
+            <element signature="e#109#128#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/gateway/driver/bar_reader.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="155">
+          <caret line="61" column="25" lean-forward="true" selection-start-line="61" selection-start-column="25" selection-end-line="61" selection-end-column="25" />
+          <folding>
+            <element signature="e#580#615#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/gateway/driver/history.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="2057">
+          <caret line="230" column="8" selection-start-line="230" selection-start-column="8" selection-end-line="230" selection-end-column="8" />
+          <folding>
+            <element signature="e#109#144#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/gateway/initialize.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="720">
+          <caret line="55" column="55" lean-forward="true" selection-start-line="55" selection-start-column="55" selection-end-line="55" selection-end-column="55" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/finance/execution.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="151">
+          <caret line="85" column="7" lean-forward="true" selection-start-line="85" selection-start-column="7" selection-end-line="85" selection-end-column="7" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/finance/_protocol.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="156">
+          <caret line="32" selection-start-line="32" selection-end-line="32" />
+          <folding>
+            <element signature="e#109#147#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/finance/portfolio.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="281">
+          <caret line="40" column="90" selection-start-line="40" selection-start-column="90" selection-end-line="40" selection-end-column="90" />
+          <folding>
+            <element signature="e#109#128#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/gateway/driver/data_portal.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-141">
+          <caret line="130" column="18" selection-start-line="130" selection-start-column="8" selection-end-line="130" selection-end-column="18" />
+          <folding>
+            <element signature="e#109#134#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/finance/position_tracker.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="348">
+          <caret line="109" column="23" selection-start-line="109" selection-start-column="23" selection-end-line="109" selection-end-column="23" />
+          <folding>
+            <element signature="e#109#157#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/_calendar/trading_calendar.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1383">
+          <caret line="156" column="23" lean-forward="true" selection-start-line="156" selection-start-column="23" selection-end-line="156" selection-end-column="23" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/finance/position.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="172">
+          <caret line="37" column="29" selection-start-line="37" selection-start-column="13" selection-end-line="37" selection-end-column="29" />
+          <folding>
+            <element signature="e#109#141#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/risk/alert.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="139">
+          <caret line="57" column="43" selection-start-line="57" selection-start-column="27" selection-end-line="57" selection-end-column="43" />
+          <folding>
+            <element signature="e#109#144#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/test.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="663">
+          <caret line="10737" column="49" selection-start-line="10737" selection-start-column="49" selection-end-line="10737" selection-end-column="49" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../zipline-master/zipline/__init__.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="141">
+          <caret line="20" selection-start-line="20" selection-end-line="20" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/gens/utils.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="146">
+          <caret line="10" column="44" selection-start-line="10" selection-start-column="29" selection-end-line="10" selection-end-column="44" />
+          <folding>
+            <element signature="e#109#136#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/finance/ledger.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="180">
+          <caret line="12" column="53" lean-forward="true" selection-start-line="12" selection-end-line="13" />
+          <folding>
+            <element signature="e#109#151#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/gens/tradesimulation.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="629">
+          <caret line="117" selection-start-line="117" selection-end-line="117" />
+          <folding>
+            <element signature="e#109#128#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/trade/__doc__.py">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/trade/__init__.py">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/opt/grid.py">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/trade/params.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1405">
+          <caret line="97" column="9" selection-start-line="97" selection-start-column="9" selection-end-line="97" selection-end-column="9" />
+          <folding>
+            <element signature="e#108#127#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/broker/oms.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="240">
+          <caret line="16" column="27" selection-start-line="16" selection-start-column="27" selection-end-line="16" selection-end-column="27" />
+          <folding>
+            <element signature="e#109#136#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/broker/blotter.py">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/trade/generator.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-177">
+          <caret line="12" column="15" selection-start-line="12" selection-start-column="15" selection-end-line="12" selection-end-column="15" />
+          <folding>
+            <element signature="e#109#136#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/run.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state>
+          <folding>
+            <element signature="e#108#129#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/metrics/analyzers.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-1051">
+          <folding>
+            <element signature="e#108#140#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+  </component>
+</project>
