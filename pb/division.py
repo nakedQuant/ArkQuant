@@ -15,7 +15,6 @@ from gateway.driver.data_portal import DataPortal
 from finance.cancel_policy import ComposedCancel
 from util.dt_utilty import locate_pos
 
-__all__ = ['OrderSimulation']
 
 # init portal
 portal = DataPortal()
@@ -30,8 +29,8 @@ class BaseSimulation(ABC):
 　　             第十九条 债券上市首日开盘集合竞价的有效竞价范围为发行价的上下 30%，连续竞价、收盘集合竞价的有效竞价范围为最近成交价的上下 10%；
         非上市首日开盘集合竞价的有效竞价范围为前收盘价的上下 10%，连续竞价、收盘集合竞价的有效竞价范围为最近成交价的上下 10%。
          一、可转换公司债券竞价交易出现下列情形的，本所可以对其实施盘中临时停牌措施：
-    　　（一）盘中成交价较前收盘价首次上涨或下跌达到或超过20%的；
-    　　（二）盘中成交价较前收盘价首次上涨或下跌达到或超过30%的。
+    　　（一）盘中成交价较前收盘价首次上涨或下跌达到或超过20%的
+    　　（二）盘中成交价较前收盘价首次上涨或下跌达到或超过30%的
     """
     @staticmethod
     @abstractmethod
@@ -64,8 +63,11 @@ class BaseSimulation(ABC):
         raise NotImplementedError()
 
 
-class OrderSimulation(BaseSimulation):
+class Divsion(object):
+
     """
+        split order into plenty of tiny orders
+
         a. calculate amount to determin size
         b. create ticker_array depend on size
         c. simulate order according to ticker_price , ticker_size , ticker_price
@@ -77,23 +79,18 @@ class OrderSimulation(BaseSimulation):
             c. 执行买入算法的需要涉及比如最大持仓比例，持仓量等限制
     """
     def __init__(self,
-                 # data_portal,
                  slippage,
                  commission,
-                 cancel_policy,
-                 execution_style,
-                 controls,
+                 # execution_style,
                  window=1):
         self.slippage_model = slippage
         self.commission_model = commission
-        self.execution_style = execution_style
-        self.cancel_policy = ComposedCancel(cancel_policy)
-        # 限制条件  MaxPositionSize ,MaxOrderSize
-        self.max_position_control, self.max_order_control = controls
+        # self.execution_style = execution_style
         # 计算滑价与定义买入capital限制
         self.data_portal = portal
         self._window = window
         self._fraction = 0.05
+
 
     @property
     def fraction(self):
@@ -244,14 +241,24 @@ class OrderSimulation(BaseSimulation):
         final_orders = self._finalize(orders, order_data)
         return final_orders
 
+    def can_be_traded(self, session_label):
+        """
+        Parameters
+        ----------
 
-if __name__ == '__main__':
+        session_label : Timestamp
+            The asset object to check.
+        Returns
+        -------
+        was_active : bool
+            Whether or not the `asset` is tradeable at the specified time.
 
-    from finance.slippage import NoSlippage
-    from finance.commission import Commission
-    from finance.cancel_policy import NeverCancel
-    from finance.execution import MarketOrder
-    from finance.control import NullControl
+        between first_traded and last_traded ; is tradeable on session label
+        """
+        alive_assets = [asset for asset in self.retrieve_all()
+                        if asset.is_active(session_label)]
+        print('alive_assets', alive_assets)
+        datas = self.reader.load_raw_arrays([session_label, session_label], alive_assets, ['close'])
+        trade_assets = [asset for asset in alive_assets if asset.sid in datas.keys() and datas[asset.sid]['close'][0]]
+        return trade_assets
 
-    order_creator = OrderSimulation(NoSlippage(), Commission(), (NeverCancel(),), MarketOrder(), NullControl())
-    print('order_creator', order_creator)

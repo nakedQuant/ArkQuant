@@ -160,7 +160,4 @@ class BundlesWriter(Crawler):
 #
 #     bundle = BundlesWriter(lmt=1)
 #     bundle.writer()
-#     # 琼民源A
-#     bundle.request_equity_kline('688526')
-#     bundle.request_convertible_kline('113602')
-#     bundle.request_fund_kline('512760')
+#     bundle.request_convertible_kline('110055')

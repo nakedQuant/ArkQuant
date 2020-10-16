@@ -38,8 +38,8 @@ from gateway.driver.data_portal import DataPortal
 from gens.clock import MinuteSimulationClock
 from gens.tradesimulation import AlgorithmSimulator
 from pipe.engine import SimplePipelineEngine
-from risk.allocation import Equal
-from trade.generator import Broker
+from risk.usage import Equal
+from broker.generator import Broker
 from metrics import default_metrics
 from metrics import MetricsTracker
 from risk.alert import UnionRisk, NoRisk

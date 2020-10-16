@@ -8,6 +8,8 @@ Created on Tue Mar 12 15:37:47 2019
 from itertools import chain
 from multiprocessing import Pool
 from functools import partial
+from broker.blotter import BlotterSimulation
+from risk.usage import Equal
 
 
 class Generator(object):
@@ -79,3 +81,10 @@ class Generator(object):
         transactions = chain([negatives, positives, p_transactions, c_transactions])
         # 执行成交
         ledger.process_transaction(transactions)
+
+
+if __name__ == '__main__':
+
+    blotter = BlotterSimulation()
+    model = Equal()
+    gen = Generator()

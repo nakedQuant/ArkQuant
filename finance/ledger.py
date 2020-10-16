@@ -199,7 +199,6 @@ class Ledger(object):
 
 if __name__ == '__main__':
 
-
     risk = PositionDrawRisk(withdraw=0.2)
     sim_params = create_simulation_parameters()
     ledger = Ledger(sim_params, risk)

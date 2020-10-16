@@ -43,9 +43,13 @@ class Position(object):
         # created by pipe (name) , event(name , asset)
         return self.event.name
 
+    # @property
+    # def sid(self):
+    #     return self.asset.sid
+
     @property
-    def sid(self):
-        return self.asset.sid
+    def asset(self):
+        return self.asset
 
     @property
     def closed(self):

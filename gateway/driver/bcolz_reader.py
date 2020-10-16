@@ -9,7 +9,7 @@ import pandas as pd, bcolz, os
 from gateway.driver.bar_reader import BarReader
 from gateway.driver.tools import transfer_to_timestamp
 from gateway.driver import BcolzDir, OHLC_RATIO
-# from gateway.asset.assets import Equity
+
 
 __all__ = [
     'BcolzDailyReader',
@@ -187,6 +187,8 @@ class BcolzDailyReader(BcolzReader):
 
 
 # if __name__ == '__main__':
+#
+#     from gateway.asset.assets import Equity
 #
 #     session = ['2005-01-01', '2015-09-03']
 #     equity = Equity('600000')

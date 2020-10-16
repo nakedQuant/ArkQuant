@@ -16,23 +16,23 @@ __all__ = [
 ]
 
 
-class CapitalManagement(ABC):
+class CapitalUsage(ABC):
     """
         distribution base class
     """
     @abstractmethod
-    def compute(self, assets, cash):
+    def compute(self, assets, available_capital, dts):
         raise NotImplementedError
 
 
-class Equal(CapitalManagement):
+class Equal(CapitalUsage):
 
-    def compute(self, assets, cash):
-        mappings = {{asset: cash / len(assets)} for asset in assets}
+    def compute(self, assets, available_capital, dts):
+        mappings = {{asset: available_capital / len(assets)} for asset in assets}
         return mappings
 
 
-class Delta(CapitalManagement):
+class Delta(CapitalUsage):
     """
         基于波动率测算持仓比例 --- 基于策略形成的净值的波动性分配比例 --- 类似于海龟算法
     """
@@ -40,7 +40,7 @@ class Delta(CapitalManagement):
                  delta_func,
                  data_portal,
                  window,
-                 frequency = 'daily'):
+                 frequency='daily'):
         # delta_func --- (asset,result)
         self._func = delta_func
         self.data_portal = data_portal
@@ -61,7 +61,7 @@ class Delta(CapitalManagement):
                                                             )
         return his
 
-    def compute(self, assets, cash, dts):
+    def compute(self, assets, available_capital, dts):
         """
             基于数据的波动性以及均值
             e.g. [5,4,8,3,6]  --- [5,6,3,8,4]
@@ -76,8 +76,8 @@ class Delta(CapitalManagement):
             return capital
 
 
-class Kelly(CapitalManagement):
+class Kelly(CapitalUsage):
 
-    def compute(self, assets, cash):
+    def compute(self, assets, available_capital, dts):
 
         raise NotImplementedError('kelly 基于策略的胜率进行分配')

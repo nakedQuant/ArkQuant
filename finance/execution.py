@@ -14,8 +14,16 @@ __all__ = [
     'StopLimitOrder'
 ]
 
+
 class ExecutionStyle(ABC):
-    """Base class for order execution styles.
+    """
+        Base class for order execution styles.
+        (stop_reached, limit_reached).
+        For market orders, will return (False, False).
+        For stop orders, limit_reached will always be False.
+        For limit orders, stop_reached will always be False.
+        For stop limit orders a Boolean is returned to flag
+        that the stop has been reached.
     """
 
     @abstractmethod
@@ -110,15 +118,15 @@ class StopLimitOrder(ExecutionStyle):
         order will be placed if market price falls below this value. For buys,
         the order will be placed if market price rises above this value.
     """
-    def __init__(self, limit_pct, stop_pct):
-        self.limit_pct = limit_pct
-        self.stop_pct = stop_pct
+    def __init__(self, limit, stop):
+        self.limit = limit
+        self.stop = stop
 
     def get_limit_price_ratio(self):
-        return self.limit_pct
+        return self.limit
 
     def get_stop_price_ratio(self):
-        return self.stop_pct
+        return self.stop
 
 
 if __name__ == '__main__':

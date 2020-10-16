@@ -17,7 +17,6 @@ from functools import partial
 from toolz import groupby, valmap
 from gateway.database import engine, metadata
 from gateway.driver.tools import unpack_df_to_component_dict
-# from gateway.asset.assets import Equity, Convertible, Fund
 
 KLINE_COLUMNS_TYPE = {
             'open': np.double,
@@ -237,6 +236,8 @@ class AssetSessionReader(BarReader):
 
 
 # if __name__ == '__main__':
+#
+#     from gateway.asset.assets import Equity, Convertible, Fund
 #
 #     reader = AssetSessionReader()
 #     asset = Equity('603612')

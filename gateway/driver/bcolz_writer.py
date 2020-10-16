@@ -136,15 +136,12 @@ class BcolzWriter(ABC):
 
     def glob_files(self):
         # e.g.  r'D:\通达信-1m\*'
-        print('_tdx_dir', self._tdx_dir)
-        sh_path = os.path.join(self._tdx_dir, 'vipdoc\sh\minline\sh6*')
-        print('sh_path', sh_path)
-        sz_path = os.path.join(self._tdx_dir, 'vipdoc\sz\minline\sz[0|3]*')
-        print('sz_path', sz_path)
+        sh_path = os.path.join(self._tdx_dir, r'vipdoc/sh/minline/sh6*')
+        sz_path = os.path.join(self._tdx_dir, r'vipdoc/sz/minline/sz[0|3]*')
         sh_files = glob.glob(sh_path)
         sz_files = glob.glob(sz_path)
         tdx_file_paths = sh_files + sz_files
-        print('files', len(tdx_file_paths), tdx_file_paths[:10])
+        print('tdx files', len(tdx_file_paths))
         return tdx_file_paths
 
     @abstractmethod
@@ -347,8 +344,8 @@ class BcolzDailyBarWriter(BcolzWriter):
         # print('df', df)
 
 
-# if __name__ == '__main__':
-#
-#     tdx_dir = r'D:\通达信-1m\*'
-#     w1 = BcolzMinuteBarWriter(tdx_dir)
-#     w1.write()
+if __name__ == '__main__':
+
+    tdx_dir = '/Users/python/Downloads/update/*'
+    w1 = BcolzMinuteBarWriter(tdx_dir)
+    w1.write()
