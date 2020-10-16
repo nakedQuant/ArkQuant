@@ -8,17 +8,6 @@ Created on Tue Mar 12 15:37:47 2019
 import pandas as pd
 from toolz import valmap
 from functools import partial
-# from gateway.driver.bar_reader import AssetSessionReader
-# from gateway.driver.bcolz_reader import BcolzMinuteReader
-# from gateway.driver.adjustment_reader import SQLiteAdjustmentReader
-# from gateway.asset.assets import Equity, Convertible, Fund
-
-
-__all__ = [
-    'AdjustedMinuteWindow',
-    'AdjustedDailyWindow',
-    'HistoryCompatibleAdjustments'
-]
 
 AdjustFields = frozenset(['open', 'high', 'low', 'close', 'volume'])
 
@@ -232,7 +221,18 @@ class AdjustedMinuteWindow(SlidingWindow):
         return 'minute'
 
 
+__all__ = [
+    'AdjustedMinuteWindow',
+    'AdjustedDailyWindow',
+    'HistoryCompatibleAdjustments'
+]
+
 # if __name__ == '__main__':
+
+#     from gateway.driver.bar_reader import AssetSessionReader
+#     from gateway.driver.bcolz_reader import BcolzMinuteReader
+#     from gateway.driver.adjustment_reader import SQLiteAdjustmentReader
+#     from gateway.asset.assets import Equity, Convertible, Fund
 #
 #     minute_reader = BcolzMinuteReader()
 #     session_reader = AssetSessionReader()

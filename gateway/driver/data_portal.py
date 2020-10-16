@@ -16,10 +16,6 @@ from gateway.driver.history import (
     HistoryDailyLoader,
     HistoryMinuteLoader
 )
-# from gateway.asset.assets import Equity
-
-
-__all__ = ['DataPortal']
 
 
 class DataPortal(object):
@@ -121,19 +117,21 @@ class DataPortal(object):
         if asset.asset_type == 'equity':
             # 存在0.1%误差
             spot_value = self.get_spot_value(dt, asset, 'daily', ['open', 'high', 'low', 'close', 'pct'])
-            open_pct = (spot_value['high'] - spot_value['low']) * 100 / (spot_value['pct'] * spot_value['open']) - 1
+            preclose = (spot_value['high'] - spot_value['low']) * 100 / spot_value['pct']
+            open_pct = spot_value['open'] / preclose - 1
         else:
             spot_value = self.get_spot_value(dt, asset, 'daily', ['open', 'close'])
-            pre_value = self._history_loader['daily'].window([asset], ['open', 'close'], dt, -1)
-            open_pct = spot_value['open'] / pre_value['close']
-        return open_pct
+            pre_value = self.get_history_window([asset], dt, -1, ['close'], 'daily')
+            preclose = pre_value[asset.sid]['close'].iloc[-1]
+            open_pct = spot_value['open'] / preclose - 1
+        return open_pct, preclose
 
     def get_window(self,
-                        assets,
-                        dt,
-                        days_in_window,
-                        field,
-                        data_frequency):
+                   assets,
+                   dt,
+                   days_in_window,
+                   field,
+                   data_frequency):
         """
         Internal method that gets a window of raw daily data for a sid
         and specified date range.  Used to support the history API method for
@@ -187,7 +185,7 @@ class DataPortal(object):
         frequency: string
             "1d" or "1m"
 
-        field: string
+        field: string or list
             The desired field of the asset.
 
         data_frequency: string
@@ -246,8 +244,13 @@ class DataPortal(object):
         return frame
 
 
+portal = DataPortal()
+
+__all__ = ['portal']
+
 # if __name__ == '__main__':
 #
+#     from gateway.asset.assets import Equity
 #     data_portal = DataPortal()
 #     assets = [Equity('600000')]
 #     fields = ['open', 'close', 'amount']
@@ -261,8 +264,8 @@ class DataPortal(object):
 #     rights = data_portal.get_rights_for_asset(assets[0], '2000-01-24')
 #     print('rights', rights)
 #
-#     open_pct = data_portal.get_open_pct(assets[0], '2020-09-03')
-#     print('open_pct', open_pct)
+#     open_pct, preclose = data_portal.get_open_pct(assets[0], '2020-09-03')
+#     print('open_pct and preclose', open_pct, preclose)
 #
 #     daily_window_data = data_portal.get_window(assets, sessions[1], days_in_window=day_window,
 #                                                field=fields, data_frequency='daily')

@@ -11,15 +11,6 @@ from _calendar.trading_calendar import calendar
 from gateway.driver.adjustArray import (
                         AdjustedDailyWindow,
                         AdjustedMinuteWindow)
-# from gateway.asset.assets import Equity, Convertible, Fund
-# from gateway.driver.bar_reader import AssetSessionReader
-# from gateway.driver.bcolz_reader import BcolzMinuteReader
-# from gateway.driver.adjustment_reader import SQLiteAdjustmentReader
-
-__all__ = [
-    'HistoryMinuteLoader',
-    'HistoryDailyLoader'
-]
 
 DefaultFields = frozenset(['open', 'high', 'low', 'close', 'amount', 'volume'])
 
@@ -331,7 +322,17 @@ class HistoryMinuteLoader(HistoryLoader):
         return _slice_window
 
 
+__all__ = [
+    'HistoryMinuteLoader',
+    'HistoryDailyLoader'
+]
+
+
 # if __name__ == '__main__':
+#     from gateway.asset.assets import Equity, Convertible, Fund
+#     from gateway.driver.bar_reader import AssetSessionReader
+#     from gateway.driver.bcolz_reader import BcolzMinuteReader
+#     from gateway.driver.adjustment_reader import SQLiteAdjustmentReader
 #
 #     minute_reader = BcolzMinuteReader()
 #     session_reader = AssetSessionReader()
@@ -341,8 +342,8 @@ class HistoryMinuteLoader(HistoryLoader):
 #     sessions = ['2005-01-01', '2010-10-30']
 #     fields = ['open', 'close']
 #     daily_history = HistoryDailyLoader(session_reader, adjustment_reader)
-#     his_window_daily = daily_history.history([asset], fields, sessions[0], window=-300)
-#     print('history_window_daily', his_window_daily)
+#     his_window_daily = daily_history.history([asset], ['close'], sessions[0], window=-300)
+#     print('history_window_daily', his_window_daily[asset.sid]['close'].iloc[-1])
 #     test_his_window_daily = daily_history.history([asset], fields, '2004-04-10', window=-70)
 #     print('test_his_window_daily', test_his_window_daily)
 #     daily_spot_value = daily_history.get_spot_value('2005-09-07', asset, fields)

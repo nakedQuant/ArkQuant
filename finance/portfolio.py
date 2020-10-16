@@ -38,7 +38,6 @@ class Portfolio(object):
         self.positions = None
         self._cash_flow = 0.0
         self.start_cash = capital_base - self.cash_flow
-        self.portfolio_daily_value = pd.Series(index=calendar.all_sessions, dtype='float64')
 
     @property
     def cash_flow(self):
@@ -48,11 +47,15 @@ class Portfolio(object):
     def cash_flow(self, capital):
         self._cash_flow = capital
 
+    @property
+    def portfolio_daily_value(self):
+        return pd.Series(index=calendar.all_sessions, dtype='float64')
+
     def __getattr__(self, item):
-        return self.__slots__[item]
+        return self.__dict__[item]
 
     def __repr__(self):
-        return "Portfolio({0})".format(self.__slots__)
+        return "Portfolio({0})".format(self.__dict__)
 
     # If you are adding new attributes, don't update this set. This method
     # is deprecated to normal attribute access so we don't want to encourage
@@ -87,13 +90,21 @@ class Portfolio(object):
                 )
                 for p in self.positions
             })
-            return position_values / self.portfolio_value
+            wgt = position_values / self.portfolio_value
+        else:
+            wgt = None
+        return wgt
 
     def record_value(self, session_ix):
         self.portfolio_daily_value[session_ix] = self.portfolio_value
 
+    def to_dict(self):
+        return self.__dict__
+
 
 if __name__ == '__main__':
 
-    portfolio = Portfolio()
+    portfolio = Portfolio(100000)
     print('portfolio', portfolio)
+    dct = portfolio.to_dict()
+    print('dct', dct)

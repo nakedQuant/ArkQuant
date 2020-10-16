@@ -9,6 +9,7 @@ Created on Sun Feb 17 16:11:34 2019
 from abc import ABC, abstractmethod
 from datetime import datetime
 from enum import Enum
+# 类型检查
 from typing import Optional, Sequence, List, Dict, TYPE_CHECKING
 
 

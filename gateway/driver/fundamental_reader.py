@@ -12,17 +12,6 @@ from gateway.driver.tools import _parse_url, unpack_df_to_component_dict
 from gateway.spider.url import ASSET_FUNDAMENTAL_URL
 from gateway.driver.bar_reader import BarReader
 from gateway.database import engine
-from gateway.asset.assets import Equity, Convertible, Fund
-
-
-__all__ = [
-    'MassiveSessionReader',
-    'ReleaseSessionReader',
-    'HolderSessionReader',
-    'OwnershipSessionReader',
-    'GrossSessionReader',
-    'MarginSessionReader'
-]
 
 
 class MassiveSessionReader(BarReader):
@@ -270,25 +259,37 @@ class GrossSessionReader(BarReader):
         return gross_value
 
 
-if __name__ == '__main__':
+__all__ = [
+    'MassiveSessionReader',
+    'ReleaseSessionReader',
+    'HolderSessionReader',
+    'OwnershipSessionReader',
+    'GrossSessionReader',
+    'MarginSessionReader'
+]
 
-    sessions = ['2020-03-25', '2020-05-01']
-    asset = [Equity('600000')]
-    massive = MassiveSessionReader()
-    m = massive.load_raw_arrays(sessions, asset)
-    print('massive', m)
-    release = ReleaseSessionReader()
-    r = release.load_raw_arrays(sessions, asset)
-    print('release', r)
-    holder = HolderSessionReader()
-    h = holder.load_raw_arrays(sessions, asset)
-    print('holder', h)
-    ownership = OwnershipSessionReader()
-    o = ownership.load_raw_arrays(sessions, asset)
-    print('ownership', o)
-    marign = MarginSessionReader()
-    margin_data = marign.load_raw_arrays(sessions, None)
-    print('margin', margin_data)
-    gdp = GrossSessionReader()
-    g = gdp.load_raw_arrays(sessions, None)
-    print('gdp', g)
+
+# if __name__ == '__main__':
+#
+#     from gateway.asset.assets import Equity, Convertible, Fund
+#
+#     sessions = ['2020-03-25', '2020-05-01']
+#     asset = [Equity('600000')]
+#     massive = MassiveSessionReader()
+#     m = massive.load_raw_arrays(sessions, asset)
+#     print('massive', m)
+#     release = ReleaseSessionReader()
+#     r = release.load_raw_arrays(sessions, asset)
+#     print('release', r)
+#     holder = HolderSessionReader()
+#     h = holder.load_raw_arrays(sessions, asset)
+#     print('holder', h)
+#     ownership = OwnershipSessionReader()
+#     o = ownership.load_raw_arrays(sessions, asset)
+#     print('ownership', o)
+#     marign = MarginSessionReader()
+#     margin_data = marign.load_raw_arrays(sessions, None)
+#     print('margin', margin_data)
+#     gdp = GrossSessionReader()
+#     g = gdp.load_raw_arrays(sessions, None)
+#     print('gdp', g)

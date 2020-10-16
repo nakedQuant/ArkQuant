@@ -14,7 +14,7 @@ from pipe.loader.loader import PricingLoader
 from finance.restrictions import UnionRestrictions, NoRestrictions
 from pipe.term import Term
 from pipe.pipeline import Pipeline
-from gateway.asset._finder import AssetFinder
+from gateway.asset._finder import _init_finder
 
 __all__ = [
     'SimplePipelineEngine',
@@ -145,7 +145,7 @@ class Engine(ABC):
         # 退出算法包含righted position
         ump_positions = self.run_ump(pipe_metadata, traded_positions) + removed_positions
         # 买入的event , 卖出的ump_positions , 总持仓（剔除配股持仓）
-        yield dts, capital, self.resolve_conflicts(pipe_proxy, ump_positions, traded_positions)
+        yield ledger.porfolio.to_dict(), dts, capital, self.resolve_conflicts(pipe_proxy, ump_positions, traded_positions)
 
     @staticmethod
     @abstractmethod
@@ -227,12 +227,11 @@ class SimplePipelineEngine(Engine):
 
     def __init__(self,
                  pipelines,
-                 asset_finder,
                  restrictions=[NoRestrictions],
                  alternatives=10,
                  allow_righted=False,
                  allowed_violation=True):
-        self.asset_finder = asset_finder
+        self.asset_finder = _init_finder()
         # SecurityListRestrictions  AvailableRestrictions
         self.restricted_rules = UnionRestrictions(restrictions)
         self.alternatives = alternatives
@@ -284,7 +283,6 @@ class NoEngineRegistered(Exception):
 
 if __name__ == '__main__':
 
-    asset_finder = AssetFinder()
     kw = {'window': (5, 10)}
     cross_term = Term('cross', kw)
     print('sma_term', cross_term)
@@ -294,5 +292,5 @@ if __name__ == '__main__':
     # init
     pipeline = Pipeline(terms)
     print('pipeline', pipeline)
-    engine = SimplePipelineEngine(pipeline, asset_finder)
+    engine = SimplePipelineEngine(pipeline)
     print('engine', engine)

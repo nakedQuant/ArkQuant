@@ -233,6 +233,8 @@ class AssetRouterWriter(Crawler):
 
     def writer(self):
         self._writer_internal()
+        # in case of pressure on spider network
+        time.sleep(5)
 
 
 # if __name__ == '__main__':

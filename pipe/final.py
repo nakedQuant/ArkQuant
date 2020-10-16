@@ -12,6 +12,7 @@ from abc import ABC, abstractmethod
 _type_error = TypeError('Cannot override final attribute')
 
 
+# 多重继承 __mro__
 def bases_mro(bases):
     """
     Yield classes in the order that methods should be looked up from the
@@ -108,7 +109,6 @@ class final(ABC):
         """
         raise _type_error
 
-    @abstractmethod
     def __get__(self, instance, owner):
         raise NotImplementedError('__get__')
 

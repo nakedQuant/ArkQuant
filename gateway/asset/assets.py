@@ -9,14 +9,7 @@ import pandas as pd, numpy as np, sqlalchemy as sa
 from sqlalchemy import select
 from gateway.database import engine, metadata
 from _calendar.trading_calendar import calendar
-
-__all__ = [
-    'Asset',
-    'Equity',
-    'Convertible',
-    'Fund'
-]
-
+from gateway.driver.data_portal import portal
 
 # 科创板股票上市后的前5个交易日不设涨跌幅限制，从第六个交易日开始设置20%涨跌幅限制
 RestrictedWindow = 5
@@ -117,6 +110,11 @@ class Asset(object):
     def is_active(self, session_label):
         active = self._is_active(session_label)
         return active
+
+    def can_be_traded(self, dt):
+        close = portal.get_spot_value(dt, self, 'daily', ['close'])
+        traded = False if close.empty else True
+        return traded
 
     def __repr__(self):
         return '%s(%s)' % (type(self).__name__, self.sid)
@@ -291,13 +289,21 @@ class Fund(Asset):
         return 0.1
 
 
-if __name__ == '__main__':
+__all__ = [
+    'Asset',
+    'Equity',
+    'Convertible',
+    'Fund'
+]
 
-    asset = Equity('300570')
-    # asset = Fund('515500')
-    # asset = Convertible('123013')
-    # p = pickle.dumps(asset)
-    limit = asset.restricted('2020-03-05')
-    limit = asset.is_active('2020-03-05')
-    # limit = asset.suspend('2020-09-04')
-    print('limit', limit)
+
+# if __name__ == '__main__':
+#
+#     asset = Equity('300570')
+#     # asset = Fund('515500')
+#     # asset = Convertible('123013')
+#     # p = pickle.dumps(asset)
+#     limit = asset.restricted('2020-03-05')
+#     limit = asset.is_active('2020-03-05')
+#     # limit = asset.suspend('2020-09-04')
+#     print('limit', limit)
