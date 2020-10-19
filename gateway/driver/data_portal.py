@@ -52,7 +52,7 @@ class DataPortal(object):
             'daily': _history_daily_loader,
             'minute': _history_minute_loader,
         }
-        self.resize_rule = Freq()
+        self.freq_rule = Freq()
         self._extra_source = None
 
     @property
@@ -218,8 +218,8 @@ class DataPortal(object):
             by_month :param delta: int ,the number day of month (max -- 31) which is trading_day
         """
         method_name = '%s_rules' % freq
-        resamples = self.resize_rule.get(method_name)(args, kwargs)
-        return resamples
+        samples = getattr(self.freq_rule, method_name)(args, kwargs)
+        return samples
 
     @staticmethod
     def get_current_minutes(sid):
@@ -248,15 +248,15 @@ portal = DataPortal()
 
 __all__ = ['portal']
 
-# if __name__ == '__main__':
-#
-#     from gateway.asset.assets import Equity
-#     data_portal = DataPortal()
-#     assets = [Equity('600000')]
-#     fields = ['open', 'close', 'amount']
-#     # fields = ['open', 'close']
-#     sessions = ['2020-05-01', '2020-09-30']
-#     day_window = 26
+if __name__ == '__main__':
+
+    from gateway.asset.assets import Equity
+    data_portal = DataPortal()
+    assets = [Equity('600000')]
+    fields = ['open', 'close', 'amount']
+    # fields = ['open', 'close']
+    sessions = ['2020-05-01', '2020-09-30']
+    day_window = 26
 #
 #     divdends = data_portal.get_dividends_for_asset(assets[0], '2017-05-25')
 #     print('divdends', divdends)
@@ -286,8 +286,8 @@ __all__ = ['portal']
 #     daily_spot_value = data_portal.get_spot_value('2020-09-03', assets[0], 'daily', ['close', 'low'])
 #     print('daily_spot_value', daily_spot_value)
 #
-#     minute_spot_value = data_portal.get_spot_value('2005-09-07', assets[0], 'minute', ['close', 'low'])
-#     print('minute_spot_value', minute_spot_value)
+    minute_spot_value = data_portal.get_spot_value('2005-09-07', assets[0], 'minute', ['close'])
+    print('minute_spot_value', minute_spot_value, minute_spot_value.index[0])
 #
 #     daily_stack_value = data_portal.get_stack_value('equity', sessions[0], -day_window, 'daily')
 #     print('daily_stack_value', daily_stack_value)

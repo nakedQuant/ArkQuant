@@ -9,8 +9,6 @@ from abc import ABC, abstractmethod
 import numpy as np
 from _calendar.trading_calendar import calendar
 
-__all__ = ['ComposedCancel', 'EODCancel', 'NeverCancel', 'ExtraCancel']
-
 
 class CancelPolicy(ABC):
     """
@@ -24,23 +22,18 @@ class CancelPolicy(ABC):
         -------
         should_cancel : bool
         """
-        pass
+        raise NotImplementedError()
 
 
-class ComposedCancel(CancelPolicy):
+class NullCancel(CancelPolicy):
+    """Orders are never automatically canceled.
     """
-     compose rules with some composing function
-    """
-    def __init__(self, policies):
 
-        if not np.all([isinstance(p, CancelPolicy) for p in policies]):
-            raise ValueError('only StatelessRule can be composed')
-
-        self.sub_policies = policies
+    def __init__(self):
+        self.warn_on_cancel = False
 
     def should_cancel(self, order):
-
-        return np.all([p.shoud_cancel(order) for p in self.sub_policies])
+        return False
 
 
 class EODCancel(CancelPolicy):
@@ -61,16 +54,6 @@ class EODCancel(CancelPolicy):
         return previous <= ticker.strftime('%Y-%m-%d')
 
 
-class NeverCancel(CancelPolicy):
-    """Orders are never automatically canceled.
-    """
-    def __init__(self):
-        self.warn_on_cancel = False
-
-    def should_cancel(self, order):
-        return False
-
-
 class ExtraCancel(CancelPolicy):
     """
         the policy cancel order which order asset is suffer negative affairs  --- black swat
@@ -81,19 +64,26 @@ class ExtraCancel(CancelPolicy):
         """
         self.root_dir = root_dir
 
-    def _load_file(self):
-        black = []
-        with open(self.root_dir, 'r') as f:
-            for r in f.readlines():
-                black.append(r)
-        return black
-
     def should_cancel(self, order):
         # 保证file update
         black_list = self._load_file()
         return order.asset in black_list
 
 
-if __name__ == '__main__':
+class ComposedCancel(CancelPolicy):
+    """
+     compose rules with some composing function
+    """
+    def __init__(self, policies):
 
-    no_cancel = NeverCancel()
+        if not np.all([isinstance(p, CancelPolicy) for p in policies]):
+            raise ValueError('only StatelessRule can be composed')
+
+        self.sub_policies = policies
+
+    def should_cancel(self, order):
+
+        return np.all([p.shoud_cancel(order) for p in self.sub_policies])
+
+
+__all__ = ['ComposedCancel', 'EODCancel', 'NullCancel', 'ExtraCancel']

@@ -12,16 +12,16 @@ MAX_WEEK_RANGE = 5
 
 
 def locate_pos(price, minutes, direction):
-    if minutes.min() <= price <= minutes.max():
-        try:
-            loc = minutes.values().index(price)
-        except ValueError:
-            idx = np.searchsorted(minutes.values(), price)
+    try:
+        loc = list(minutes.index[minutes == price])
+        if not loc:
             # 当卖出价格大于bid价格才会成交，买入价格低于bid价格才会成交
-            # 变相实现了当价格超过范围的时候默认为最高价格 length -1
-            loc = idx if direction == 'negative' else idx - 1
-            loc = min(loc, len(minutes) - 1)
-        return price, minutes.index[loc]
+            loc = list(minutes.index[minutes <= price]) if direction == '1' else \
+                list(minutes.index[minutes >= price])
+        return loc[0]
+    except IndexError:
+        print('price out of minutes')
+        return None
 
 
 def parse_date_str_series(format_str, tz, date_str_series):

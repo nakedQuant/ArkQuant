@@ -44,13 +44,14 @@ class MarketImpact(SlippageModel):
                  window=10):
         """
         :param _func: to measure market_impact e.g. exp(alpha) - 1
+        slippage base on vol_pct ,e.g. slippage = np.exp(vol_pct)
         """
         self.func = _func
         self.length = window
 
     def calculate_slippage_factor(self, asset, dts):
         """
-        :param alpha: float , e.g. pre_volume / volume.mean()
+        asset :param Asset
         :return:
         """
         alpha = portal.get_window([asset], dts, self.length, ['amount', 'volume'])

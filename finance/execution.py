@@ -6,13 +6,8 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 from abc import ABC, abstractmethod
-
-__all__ = [
-    'MarketOrder',
-    'LimitOrder',
-    'StopOrder',
-    'StopLimitOrder'
-]
+from functools import lru_cache
+from gateway.driver.data_portal import portal
 
 
 class ExecutionStyle(ABC):
@@ -25,9 +20,14 @@ class ExecutionStyle(ABC):
         For stop limit orders a Boolean is returned to flag
         that the stop has been reached.
     """
+    @staticmethod
+    @lru_cache(maxsize=32)
+    def get_pre_close(asset, dt):
+        open_pct, pre_close = portal.get_open_pct(asset, dt)
+        return pre_close
 
     @abstractmethod
-    def get_limit_price_ratio(self):
+    def get_limit_ratio(self, asset, dts):
         """
         Get the limit price ratio for this order.
         Returns either None or a numerical value >= 0.
@@ -35,7 +35,7 @@ class ExecutionStyle(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_stop_price_ratio(self):
+    def get_stop_ratio(self, asset, dts):
         """
         Get the stop price for this order.
         Returns either None or a numerical value >= 0.
@@ -49,13 +49,15 @@ class MarketOrder(ExecutionStyle):
 
     This is the default for orders placed with :func:`~zipline.api.order`.
     """
-    def get_limit_price_ratio(self):
-        # return -np.inf
-        return 0.0
+    def get_limit_ratio(self, asset, dts):
+        pre_close = self.get_pre_close(asset, dts)
+        limit_price = pre_close * (1 + asset.restricted(dts))
+        return limit_price
 
-    def get_stop_price_ratio(self):
-        # return np.inf
-        return 0.0
+    def get_stop_ratio(self, asset, dts):
+        pre_close = self.get_pre_close(asset, dts)
+        stop_price = pre_close * (1 - asset.restricted(dts))
+        return stop_price
 
 
 class LimitOrder(ExecutionStyle):
@@ -69,15 +71,18 @@ class LimitOrder(ExecutionStyle):
         Maximum price for buys, or minimum price for sells, at which the order
         should be filled.
     """
-    def __init__(self, limit_price):
-        self.limit_price = limit_price
+    def __init__(self, limit=0.08):
+        self.limit = limit
 
-    def get_limit_price_ratio(self):
-        return self.limit_price
+    def get_limit_ratio(self, asset, dts):
+        pre_close = self.get_pre_close(asset, dts)
+        limit_price = pre_close * (1 + self.limit)
+        return limit_price
 
-    def get_stop_price_ratio(self):
-        # return -np.inf
-        return 0.0
+    def get_stop_ratio(self, asset, dts):
+        pre_close = self.get_pre_close(asset, dts)
+        stop_price = pre_close * (1 - asset.restricted(dts))
+        return stop_price
 
 
 class StopOrder(ExecutionStyle):
@@ -92,15 +97,18 @@ class StopOrder(ExecutionStyle):
         order will be placed if market price falls below this value. For buys,
         the order will be placed if market price rises above this value.
     """
-    def __init__(self, stop_price):
-        self.stop_price = stop_price
+    def __init__(self, stop=0.07):
+        self.stop = stop
 
-    def get_limit_price_ratio(self):
-        # return np.inf
-        return 0.0
+    def get_limit_ratio(self, asset, dts):
+        pre_close = self.get_pre_close(asset, dts)
+        limit_price = pre_close * (1 + asset.restricted(dt))
+        return limit_price
 
-    def get_stop_price_ratio(self,):
-        return self.get_stop_price()
+    def get_stop_ratio(self, asset, dts):
+        pre_close = self.get_pre_close(asset, dts)
+        stop_price = pre_close * (1 - self.stop)
+        return stop_price
 
 
 class StopLimitOrder(ExecutionStyle):
@@ -118,18 +126,24 @@ class StopLimitOrder(ExecutionStyle):
         order will be placed if market price falls below this value. For buys,
         the order will be placed if market price rises above this value.
     """
-    def __init__(self, limit, stop):
-        self.limit = limit
-        self.stop = stop
+    def __init__(self, kwargs):
+        self.limit = kwargs.get('limit', 0.08)
+        self.stop = kwargs.get('stop', 0.07)
 
-    def get_limit_price_ratio(self):
-        return self.limit
+    def get_limit_ratio(self, asset, dts):
+        pre_close = self.get_pre_close(asset, dts)
+        limit_price = pre_close * (1 + self.limit )
+        return limit_price
 
-    def get_stop_price_ratio(self):
-        return self.stop
+    def get_stop_ratio(self, asset, dts):
+        pre_close = self.get_pre_close(asset, dts)
+        stop_price = pre_close * (1 - self.stop)
+        return stop_price
 
 
-if __name__ == '__main__':
-
-    m_ord = MarketOrder()
-    print('market order', m_ord)
+__all__ = [
+    'MarketOrder',
+    'LimitOrder',
+    'StopOrder',
+    'StopLimitOrder'
+]

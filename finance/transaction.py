@@ -5,18 +5,19 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
+from finance.order import Order
 
 
 class Transaction(object):
 
     __slots__ = ['asset', 'amount', 'price', 'cost', 'created_dt']
 
-    def __init__(self, asset, amount, price, cost, dt):
+    def __init__(self, asset, amount, price, dts, cost):
         self.asset = asset
         self.amount = amount
         self.price = price
+        self.created_dt = dts
         self.cost = cost
-        self.created_dt = dt
 
     def __repr__(self):
         template = (
@@ -49,15 +50,17 @@ def create_transaction(order, commission):
     :param commission: Commission object used for calculating order cost
     :return: transaction
     """
-    sign = -1 if order.direction == 'negative' else 1
-    # calculate cost
-    cost = commission.calculate(order)
-    # create txn
-    transaction = Transaction(
-        asset=order.asset,
-        amount=order.amount * sign,
-        price=order.price,
-        dt=order.created_dt,
-        cost=cost
-    )
-    return transaction
+    if isinstance(order, Order):
+        # calculate cost
+        cost = commission.calculate(order)
+        # create txn
+        transaction = Transaction(
+            asset=order.asset,
+            amount=order.amount,
+            price=order.price,
+            dts=order.created_dt,
+            cost=cost
+        )
+        return transaction
+    else:
+        raise ValueError('Order object can transform to transaction')

@@ -10,9 +10,6 @@ from finance.portfolio import Portfolio
 from finance._protocol import Account, MutableView
 from finance.position_tracker import PositionTracker
 from risk.alert import UnionRisk, PositionDrawRisk
-from trade.params import create_simulation_parameters
-
-__all__ = ['Ledger']
 
 
 class Ledger(object):
@@ -197,9 +194,14 @@ class Ledger(object):
         return expires
 
 
-if __name__ == '__main__':
+__all__ = ['Ledger']
 
-    risk = PositionDrawRisk(withdraw=0.2)
-    sim_params = create_simulation_parameters()
-    ledger = Ledger(sim_params, risk)
-    print('ledger', ledger)
+
+# if __name__ == '__main__':
+#
+#     from trade.params import create_simulation_parameters
+
+#     risk = PositionDrawRisk(withdraw=0.2)
+#     sim_params = create_simulation_parameters()
+#     ledger = Ledger(sim_params, risk)
+#     print('ledger', ledger)

@@ -227,7 +227,8 @@ class SimplePipelineEngine(Engine):
 
     def __init__(self,
                  pipelines,
-                 restrictions=[NoRestrictions],
+                 restrictions,
+                 cancel_models,
                  alternatives=10,
                  allow_righted=False,
                  allowed_violation=True):
