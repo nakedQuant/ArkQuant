@@ -8,18 +8,14 @@ Created on Tue Mar 12 15:37:47 2019
 import numpy as np, pandas as pd
 from finance._protocol import InnerPosition, Position as ProtocolPosition
 from _calendar.trading_calendar import calendar
-from pipe import Event
-from gateway.asset.assets import Equity
-
-__all__ = ['Position']
 
 
 class Position(object):
 
-    __slots__ = ['inner_position', 'event', 'position_returns', '_closed']
+    __slots__ = ['inner_position', 'position_returns', '_closed']
 
     def __init__(self,
-                 event,
+                 asset,
                  amount=0,
                  cost_basis=0.0,
                  last_sync_price=0.0,
@@ -27,33 +23,26 @@ class Position(object):
 
         # 属性只能在inner里面进行更新 --- 变相隔离
         inner = InnerPosition(
-                asset=event.asset,
+                asset=asset,
                 amount=amount,
                 cost_basis=cost_basis,
                 last_sync_price=last_sync_price,
                 last_sync_date=last_sync_date,
         )
         self.inner_position = inner
-        self.event = event
         self.position_returns = pd.Series(index=calendar.all_sessions, dtype='float64')
         self._closed = False
 
     @property
     def name(self):
-        # created by pipe (name) , event(name , asset)
-        return self.event.name
-
-    # @property
-    # def sid(self):
-    #     return self.asset.sid
-
-    @property
-    def asset(self):
-        return self.asset
+        return self.asset.tag
 
     @property
     def closed(self):
         return self._closed
+
+    def __getattr__(self, item):
+        return getattr(self.inner_position, item)
 
     @property
     # 当天买入仓位不能卖出 --- 需改整个运行逻辑
@@ -63,12 +52,6 @@ class Position(object):
     @property
     def protocol(self):
         return ProtocolPosition(self.inner_position)
-
-    def __getattr__(self, item):
-        return getattr(self.inner_position, item)
-
-    # def __setattr__(self, key, value):
-    #     setattr(self.inner_position, key, value)
 
     def handle_split(self, amount_ratio, cash_ratio):
         """
@@ -107,6 +90,7 @@ class Position(object):
                 self.inner_position.last_sync_price = txn.price
                 self.inner_position.last_sync_date = txn.created_dt
                 self._closed = True
+            # txn_capital = txn_value + np.copysign(txn_cost, txn_value)
             txn_capital = txn_value - txn_cost
         return txn_capital
 
@@ -114,11 +98,17 @@ class Position(object):
         self.position_returns[self.last_sync_date] = self.last_sync_price / self.cost_basis - 1.0
 
     def __repr__(self):
-        template = "asset :{asset} , amount:{amount},cost_basis:{cost_basis}"
+        template = "asset={asset}," \
+                   "amount={amount}," \
+                   "cost_basis={cost_basis}," \
+                   "last_sync_price={last_sync_price}," \
+                   "last_sync_date={last_sync_date}"
         return template.format(
             asset=self.asset,
             amount=self.amount,
-            cost_basis=self.cost_basis
+            cost_basis=self.cost_basis,
+            last_sync_price=self.last_sync_price,
+            last_sync_date=self.last_sync_date
         )
 
     def to_dict(self):
@@ -127,7 +117,7 @@ class Position(object):
         :return:
         """
         return {
-            'sid': self.asset.sid,
+            'asset': self.asset,
             'amount': self.amount,
             'origin': self.asset_type.source,
             'cost_basis': self.cost_basis,
@@ -136,9 +126,4 @@ class Position(object):
             }
 
 
-if __name__ == '__main__':
-
-    asset = Equity('600000')
-    event = Event(asset, 'pipeline')
-    p = Position(event)
-    print('position', p)
+__all__ = ['Position']

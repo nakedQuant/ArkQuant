@@ -5,9 +5,10 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-from itertools import chain
 import numpy as np, pandas as pd
-from functools import lru_cache
+from itertools import chain
+from multiprocessing import Pool
+from functools import lru_cache, partial
 from abc import ABC, abstractmethod
 from gateway.driver.data_portal import portal
 from finance.control import UnionControl
@@ -94,6 +95,7 @@ class CapitalDivision(BaseDivision):
             a. pipe 买入策略信号会滞后 ， dt对象与dt + 1对象可能相同的 --- 分段加仓
             b. 针对于卖出标的 -- 遵循最大程度卖出（当天）
             c. 执行买入算法的需要涉及比如最大持仓比例，持仓量等限制
+        order amount --- negative
     """
     def __init__(self,
                  slippage,
@@ -117,8 +119,8 @@ class CapitalDivision(BaseDivision):
         per_size = np.ceil(20000 / base_capital)
         """根据目标q --- 生成size序列拆分订单数量"""
         size_array = np.tile([per_size], int(size/per_size))
-        size_array[np.random.randint(0, len(size_array),size % per_size)] += 1
-        size_array = size_array * asset.tick_size
+        size_array[np.random.randint(0, len(size_array), size % per_size)] += 1
+        size_array = size_array * asset.tick_size * -1
         # simulate price
         dist = self.dist.simulate_dist(int(size / per_size), open_pct)
         clip_pct = np.clip(dist, (1 - asset.restricted), (1 + asset.restricted))
@@ -140,7 +142,7 @@ class CapitalDivision(BaseDivision):
         """根据目标q --- 生成size序列拆分订单数量"""
         size_array = np.tile([per_size], int(size / per_size))
         size_array[np.random.randint(0, len(size_array), size % per_size)] += 1
-        size_array = size_array * asset.tick_size
+        size_array = size_array * asset.tick_size * -1
         # simulate ticker
         sim_tickers = self.dist.simulate_ticker(int(size / per_size))
         return zip(sim_tickers, size_array)
@@ -183,6 +185,7 @@ class PositionDivision(BaseDivision):
             a. pipe 买入策略信号会滞后 ， dt对象与dt + 1对象可能相同的 --- 分段加仓
             b. 针对于卖出标的 -- 遵循最大程度卖出（当天）
             c. 执行买入算法的需要涉及比如最大持仓比例，持仓量等限制
+        order amount --- positive
     """
 
     def __init__(self,
@@ -231,7 +234,6 @@ class PositionDivision(BaseDivision):
         """根据目标q --- 生成size序列拆分订单数量"""
         size_array = np.tile([per_size], int(size / per_size))
         size_array[np.random.randint(0, len(size_array), size % per_size)] += 1
-        size_array = size_array * -1
         # simulate ticker
         sim_tickers = self.dist.simulate_ticker(int(size / per_size))
         return zip(sim_tickers, size_array)
@@ -263,6 +265,14 @@ class PositionDivision(BaseDivision):
 
 class BlotterSimulation(object):
     """
+        前5个交易日,科创板科创板还设置了临时停牌制度，当盘中股价较开盘价上涨或下跌幅度首次达到30%、60%时，都分别进行一次临时停牌
+        单次盘中临时停牌的持续时间为10分钟。每个交易日单涨跌方向只能触发两次临时停牌，最多可以触发四次共计40分钟临时停牌。
+        如果跨越14:57则复盘
+
+                科创板盘后固定价格交易 15:00 --- 15:30
+        若收盘价高于买入申报指令，则申报无效；若收盘价低于卖出申报指令同样无效
+        原则 --- 以收盘价为成交价，按照时间优先的原则进行逐笔连续撮合
+
         transform orders which are simulated by gen module to transactions
         撮合成交逻辑基于时间或者价格
     """
@@ -284,7 +294,8 @@ class BlotterSimulation(object):
         # 基于订单的设置的上下线过滤订单
         upper = 1 + self.execution.get_limit_ratio(asset, dts)
         bottom = 1 - self.execution.get_stop_ratio(asset, dts)
-        if bottom <= price <= upper:
+        # avoid asset price reach price restriction
+        if bottom < price < upper:
             # 计算滑价系数
             slippage = self.slippage.calculate_slippage_factor(asset, dts)
             order.price = price * (1+slippage)
@@ -325,9 +336,19 @@ class Interactive(object):
     """
     def __init__(self, delay):
         self.delay = delay
-        self.holidng_division = PositionDivision()
+        self.holding_division = PositionDivision()
         self.capital_division = CapitalDivision()
         self.blotter = BlotterSimulation()
+
+    def yield_capital(self, asset, capital, dts):
+        capital_orders = self.capital_division.simulate_iterator(asset, capital, dts)
+        capital_transactions = self.blotter.create_transaction(capital_orders, dts)
+        return capital_transactions
+
+    def yield_position(self, position, dts):
+        holding_orders = self.holding_division.simulate_iterator(position, dts)
+        holding_transactions = self.blotter.create_transaction(holding_orders, dts)
+        return holding_transactions
 
     def yield_interactive(self, position, asset, dts):
         """
@@ -369,16 +390,6 @@ class Interactive(object):
         long_transactions = self.blotter.create_transaction(orders, dts)
         return short_transactions, long_transactions
 
-    def yield_capital(self, asset, capital, dts):
-        capital_orders = self.capital_division.simulate_iterator(asset, capital, dts)
-        capital_transactions = self.blotter.create_transaction(capital_orders, dts)
-        return capital_transactions
-
-    def yield_position(self, position, dts):
-        holding_orders = self.holidng_division.simulate_iterator(position, dts)
-        holding_transactions = self.blotter.create_transaction(holding_orders, dts)
-        return holding_transactions
-
 
 class Generator(object):
     """
@@ -395,45 +406,71 @@ class Generator(object):
             combine simpleEngine and blotter module
             engine --- asset --- orders --- transactions
             订单 --- 引擎生成交易 --- 执行计划式的
-
     """
     def __init__(self,
+                 engine,
                  controls,
-                 risk_model,
+                 allocation_model,
                  delay=1):
+        self.engine = engine
+        self.capital_model = allocation_model
         self.interactive = Interactive(delay=delay)
-        self.risk_model = risk_model
         self.trade_controls = UnionControl(controls)
 
-    def engaged_in_risk(self, assets, capital, portfolio, dts):
-        allocation = self.risk_model.compute(assets, capital, dts)
-        for k, v in allocation.items():
-            asset, amount, capital = self.trade_controls.validate(k, 0, v, portfolio, dts)
+    def set_controls_func(self, portfolio):
+        cap_controls = partial(self.trade_controls.validate_call, porfolio=portfolio)
+        position_controls = partial(self.trade_controls.validate_put, porfolio=portfolio)
+        return cap_controls, position_controls
 
-    def enroll_implement(self, asset, capital, dts):
+    def implement_capital(self, assets, capital, algo_control, dts):
         """基于资金买入对应仓位"""
-        self.interactive.yield_capital(asset, capital, dts)
+        txn_mappings = dict()
+        # controls
+        allocation = self.capital_model.compute(assets, capital, dts)
+        for asset, cap in allocation.items():
+            asset, control_cap = algo_control(asset=asset, capital=cap, algo_datetime=dts)
+            txn_mappings[asset] = self.interactive.yield_capital(asset, control_cap, dts)
+        return txn_mappings
 
-    def withdraw_implement(self, positions, dts):
+    def implement_position(self, positions, algo_control, dts):
         """单独的卖出仓位"""
-        self.interactive.yield_position(positions, dts)
+        txn_mappings = dict()
+        for p in positions:
+            p = algo_control(p)
+            txn_mappings[p.asset] = self.interactive.yield_position(p, dts)
+        return txn_mappings
 
-    def dual_implement(self, duals, dts):
+    def implement_duals(self, duals, dts):
         """
             针对一个pipeline算法，卖出 -- 买入
         """
-        p, asset = duals
-        self.interactive.yield_interactive(p, asset, dts)
+        txn_mappings = dict()
+        for dual in duals:
+            p, asset = dual
+            short, long = self.interactive.yield_interactive(p, asset, dts)
+            txn_mappings[p.asset] = short
+            txn_mappings[asset] = long
+        return txn_mappings
 
-    def carry_out(self, engine, ledger):
+    @staticmethod
+    def process(ledger, iterable):
+        def proc(dct):
+            for k, v in dct.items():
+                ledger.process_transaction(v)
+        with Pool(processes=3) as pool:
+            [pool.apply_async(proc, item) for item in iterable]
+
+    def carry_out(self, ledger):
         """建立执行计划"""
-        dts, capital, negatives, dual, positives = engine.execute_algorithm(ledger)
+        dts, capital, negatives, duals, positives = self.engine.execute_algorithm(ledger)
+        # init controls
+        capital_controls, position_controls = self.set_controls_func(ledger.portfolio)
         # 直接买入
+        call_txns = self.implement_capital(positives, capital, capital_controls, dts)
         # 直接卖出
+        put_txns = self.implement_position(negatives, position_controls, dts)
         # 卖出 --- 买入
-        # unchanged_positions
-        # 根据标的追踪 --- 具体卖入订单根据volume计算成交率，买入订单根据成交额来计算资金利用率 --- 评估撮合引擎撮合的的效率
-        # --- 通过portfolio的资金使用效率来度量算法的效率
+        dual_txns = self.implement_duals(duals, dts)
+        # portfolio的资金使用效率评估引擎撮合的的效率 --- 并行执行成交
+        self.process(ledger, [call_txns, put_txns, dual_txns])
 
-        # 执行成交
-        # ledger.process_transaction(transactions)

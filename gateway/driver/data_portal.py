@@ -59,7 +59,7 @@ class DataPortal(object):
     def adjustment_reader(self):
         return self._adjustment_reader
 
-    def get_dividends_for_asset(self, asset, trading_day):
+    def get_dividends(self, assets, trading_day):
         """
         splits --- divdends
 
@@ -68,7 +68,7 @@ class DataPortal(object):
 
         Parameters
         ----------
-        asset: Asset
+        assets: Asset list
             The asset whose stock dividends should be returned.
 
         trading_day: pd.DatetimeIndex
@@ -78,17 +78,17 @@ class DataPortal(object):
         -------
             equity divdends or cash divdends
         """
-        dividends = self._adjustment_reader.load_divdends_for_sid(asset.sid, trading_day)
+        dividends = self._adjustment_reader.retrieve_pay_date_divdends(assets, trading_day)
         return dividends
 
-    def get_rights_for_asset(self, asset, trading_day):
+    def get_rights(self, assets, trading_day):
         """
         Returns all the stock dividends for a specific sid that occur
         in the given trading range.
 
         Parameters
         ----------
-        asset: Asset
+        assets: Asset list
             The asset whose stock dividends should be returned.
 
         trading_day: pd.DatetimeIndex
@@ -98,7 +98,7 @@ class DataPortal(object):
         -------
             equity rights
         """
-        rights = self._adjustment_reader.load_rights_for_sid(asset.sid, trading_day)
+        rights = self._adjustment_reader.retrieve_ex_date_rights(assets, trading_day)
         return rights
 
     def get_mkv_value(self, sessions, assets, fields=None):
@@ -248,20 +248,20 @@ portal = DataPortal()
 
 __all__ = ['portal']
 
-if __name__ == '__main__':
-
-    from gateway.asset.assets import Equity
-    data_portal = DataPortal()
-    assets = [Equity('600000')]
-    fields = ['open', 'close', 'amount']
-    # fields = ['open', 'close']
-    sessions = ['2020-05-01', '2020-09-30']
-    day_window = 26
+# if __name__ == '__main__':
 #
-#     divdends = data_portal.get_dividends_for_asset(assets[0], '2017-05-25')
+#     from gateway.asset.assets import Equity
+#     data_portal = DataPortal()
+#     assets = [Equity('600000')]
+#     fields = ['open', 'close', 'amount']
+#     # fields = ['open', 'close']
+#     sessions = ['2020-05-01', '2020-09-30']
+#     day_window = 26
+#
+#     divdends = data_portal.get_dividends(assets, '2017-05-25')
 #     print('divdends', divdends)
 #
-#     rights = data_portal.get_rights_for_asset(assets[0], '2000-01-24')
+#     rights = data_portal.get_rights(assets, '2000-01-24')
 #     print('rights', rights)
 #
 #     open_pct, preclose = data_portal.get_open_pct(assets[0], '2020-09-03')
@@ -286,8 +286,8 @@ if __name__ == '__main__':
 #     daily_spot_value = data_portal.get_spot_value('2020-09-03', assets[0], 'daily', ['close', 'low'])
 #     print('daily_spot_value', daily_spot_value)
 #
-    minute_spot_value = data_portal.get_spot_value('2005-09-07', assets[0], 'minute', ['close'])
-    print('minute_spot_value', minute_spot_value, minute_spot_value.index[0])
+#     minute_spot_value = data_portal.get_spot_value('2005-09-07', assets[0], 'minute', ['close'])
+#     print('minute_spot_value', minute_spot_value, minute_spot_value.index[0])
 #
 #     daily_stack_value = data_portal.get_stack_value('equity', sessions[0], -day_window, 'daily')
 #     print('daily_stack_value', daily_stack_value)

@@ -102,7 +102,7 @@ class StopOrder(ExecutionStyle):
 
     def get_limit_ratio(self, asset, dts):
         pre_close = self.get_pre_close(asset, dts)
-        limit_price = pre_close * (1 + asset.restricted(dt))
+        limit_price = pre_close * (1 + asset.restricted(dts))
         return limit_price
 
     def get_stop_ratio(self, asset, dts):

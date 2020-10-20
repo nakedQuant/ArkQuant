@@ -7,7 +7,7 @@ Created on Tue Mar 12 15:37:47 2019
 """
 import pandas as pd
 from _calendar.trading_calendar import calendar
-from gens import (
+from trade import (
     SESSION_START,
     SESSION_END,
     BEFORE_TRADING_START

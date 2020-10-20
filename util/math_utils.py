@@ -5,7 +5,7 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 from decimal import Decimal
-import math, numpy as np
+import math, numpy as np, pandas as pd
 from numpy import isnan
 
 
@@ -115,4 +115,12 @@ def _gen_unzip(it, elem_len):
 def vectorized_is_element(array, choices):
     # numpy.vectorize(pyfunc, otypes=None, doc=None, excluded=None, cache=False, signature=None)
     return np.vectorize(choices.__contains__, otypes=[bool])(array)
+
+
+def measure_volatity(data):
+    if isinstance(data, pd.DataFrame):
+        std = (data['high'] - data['low']).std()
+    elif isinstance(data, np.array):
+        std = np.std(data)
+    return std
 

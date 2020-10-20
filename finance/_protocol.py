@@ -8,14 +8,6 @@ Created on Tue Mar 12 15:37:47 2019
 from gateway.asset.assets import Asset
 from util.wrapper import _deprecated_getitem_method
 
-__all__ = [
-    'MutableView',
-    'InnerPosition',
-    'Position',
-    'Positions',
-    'Account'
-]
-
 
 class MutableView(object):
     """A mutable view over an "immutable" object.
@@ -27,7 +19,7 @@ class MutableView(object):
     """
     # add slots so we don't accidentally add attributes to the view instead of
     # ``ob``
-    __slots__ = ['_mutable_view_obj']
+    # __slots__ = ['_mutable_view_obj']
 
     def __init__(self, ob):
         object.__setattr__(self, '_mutable_view_obj', ob)
@@ -44,12 +36,7 @@ class MutableView(object):
 
 
 class InnerPosition(object):
-    """The real values of a position.
 
-    This exists to be owned by both a
-    :class:`zipline.finance.position.Position` and a
-    :class:`zipline.protocol.Position` at the same time without a cycle.
-    """
     __slots__ = ['asset', 'amount', 'cost_basis', 'last_sync_price', 'last_sync_date']
 
     def __init__(self,
@@ -132,38 +119,9 @@ class Positions(dict):
                             " instead.".format(type(key).__name__))
 
 
-class Account(object):
-    """
-    The account object tracks information about the trading account. The
-    values are updated as the algorithm runs and its keys remain unchanged.
-    If connected to a broker, one can update these values with the trading
-    account values as reported by the broker.
-    """
-    __slots__ = ['settled_cash', 'total_value', 'position_values', 'positions', 'pnl']
-
-    def __init__(self, portfolio):
-        self.settled_cash = portfolio.start_cash
-        self.total_value = portfolio.portfolio_value
-        self.position_values = portfolio.position_values
-        self.positions = portfolio.positions
-        self.pnl = portfolio.pnl
-        # leverage = np.inf
-
-    def __repr__(self):
-        return "Account({0})".format(self.__dict__)
-
-    def __setattr__(self, attr, value):
-        raise AttributeError('cannot mutate Portfolio objects')
-
-    # If you are adding new attributes, don't update this set. This method
-    # is deprecated to normal attribute access so we don't want to encourage
-    # new usages.
-    __getitem__ = _deprecated_getitem_method(
-        'account', {
-            'settled_cash',
-            'total_value',
-            'position_values',
-            'cushion',
-            'positions',
-        },
-    )
+__all__ = [
+    'MutableView',
+    'InnerPosition',
+    'Position',
+    'Positions',
+]

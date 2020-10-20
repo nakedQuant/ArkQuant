@@ -8,13 +8,12 @@ Created on Tue Mar 12 15:37:47 2019
 import pandas as pd
 from contextlib import ExitStack
 from util.api_support import ZiplineAPI
-from gens.clock import MinuteSimulationClock
-from gens import (
+from trade.clock import MinuteSimulationClock
+from trade import (
     SESSION_START,
     SESSION_END,
     BEFORE_TRADING_START
 )
-from trade.params import create_simulation_parameters
 
 
 class AlgorithmSimulator(object):
@@ -110,9 +109,3 @@ class AlgorithmSimulator(object):
             session_label = session_label.strftime('%Y%m%d')
         perf_message = self.metrics_tracker.handle_market_close(session_label)
         return perf_message
-
-
-if __name__ == '__main__':
-
-    sim_params = create_simulation_parameters()
-    simulator = AlgorithmSimulator(sim_params)

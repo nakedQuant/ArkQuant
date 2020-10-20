@@ -11,10 +11,7 @@ from toolz import keyfilter
 from functools import reduce
 from pipe.term import Term, NotSpecific
 from pipe.graph import TermGraph
-from pipe import Event, NamedPipe
-from pipe.ump import  UmpPickers
-
-__all__ = ['Pipeline']
+from pipe.ump import UmpPickers
 
 
 class Pipeline(object):
@@ -141,9 +138,7 @@ class Pipeline(object):
     def _finalize(self, alternative):
         """将pipeline.name --- outs"""
         final = self._workspace.popitem(last=True).values()
-        # transform to named_pipe , priority --- 0 highest
-        outputs = [NamedPipe(Event(asset, self.name), priority) for priority, asset
-                   in enumerate(final[:alternative])]
+        outputs = [asset.set_tag(self.name) for asset in final[:alternative]]
         return outputs
 
     def to_withdraw_plan(self, position, metadata):
@@ -154,14 +149,17 @@ class Pipeline(object):
         return out
 
 
-if __name__ == '__main__':
+__all__ = ['Pipeline']
 
-    kw = {'window': (5, 10)}
-    cross_term = Term('cross', kw)
-    print('sma_term', cross_term)
-    kw = {'window': 10, 'fast': 12, 'slow': 26, 'period': 9}
-    break_term = Term('break', kw, cross_term)
-    terms = [cross_term, break_term]
-    # init
-    pipeline = Pipeline(terms)
-    print('pipeline', pipeline)
+
+# if __name__ == '__main__':
+#
+#     kw = {'window': (5, 10)}
+#     cross_term = Term('cross', kw)
+#     print('sma_term', cross_term)
+#     kw = {'window': 10, 'fast': 12, 'slow': 26, 'period': 9}
+#     break_term = Term('break', kw, cross_term)
+#     terms = [cross_term, break_term]
+#     # init
+#     pipeline = Pipeline(terms)
+#     print('pipeline', pipeline)

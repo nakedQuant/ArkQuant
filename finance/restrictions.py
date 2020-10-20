@@ -9,6 +9,7 @@ from abc import ABC, abstractmethod
 from functools import reduce
 import pandas as pd, operator
 from gateway.asset.assets import Asset
+from gateway.asset._finder import init_finder
 from _calendar.trading_calendar import calendar
 
 
@@ -56,7 +57,7 @@ class NoRestrictions(Restrictions):
     A no-op restrictions that contains no restrictions.
     """
     def is_restricted(self, assets, dt):
-        return assets
+        return set(assets)
 
 
 class StaticRestrictions(Restrictions):
@@ -81,63 +82,43 @@ class StaticRestrictions(Restrictions):
         return selector
 
 
-class SecurityListRestrictions(Restrictions):
+class DtRestrictions(Restrictions):
     """
-        a. 剔除停盘
-        b. 剔除上市不足一个月的 --- 次新股波动性太大
-        c. 剔除进入退市整理期的30个交易日
+        a. 剔除上市不足一个月的 --- 次新股波动性太大
     """
-    def __init__(self,
-                 asset_finder,
-                 window=[3*22, 30]):
-        self.asset_finder = asset_finder
-        self.window = window
+    def __init__(self, length=30):
+        self.window = length
+        self.asset_finder = init_finder()
 
     def is_restricted(self, assets, dt):
-        s_date = calendar.dt_window_size(dt, self.window[0])
-        e_date = calendar.dt_window_size(dt, self.window[-1])
-        # alive assets --- means assets on dt can be traded
-        active_assets = self.asset_finder.was_active(dt)
-        # asset ipo date after s_date and asset delist date is before edate
-        alive_assets = self.asset_finder.lifetime([s_date, e_date])
-        ensure_assets = set(alive_assets) & set(active_assets)
-        # intersection
-        final_assets = set(assets) & set(ensure_assets)
+        s_date = calendar.dt_window_size(dt, self.window)
+        # a --- asset ipo date and dt excess 30 days
+        alive_assets = self.asset_finder.lifetimes([s_date, dt])
+        final_assets = set(assets) & set(alive_assets)
         return final_assets
 
 
-class AvailableRestrictions(Restrictions):
+class StatusRestrictions(Restrictions):
     """
-        a. 受制于涨跌停限制
-        b. 返回非限制的标的
+        a. 剔除退市的股票
+        b. 剔除停盘
     """
-    def __init__(self,
-                 data_portal,
-                 threshold=0.0990):
-        self.data_portal = data_portal
-        self.threshold = threshold
+    def __init__(self, length=0):
+        self.length = length
+        self.asset_finder = init_finder()
 
-    def is_restricted(self, assets, dts):
-        open_pct, pre_close = self._data_portal.get_open_pct(assets, dts)
-        final_assets = [asset for asset in assets if open_pct[asset] < self.threshold]
+    def is_restricted(self, assets, dt):
+        # a category
+        trade_assets = self.asset_finder.can_be_traded(dt)
+        # b category
+        del_assets = self.asset_finder.delist_assets(dt, self.length)
+        final_assets = (set(assets) - set(del_assets)) & set(trade_assets)
         return final_assets
 
 
-class TemporaryRestrictions(object):
+class SwatRestrictions(Restrictions):
     """
-        前5个交易日,科创板科创板还设置了临时停牌制度，当盘中股价较开盘价上涨或下跌幅度首次达到30%、60%时，都分别进行一次临时停牌
-        单次盘中临时停牌的持续时间为10分钟。每个交易日单涨跌方向只能触发两次临时停牌，最多可以触发四次共计40分钟临时停牌。
-        如果跨越14:57则复盘
-    """
-    def is_restricted(self, assets, dt):
-        raise NotImplementedError()
-
-
-class AfterRestrictions(object):
-    """
-        科创板盘后固定价格交易 15:00 --- 15:30
-        若收盘价高于买入申报指令，则申报无效；若收盘价低于卖出申报指令同样无效
-        原则 --- 以收盘价为成交价，按照时间优先的原则进行逐笔连续撮合
+        black swat : asset suffers negative affairs
     """
     def is_restricted(self, assets, dt):
         raise NotImplementedError()
@@ -200,17 +181,6 @@ __all__ = [
     'UnionRestrictions',
     'NoRestrictions',
     'StaticRestrictions',
-    'SecurityListRestrictions',
-    'AvailableRestrictions',
-    'TemporaryRestrictions',
-    'AfterRestrictions'
+    'DtRestrictions',
+    'StatusRestrictions'
 ]
-
-
-# if __name__ == '__main__':
-#
-#     from gateway.asset._finder import AssetFinder
-
-#     finder = AssetFinder()
-#     restriction = SecurityListRestrictions(finder)
-#     print('restriction', restriction)

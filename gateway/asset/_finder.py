@@ -16,6 +16,7 @@ from gateway.asset.assets import Equity, Convertible, Fund
 from gateway.spider.url import ASSERT_URL_MAPPING
 from gateway.driver.client import tsclient
 from gateway.driver.tools import _parse_url
+from _calendar.trading_calendar import calendar
 
 
 SectorPrefix = {
@@ -217,27 +218,24 @@ class AssetFinder(object):
         dct = frame.iloc[:, 0].to_dict()
         return dct
 
-    def lifetimes(self, sessions, category):
+    def can_be_traded(self, session_label):
         """
-        Compute a DataFrame representing asset lifetimes for the specified date
-        range.
-
         Parameters
         ----------
-        sessions : tuple or list
-            The dates for which to compute lifetimes.
-        category : str
-            equity or fund or convertible
 
+        session_label : Timestamp
+            The asset object to check.
         Returns
         -------
-        assets list
-        # 剔除处于退市整理期的股票，一般是30个交易日  --- 收到退市决定后申请复合，最后一步进入退市整理期30个交易日
+        was_active : bool
+            Whether or not the `asset` is tradeable at the specified time.
+
+        between first_traded and last_traded ; is tradeable on session label
         """
-        assets = self.retrieve_type_assets(category)
-        _active = partial(self._is_alive, session_labels=sessions)
-        active_assets = [asset for asset in assets if _active(asset)]
-        return active_assets
+        alive_assets = [asset for asset in self.retrieve_all()
+                        if asset.is_active(session_label)]
+        trade_assets = [asset for asset in alive_assets if asset.can_be_traded(session_label)]
+        return trade_assets
 
     @staticmethod
     def _is_alive(asset, session_labels):
@@ -263,43 +261,41 @@ class AssetFinder(object):
             mask &= (asset.last_traded >= end)
         return mask
 
-    def alive(self, session_labels):
+    def lifetimes(self, sessions):
         """
+        Compute a DataFrame representing asset lifetimes for the specified date
+        range.
+
         Parameters
         ----------
+        sessions : tuple or list
+            The dates for which to compute lifetimes.
 
-        session_label : Timestamp
-            The asset object to check.
         Returns
         -------
+        assets list
         was_active : bool
-            Whether or not the `asset` is tradeable at the specified time.
+        Whether or not the `asset` is tradeable at the specified time.
 
         between first_traded and last_traded ; is tradeable on session label
-        """
-        alive_assets = [asset for asset in self.retrieve_all()
-                        if self._is_alive(asset, session_labels)]
-        return alive_assets
 
-    def can_be_traded(self, session_label):
+        # 剔除处于退市整理期的股票，一般是30个交易日  --- 收到退市决定后申请复合，最后一步进入退市整理期30个交易日
         """
-        Parameters
-        ----------
+        # assets = self.retrieve_type_assets(category)
+        assets = self.retrieve_all()
+        _active = partial(self._is_alive, session_labels=sessions)
+        active_assets = [asset for asset in assets if _active(asset)]
+        return active_assets
 
-        session_label : Timestamp
-            The asset object to check.
-        Returns
-        -------
-        was_active : bool
-            Whether or not the `asset` is tradeable at the specified time.
-
-        between first_traded and last_traded ; is tradeable on session label
-        """
-        alive_assets = [asset for asset in self.retrieve_all()
-                        if asset.is_active(session_label)]
-        print('alive_assets', alive_assets)
-        tradeable_assets = [asset for asset in alive_assets if asset.can_be_traded(session_label)]
-        return tradeable_assets
+    def delist_assets(self, dt, window):
+        # 剔除处于退市整理期的股票，一般是30个交易日  --- 收到退市决定后申请复合，最后一步进入退市整理期30个交易日
+        assets = self.retrieve_all()
+        if window == 0:
+            delist = [asset for asset in assets if asset.last_traded == dt]
+        else:
+            delist = set([asset for asset in assets if asset.last_traded > dt and
+                         len(calendar.session_in_range(dt, asset.last_traded)) >= window])
+        return delist
 
     @classmethod
     def suspend(cls, dt):
@@ -318,13 +314,13 @@ class AssetFinder(object):
         return frame
 
 
-def _init_finder():
+def init_finder():
     _finder = AssetFinder()
     _finder.synchronize()
     return _finder
 
 
-__all__ = ['_init_finder']
+__all__ = ['init_finder']
 
 
 # if __name__ == '__main__':
@@ -334,8 +330,6 @@ __all__ = ['_init_finder']
 #     all = finder.retrieve_all()
 #     assets = finder.retrieve_asset(['512690', '515110', '603612'])
 #     equities = finder.lookup_bond_ownership_by_equity('603612')
-#     alive_assets = finder.alive(['2020-01-25', '2020-09-30'])
-#     print('alive_assets', alive_assets)
 #     fund_assets = finder.retrieve_type_assets('fund')
 #     print('fund_assets', fund_assets)
 #     dual_assets = finder.fuzzy_dual_equities()
@@ -344,5 +338,7 @@ __all__ = ['_init_finder']
 #     print('index_assets', index_assets)
 #     suspend_assets = AssetFinder.suspend('2020-08-25')
 #     print('suspend_assets', suspend_assets)
+#     alive_assets = finder.lifetimes(['2020-01-25', '2020-09-30'])
+#     print('alive_assets', alive_assets)
 #     live_assets = finder.lifetimes(['2018-09-30', '2018-10-30'], 'equity')
 #     print('live assets', live_assets)

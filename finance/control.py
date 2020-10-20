@@ -5,11 +5,10 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-from abc import ABC, abstractmethod
+import warnings, copy
 from logging import log
 from error.errors import ZiplineError
 from gateway.driver.data_portal import portal
-import warnings
 
 
 class TradingControlViolation(ZiplineError):
@@ -22,18 +21,16 @@ class TradingControlViolation(ZiplineError):
         """.strip()
 
 
-class TradingControl(ABC):
+class TradingControl(object):
     """
     Abstract base class representing a fail-safe control on the behavior of any
     algorithm.
     """
-    @abstractmethod
-    def validate(self,
-                 asset,
-                 amount,
-                 capital,
-                 portfolio,
-                 algo_datetime):
+    def validate_call(self,
+                      asset,
+                      capital,
+                      portfolio,
+                      algo_datetime):
         """
         Before any order is executed by TradingAlgorithm, this method should be
         called *exactly once* on each registered TradingControl object.
@@ -45,7 +42,24 @@ class TradingControl(ABC):
         If the desired order violates this TradingControl's contraint, this
         method should call self.fail(asset, amount).
         """
-        raise NotImplementedError
+        return asset, capital
+
+    def validate_put(self,
+                     position,
+                     portfolio,
+                     algo_datetime):
+        """
+        Before any order is executed by TradingAlgorithm, this method should be
+        called *exactly once* on each registered TradingControl object.
+
+        If the specified asset and amount do not violate this TradingControl's
+        restraint given the information in `portfolio`, this method should
+        return None and have no externally-visible side-effects.
+
+        If the desired order violates this TradingControl's contraint, this
+        method should call self.fail(asset, amount).
+        """
+        return position
 
     def handle_violation(self,
                          asset,
@@ -105,23 +119,38 @@ class MaxOrderSize(TradingControl):
         self.on_error = kwargs.get('on_error', 'warn')
         self.__fail_args = 'order amount exceed average asset volume'
 
-    def validate(self,
-                 asset,
-                 amount,
-                 capital,
-                 portfolio,
-                 algo_datetime):
+    def validate_call(self,
+                      asset,
+                      capital,
+                      portfolio,
+                      algo_datetime):
         """
         Fail if the magnitude of the given order exceeds either self.max_shares
         or self.max_notional.
         """
+        super().validate_call(asset,
+                              capital,
+                              portfolio,
+                              algo_datetime)
+
+    def validate_put(self,
+                     position,
+                     portfolio,
+                     algo_datetime):
+        """
+        Fail if the magnitude of the given order exceeds either self.max_shares
+        or self.max_notional.
+        """
+        asset = position.asset
+        amount = position.amount
+        capital = position.price * amount
         volume_window = portal.get_window([asset], algo_datetime, - abs(self.length), ['volume'])
         threshold_volume = volume_window[asset.sid].mean() * self.threshold
         if amount > threshold_volume:
             self.handle_violation(asset, amount, capital, portfolio, algo_datetime)
             control_volume = threshold_volume
-            return asset, control_volume, amount
-        return asset, amount, capital
+            position.amount = control_volume
+        return position
 
 
 class MaxOrderCapital(TradingControl):
@@ -136,12 +165,11 @@ class MaxOrderCapital(TradingControl):
         self.on_error = kwargs.get('on_error', 'warn')
         self.__fail_args = 'order capital exceed average asset amount'
 
-    def validate(self,
-                 asset,
-                 amount,
-                 capital,
-                 portfolio,
-                 algo_datetime):
+    def validate_call(self,
+                      asset,
+                      capital,
+                      portfolio,
+                      algo_datetime):
         """
         Fail if the magnitude of the given order exceeds either self.max_shares
         or self.max_notional.
@@ -153,6 +181,18 @@ class MaxOrderCapital(TradingControl):
             control_capital = threshold_amount
             return asset, control_capital
         return asset, capital
+
+    def validate_put(self,
+                     position,
+                     portfolio,
+                     algo_datetime):
+        """
+        Fail if the magnitude of the given order exceeds either self.max_shares
+        or self.max_notional.
+        """
+        super().validate_put(position,
+                             portfolio,
+                             algo_datetime)
 
 
 class MaxPositionValue(TradingControl):
@@ -167,12 +207,11 @@ class MaxPositionValue(TradingControl):
         self.on_error = kwargs.get('on_error', 'warn')
         self.__fail_args = 'asset position proportion exceed portfolio limit'
 
-    def validate(self,
-                 asset,
-                 amount,
-                 capital,
-                 portfolio,
-                 algo_datetime):
+    def validate_call(self,
+                      asset,
+                      capital,
+                      portfolio,
+                      algo_datetime):
         """
         Fail if the given order would cause the magnitude of our position to be
         greater in shares than self.max_shares or greater in dollar value than
@@ -188,6 +227,19 @@ class MaxPositionValue(TradingControl):
             return asset, available_capital
         return asset, capital
 
+    def validate_put(self,
+                     position,
+                     portfolio,
+                     algo_datetime):
+        """
+        Fail if the given order would cause the magnitude of our position to be
+        greater in shares than self.max_shares or greater in dollar value than
+        self.max_notional.
+        """
+        super().validate_put(position,
+                             portfolio,
+                             algo_datetime)
+
 
 class LongOnly(TradingControl):
     """
@@ -197,19 +249,26 @@ class LongOnly(TradingControl):
         self.on_error = on_error
         self.__fail_args = 'short action is not allowed'
 
-    def validate(self,
-                 asset,
-                 amount,
-                 capital,
-                 portfolio,
-                 algo_datetime):
+    def validate_call(self,
+                      asset,
+                      capital,
+                      portfolio,
+                      algo_datetime):
+        super().validate_call(asset,
+                              capital,
+                              portfolio,
+                              algo_datetime)
+
+    def validate_put(self,
+                     position,
+                     portfolio,
+                     algo_datetime):
         """
         Fail if we would hold negative shares of asset after completing this order.
         """
-        holdings = {p.sid: p.amount for p in portfolio.positions}
-        holding = holdings[asset.sid] + amount
-        assert holding >= 0, self.handle_violation(asset, amount, capital, portfolio, algo_datetime)
-        return asset, amount, capital
+        super().validate_put(position,
+                             portfolio,
+                             algo_datetime)
 
 
 class UnionControl(TradingControl):
@@ -217,16 +276,25 @@ class UnionControl(TradingControl):
     def __init__(self, controls):
         self.controls = controls if isinstance(controls, list) else [controls]
 
-    def validate(self,
-                 asset,
-                 amount,
-                 capital,
-                 portfolio,
-                 algo_datetime):
+    def validate_call(self,
+                      asset,
+                      capital,
+                      portfolio,
+                      algo_datetime):
 
         for control in self.controls:
-            asset, amount, capital = control.validate(asset, amount, capital, portfolio, algo_datetime)
-        return asset, amount, capital
+            asset, amount, capital = control.validate(asset, capital, portfolio, algo_datetime)
+        return asset, capital
+
+    def validate_put(self,
+                     position,
+                     portfolio,
+                     algo_datetime):
+        # set copy in case of changing original
+        p = copy.deepcopy(position)
+        for control in self.controls:
+            p = control.validate(p, portfolio, algo_datetime)
+        return p
 
 
 __all__ = ['MaxOrderSize', 'MaxOrderCapital', 'MaxPositionValue', 'LongOnly', 'UnionControl']

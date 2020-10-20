@@ -16,7 +16,7 @@ from error.errors import (
     UnsupportedCancelPolicy,
     ZeroCapitalError
 )
-from finance.cancel_policy import NeverCancel, CancelPolicy
+from risk.cancel_policy import NeverCancel, CancelPolicy
 from finance.commission import NoCommission
 from finance.control import (
     LongOnly,
@@ -36,9 +36,9 @@ from gateway.driver.benchmark import (
 )
 from gateway.driver.data_portal import DataPortal
 from gens.clock import MinuteSimulationClock
-from gens.tradesimulation import AlgorithmSimulator
+from trade.tradesimulation import AlgorithmSimulator
 from pipe.engine import SimplePipelineEngine
-from risk.usage import Equal
+from risk.allocation import Equal
 from broker.generator import Broker
 from metrics import default_metrics
 from metrics import MetricsTracker
@@ -49,8 +49,6 @@ from util.api_support import (
 )
 from util.events import EventManager, Event, Always
 from util.wrapper import  api_method
-
-__all__ = ['TradingAlgorithm']
 
 
 class TradingAlgorithm(object):
@@ -757,6 +755,4 @@ class TradingAlgorithm(object):
                    )
 
 
-if __name__ == '__main__':
-
-    trading = TradingAlgorithm()
+__all__ = ['TradingAlgorithm']

@@ -4,8 +4,10 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
+import argparse, re, heapq
 from collections import namedtuple
-import argparse, re
+from hashlib import md5
+
 
 Argspec = namedtuple('Argspec', ['args', 'starargs', 'kwargs'])
 
@@ -131,4 +133,34 @@ def commandParse():
     namespace = parser.parse_args()
     command_line_args={k: v for k, v in vars(namespace).items() if v}
     return command_line_args
+
+
+def _decorate_source(source):
+    for message in source:
+        yield ((message.dt, message.source_id), message)
+
+
+def date_sorted_sources(*sources):
+    """
+    Takes an iterable of sources, generating namestrings and
+    piping their output into date_sort.
+    """
+    # merge multi inputs into single return iterable
+    sorted_stream = heapq.merge(*(_decorate_source(s) for s in sources))
+
+    # Strip out key decoration
+    for _, message in sorted_stream:
+        yield message
+
+
+def hash_args(*args, **kwargs):
+    """Define a unique string for any set of representable args."""
+    arg_string = '_'.join([str(arg) for arg in args])
+    kwarg_string = '_'.join([str(key) + '=' + str(value)
+                             for key, value in kwargs.items()])
+    combined = ':'.join([arg_string, kwarg_string])
+    hasher = md5()
+    hasher.update(bytes(combined))
+    return hasher.hexdigest()
+
 

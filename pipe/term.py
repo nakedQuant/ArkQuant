@@ -34,17 +34,13 @@ class Term(object):
             1 mask --- asset list
             2 compute ---- algorithm list
             3 outputs --- algorithm list & asset list
-
-        term --- 不可变通过改变不同的dependence重构pipeline
-        term --- universe
+        term --- 不可变通过改变不同的dependence重构pipeline --- params (final attr to define term)
     """
     default_type = (tuple,)
     _term_cache = WeakValueDictionary()
     namespace = dict()
     # base_dir = '/Users/python/Library/Mobile Documents/com~apple~CloudDocs/nakedquant/signal'
     base_dir = os.path.join(os.path.split(os.getcwd())[0], 'signal')
-
-    # __slots__ = ['domain', 'dependencies', 'signal', '_subclass_called_validate']
 
     def __new__(cls,
                 script,
@@ -70,7 +66,7 @@ class Term(object):
 
     @classmethod
     def _static_identity(cls, ins, domain, dependencies):
-        return (ins, domain, dependencies)
+        return ins, domain, dependencies
 
     def _init(self, script, p, dependencies):
         """
@@ -114,9 +110,6 @@ class Term(object):
         """
         # mark that we got here to enforce that subclasses overriding _validate
         self._subclass_called_validate = True
-
-    # def __setattr__(self, key, value):
-    #     raise NotImplementedError()
 
     def postprocess(self, data):
         """
@@ -175,12 +168,12 @@ class Term(object):
         return type(self).__name__
 
 
-if __name__ == '__main__':
-
-    kw = {'window': (5, 10)}
-    cross_term = Term('cross', kw)
-    print('sma_term', cross_term)
-    kw = {'window': 10, 'fast': 12, 'slow': 26, 'period': 9}
-    break_term = Term('break', kw, cross_term)
-    print(break_term.dependencies)
+# if __name__ == '__main__':
+#
+#     kw = {'window': (5, 10)}
+#     cross_term = Term('cross', kw)
+#     print('sma_term', cross_term)
+#     kw = {'window': 10, 'fast': 12, 'slow': 26, 'period': 9}
+#     break_term = Term('break', kw, cross_term)
+#     print(break_term.dependencies)
 

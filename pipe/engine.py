@@ -11,15 +11,8 @@ from multiprocessing import Pool
 from itertools import chain
 from abc import ABC, abstractmethod
 from pipe.loader.loader import PricingLoader
-from finance.restrictions import UnionRestrictions, NoRestrictions
-from pipe.term import Term
-from pipe.pipeline import Pipeline
-from gateway.asset._finder import _init_finder
-
-__all__ = [
-    'SimplePipelineEngine',
-    'NoEngineRegistered',
-]
+from finance.restrictions import UnionRestrictions
+from gateway.asset._finder import init_finder
 
 
 class Engine(ABC):
@@ -27,18 +20,25 @@ class Engine(ABC):
         set asset range which means all asset with some restrictions
         --- engine process should be automatic without much manual interface
     """
-    def _init(self, pipelines):
-        inner_terms = list(chain([pipeline.terms for pipeline in pipelines]))
+    def _init_loader(self, pipelines):
+        inner_terms = list(chain(pipeline.terms for pipeline in pipelines))
         print('inner_terms', inner_terms)
-        inner_pickers = list(chain([pipeline.ump_terms for pipeline in pipelines]))
+        inner_pickers = list(chain(pipeline.ump_terms for pipeline in pipelines))
         print('inner_picker', inner_pickers)
-        engine_terms = set(inner_terms[0] + inner_pickers[0])
+        engine_terms = set(inner_terms + inner_pickers)
         print('engine_terms', engine_terms)
         # get_loader
         _get_loader = PricingLoader(engine_terms)
         return pipelines, _get_loader
 
-    def _compute_default(self, ledger):
+    def _compute_mask(self, dts):
+        # default assets
+        equities = self.asset_finder.retrieve_type_assets('equity')
+        # save the high priority and asset which can be traded
+        default_mask = self.restricted_rules.is_restricted(equities, dts)
+        return default_mask
+
+    def _compute_exclude(self, ledger):
         """
         Register a Pipeline default for pipe on every day.
         :param dts: initialize attach pipe and cache metadata for engine
@@ -65,13 +65,14 @@ class Engine(ABC):
             remove_positions = set()
         # 剔除配股的持仓
         traded_positions = set(expired_positions) + set(ledger.positions) - set(remove_positions)
-        # default assets
-        equities = self.asset_finder.retrieve_type_assets('equity')
-        # save the high priority and asset which can be traded
-        default_mask = self.restricted_rules.is_restricted(equities, dts)
-        # set pipe metadata
-        history_metadata = self._get_loader.load_pipeline_arrays(dts, default_mask)
-        return default_mask, history_metadata, traded_positions, remove_positions, dts, capital
+        return traded_positions, remove_positions
+
+    def _prepare(self, ledger):
+        # 判断ledger 是否update
+        dts = ledger.synchronized_clock
+        mask = self._compute_mask(dts)
+        # metadata
+        metadata = self._get_loader.load_pipeline_arrays(dts, mask)
 
     def _run_pipeline(self, pipeline, metadata, mask):
         """
@@ -125,7 +126,6 @@ class Engine(ABC):
             return position list
         """
         proxy = {{pipe.name: pipe} for pipe in self.pipelines}
-
         _impl = partial(self._run_ump, metadata=metadata)
 
         with Pool(processes=len(positions))as pool:
@@ -228,11 +228,10 @@ class SimplePipelineEngine(Engine):
     def __init__(self,
                  pipelines,
                  restrictions,
-                 cancel_models,
                  alternatives=10,
                  allow_righted=False,
                  allowed_violation=True):
-        self.asset_finder = _init_finder()
+        self.asset_finder = init_finder()
         # SecurityListRestrictions  AvailableRestrictions
         self.restricted_rules = UnionRestrictions(restrictions)
         self.alternatives = alternatives
@@ -270,8 +269,7 @@ class SimplePipelineEngine(Engine):
             direct_positives = keyfilter(lambda x: x in extra, calls)
         else:
             direct_positives = dict()
-        # unchanged positions
-        # unchanged_pipe = set(hold_proxy) - set(put_proxy)
+        # unchanged positions unchanged_pipe = set(hold_proxy) - set(put_proxy)
         return direct_negatives, dual, direct_positives
 
 
@@ -282,16 +280,7 @@ class NoEngineRegistered(Exception):
     """
 
 
-if __name__ == '__main__':
-
-    kw = {'window': (5, 10)}
-    cross_term = Term('cross', kw)
-    print('sma_term', cross_term)
-    kw = {'window': 10, 'fast': 12, 'slow': 26, 'period': 9}
-    break_term = Term('break', kw, cross_term)
-    terms = [cross_term, break_term]
-    # init
-    pipeline = Pipeline(terms)
-    print('pipeline', pipeline)
-    engine = SimplePipelineEngine(pipeline)
-    print('engine', engine)
+__all__ = [
+    'SimplePipelineEngine',
+    'NoEngineRegistered',
+]

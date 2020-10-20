@@ -40,6 +40,7 @@ class Break(Signal):
                        for m in mask]
             zp = valmap(lambda x: x > self.p.get('threshold', 0), dict(zip(mask, signals)))
             if self.final:
+                # priority according to val of long_signal
                 sorted_zp = sorted(zp.items(), key=lambda x: x[1])
                 out = [i[0] for i in sorted_zp]
             else:

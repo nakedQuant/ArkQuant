@@ -81,8 +81,7 @@ class SQLiteAdjustmentReader(object):
         return unpack_rights
 
     def _load_adjustments_from_sqlite(self, sessions):
-        adjustments = {}
-        # retrieve from mysql
+        adjustments = dict()
         adjustments['divdends'] = self._get_divdends_with_ex_date(sessions)
         adjustments['rights'] = self._get_rights_with_ex_date(sessions)
         return adjustments
@@ -91,28 +90,34 @@ class SQLiteAdjustmentReader(object):
         pricing_adjustments = self._load_adjustments_from_sqlite(sessions)
         return pricing_adjustments
 
-    def load_divdends_for_sid(self, sid, date):
-        sql_dialect = sa.select([self.equity_splits.c.ex_date,
+    def retrieve_pay_date_divdends(self, assets, date):
+        sql_dialect = sa.select([self.equity_splits.c.sid,
                                  sa.cast(self.equity_splits.c.sid_bonus, sa.Numeric(5, 2)),
                                  sa.cast(self.equity_splits.c.sid_transfer, sa.Numeric(5, 2)),
                                  sa.cast(self.equity_splits.c.bonus, sa.Numeric(5, 2))]).\
-                                where(sa.and_(self.equity_splits.c.sid == sid,
-                                      self.equity_splits.c.progress.like('实施'),
-                                      self.equity_splits.c.pay_date == date))
+                                where(sa.and_(self.equity_splits.c.progress.like('实施'),
+                                              self.equity_splits.c.pay_date == date))
         rp = self.engine.execute(sql_dialect)
-        dividends = pd.DataFrame(rp.fetchall(), columns=['ex_date', 'sid_bonus',
+        dividends = pd.DataFrame(rp.fetchall(), columns=['sid', 'sid_bonus',
                                                          'sid_transfer', 'bonus'])
+        dividends.set_index('sid', inplace=True)
+        sids = [asset.sid for asset in assets]
+        dividends = dividends.reindex(sids)
+        dividends.dropna(how='all', inplace=True)
         adjust_divdends = self._adjust_frame_type(dividends)
         return adjust_divdends
 
-    def load_rights_for_sid(self, sid, date):
-        sql = sa.select([self.equity_rights.c.ex_date,
+    def retrieve_ex_date_rights(self, assets, date):
+        sql = sa.select([self.equity_rights.c.sid,
                          sa.cast(self.equity_rights.c.rights_bonus, sa.Numeric(5, 2)),
                          sa.cast(self.equity_rights.c.rights_price, sa.Numeric(5, 2))]).\
-                        where(sa.and_(self.equity_rights.c.sid == sid,
-                                      self.equity_rights.c.pay_date == date))
+                        where(self.equity_rights.c.ex_date == date)
         rp = self.engine.execute(sql)
-        rights = pd.DataFrame(rp.fetchall(), columns=['ex_date', 'right_bonus', 'right_price'])
+        rights = pd.DataFrame(rp.fetchall(), columns=['sid', 'right_bonus', 'right_price'])
+        rights.set_index('sid', inplace=True)
+        sids = [asset.sid for asset in assets]
+        rights = rights.reindex(sids)
+        rights.dropna(how='all', inplace=True)
         adjust_rights = self._adjust_frame_type(rights)
         return adjust_rights
 
@@ -128,7 +133,7 @@ class SQLiteAdjustmentReader(object):
 #     reader = SQLiteAdjustmentReader()
 #     adjustments = reader.load_pricing_adjustments(['2018-01-01', '2020-09-01'])
 #     print('adjustments.keys', adjustments.keys())
-#     symbol_divdends = reader.load_divdends_for_sid('600061', '20200401')
+#     symbol_divdends = reader.retrieve_ex_date_divdends('600061', '20200401')
 #     print('divdends', symbol_divdends)
-#     symbol_rights = reader.load_rights_for_sid('600061', '20200401')
+#     symbol_rights = reader.retrieve_ex_date_rights('600061', '20200401')
 #     print('rights', symbol_rights)

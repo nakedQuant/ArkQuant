@@ -69,7 +69,9 @@ class TsClient:
             暴力更新 获取 清空 入库
         """
         withdraw = self._get_ts_status('D')
+        # print('withdraw', withdraw)
         suspend = self._get_ts_status('P')
+        # print('suspend', suspend)
         status = withdraw.append(suspend)
         status.rename(columns={'symbol': 'sid', 'delist_date': 'last_traded'}, inplace=True)
         # 入库序列号存在重复
@@ -84,6 +86,4 @@ tsclient = TsClient()
 #
 #     stats = tsclient.to_ts_status()
 #     stats.dropna(axis=0, how='any', inplace=True)
-#     print(len(stats), stats)
-#     trading_days = tsclient.to_ts_calendar('1990-01-01', '3000-01-01')
-#     print('calendar', trading_days)
+

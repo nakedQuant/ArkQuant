@@ -5,7 +5,3 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-from collections import namedtuple
-
-Event = namedtuple('Event', 'asset name')
-NamedPipe = namedtuple('NamedPipe', 'event priority')

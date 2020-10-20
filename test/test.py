@@ -10736,3 +10736,91 @@ from functools import lru_cache
 # labels as midnight UTC).
 # self._start_session = normalize_date(start_session)
 # self._end_session = normalize_date(end_session)
+import pytz, numbers
+from datetime import datetime
+from zipline.protocol import DATASOURCE_TYPE
+
+
+def assert_datasource_protocol(event):
+    """Assert that an event meets the protocol for datasource outputs."""
+    assert event.type in DATASOURCE_TYPE
+
+    # Done packets have no dt.
+    if not event.type == DATASOURCE_TYPE.DONE:
+        assert isinstance(event.dt, datetime)
+        assert event.dt.tzinfo == pytz.utc
+
+
+def assert_trade_protocol(event):
+    """Assert that an event meets the protocol for datasource TRADE outputs."""
+    assert_datasource_protocol(event)
+
+    assert event.type == DATASOURCE_TYPE.TRADE
+    assert isinstance(event.price, numbers.Real)
+    assert isinstance(event.volume, numbers.Integral)
+    assert isinstance(event.dt, datetime)
+
+
+def assert_datasource_unframe_protocol(event):
+    """Assert that an event is valid output of zp.DATASOURCE_UNFRAME."""
+    assert event.type in DATASOURCE_TYPE
+
+
+from sklearn.linear_model import LinearRegression
+import statsmodels.api as sm
+
+
+def _fit_sklearn(x, y):
+    reg = LinearRegression(fit_intercept=False).fit(x, y)
+    # reg.intercept_
+    coef = reg.coef_
+    return coef
+
+
+def _fit_statsmodel(x, y):
+    # statsmodels.regression.linear_model  intercept = model.params[0]，rad = model.params[1]
+    X = sm.add_constant(x)
+    #const coef
+    res = sm.OLS(y, X).fit()
+    return res[-1]
+
+
+# def load_divdends_for_sid(self, sid, date):
+#     sql_dialect = sa.select([self.equity_splits.c.ex_date,
+#                              sa.cast(self.equity_splits.c.sid_bonus, sa.Numeric(5, 2)),
+#                              sa.cast(self.equity_splits.c.sid_transfer, sa.Numeric(5, 2)),
+#                              sa.cast(self.equity_splits.c.bonus, sa.Numeric(5, 2))]).\
+#                             where(sa.and_(self.equity_splits.c.sid == sid,
+#                                   self.equity_splits.c.progress.like('实施'),
+#                                   self.equity_splits.c.pay_date == date))
+#     rp = self.engine.execute(sql_dialect)
+#     dividends = pd.DataFrame(rp.fetchall(), columns=['ex_date', 'sid_bonus',
+#                                                      'sid_transfer', 'bonus'])
+#     adjust_divdends = self._adjust_frame_type(dividends)
+#     return adjust_divdends
+#
+# def load_rights_for_sid(self, sid, date):
+#     sql = sa.select([self.equity_rights.c.ex_date,
+#                      sa.cast(self.equity_rights.c.rights_bonus, sa.Numeric(5, 2)),
+#                      sa.cast(self.equity_rights.c.rights_price, sa.Numeric(5, 2))]).\
+#                     where(sa.and_(self.equity_rights.c.sid == sid,
+#                                   self.equity_rights.c.pay_date == date))
+#     rp = self.engine.execute(sql)
+#     rights = pd.DataFrame(rp.fetchall(), columns=['ex_date', 'right_bonus', 'right_price'])
+#     adjust_rights = self._adjust_frame_type(rights)
+#     return adjust_rights
+
+# def handle_splits(self, dts):
+#     total_left_cash = 0
+#     dividends = portal.get_dividends(set(self.positions), dts)
+#     for asset, position in self.positions.items():
+#         # update last_sync_date
+#         position.last_sync_date = dts
+#         try:
+#             amount_ratio, cash_ratio = self._calculate_adjust_ratio(dividends.loc[asset.sid, :])
+#             left_cash = position.handle_split(amount_ratio, cash_ratio)
+#             total_left_cash += left_cash
+#         except KeyError:
+#             pass
+#     return total_left_cash
+

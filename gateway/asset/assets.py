@@ -31,10 +31,11 @@ class Asset(object):
         __set__(self, instance, value):为一个属性赋值时,触发
         __delete__(self, instance):采用del删除属性时,触发
     """
-    __slots__ = ['sid']
+    __slots__ = ['sid', '_tag']
 
     def __init__(self, sid):
         self.sid = sid
+        self._tag = None
         self._retrieve_asset_mappings()
         self._supplementary_for_asset()
 
@@ -81,6 +82,14 @@ class Asset(object):
     def is_interday(self):
         # 日内交易日
         return False
+
+    @property
+    def tag(self):
+        return self._tag
+
+    def set_tag(self, tg):
+        self._tag = tg
+        return self
 
     def restricted(self, dt):
         raise NotImplementedError()

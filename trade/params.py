@@ -9,8 +9,6 @@ import pandas as pd
 from datetime import datetime
 from _calendar.trading_calendar import calendar
 
-__all__ = ['create_simulation_parameters']
-
 # __func__ ---指向函数对象
 DEFAULT_CAPITAL_BASE = 1e5
 
@@ -105,3 +103,6 @@ def create_simulation_parameters(year=2004,
         data_frequency=data_frequency
     )
     return sim_params
+
+
+__all__ = ['create_simulation_parameters']
