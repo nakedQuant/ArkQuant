@@ -114,7 +114,6 @@ class Position(object):
     def to_dict(self):
         """
             create a dict representing the state of this position
-        :return:
         """
         return {
             'asset': self.asset,

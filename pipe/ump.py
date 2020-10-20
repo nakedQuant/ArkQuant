@@ -8,8 +8,6 @@ Created on Tue Mar 12 15:37:47 2019
 import numpy as np
 from pipe.term import Term
 
-__all__ = ['UmpPickers']
-
 
 class UmpPickers(object):
     """
@@ -20,7 +18,7 @@ class UmpPickers(object):
         关于仲裁逻辑：
         H0假设 --- 标的退出
             迭代选股序列因子 --- 一旦任何因子投出反对票无法通过HO假设
-        基于一个因子判断是否退出股票有失偏颇
+        基于一个因子判断是否退出股票有失偏颇 或者 超过一定比例表示退出
     """
     def __init__(self, pickers):
         self._validate_features(pickers)
@@ -46,14 +44,17 @@ class UmpPickers(object):
         return vote
 
 
-if __name__ == '__main__':
+__all__ = ['UmpPickers']
 
-    kw = {'window': (5, 10)}
-    cross_term = Term('cross', kw)
-    print('sma_term', cross_term)
-    kw = {'window': 10, 'fast': 12, 'slow': 26, 'period': 9}
-    break_term = Term('break', kw, cross_term)
-    terms = [cross_term, break_term]
-    # init
-    ump = UmpPickers(terms)
-    print('ump', ump)
+
+# if __name__ == '__main__':
+#
+#     kw = {'window': (5, 10)}
+#     cross_term = Term('cross', kw)
+#     print('sma_term', cross_term)
+#     kw = {'window': 10, 'fast': 12, 'slow': 26, 'period': 9}
+#     break_term = Term('break', kw, cross_term)
+#     terms = [cross_term, break_term]
+#     # init
+#     ump = UmpPickers(terms)
+#     print('ump', ump)

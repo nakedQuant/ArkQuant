@@ -127,19 +127,19 @@ class Ledger(object):
                    if txn.dt.strftime('%Y-%m-%d') == dt]
         return dt_txns
 
-    def get_rights_positions(self, dts):
-        # 获取当天为配股登记日的仓位 --- 卖出 因为需要停盘产生机会成本
-        assets = [p.asset for p in self.positions]
-        rights = self.position_tracker.retrieve_equity_rights(assets, dts)
-        dct = {p.asset.sid: p for p in self.positions}
-        right_positions = None if rights.empty else [dct[s].protocol for s in rights.index]
-        return right_positions
-
     def get_violate_risk_positions(self):
         # 获取违反风控管理的仓位
         violate_positions = [p.protocol for p in self.positions
                              if self.risk_alert.should_trigger(p)]
         return violate_positions
+
+    def get_rights_positions(self, dts):
+        # 获取当天为配股登记日的仓位 --- 卖出 因为需要停盘产生机会成本
+        assets = [p.asset for p in self.positions]
+        rights = self.position_tracker.retrieve_equity_rights(assets, dts)
+        p_mapping = {p.asset.sid: p for p in self.positions}
+        right_positions = None if rights.empty else [p_mapping[s].protocol for s in rights.index]
+        return right_positions
 
     def _cleanup_expired_assets(self, dt):
         """

@@ -18,8 +18,7 @@ from trade import (
 
 class AlgorithmSimulator(object):
     """
-        nakedquant start:
-                        a.初始化相关模块以及参数
+        initialization a.初始化相关模块以及参数
         before trading:
                         a. 针对ledger预处理
                         b. pipelineEngine计算的结果
@@ -31,7 +30,7 @@ class AlgorithmSimulator(object):
         session end:
                         a.调用metrics_tracker --- generate metrics_perf
         simulation_end:
-                        a. 收尾
+                        a. plot and generate pdf
     """
 
     EMISSION_TO_PERF_KEY_MAP = {
@@ -65,8 +64,7 @@ class AlgorithmSimulator(object):
 
         def on_exit():
             # Remove references to algo, data portal, et al to break cycles
-            # and ensure deterministic cleanup of these objects when the
-            # nakedquant finishes.
+            # and ensure deterministic cleanup of these objects
             self.algorithm = None
 
         with ExitStack() as stack:

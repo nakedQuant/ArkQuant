@@ -34,9 +34,9 @@ class Break(Signal):
         deviation = ema[-1] - macd[-1]
         return deviation
 
-    def long_signal(self, mask, aggdata) -> bool:
+    def long_signal(self, mask, meta) -> bool:
         with Pool(processes=len(mask)) as pool:
-            signals = [pool.apply_async(self._run_signal, (aggdata[m]))
+            signals = [pool.apply_async(self._run_signal, (meta[m]))
                        for m in mask]
             zp = valmap(lambda x: x > self.p.get('threshold', 0), dict(zip(mask, signals)))
             if self.final:

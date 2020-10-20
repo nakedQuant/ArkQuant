@@ -25,7 +25,6 @@ class Pipeline(object):
 
     def __init__(self, terms, ump_picker=None):
         self._terms_store = terms
-        # last item --- finalTerm
         self._workspace = OrderedDict()
         self.graph = self._init_graph()
         self._ump = UmpPickers(ump_picker) if ump_picker else UmpPickers(terms)
@@ -139,7 +138,7 @@ class Pipeline(object):
         """将pipeline.name --- outs"""
         final = self._workspace.popitem(last=True).values()
         outputs = [asset.set_tag(self.name) for asset in final[:alternative]]
-        return outputs
+        return {self.name: outputs}
 
     def to_withdraw_plan(self, position, metadata):
         """
@@ -150,16 +149,3 @@ class Pipeline(object):
 
 
 __all__ = ['Pipeline']
-
-
-# if __name__ == '__main__':
-#
-#     kw = {'window': (5, 10)}
-#     cross_term = Term('cross', kw)
-#     print('sma_term', cross_term)
-#     kw = {'window': 10, 'fast': 12, 'slow': 26, 'period': 9}
-#     break_term = Term('break', kw, cross_term)
-#     terms = [cross_term, break_term]
-#     # init
-#     pipeline = Pipeline(terms)
-#     print('pipeline', pipeline)

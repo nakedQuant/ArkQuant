@@ -10824,3 +10824,20 @@ def _fit_statsmodel(x, y):
 #             pass
 #     return total_left_cash
 
+# @staticmethod
+# def resolve_pipeline_final(outputs):
+#     mappings = dict()
+#     for item in outputs:
+#         mappings.update(item)
+#
+#     # to find out the final asset of each pipe , notice ---  NamedPipe list
+#     # group by pipe name
+#     sample_by_pipe = groupby(lambda x: x.name, outputs)
+#     # priority 0 --- high ,diminish by increase number
+#     group_sorted = valmap(lambda x: x.sort(key=lambda k: k.priority), sample_by_pipe)
+#     # namedPipe --- event priority
+#     finals = valmap(lambda x: x[0].asset if x else None, group_sorted)
+#     return finals
+
+# 不同的pipeline 可以相同持仓，但是不一定同一时间卖出
+# 其他的pipeline产生相同的持仓，持仓动态变动，所以只能做收盘的分析 或者每个minute产生一个account view

@@ -10,6 +10,27 @@ import numpy as np
 from _calendar.trading_calendar import calendar
 
 
+class Fuse(object):
+    """
+        当持仓组合在一定时间均值低于threshold，则执行manual exit
+    """
+    def __init__(self,
+                 thres,
+                 window):
+        self._thres = thres
+        self.length = window
+
+    def trigger(self, signal):
+        raise NotImplementedError
+
+    def proc(self, portfolio):
+        net_value = portfolio.portfolio_daily_value
+        if len(net_value) < self.length:
+            return False
+        trigger = net_value[-self.length:].mean() / portfolio.base <= self._thres
+        self.trigger(trigger)
+
+
 class CancelPolicy(ABC):
     """
         Abstract cancellation policy interface.
@@ -73,22 +94,3 @@ class ComposedCancel(CancelPolicy):
         return np.all([p.shoud_cancel(asset) for p in self.sub_policies])
 
 
-class Exit(object):
-    """
-        当持仓组合在一定时间均值低于threshold，则执行manual exit
-    """
-    def __init__(self,
-                 thres,
-                 window):
-        self._thres = thres
-        self.length = window
-
-    def trigger(self, signal):
-        raise NotImplementedError
-
-    def proc(self, portfolio):
-        net_value = portfolio.portfolio_daily_value
-        if len(net_value) < self.length:
-            return False
-        trigger = net_value[-self.length:].mean() / portfolio.base <= self._thres
-        self.trigger(trigger)
