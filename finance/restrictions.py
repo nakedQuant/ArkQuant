@@ -140,6 +140,7 @@ class UnionRestrictions(Restrictions):
     """
 
     def __new__(cls, sub_restrictions):
+        sub_restrictions = sub_restrictions if isinstance(sub_restrictions, (list, tuple)) else [sub_restrictions]
         # Filter out NoRestrictions and deal with resulting cases involving
         # one or zero sub_restrictions
         sub_restrictions = [

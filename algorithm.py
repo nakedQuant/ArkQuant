@@ -6,6 +6,7 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 import pandas as pd
+# error module
 from error.errors import (
     IncompatibleSlippageModel,
     RegisterTradingControlPostInit,
@@ -16,39 +17,44 @@ from error.errors import (
     UnsupportedCancelPolicy,
     ZeroCapitalError
 )
+# gateway api
 from gateway.asset.assets import Equity
-from gateway.driver.resample import Freq
+from gateway.asset._finder import init_finder
 from gateway.driver.data_portal import portal
 from gateway.driver.benchmark import (
     get_benchmark_returns,
     get_foreign_benchmark_returns
 )
+# finance module
 from finance.ledger import Ledger
 from finance.slippage import NoSlippage
 from finance.execution import MarketOrder
 from finance.commission import NoCommission
 from finance.restrictions import NoRestrictions, UnionRestrictions
 from finance.control import (
-    LongOnly,
-    MaxOrderSize,
-    MaxOrderCapital,
-    MaxPositionValue,
-    UnionControl
+    NoControl,
+    MaxPositionSize,
+    MaxOrderAmount,
+    MaxOrderProportion
 )
+# risk management
 from risk.allocation import Equal
 from risk.alert import UnionRisk, NoRisk
-
-from pb.dist import simple
-from pb.trigger import Trigger
+# pb module
+from pb.dist import BaseDist
+from pb.broker import Broker
 from pb.generator import Generator
 from pb.blotter import SimulationBlotter
-from pb.division import PositionDivision, CapitalDivision, BaseDivision
-
+from pb.division import PositionDivision, CapitalDivision
+# pipe engine
 from pipe.engine import SimplePipelineEngine
+# trade simulation
 from trade.clock import MinuteSimulationClock
 from trade.tradesimulation import AlgorithmSimulator
+# metric module
 from metric import default_metrics
 from metric.tracker import MetricsTracker
+# util api method
 from util.wrapper import  api_method
 from util.api_support import ZiplineAPI
 from util.events import EventManager, Event, Always
@@ -60,17 +66,8 @@ class TradingAlgorithm(object):
 
     Parameters
     ----------
-    *args, **kwargs
-        Forwarded to ``initialize`` unless listed below.
     initialize : callable[context -> None], optional
-        Function that is called at the start of the nakedquant to
-        setup the initial context.
-    handle_data : callable[(context, data) -> None], optional
-        Function called on every bar. This is where most logic should be
-        implemented.
-    before_trading_start : callable[(context, data) -> None], optional
-        Function that is called before any bars have been processed each
-        day.
+        Function that is called at the start to setup the initial context.
     analyze : callable[(context, DataFrame) -> None], optional
         Function that is called at the end of the backtest. This is passed
         the context and the performance results for the backtest.
@@ -83,43 +80,17 @@ class TradingAlgorithm(object):
     algo_filename : str, optional
         The filename for the algoscript. This will be used in exception
         tracebacks. default: '<string>'.
-    data_frequency : {'daily', 'minute'}, optional
-        The duration of the bars.
-    equities_metadata : dict or DataFrame or file-like object, optional
-        If dict is provided, it must have the following structure:
-        * keys are the identifiers
-        * values are dicts containing the metadata, with the metadata
-          field name as the key
-        If pandas.DataFrame is provided, it must have the
-        following structure:
-        * column names must be the metadata fields
-        * index must be the different asset identifiers
-        * array contents should be the metadata value
-        If an object with a ``read`` method is provided, ``read`` must
-        return rows containing at least one of 'sid' or 'symbol' along
-        with the other metadata fields.
-    futures_metadata : dict or DataFrame or file-like object, optional
-        The same layout as ``equities_metadata`` except that it is used
-        for futures information.
-    identifiers : list, optional
-        Any asset identifiers that are not provided in the
-        equities_metadata, but will be traded by this TradingAlgorithm.
-    get_pipeline_loader : callable[BoundColumn -> pipe], optional
-        The function that maps Pipeline columns to their loaders.
     create_event_context : callable[BarData -> context manager], optional
         A function used to create a context mananger that wraps the
         execution of all events that are scheduled for a bar.
         This function will be passed the data for the bar and should
         return the actual context manager that will be entered.
-    history_container_class : type, optional
-        The type of history container to use. default: HistoryContainer
     platform : str, optional
         The platform the nakedquant is running on. This can be queried for
         in the nakedquant with ``get_environment``. This allows algorithms
         to conditionally execute code based on platform it is running on.
         default: 'zipline'
-    adjustment_reader : AdjustmentReader
-        The interface to the adjustments.
+
     量化交易系统:
         a.策略识别（搜索策略 ， 挖掘优势 ， 交易频率）
         b.回溯测试（获取数据 ， 分析策略性能 ，剔除偏差）
@@ -127,35 +98,24 @@ class TradingAlgorithm(object):
         d.风险管理（最优资本配置 ， 最优赌注或者凯利准则 ， 海龟仓位管理）
     """
     def __init__(self,
-                 # set ledger
                  sim_params,
-                 position_risk_models=None,
-                 # dataApi --- only entrance of backtest
-                 data_portal=None,
-                 sample_rule=None,
-                 asset_finder=None,
-                 # finance module intended for order object
+                 on_error='log',
+                 # finance module
+                 control=None,
                  slippage=None,
                  commission=None,
-                 control=None,
                  restrictions=None,
-                 cancel_policy=None,
                  execution_style=None,
-                 # order generator
-                 creator=None,
-                 # blotter --- transform order to transaction , delay --- means transfer put to call
-                 delay=None,
-                 blotter_class=None,
+                 # dist
+                 dist=None,
                  # pipe API
-                 scripts=None,
+                 pipelines=None,
                  alternatives=10,
-                 allow_righted=False,
-                 allowed_violation=True,
-                 # broker --- combine creator,blotter pipe_engine together
-                 broker_engine=None,
-                 # capital allocation and portfolio management
-                 risk_capital_controls=None,
-                 risk_manual=None,
+                 disallow_righted=False,
+                 disallowed_violation=True,
+                 # risk
+                 risk_models=None,
+                 risk_allocation=None,
                  # metric
                  _analyze=None,
                  metrics_set=None,
@@ -167,78 +127,40 @@ class TradingAlgorithm(object):
                  logger=None,
                  **initialize_kwargs):
 
+        assert sim_params.capital_base <= 0, ZeroCapitalError()
         self.sim_params = sim_params
-        if sim_params.capital_base <= 0:
-            raise ZeroCapitalError()
+        self.on_error = on_error
         # set benchmark returns
         self.benchmark_returns = self._calculate_benchmark_returns()
-        # set resample rule
-        self.sample_rule = sample_rule or Freq(sim_params.sessions)
-        # set data_portal
-        if self.data_portal is None:
-            if asset_finder is None:
-                raise ValueError(
-                    "Must pass either data_portal or asset_finder "
-                    "to TradingAlgorithm()"
-                )
-            self.asset_finder = asset_finder
-            self.data_portal = portal
-        else:
-            # Raise an error if we were passed two different asset finders.
-            # There's no world where that's a good idea.
-            if asset_finder is not None \
-               and asset_finder is not data_portal.asset_finder:
-                raise ValueError(
-                    "Inconsistent asset_finders in TradingAlgorithm()"
-                )
-            self.asset_finder = data_portal.asset_finder
-            self.data_portal = data_portal
-
-        # set ledger with capital base
-        # risk_models = position_risk_models or [PositionLossRisk, PositionDrawRisk]
-        risk_models = position_risk_models or [NoRisk]
+        # data interface
+        self.data_portal = portal
+        self.asset_finder = init_finder()
+        # restrictions
+        restrictions = restrictions or NoRestrictions()
+        # set ledger
+        risk_models = risk_models or NoRisk()
         self.ledger = Ledger(sim_params, risk_models)
-
-        # order creator to create orders by capital or amount
-        self.trading_controls = control or [MaxOrderSize, MaxPositionValue]
-
-        if creator is not None:
-            self._creator = creator
-        else:
-            slippage = slippage or NoSlippage()
-            commission = commission or NoCommission()
-            execution_style = execution_style or MarketOrder()
-            # cancel_policy = cancel_policy or NeverCancel()
-            # List of trading controls to be used to validate orders.
-            # trading_controls = control or [MaxOrderSize, MaxPositionSize]
-            # List of account controls to be checked on each bar.
-            # self.account_controls = []
-            self._creator = OrderCreator(data_portal,
-                                         slippage,
-                                         commission,
-                                         execution_style,
-                                         cancel_policy,
-                                         self.trading_controls)
-
-        # blotter
-        self.blotter = blotter_class if blotter_class else SimulationBlotter(self._creator, delay)
-        # restrictions , alternative
-        self.restrictions = NoRestrictions() or restrictions
+        # init blotter
+        self.slippage = slippage or NoSlippage()
+        self.commission = commission or NoCommission()
+        self.execution_style = execution_style or MarketOrder()
+        self.blotter = self._init_blotter()
+        # init generator
+        self.generator = self._init_generator(dist)
         # Initialize pipe_engine API
-        self.pipeline_engine = self.init_engine(scripts,
-                                                alternatives,
-                                                allow_righted,
-                                                allowed_violation)
-        # create generator --- initialized = True
-        self.initialized = False
-        # capital allocation
-        capital_control = Equal or risk_capital_controls
-        # broker --- combine pipe_engine and blotter ; when live trading broker ---- xtp
-        self.broke_class = self._create_broker(broker_engine, capital_control)
-        # set manual risk management --- manual close positions
-        # risk_manual = risk_manual or PortfolioRisk
-        # self.manual_controls = Manual(risk_manual)
-        # metrics_set and initialize metric tracker
+        self.pipelines = pipelines
+        self.restrictions = restrictions
+        self.pipe_engine = self._init_engine(
+                                            alternatives,
+                                            disallow_righted,
+                                            disallowed_violation)
+        # set controls
+        self.trading_controls = control or NoControl()
+        # set allocation policy
+        risk_allocation = risk_allocation or Equal()
+        # init broker
+        self.broker = Broker(risk_allocation)
+
         if metrics_set is not None:
             self._metrics_set = metrics_set
         else:
@@ -251,10 +173,11 @@ class TradingAlgorithm(object):
         self._analyze = _analyze
         # set event manager
         self.event_manager = EventManager(create_event_context)
-        self.event_manager.add_event(
-            Event(Always(), self.handle_data.__func__),
-            prepend=True,
-        )
+        # self.event_manager.add_event(
+        #     Event(Always(), self.handle_data.__func__),
+        #     prepend=True,
+        # )
+        self.initialized = False
         # set additional attr
         self.logger = logger
         self._platform = platform
@@ -262,66 +185,59 @@ class TradingAlgorithm(object):
         self._recorded_vars = {}
         self.namespace = namespace or {}
 
-    def _calculate_universe(self):
-        # this exists to provide backwards compatibility for older,
-        # deprecated APIs, particularly around the iterability of
-        # BarData (ie, 'for sid in data`).
-        if self._backwards_compat_universe is None:
-            self._backwards_compat_universe = (
-                self.asset_finder.retrieve_all(self.asset_finder.sids)
-            )
-        return self._backwards_compat_universe
-
-    def _create_blotter(self, blotter_class, delay):
+    def _init_blotter(self):
         """
             nakedquant blotter
             function --- transform order to txn via different ways(capital , amount ,dual)
         """
-        if blotter_class is not None:
-            simulation_blotter = blotter_class
-        else:
-            simulation_blotter = SimulationBlotter(self._creator, delay)
-        return simulation_blotter
+        blotter = SimulationBlotter(self.commission,
+                                    self.slippage,
+                                    self.execution_style)
+        return blotter
 
-    def _create_broker(self, broker, control):
-        """
-            broker --- xtp
-        """
-        if broker is not None:
-            broke_class = broker
-        else:
-            broke_class = Broker(self.blotter, control)
-        return broke_class
+    def _init_generator(self, dist):
+        # set division
+        divisions = [CapitalDivision(dist), PositionDivision(dist)]
+        # generator
+        generator_class = Generator(self.sim_params.delay,
+                                    self.blotter,
+                                    divisions)
+        return generator_class
 
-    def init_engine(self,
-                    scripts,
-                    alternatives,
-                    allow_righted,
-                    allowed_violation):
+    def _init_engine(self,
+                     alternatives,
+                     righted,
+                     violation):
         """
         Construct and store a PipelineEngine from loader.
 
         If get_loader is None, constructs an ExplodingPipelineEngine
         """
-        pipelines = []
-        for script_file in scripts:
-            name = script_file.rsplit('.')[-2]
-            with open(script_file, 'r') as f:
-                exec(f.read(), self.namespace)
-                pipelines.append(self.namespace[name])
+        # pipelines = []
+        # for script_file in scripts:
+        #     name = script_file.rsplit('.')[-2]
+        #     with open(script_file, 'r') as f:
+        #         exec(f.read(), self.namespace)
+        #         pipelines.append(self.namespace[name])
         try:
-            engine = SimplePipelineEngine(
-                                pipelines,
-                                self.asset_finder,
-                                self.data_portal,
-                                self.restrictions,
-                                alternatives,
-                                allow_righted,
-                                allowed_violation
-                                        )
+            engine = SimplePipelineEngine(self.pipelines,
+                                          self.restrictions,
+                                          alternatives,
+                                          righted,
+                                          violation)
             return engine
         except Exception as e:
             raise ValueError('initialization error %s' % e)
+
+    def _init_broker(self, allocation_model):
+        """
+            broker --- xtp
+        """
+        broker_class = Broker(self.pipe_engine,
+                              self.generator,
+                              self.trading_controls,
+                              allocation_model)
+        return broker_class
 
     def _create_metrics_tracker(self):
         return MetricsTracker(
@@ -332,10 +248,10 @@ class TradingAlgorithm(object):
 
     def _calculate_benchmark_returns(self):
         benchmark = self.sim_params.benchmark
-        benchmark_symbols = self.asset_finder.retrieve_index_symbols()
-        if benchmark in benchmark_symbols:
+        try:
             returns = get_benchmark_returns(benchmark)
-        else:
+        except Exception as e:
+            print('error:', e)
             returns = get_foreign_benchmark_returns(benchmark)
         return returns.loc[self.sim_params.sessions, :]
 
@@ -347,7 +263,7 @@ class TradingAlgorithm(object):
                         self.sim_params
                         )
 
-    def _create_generator(self, sim_params):
+    def _create_simulation(self, sim_params):
         """
         Override this method to add new logic to the construction
         of the generator. Overrides can use the _create_generator
@@ -363,13 +279,23 @@ class TradingAlgorithm(object):
         )
         return self.trading_client.transform()
 
-    def get_generator(self):
+    def yield_simulation(self):
         """
         Override this method to add new logic to the construction
         of the generator. Overrides can use the _create_generator
         method to get a standard construction generator.
         """
-        return self._create_generator(self.sim_params)
+        return self._create_simulation(self.sim_params)
+
+    def _calculate_universe(self):
+        # this exists to provide backwards compatibility for older,
+        # deprecated APIs, particularly around the iterability of
+        # BarData (ie, 'for sid in data`).
+        if self._backwards_compat_universe is None:
+            self._backwards_compat_universe = (
+                self.asset_finder.retrieve_all(self.asset_finder.sids)
+            )
+        return self._backwards_compat_universe
 
     def initialize(self, *args, **kwargs):
         """
@@ -386,7 +312,7 @@ class TradingAlgorithm(object):
         # Each iteration returns a perf dictionary
         try:
             perfs = []
-            for perf in self.get_generator():
+            for perf in self.yield_simulation():
                 perfs.append(perf)
             # convert perf dict to pandas frame
             daily_stats = self._create_daily_stats(perfs)
@@ -458,7 +384,7 @@ class TradingAlgorithm(object):
         """
         env = {
             'arena': 'china',
-            # 'data_frequency': self.sim_params.data_frequency,
+            'data_frequency': self.sim_params.data_frequency,
             'start': self.sim_params.sessions[0],
             'end': self.sim_params.sessions[-1],
             'capital_base': self.sim_params.capital_base,
@@ -509,17 +435,34 @@ class TradingAlgorithm(object):
         if self.initialized:
             raise SetBenchmarkOutsideInitialize()
 
+    ####################
+    # PipeEngine Control
+    ####################
+
+    def set_pipeline_engine(self,
+                            num_choices,
+                            righted=True,
+                            violated=True):
+        if self.initialized:
+            raise AttributeError
+        self.pipe_engine = self._init_engine(num_choices, righted, violated)
+
+    ####################
+    # Finance Controls #
+    ####################
+
+    def set_risk_models(self, risk_models):
+        self.ledger.risk_alert = UnionRisk(risk_models)
+
     @api_method
-    def set_slippage(self, us_equities=None):
+    def set_slippage(self, slippage_class):
         """
         Set the slippage models for the nakedquant.
 
         Parameters
         ----------
-        us_equities : EquitySlippageModel
+        slippage_class : EquitySlippageModel
             The slippage model to use for trading US equities.
-        us_futures : FutureSlippageModel
-            The slippage model to use for trading US futures.
 
         Notes
         -----
@@ -532,19 +475,11 @@ class TradingAlgorithm(object):
         """
         if self.initialized:
             raise SetSlippagePostInit()
-
-        if us_equities is not None:
-            if Equity not in us_equities.allowed_asset_types:
-                raise IncompatibleSlippageModel(
-                    asset_type='equities',
-                    given_model=us_equities,
-                    supported_asset_types=us_equities.allowed_asset_types,
-                )
-            self.blotter.slippage_models[Equity] = us_equities
+        self.slippage = slippage_class
 
     @api_method
     def set_commission(self, commission_class):
-        """Sets the commission models for the nakedquant.
+        """Sets the commission models for the trading
 
         Parameters
         ----------
@@ -564,37 +499,22 @@ class TradingAlgorithm(object):
         """
         if self.initialized:
             raise SetCommissionPostInit()
+        self.commission = commission_class
 
-        self.blotter.commission_model = commission_class
-
-    @api_method
-    def set_cancel_policy(self, cancel_policy):
-        """Sets the order cancellation policy for the nakedquant.
-
-        Parameters
-        ----------
-        cancel_policy : CancelPolicy
-            The cancellation policy to use.
-
-        See Also
-        --------
-        :class:`zipline.api.EODCancel`
-        :class:`zipline.api.NeverCancel`
+    def set_execution_style(self, execution_model):
+        """Sets the execution_style models for the trading
+        :param execution_model --- execution_style
         """
-        if not isinstance(cancel_policy, CancelPolicy):
-            raise UnsupportedCancelPolicy()
-
         if self.initialized:
-            raise SetCancelPolicyPostInit()
-
-        self.blotter.cancel_policy = cancel_policy
+            raise AttributeError
+        self.execution_style = execution_model
 
     def set_restrictions(self, restricted_list):
         """Set a restriction on which asset can be ordered.
 
         Parameters
         ----------
-        restricted_list : Restrictions
+        restricted_list : list of Restrictions
             An object providing information about restricted asset.
 
         See Also
@@ -603,23 +523,21 @@ class TradingAlgorithm(object):
         """
         if self.initialized:
             raise SetCancelPolicyPostInit()
+        self.restrictions = restricted_list
 
-        self.pipeline_engine.restricted_rules = UnionRestrictions(restricted_list
-                                                                  if isinstance(restricted_list, list)
-                                                                  else [restricted_list])
+    ####################
+    # Pb Controls #
+    ####################
 
-    def set_capital_control(self, capital_control):
-        self.broke_class.allocation = capital_control
+    def set_dist_func(self, dist_model):
+        assert isinstance(dist_model, BaseDist), \
+            'dist_model must be subclass of BaseDist'
+        self.generator = self._init_generator(dist_model)
 
-    def set_risk_controls(self, risk_models):
-        self.ledger.risk_alert = UnionRisk(risk_models if isinstance(risk_models, list)
-                                           else [risk_models])
-
-    def set_manual_controls(self, manual_controls):
-        """
-        :param manual_controls:  if ledger violate manual_controls then close positions
-        """
-        self.manual_controls.trigger = manual_controls
+    def set_risk_allocation(self, allocation_model):
+        if self.initialized:
+            raise AttributeError
+        self.broker.capital_model = allocation_model
 
     ####################
     # Trading Controls #
@@ -635,8 +553,8 @@ class TradingAlgorithm(object):
 
     @api_method
     def set_max_position_size(self,
-                              max_notional=None,
-                              on_error='fail'):
+                              window,
+                              max_notional):
         """Set a limit on the number of shares and/or dollar value held for the
         given sid. Limits are treated as absolute values and are enforced at
         the time that the algo attempts to place an order for sid. This means
@@ -650,19 +568,21 @@ class TradingAlgorithm(object):
 
         Parameters
         ----------
+        window : measure_window
         max_notional : float, optional
                 The maximum value to hold for an asset.
         on_error : int, optional
                 The maximum number of shares to hold for an asset.
         """
-        control = MaxPositionSize(max_notional=max_notional,
-                                  on_error=on_error)
+        control = MaxPositionSize(window=window,
+                                  max_notional=max_notional,
+                                  on_error=self.on_error)
         self.register_trading_control(control)
 
     @api_method
-    def set_max_order_size(self,
-                           max_shares=None,
-                           on_error='fail'):
+    def set_max_order_amount(self,
+                             window,
+                             max_notional):
         """Set a limit on the number of shares and/or dollar value of any single
         order placed for sid.  Limits are treated as absolute values and are
         enforced at the time that the algo attempts to place an order for sid.
@@ -672,20 +592,23 @@ class TradingAlgorithm(object):
 
         Parameters
         ----------
-        max_shares : int, optional
-            The maximum number of shares that can be ordered at one time.
-        on_error : fail or log
+        window : int, optional
+            window  that measure the max amount can be ordered at one time
+        max_notional : float
         """
-        control = MaxOrderSize(max_shares=max_shares,
-                               on_error=on_error)
+        control = MaxOrderAmount(window=window,
+                                 max_notional=max_notional,
+                                 on_error=self.on_error)
         self.register_trading_control(control)
 
     @api_method
-    def set_long_only(self, on_error='fail'):
+    def set_max_order_proportion(self, max_notional):
         """Set a rule specifying that this algorithm cannot take short
         positions.
         """
-        self.register_trading_control(LongOnly(on_error))
+        control = MaxOrderProportion(max_notional=max_notional,
+                                     on_error=self.on_error)
+        self.register_trading_control(control)
 
     ##################
     # End pipe API
@@ -745,16 +668,14 @@ class TradingAlgorithm(object):
     initialized={initialized},
     slippage_models={slippage_models},
     commission_models={commission_models},
-    broker={broker},
-    recorded_vars={recorded_vars})
+    broker={broker})
 """.strip().format(class_name=self.__class__.__name__,
                    capital_base=self.sim_params.capital_base,
                    sim_params=repr(self.sim_params),
                    initialized=self.initialized,
-                   slippage_models=repr(self.blotter.slippage_models),
-                   commission_models=repr(self.blotter.commission_models),
-                   blotter=repr(self.blotter)
-                   # recorded_vars=repr(self.recorded_vars))
+                   slippage_models=repr(self.blotter.slippage),
+                   commission_models=repr(self.blotter.commission),
+                   broker=repr(self.broker)
                    )
 
 

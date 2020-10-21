@@ -10841,3 +10841,140 @@ def _fit_statsmodel(x, y):
 
 # 不同的pipeline 可以相同持仓，但是不一定同一时间卖出
 # 其他的pipeline产生相同的持仓，持仓动态变动，所以只能做收盘的分析 或者每个minute产生一个account view
+
+# trading controls --- List of account controls to be checked on each bar
+# cancel_policy = cancel_policy or NeverCancel()
+# List of trading controls to be used to validate orders.
+# trading_controls = control or [MaxOrderSize, MaxPositionSize]
+# List of account controls to be checked on each bar.
+# self.account_controls = []
+
+# broker --- combine pipe_engine and blotter ; when live trading broker ---- xtp
+# set manual risk management --- manual close positions
+# risk_manual = risk_manual or PortfolioRisk
+# self.manual_controls = Manual(risk_manual)
+# metrics_set and initialize metric tracker
+
+
+# @api_method
+# def set_cancel_policy(self, cancel_policy):
+#     """Sets the order cancellation policy for the nakedquant.
+#
+#     Parameters
+#     ----------
+#     cancel_policy : CancelPolicy
+#         The cancellation policy to use.
+#
+#     See Also
+#     --------
+#     :class:`zipline.api.EODCancel`
+#     :class:`zipline.api.NeverCancel`
+#     """
+#     if not isinstance(cancel_policy, CancelPolicy):
+#         raise UnsupportedCancelPolicy()
+#
+#     if self.initialized:
+#         raise SetCancelPolicyPostInit()
+#
+#     self.blotter.cancel_policy = cancel_policy
+
+
+# class LongOnly(TradingControl):
+#     """
+#     TradingControl representing a prohibition against holding short positions.
+#     """
+#     def __init__(self, on_error='fail'):
+#         self.on_error = on_error
+#         self.__fail_args = 'short action is not allowed'
+#
+#     def validate_call(self,
+#                       asset,
+#                       capital,
+#                       portfolio,
+#                       algo_datetime):
+#         super().validate_call(asset,
+#                               capital,
+#                               portfolio,
+#                               algo_datetime)
+#
+#     def validate_put(self,
+#                      position,
+#                      portfolio,
+#                      algo_datetime):
+#         """
+#         Fail if we would hold negative shares of asset after completing this order.
+#         """
+#         super().validate_put(position,
+#                              portfolio,
+#                              algo_datetime)
+
+# futures_metadata : dict or DataFrame or file-like object, optional
+#     The same layout as ``equities_metadata`` except that it is used
+#     for futures information.
+# identifiers : list, optional
+#     Any asset identifiers that are not provided in the
+#     equities_metadata, but will be traded by this TradingAlgorithm.
+# get_pipeline_loader : callable[BoundColumn -> pipe], optional
+#     The function that maps Pipeline columns to their loaders.
+
+"""A class that represents a trading strategy and parameters to execute
+    the strategy.
+
+    Parameters
+    ----------
+    *args, **kwargs
+        Forwarded to ``initialize`` unless listed below.
+    initialize : callable[context -> None], optional
+        Function that is called at the start of the nakedquant to
+        setup the initial context.
+    handle_data : callable[(context, data) -> None], optional
+        Function called on every bar. This is where most logic should be
+        implemented.
+    before_trading_start : callable[(context, data) -> None], optional
+        Function that is called before any bars have been processed each
+        day.
+    analyze : callable[(context, DataFrame) -> None], optional
+        Function that is called at the end of the backtest. This is passed
+        the context and the performance results for the backtest.
+    script : str, optional
+        Algoscript that contains the definitions for the four algorithm
+        lifecycle functions and any supporting code.
+    namespace : dict, optional
+        The namespace to execute the algoscript in. By default this is an
+        empty namespace that will include only python built ins.
+    algo_filename : str, optional
+        The filename for the algoscript. This will be used in exception
+        tracebacks. default: '<string>'.
+
+    equities_metadata : dict or DataFrame or file-like object, optional
+        If dict is provided, it must have the following structure:
+        * keys are the identifiers
+        * values are dicts containing the metadata, with the metadata
+          field name as the key
+        If pandas.DataFrame is provided, it must have the
+        following structure:
+        * column names must be the metadata fields
+        * index must be the different asset identifiers
+        * array contents should be the metadata value
+        If an object with a ``read`` method is provided, ``read`` must
+        return rows containing at least one of 'sid' or 'symbol' along
+        with the other metadata fields.
+    create_event_context : callable[BarData -> context manager], optional
+        A function used to create a context mananger that wraps the
+        execution of all events that are scheduled for a bar.
+        This function will be passed the data for the bar and should
+        return the actual context manager that will be entered.
+    history_container_class : type, optional
+        The type of history container to use. default: HistoryContainer
+    platform : str, optional
+        The platform the nakedquant is running on. This can be queried for
+        in the nakedquant with ``get_environment``. This allows algorithms
+        to conditionally execute code based on platform it is running on.
+        default: 'zipline'
+
+    量化交易系统:
+        a.策略识别（搜索策略 ， 挖掘优势 ， 交易频率）
+        b.回溯测试（获取数据 ， 分析策略性能 ，剔除偏差）
+        c.交割系统（经纪商接口 ，交易自动化 ， 交易成本最小化）
+        d.风险管理（最优资本配置 ， 最优赌注或者凯利准则 ， 海龟仓位管理）
+"""

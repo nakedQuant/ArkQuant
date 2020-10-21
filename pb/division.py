@@ -14,13 +14,8 @@ from pb.dist import simple
 
 class BaseDivision(object):
 
-    def __init__(self,
-                 slippage,
-                 execution_style,
-                 distribution=simple):
-        self.slippage_model = slippage
-        self.execution_style = execution_style
-        self.dis = distribution
+    def __init__(self, dist):
+        self.dis = dist if dist else simple
 
     @lru_cache(maxsize=32)
     def _init_data(self, asset, dts):
@@ -61,6 +56,9 @@ class CapitalDivision(BaseDivision):
         order amount --- negative
     """
     name = 'capital'
+
+    def __init__(self, dist):
+        super(CapitalDivision, self).__init__(dist)
 
     def yield_size_on_capital(self, asset, capital, dts):
         """
@@ -146,6 +144,9 @@ class PositionDivision(BaseDivision):
     """
     name = 'position'
 
+    def __init__(self, dist):
+        super(PositionDivision, self).__init__(dist)
+
     def yield_size_on_position(self, position, dts):
         """
             针对于买入操作
@@ -213,4 +214,4 @@ class PositionDivision(BaseDivision):
         return orders
 
 
-__all__ = ['CapitalDivision', 'PositionDivision', 'BaseDivision']
+__all__ = ['CapitalDivision', 'PositionDivision']

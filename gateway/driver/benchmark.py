@@ -10,11 +10,6 @@ from gateway.driver.tools import _parse_url
 from gateway.spider.url import BENCHMARK_URL
 from gateway.driver import lookup_benchmark
 
-__all__ = [
-    'get_benchmark_returns',
-    'get_foreign_benchmark_returns'
-]
-
 
 def get_benchmark_returns(sid):
     """
@@ -54,6 +49,11 @@ def get_foreign_benchmark_returns(index_name):
     returns = kline['close'] / kline['close'].shift(1) - 1
     return returns
 
+
+__all__ = [
+    'get_benchmark_returns',
+    'get_foreign_benchmark_returns'
+]
 
 # if __name__ == '__main__':
 #

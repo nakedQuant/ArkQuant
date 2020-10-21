@@ -5,98 +5,77 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-from multiprocessing import Pool
-from functools import partial
-from finance.control import UnionControl
+import numpy as np, pandas as pd
+from gateway.driver.data_portal import portal
+from finance.order import Order
 
 
 class Generator(object):
     """
-        a. calculate amount to determin size
-        b. create ticker_array depend on size
-        c. simulate order according to ticker_price , ticker_size , ticker_price
-            --- 存在竞价机制的情况将订单分散在不同时刻，符合最大成交原则
-            --- 无竞价机制的情况下，模拟的价格分布，将异常的价格集中以收盘价价格进行成交
-        d. principle:
-            a. pipe 买入策略信号会滞后 ， dt对象与dt + 1对象可能相同的 --- 分段加仓
-            b. 针对于卖出标的 -- 遵循最大程度卖出（当天）
-            c. 执行买入算法的需要涉及比如最大持仓比例，持仓量等限制
-        e.
-            combine simpleEngine and blotter module
-            engine --- asset --- orders --- transactions
-            订单 --- 引擎生成交易 --- 执行计划式的
+        transfer short to long on specific pipeline
     """
     def __init__(self,
-                 engine,
-                 trigger,
-                 controls,
-                 allocation_model):
-        self.engine = engine
-        self.trigger = trigger
-        self.capital_model = allocation_model
-        self.trade_controls = UnionControl(controls)
+                 delay,
+                 blotter,
+                 divisions):
+        try:
+            mp = {d.name: d for d in divisions}
+            self.holding_division = mp['position']
+            self.capital_division = mp['capital']
+        except TypeError:
+            raise ValueError('divisions must be tuple or list')
+        self.delay = delay
+        self.blotter = blotter
 
-    def set_controls_func(self, portfolio):
-        cap_controls = partial(self.trade_controls.validate_call, porfolio=portfolio)
-        position_controls = partial(self.trade_controls.validate_put, porfolio=portfolio)
-        return cap_controls, position_controls
+    def yield_capital(self, asset, capital, dts):
+        capital_orders = self.capital_division.simulate_iterator(asset, capital, dts)
+        capital_transactions = self.blotter.create_transaction(capital_orders, dts)
+        return capital_transactions
 
-    def implement_capital(self, positives, capital, algo_control, dts):
-        """基于资金买入对应仓位"""
-        assets = list(positives.values())
-        txn_mappings = dict()
-        # controls
-        allocation = self.capital_model.compute(assets, capital, dts)
-        for asset, cap in allocation.items():
-            asset, control_cap = algo_control(asset=asset, capital=cap, algo_datetime=dts)
-            txn_mappings[asset] = self.trigger.yield_capital(asset, control_cap, dts)
-        return txn_mappings
+    def yield_position(self, position, dts):
+        holding_orders = self.holding_division.simulate_iterator(position, dts)
+        holding_transactions = self.blotter.create_transaction(holding_orders, dts)
+        return holding_transactions
 
-    def implement_position(self, negatives, algo_control, dts):
-        """单独的卖出仓位"""
-        txn_mappings = dict()
-        for p in negatives.values():
-            p = algo_control(p)
-            txn_mappings[p.asset] = self.trigger.yield_position(p, dts)
-        return txn_mappings
-
-    def implement_duals(self, duals, dts):
+    def yield_interactive(self, position, asset, dts):
         """
-            针对一个pipeline算法，卖出 -- 买入
-            防止策略冲突 当pipeline的结果与ump的结果出现重叠 --- 说明存在问题，正常情况退出策略与买入策略应该不存交集
+            p -- position , c --- event , dts --- pd.Timestamp or str
+            基于触发器构建 通道 基于策略 卖出 --- 买入
+            principle --- 只要发出卖出信号的最大限度的卖出，如果没有完全卖出直接转入下一个交易日继续卖出
+            订单 --- priceOrder TickerOrder Intime
+            engine --- xtp or simulate(slippage_factor = self.slippage.calculate_slippage_factor)
+            dual -- True 双方向
+                  -- False 单方向（提交订单）
+            eager --- True 最后接近收盘时候集中将为成交的订单成交撮合成交保持最大持仓
+                  --- False 将为成交的订单追加之前由于restrict_rule里面的为成交订单里面
+            具体逻辑：
+                当产生执行卖出订单时一旦成交接着执行买入算法，要求卖出订单的应该是买入Per买入标的的times，
+                保证一次卖出成交金额可以覆盖买入标的
+            优势：提前基于一定的算法将订单根据时间或者价格提前设定好，在一定程度避免了被监测的程度。
+            成交的订单放入队列里面，不断的get
+            针对于put orders 生成的买入ticker_orders （逻辑 --- 滞后的订单是优先提交，主要由于订单生成到提交存在一定延迟)
+            订单优先级 --- Intime (first) > TickerOrder > priceOrder
+            基于asset计算订单成交比例
+            获取当天实时的ticer实点的数据，并且增加一些滑加，+ /-0.01
+            卖出标的 --- 对应买入标的 ，闲于的资金
         """
-        txn_mappings = dict()
-        for dual in duals:
-            p, asset = dual
-            # p.asset 与 asset 不一样
-            short, long = self.trigger.yield_interactive(p, asset, dts)
-            txn_mappings[p.asset] = short
-            txn_mappings[asset] = long
-        return txn_mappings
-
-    @staticmethod
-    def process(ledger, iterable):
-        def proc(dct):
-            for k, v in dct.items():
-                ledger.process_transaction(v)
-        with Pool(processes=3) as pool:
-            [pool.apply_async(proc, item) for item in iterable]
-
-    def carry_out(self, ledger, dts):
-        """建立执行计划"""
-        capital = ledger.portfolio.start_cash.copy()
-        # {pipeline_name : asset} , {pipeline_name : position} , (position, asset)
-        positives, negatives, duals = self.engine.execute_algorithm(ledger)
-        # init controls
-        capital_controls, position_controls = self.set_controls_func(ledger.portfolio)
-        # 直接买入
-        call_txns = self.implement_capital(positives, capital, capital_controls, dts)
-        # 直接卖出
-        put_txns = self.implement_position(negatives, position_controls, dts)
-        # 卖出 --- 买入
-        dual_txns = self.implement_duals(duals, dts)
-        # portfolio的资金使用效率评估引擎撮合的的效率 --- 并行执行成交
-        self.process(ledger, [call_txns, put_txns, dual_txns])
+        # 卖出持仓
+        short_transactions = self.yield_position(position, dts)
+        short_prices = np.array([txn.price for txn in short_transactions])
+        short_amount = np.array([txn.amount for txn in short_transactions])
+        # 切换之间存在时间差，默认以minutes为单位
+        tickers = [pd.Timedelta(minutes='%dminutes' % self.delay) + txn.created_dt for txn in short_transactions]
+        tickers = [ticker for ticker in tickers if ticker.hour < 15]
+        # 根据ticker价格比值
+        minutes = portal.get_spot_value(dts, asset, 'minute', ['close'])
+        ticker_prices = np.array([minutes[ticker] for ticker in tickers])
+        # 模拟买入订单数量
+        ratio = short_prices[:len(tickers)] / ticker_prices
+        ticker_amount = ratio * short_amount[:len(tickers)]
+        # 生成对应的买入订单
+        orders = [Order(asset, *args) for args in zip(ticker_prices, ticker_amount, tickers)]
+        long_transactions = self.blotter.create_transaction(orders, dts)
+        return short_transactions, long_transactions
 
 
 __all__ = ['Generator']

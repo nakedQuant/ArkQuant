@@ -105,18 +105,22 @@ class TradingControl(object):
                                         attrs=self.__fail_args)
 
 
-class MaxOrderSize(TradingControl):
+class MaxPositionSize(TradingControl):
     """
     TradingControl representing a limit on the magnitude of any single order
     placed with the given asset.  Can be specified by share or by dollar
     value. 深圳ST股票买入卖出都不受限制，上海买入限制50万股，卖出没有限制
     """
 
-    def __init__(self, kwargs):
+    def __init__(self,
+                 window,
+                 max_notional,
+                 on_error='log'
+                 ):
 
-        self.length = kwargs['window']
-        self.threshold = kwargs.get('threshold', 0.05)
-        self.on_error = kwargs.get('on_error', 'warn')
+        self.window = window
+        self.max_notional = max_notional
+        self.on_error = on_error
         self.__fail_args = 'order amount exceed average asset volume'
 
     def validate_call(self,
@@ -144,8 +148,8 @@ class MaxOrderSize(TradingControl):
         asset = position.asset
         amount = position.amount
         capital = position.price * amount
-        volume_window = portal.get_window([asset], algo_datetime, - abs(self.length), ['volume'])
-        threshold_volume = volume_window[asset.sid].mean() * self.threshold
+        volume_window = portal.get_window([asset], algo_datetime, - abs(self.window), ['volume'])
+        threshold_volume = volume_window[asset.sid].mean() * self.max_notional
         if amount > threshold_volume:
             self.handle_violation(asset, amount, capital, portfolio, algo_datetime)
             control_volume = threshold_volume
@@ -153,16 +157,19 @@ class MaxOrderSize(TradingControl):
         return position
 
 
-class MaxOrderCapital(TradingControl):
+class MaxOrderAmount(TradingControl):
     """
     TradingControl representing a limit on the magnitude of any single order
     placed with the given asset.  Can be specified by share or by dollar value
     """
-    def __init__(self, kwargs):
+    def __init__(self,
+                 window,
+                 max_notional,
+                 on_error='log'):
 
-        self.length = kwargs['window']
-        self.threshold = kwargs.get('threshold', 0.05)
-        self.on_error = kwargs.get('on_error', 'warn')
+        self.window = window
+        self.max_notional = max_notional
+        self.on_error = on_error
         self.__fail_args = 'order capital exceed average asset amount'
 
     def validate_call(self,
@@ -175,7 +182,7 @@ class MaxOrderCapital(TradingControl):
         or self.max_notional.
         """
         amount_window = portal.get_window([asset], algo_datetime, - abs(self.length), ['amount'])
-        threshold_amount = amount_window[asset.sid].mean() * self.threshold
+        threshold_amount = amount_window[asset.sid].mean() * self.max_notional
         if capital > threshold_amount:
             self.handle_violation(asset, capital, portfolio, algo_datetime)
             control_capital = threshold_amount
@@ -195,16 +202,17 @@ class MaxOrderCapital(TradingControl):
                              algo_datetime)
 
 
-class MaxPositionValue(TradingControl):
+class MaxOrderProportion(TradingControl):
     """
     TradingControl representing a limit on the maximum position size that can
     be held by an algo for a given asset.
     """
-    def __init__(self, kwargs):
+    def __init__(self,
+                 max_notional,
+                 on_error='log'):
 
-        self.threshold = kwargs.get('threshold', 0.6)
-        assert self.threshold > 0, ValueError("max_notional must be positive.")
-        self.on_error = kwargs.get('on_error', 'warn')
+        self.max_notional = max_notional
+        self.on_error = on_error
         self.__fail_args = 'asset position proportion exceed portfolio limit'
 
     def validate_call(self,
@@ -217,7 +225,7 @@ class MaxPositionValue(TradingControl):
         greater in shares than self.max_shares or greater in dollar value than
         self.max_notional.
         """
-        max_holding = portfolio['portfolio_value'] * self.threshold
+        max_holding = portfolio['portfolio_value'] * self.max_notional
         position_mappings = {p.sid: p.last_sale_price * p.amount for p in portfolio['positions']}
         holding_value = position_mappings.get(asset.sid, 0.0)
         # 已有持仓 不同的策略生成相同的标的 --- sid
@@ -241,7 +249,7 @@ class MaxPositionValue(TradingControl):
                              algo_datetime)
 
 
-class LongOnly(TradingControl):
+class NoControl(TradingControl):
     """
     TradingControl representing a prohibition against holding short positions.
     """
@@ -297,4 +305,4 @@ class UnionControl(TradingControl):
         return p
 
 
-__all__ = ['MaxOrderSize', 'MaxOrderCapital', 'MaxPositionValue', 'LongOnly', 'UnionControl']
+__all__ = ['MaxPositionSize', 'MaxOrderAmount', 'MaxOrderProportion', 'NoControl', 'UnionControl']

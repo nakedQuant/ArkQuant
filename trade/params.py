@@ -11,16 +11,26 @@ from _calendar.trading_calendar import calendar
 
 # __func__ ---指向函数对象
 DEFAULT_CAPITAL_BASE = 1e5
+DEFAULT_DELAY_BASE = 1
 
 
 class SimulationParameters(object):
+    """
+
+    data_frequency : {'daily', 'minute'}, optional
+        The duration of the bars.
+    delay : int
+        Transfer puts to calls (duals)
+    """
     def __init__(self,
                  start_session,
                  end_session,
                  capital_base=DEFAULT_CAPITAL_BASE,
+                 delay=DEFAULT_DELAY_BASE,
                  data_frequency='daily'):
 
         self._capital_base = capital_base
+        self._delay = delay
         self._data_frequency = data_frequency
         self._sessions = calendar.session_in_range(start_session, end_session)
 
@@ -32,9 +42,9 @@ class SimulationParameters(object):
     def data_frequency(self):
         return self._data_frequency
 
-    @data_frequency.setter
-    def data_frequency(self, val):
-        self._data_frequency = val
+    @property
+    def delay(self):
+        return self._delay
 
     @property
     def start_session(self):

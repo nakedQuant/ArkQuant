@@ -221,11 +221,11 @@ class SimplePipelineEngine(Engine):
                  restrictions,
                  alternatives=10,
                  disallow_righted=True,
-                 disallowed_violation=True):
+                 disallow_violation=True):
         self.asset_finder = init_finder()
         self.alternatives = alternatives
         self.disallowed_righted = disallow_righted
-        self.disallowed_violation = disallowed_violation
+        self.disallowed_violation = disallow_violation
         self.restricted_rules = UnionRestrictions(restrictions)
         self.pipelines, self._get_loader = self._init_loader(pipelines)
 
