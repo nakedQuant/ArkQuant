@@ -16,39 +16,42 @@ from error.errors import (
     UnsupportedCancelPolicy,
     ZeroCapitalError
 )
-from risk.cancel_policy import NeverCancel, CancelPolicy
-from finance.commission import NoCommission
-from finance.control import (
-    LongOnly,
-    MaxOrderSize,
-    MaxPositionSize,
-)
-from finance.execution import MarketOrder
-from finance.ledger import Ledger
-from broker import SimulationBlotter
-from broker.oms import OrderCreator
-from finance.restrictions import NoRestrictions, UnionRestrictions
-from finance.slippage import NoSlippage
 from gateway.asset.assets import Equity
+from gateway.driver.resample import Freq
+from gateway.driver.data_portal import portal
 from gateway.driver.benchmark import (
     get_benchmark_returns,
     get_foreign_benchmark_returns
 )
-from gateway.driver.data_portal import DataPortal
-from gens.clock import MinuteSimulationClock
-from trade.tradesimulation import AlgorithmSimulator
-from pipe.engine import SimplePipelineEngine
-from risk.allocation import Equal
-from broker.generator import Broker
-from metrics import default_metrics
-from metrics import MetricsTracker
-from risk.alert import UnionRisk, NoRisk
-from risk.manual import PortfolioRisk, Manual
-from util.api_support import (
-    ZiplineAPI,
+from finance.ledger import Ledger
+from finance.slippage import NoSlippage
+from finance.execution import MarketOrder
+from finance.commission import NoCommission
+from finance.restrictions import NoRestrictions, UnionRestrictions
+from finance.control import (
+    LongOnly,
+    MaxOrderSize,
+    MaxOrderCapital,
+    MaxPositionValue,
+    UnionControl
 )
-from util.events import EventManager, Event, Always
+from risk.allocation import Equal
+from risk.alert import UnionRisk, NoRisk
+
+from pb.dist import simple
+from pb.trigger import Trigger
+from pb.generator import Generator
+from pb.blotter import SimulationBlotter
+from pb.division import PositionDivision, CapitalDivision, BaseDivision
+
+from pipe.engine import SimplePipelineEngine
+from trade.clock import MinuteSimulationClock
+from trade.tradesimulation import AlgorithmSimulator
+from metric import default_metrics
+from metric.tracker import MetricsTracker
 from util.wrapper import  api_method
+from util.api_support import ZiplineAPI
+from util.events import EventManager, Event, Always
 
 
 class TradingAlgorithm(object):
@@ -153,7 +156,7 @@ class TradingAlgorithm(object):
                  # capital allocation and portfolio management
                  risk_capital_controls=None,
                  risk_manual=None,
-                 # metrics
+                 # metric
                  _analyze=None,
                  metrics_set=None,
                  metrics_tracker=None,
@@ -170,7 +173,7 @@ class TradingAlgorithm(object):
         # set benchmark returns
         self.benchmark_returns = self._calculate_benchmark_returns()
         # set resample rule
-        self.sample_rule = sample_rule or Sample(sim_params.sessions)
+        self.sample_rule = sample_rule or Freq(sim_params.sessions)
         # set data_portal
         if self.data_portal is None:
             if asset_finder is None:
@@ -179,7 +182,7 @@ class TradingAlgorithm(object):
                     "to TradingAlgorithm()"
                 )
             self.asset_finder = asset_finder
-            self.data_portal = DataPortal()
+            self.data_portal = portal
         else:
             # Raise an error if we were passed two different asset finders.
             # There's no world where that's a good idea.
@@ -197,7 +200,7 @@ class TradingAlgorithm(object):
         self.ledger = Ledger(sim_params, risk_models)
 
         # order creator to create orders by capital or amount
-        self.trading_controls = control or [MaxOrderSize, MaxPositionSize]
+        self.trading_controls = control or [MaxOrderSize, MaxPositionValue]
 
         if creator is not None:
             self._creator = creator
@@ -205,7 +208,7 @@ class TradingAlgorithm(object):
             slippage = slippage or NoSlippage()
             commission = commission or NoCommission()
             execution_style = execution_style or MarketOrder()
-            cancel_policy = cancel_policy or NeverCancel()
+            # cancel_policy = cancel_policy or NeverCancel()
             # List of trading controls to be used to validate orders.
             # trading_controls = control or [MaxOrderSize, MaxPositionSize]
             # List of account controls to be checked on each bar.
@@ -217,7 +220,7 @@ class TradingAlgorithm(object):
                                          cancel_policy,
                                          self.trading_controls)
 
-        # nakedquant blotter
+        # blotter
         self.blotter = blotter_class if blotter_class else SimulationBlotter(self._creator, delay)
         # restrictions , alternative
         self.restrictions = NoRestrictions() or restrictions
@@ -233,9 +236,9 @@ class TradingAlgorithm(object):
         # broker --- combine pipe_engine and blotter ; when live trading broker ---- xtp
         self.broke_class = self._create_broker(broker_engine, capital_control)
         # set manual risk management --- manual close positions
-        risk_manual = risk_manual or PortfolioRisk
-        self.manual_controls = Manual(risk_manual)
-        # metrics_set and initialize metrics tracker
+        # risk_manual = risk_manual or PortfolioRisk
+        # self.manual_controls = Manual(risk_manual)
+        # metrics_set and initialize metric tracker
         if metrics_set is not None:
             self._metrics_set = metrics_set
         else:
@@ -244,7 +247,7 @@ class TradingAlgorithm(object):
             self.metrics_tracker = metrics_tracker
         else:
             self.metrics_tracker = self._create_metrics_tracker()
-        # analyze the metrics
+        # analyze the metric
         self._analyze = _analyze
         # set event manager
         self.event_manager = EventManager(create_event_context)

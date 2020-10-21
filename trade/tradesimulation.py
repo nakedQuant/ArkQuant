@@ -41,13 +41,8 @@ class AlgorithmSimulator(object):
     def __init__(self,
                  algorithm,
                  sim_params):
-        # ==============
-        # Setup Algo
-        # ==============
+
         self.algorithm = algorithm
-        # ==============
-        # Setup Clock
-        # ==============
         self.clock = MinuteSimulationClock(sim_params)
 
     def transform(self):
@@ -82,10 +77,10 @@ class AlgorithmSimulator(object):
 
             # 生成器yield方法 ，返回yield 生成的数据，next 执行yield 之后的方法
             for session_label, action in clock:
-                # 如果执行manual --- 直接return退出函数
-                if manual_control.execute_manual_process(ledger, broker, session_label):
-                    perf = self._get_daily_message()
-                    return perf
+                # # 如果执行manual --- 直接return退出函数
+                # if manual_control.execute_manual_process(ledger, broker, session_label):
+                #     perf = self._get_daily_message()
+                #     return perf
                 # normal action
                 if action == BEFORE_TRADING_START:
                     self.metrics_tracker.handle_market_open(session_label)

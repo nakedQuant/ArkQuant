@@ -16,7 +16,7 @@ from gateway.driver.client import tsclient
 __all__ = ['calendar']
 
 
-class TradingCalendar (object):
+class Calendar (object):
     """
         元旦：1月1日 ; 清明节：4月4日; 劳动节：5月1日; 国庆节:10月1日 春节 中秋
         数据时间格式 %Y-%m-%d (price, splits, rights, ownership, holder, massive, unfreeze)
@@ -197,35 +197,54 @@ class TradingCalendar (object):
             (r[0], r[-1]) for r in partition_all(chunk_size, sessions)
         )
 
-    @staticmethod
-    def execution_time_from_open(sessions):
-        opens = [pd.Timestamp(dt) + pd.Timedelta(hours=9, minutes=30) for dt in sessions]
-        _opens = [pd.Timestamp(dt) + pd.Timedelta(hours=13) for dt in sessions]
-        # 熔断期间 --- 2次提前收市
-        if '20160107' in sessions:
-            idx = np.searchsorted('20160107', sessions)
-            _opens[idx] = np.nan
-        return opens, opens
+    # @staticmethod
+    # def execution_from_open(sessions):
+    #     opens = [pd.Timestamp(dt) + pd.Timedelta(hours=9, minutes=30) for dt in sessions]
+    #     _opens = [pd.Timestamp(dt) + pd.Timedelta(hours=13) for dt in sessions]
+    #     # 熔断期间 --- 2次提前收市
+    #     if '20160107' in sessions:
+    #         idx = np.searchsorted('20160107', sessions)
+    #         _opens[idx] = np.nan
+    #     return opens, _opens
+    #
+    # @staticmethod
+    # def execution_from_close(sessions):
+    #     closes = [pd.Timestamp(dt) + pd.Timedelta(hours=11, minutes=30) for dt in sessions]
+    #     _closes = [pd.Timestamp(dt) + pd.Timedelta(hours=15) for dt in sessions]
+    #     # 熔断期间 --- 2次提前收市
+    #     if '20160104' in sessions:
+    #         idx = np.searchsorted('20160104', sessions)
+    #         _closes[idx] = pd.Timestamp('20160104') + pd.Timedelta(hours=13, minutes=34)
+    #     elif '20160107' in sessions:
+    #         idx = np.searchsorted('20160107', sessions)
+    #         closes[idx] = pd.Timestamp('20160107') + pd.Timedelta(hours=10)
+    #         _closes[idx] = np.nan
+    #     return closes, _closes
 
     @staticmethod
-    def execution_time_from_close(sessions):
-        closes = [pd.Timestamp(dt) + pd.Timedelta(hours=11, minutes=30) for dt in sessions]
-        _closes = [pd.Timestamp(dt) + pd.Timedelta(hours=15) for dt in sessions]
+    def execution_from_open(sessions):
+        opens = [pd.Timestamp(dt) + pd.Timedelta(hours=9, minutes=30) for dt in sessions]
+        return opens
+
+    @staticmethod
+    def execution_from_close(sessions):
+        closes = [pd.Timestamp(dt) + pd.Timedelta(hours=15) for dt in sessions]
         # 熔断期间 --- 2次提前收市
         if '20160104' in sessions:
             idx = np.searchsorted('20160104', sessions)
-            _closes[idx] = pd.Timestamp('20160104') + pd.Timedelta(hours=13, minutes=34)
+            closes[idx] = pd.Timestamp('20160104') + pd.Timedelta(hours=13, minutes=34)
         elif '20160107' in sessions:
             idx = np.searchsorted('20160107', sessions)
             closes[idx] = pd.Timestamp('20160107') + pd.Timedelta(hours=10)
-            _closes[idx] = np.nan
-        return closes, _closes
+        return closes
 
     def open_and_close_for_session(self, dts):
         # 每天开盘，休盘，开盘，收盘的时间
-        open_tuple = self.execution_time_from_open(dts)
-        close_tuple = self.excution_time_from_close(dts)
-        o_c = zip(open_tuple, close_tuple)
+        opens = self.execution_from_open(dts)
+        # print('open', opens)
+        closes = self.execution_from_close(dts)
+        # print('close', closes)
+        o_c = zip(opens, closes)
         return o_c
 
     @staticmethod
@@ -263,10 +282,12 @@ class TradingCalendar (object):
         return early_close_days
 
 
-calendar = TradingCalendar()
+calendar = Calendar()
 
 
 if __name__ == '__main__':
 
-    days = calendar.holiday_sessions()
-    print('days', days)
+    # days = calendar.holiday_sessions()
+    # print('days', days)
+    o_c = calendar.open_and_close_for_session(['2020-10-20'])
+

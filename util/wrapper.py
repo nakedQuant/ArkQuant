@@ -368,7 +368,7 @@ def valid_check(func):
         if self.valid:
             return func(self, *args, **kwargs)
         else:
-            logging.info('metrics input is invalid or zero order gen!')
+            logging.info('metric input is invalid or zero order gen!')
 
     return wrapper
 

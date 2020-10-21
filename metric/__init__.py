@@ -5,8 +5,8 @@ Created on Sun Feb 17 16:11:34 2019
 
 @author: python
 """
-from metrics.tracker import _ClassicRiskMetrics
-from metrics.metric import (
+from metric.tracker import _ClassicRiskMetrics
+from metric.metrics import (
     SessionField,
     DailyLedgerField,
     PNL,
@@ -27,7 +27,7 @@ from metrics.metric import (
     ReturnsStatistic,
     _ConstantCumulativeRiskMetric,
 )
-from metrics.analyzers import (
+from metric.analyzers import (
                         sortino_ratio,
                         sharpe_ratio,
                         annual_volatility,

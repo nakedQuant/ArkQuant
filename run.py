@@ -65,8 +65,8 @@ def run_algorithm(start,
     trading_calendar : TradingCalendar, optional
         The trading _calendar to use for your backtest.
     metrics_set : iterable[Metric] or str, optional
-        The set of metrics to compute in the nakedquant. If a string is passed,
-        resolve the set with :func:`zipline.finance.metrics.load`.
+        The set of metric to compute in the nakedquant. If a string is passed,
+        resolve the set with :func:`zipline.finance.metric.load`.
     default_extension : bool, optional
         Should the default zipline extension be loaded. This is found at
         ``$ZIPLINE_ROOT/extension.py``
@@ -232,7 +232,7 @@ def _run(handle_data,
     #
     # if isinstance(metrics_set, six.string_types):
     #     try:
-    #         metrics_set = metrics.load(metrics_set)
+    #         metrics_set = metric.load(metrics_set)
     #     except ValueError as e:
     #         raise _RunAlgoError(str(e))
     #

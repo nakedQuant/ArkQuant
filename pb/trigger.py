@@ -8,19 +8,24 @@ Created on Tue Mar 12 15:37:47 2019
 import numpy as np, pandas as pd
 from gateway.driver.data_portal import portal
 from finance.order import Order
-from pb.division import CapitalDivision, PositionDivision
-from pb.blotter import BlotterSimulation
 
 
 class Trigger(object):
     """
         transfer short to long on specific pipeline
     """
-    def __init__(self, delay):
+    def __init__(self,
+                 delay,
+                 divisions,
+                 blotter):
+        try:
+            mp = {d.name: d for d in divisions}
+            self.holding_division = mp['position']
+            self.capital_division = mp['capital']
+        except TypeError:
+            raise ValueError('divisions must be tuple or list')
         self.delay = delay
-        self.holding_division = PositionDivision()
-        self.capital_division = CapitalDivision()
-        self.blotter = BlotterSimulation()
+        self.blotter = blotter
 
     def yield_capital(self, asset, capital, dts):
         capital_orders = self.capital_division.simulate_iterator(asset, capital, dts)
@@ -71,3 +76,6 @@ class Trigger(object):
         orders = [Order(asset, *args) for args in zip(ticker_prices, ticker_amount, tickers)]
         long_transactions = self.blotter.create_transaction(orders, dts)
         return short_transactions, long_transactions
+
+
+__all__ = ['Trigger']

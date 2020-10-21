@@ -21,9 +21,7 @@ class SimulationParameters(object):
                  data_frequency='daily'):
 
         self._capital_base = capital_base
-
         self._data_frequency = data_frequency
-
         self._sessions = calendar.session_in_range(start_session, end_session)
 
     @property

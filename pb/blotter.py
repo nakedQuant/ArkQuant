@@ -12,7 +12,7 @@ from finance.transaction import create_transaction
 from util.dt_utilty import locate_pos
 
 
-class BlotterSimulation(object):
+class SimulationBlotter(object):
     """
         前5个交易日,科创板科创板还设置了临时停牌制度，当盘中股价较开盘价上涨或下跌幅度首次达到30%、60%时，都分别进行一次临时停牌
         单次盘中临时停牌的持续时间为10分钟。每个交易日单涨跌方向只能触发两次临时停牌，最多可以触发四次共计40分钟临时停牌。
@@ -77,3 +77,6 @@ class BlotterSimulation(object):
         # create txn
         transactions = [create_transaction(order_obj, self.commission) for order_obj in trigger_orders]
         return transactions
+
+
+__all__ = ['SimulationBlotter']

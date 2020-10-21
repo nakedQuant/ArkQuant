@@ -136,34 +136,35 @@ class Engine(ABC):
         pipe_proxy = self.run_pipeline(metadata, default_mask)
         # 剔除righted positions, violate_positions, expired_positions
         ump_positions = set(self.run_ump(metadata, traded_positions)) | removed_positions
-        yield self.resolve_conflicts(pipe_proxy, ump_positions, traded_positions)
+        yield self.resolve_conflicts(pipe_proxy, ump_positions, ledger.positions)
 
     @staticmethod
     @abstractmethod
-    def resolve_conflicts(*args):
+    def resolve_conflicts(calls, puts, holding):
         """
-            param args: pipe outputs , ump outputs holdings
-            return: target asset which can be simulate into orders
+        :param calls: dict --- pipe_name : asset --- all pipeline
+        :param puts: (ump position) + righted position + violate position + expired position
+        :param holdings: ledger positions
 
-            instructions:
-                防止策略冲突 当pipeline的结果与ump的结果出现重叠 --- 说明存在问题，正常情况退出策略与买入策略应该不存交集
+        instructions:
+            防止策略冲突 当pipeline的结果与ump的结果出现重叠 --- 说明存在问题，正常情况退出策略与买入策略应该不存交集
 
-                1. engine共用一个ump ---- 解决了不同策略产生的相同标的可以同一时间退出
-                2. engine --- 不同的pipeline对应不同的ump,产生1中的问题，相同的标的不会在同一时间退出是否合理（冲突）
+            1. engine共用一个ump ---- 解决了不同策略产生的相同标的可以同一时间退出
+            2. engine --- 不同的pipeline对应不同的ump,产生1中的问题，相同的标的不会在同一时间退出是否合理（冲突）
 
-                退出策略 --- 针对标的，与标的是如何产生的不存在直接关系;只能根据资产类别的有关 --- 1
-                如果产生冲突 --- 当天卖出标的与买入标的产生重叠 说明策略是有问题的ump --- pipelines 对立的
-                symbol ,etf 的退出策略可以相同，但是bond 属于T+0 机制不一样
+            退出策略 --- 针对标的，与标的是如何产生的不存在直接关系;只能根据资产类别的有关 --- 1
+            如果产生冲突 --- 当天卖出标的与买入标的产生重叠 说明策略是有问题的ump --- pipelines 对立的
+            symbol ,etf 的退出策略可以相同，但是bond 属于T+0 机制不一样
 
-                建仓逻辑 --- 逐步建仓 1/2 原则 --- 1 优先发生信号先建仓 ，后发信号仓位变为剩下的1/2（为了提高资金利用效率）
-                                                2 如果没新的信号 --- 在已经持仓的基础加仓（不管资金是否足够或者设定一个底层资金池）
-                ---- 变相限定了单次单个标的最大持仓为1/2
-                position + pipe - ledger ---  (当ledger为空 --- position也为空)
+            建仓逻辑 --- 逐步建仓 1/2 原则 --- 1 优先发生信号先建仓 ，后发信号仓位变为剩下的1/2（为了提高资金利用效率）
+                                            2 如果没新的信号 --- 在已经持仓的基础加仓（不管资金是否足够或者设定一个底层资金池）
+            ---- 变相限定了单次单个标的最大持仓为1/2
+            position + pipe - ledger ---  (当ledger为空 --- position也为空)
 
-                关于ump --- 只要当天不是一直在跌停价格，以全部出货为原则，涉及一个滑价问题（position的成交额 与前一周的成交额占比
-                评估滑价），如果当天没有买入，可以适当放宽（开盘的时候卖出大部分，剩下的等等） ；
-                如果存在买入标的的行为则直接按照全部出货原则以open价格最大比例卖出 ，一般来讲集合竞价的代表主力卖入意愿强度）
-                ---- 侧面解决了卖出转为买入的断层问题 transfer1
+            关于ump --- 只要当天不是一直在跌停价格，以全部出货为原则，涉及一个滑价问题（position的成交额 与前一周的成交额占比
+            评估滑价），如果当天没有买入，可以适当放宽（开盘的时候卖出大部分，剩下的等等） ；
+            如果存在买入标的的行为则直接按照全部出货原则以open价格最大比例卖出 ，一般来讲集合竞价的代表主力卖入意愿强度）
+            ---- 侧面解决了卖出转为买入的断层问题 transfer1
         """
         raise NotImplementedError()
 
@@ -230,33 +231,28 @@ class SimplePipelineEngine(Engine):
 
     @staticmethod
     def resolve_conflicts(calls, puts, holdings):
-        """
-        :param calls: dict --- pipe_name : asset
-        :param puts: Position list (ump position + righted position
-        :param holdings: ledger positions (exclude righted positions)
-        """
-        # return mappings {name:position}
+        # mappings {pipe_name:position}
         put_proxy = {r.name: r for r in puts}
-        # common pipe name
-        common_pipe = set(put_proxy) & set(calls)
-        # 直接卖出持仓，无买入标的
-        direct_negatives = set(put_proxy) - set(common_pipe)
-        if common_pipe:
-            conflicts = [name for name in common_pipe if put_proxy[name].asset == calls[name]]
-            assert not conflicts, ValueError('name : %r have conflicts between ump and pipe ' % conflicts)
-            # 卖出持仓买入对应标的 --- (position, asset)
-            dual = [(put_proxy[name], calls[name]) for name in common_pipe]
-        else:
-            dual = set()
-        # pipeline_name : holding group by 可能存在相同的持仓但是由不同的pipeline产生
         hold_proxy = {p.name: p for p in holdings}
-        # 基于capital执行买入标的的对应的pipeline_name
+        # 基于capital执行直接买入标的的
         extra = set(calls) - set(hold_proxy)
         if extra:
             direct_positives = keyfilter(lambda x: x in extra, calls)
         else:
             direct_positives = dict()
-        return direct_negatives, dual, direct_positives
+        # common pipe name
+        common_pipe = set(put_proxy) & set(calls)
+        # 直接卖出持仓，无买入标的
+        negatives = set(put_proxy) - set(common_pipe)
+        direct_negatives = keyfilter(lambda x: x in negatives, put_proxy)
+        # 卖出持仓买入对应标的 --- (position, asset)
+        if common_pipe:
+            conflicts = [name for name in common_pipe if put_proxy[name].asset == calls[name]]
+            assert not conflicts, ValueError('name : %r have conflicts between ump and pipe ' % conflicts)
+            dual = [(put_proxy[name], calls[name]) for name in common_pipe]
+        else:
+            dual = set()
+        return direct_positives, direct_negatives, dual
 
 
 class NoEngineRegistered(Exception):

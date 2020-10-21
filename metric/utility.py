@@ -353,36 +353,36 @@ def roll(*args, **kwargs):
 # roll_max_drawdown = _create_unary_vectorized_roll_function(max_drawdown)
 
 def _make_metrics_set_core():
-    """Create a family of metrics sets functions that read from the same
-    metrics set mapping.
+    """Create a family of metric sets functions that read from the same
+    metric set mapping.
 
     Returns
     -------
     metrics_sets : mappingproxy
-        The mapping of metrics sets to load functions.
+        The mapping of metric sets to load functions.
     register : callable
-        The function which registers new metrics sets in the ``metrics_sets``
+        The function which registers new metric sets in the ``metrics_sets``
         mapping.
     unregister : callable
-        The function which deregisters metrics sets from the ``metrics_sets``
+        The function which deregisters metric sets from the ``metrics_sets``
         mapping.
     load : callable
-        The function which loads the ingested metrics sets back into memory.
+        The function which loads the ingested metric sets back into memory.
     """
     _metrics_sets = {}
     # Expose _metrics_sets through a proxy so that users cannot mutate this
     # accidentally. Users may go through `register` to update this which will
-    # warn when trampling another metrics set.
+    # warn when trampling another metric set.
 
     def register(name, function=None):
-        """Register a new metrics set.
+        """Register a new metric set.
 
         Parameters
         ----------
         name : str
-            The name of the metrics set
+            The name of the metric set
         function : callable
-            The callable which produces the metrics set.
+            The callable which produces the metric set.
 
         Notes
         -----
@@ -390,57 +390,57 @@ def _make_metrics_set_core():
 
         See Also
         --------
-        zipline.finance.metrics.get_metrics_set
-        zipline.finance.metrics.unregister_metrics_set
+        zipline.finance.metric.get_metrics_set
+        zipline.finance.metric.unregister_metrics_set
         """
         if function is None:
             # allow as decorator with just name.
             return partial(register, name)
 
         if name in _metrics_sets:
-            raise ValueError('metrics set %r is already registered' % name)
+            raise ValueError('metric set %r is already registered' % name)
 
         _metrics_sets[name] = function
 
         return function
 
     def unregister(name):
-        """Unregister an existing metrics set.
+        """Unregister an existing metric set.
 
         Parameters
         ----------
         name : str
-            The name of the metrics set
+            The name of the metric set
 
         See Also
         --------
-        zipline.finance.metrics.register_metrics_set
+        zipline.finance.metric.register_metrics_set
         """
         try:
             del _metrics_sets[name]
         except KeyError:
             raise ValueError(
-                'metrics set %r was not already registered' % name,
+                'metric set %r was not already registered' % name,
             )
 
     def load(name):
-        """Return an instance of the metrics set registered with the given name.
+        """Return an instance of the metric set registered with the given name.
 
         Returns
         -------
-        metrics : set[Metric]
-            A new instance of the metrics set.
+        metric : set[Metric]
+            A new instance of the metric set.
 
         Raises
         ------
         ValueError
-            Raised when no metrics set is registered to ``name``
+            Raised when no metric set is registered to ``name``
         """
         try:
             function = _metrics_sets[name]
         except KeyError:
             raise ValueError(
-                'no metrics set registered as %r, options are: %r' % (
+                'no metric set registered as %r, options are: %r' % (
                     name,
                     sorted(_metrics_sets),
                 ),

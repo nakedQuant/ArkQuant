@@ -8660,7 +8660,7 @@ from itertools import product
 #
 #
 # class _ConstantCumulativeRiskMetric(object):
-#     """A metrics which does not change, ever.
+#     """A metric which does not change, ever.
 #
 #     Notes
 #     -----
@@ -9555,7 +9555,7 @@ from dateutil.relativedelta import relativedelta
 #     return pipe
 
 # def _sync_last_sale_prices(self, dt=None):
-#     """Sync the last sale prices on the metrics tracker to a given
+#     """Sync the last sale prices on the metric tracker to a given
 #     datetime.
 #
 #     Parameters

@@ -7,26 +7,7 @@ Created on Sun Feb 17 16:11:34 2019
 """
 import pandas as pd, numpy as np
 from scipy import stats
-
-__all__ = [
-    'cum_returns_final',
-    'annual_return',
-    'annual_volatility',
-    'sharpe_ratio',
-    'sqn',
-    'excess_sharpe',
-    'calmar_ratio',
-    'stability_of_timeseries',
-    'max_drawdown',
-    'omega_ratio',
-    'sortino_ratio',
-    # 'stats.skew',
-    # 'stats.kurtosis',
-    'tail_ratio',
-    'cagr',
-    'value_at_risk',
-    'conditional_value_at_risk',
-]
+from metric.utility import _adjust_returns
 
 
 def cum_returns(
@@ -473,6 +454,7 @@ def excess_sharpe(
 
 def sortino_ratio(
                 returns,
+                _downside_risk,
                 risk_free=0.0,
                 required_return=0.0
                 ):
@@ -769,3 +751,23 @@ def conditional_value_at_risk(
     # moved before this element and all equal or greater are moved behind it. The ordering of the elements in the two
     # partitions is undefined.
     return np.mean(np.partition(returns, cutoff_index)[:cutoff_index + 1])
+
+
+__all__ = [
+    'cum_returns_final',
+    'annual_return',
+    'annual_volatility',
+    'sharpe_ratio',
+    'sqn',
+    'excess_sharpe',
+    'calmar_ratio',
+    'stability_of_timeseries',
+    'max_drawdown',
+    'omega_ratio',
+    'sortino_ratio',
+    'downside_risk',
+    'tail_ratio',
+    'cagr',
+    'value_at_risk',
+    'conditional_value_at_risk',
+]

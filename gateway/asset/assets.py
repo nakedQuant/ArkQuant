@@ -87,7 +87,7 @@ class Asset(object):
     def tag(self):
         return self._tag
 
-    def set_tag(self, tg):
+    def source_id(self, tg):
         self._tag = tg
         return self
 

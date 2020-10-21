@@ -7,19 +7,26 @@ Created on Tue Mar 12 15:37:47 2019
 """
 import numpy as np
 from functools import lru_cache
-from abc import ABC, abstractmethod
 from gateway.driver.data_portal import portal
 from finance.order import PriceOrder, TickerOrder
+from pb.dist import simple
 
 
-class BaseDivision(ABC):
+class BaseDivision(object):
+
+    def __init__(self,
+                 slippage,
+                 execution_style,
+                 distribution=simple):
+        self.slippage_model = slippage
+        self.execution_style = execution_style
+        self.dis = distribution
 
     @lru_cache(maxsize=32)
     def _init_data(self, asset, dts):
         open_pct, pre_close = portal.get_open_pct(asset, dts)
         return open_pct, pre_close
 
-    @abstractmethod
     def simulate_iterator(self, *args):
         """
             针对于持仓卖出生成对应的订单 ， 一般不存在什么限制
@@ -53,13 +60,7 @@ class CapitalDivision(BaseDivision):
             c. 执行买入算法的需要涉及比如最大持仓比例，持仓量等限制
         order amount --- negative
     """
-    def __init__(self,
-                 slippage,
-                 execution_style,
-                 distribution=SimpleSimulation()):
-        self.slippage_model = slippage
-        self.execution_style = execution_style
-        self.dis = distribution
+    name = 'capital'
 
     def yield_size_on_capital(self, asset, capital, dts):
         """
@@ -143,14 +144,7 @@ class PositionDivision(BaseDivision):
             c. 执行买入算法的需要涉及比如最大持仓比例，持仓量等限制
         order amount --- positive
     """
-
-    def __init__(self,
-                 slippage,
-                 execution_style,
-                 distribution=SimpleSimulation):
-        self.slippage_model = slippage
-        self.execution_style = execution_style
-        self.dis = distribution
+    name = 'position'
 
     def yield_size_on_position(self, position, dts):
         """
@@ -217,3 +211,6 @@ class PositionDivision(BaseDivision):
             iterator = self.yield_size_on_position(position, dts)
             orders = [PriceOrder(asset, *args) for args in iterator]
         return orders
+
+
+__all__ = ['CapitalDivision', 'PositionDivision', 'BaseDivision']

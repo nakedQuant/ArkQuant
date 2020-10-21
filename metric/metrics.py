@@ -8,11 +8,11 @@ Created on Sun Feb 17 16:11:34 2019
 import numpy as np, operator as op
 from toolz import groupby
 from gateway.driver.benchmark import get_benchmark_returns
-from metrics.exposure import alpha_beta_aligned
+from metric.exposure import alpha_beta_aligned
 
 
 class _ConstantCumulativeRiskMetric(object):
-    """A metrics which does not change, ever.
+    """A metric which does not change, ever.
 
     Notes
     -----
@@ -23,15 +23,21 @@ class _ConstantCumulativeRiskMetric(object):
         self._field = field
         self._value = value
 
-    def end_of_session(self, packet, *args):
+    def end_of_session(self,
+                       packet,
+                       ledger,
+                       session_ix):
         packet['cumulative_risk_metrics'][self._field] = self._value
 
-    def end_of_simulation(self,packet, *args):
+    def end_of_simulation(self,
+                          packet,
+                          ledger,
+                          sessions):
         packet['cumulative_risk_metrics'][self._field] = self._value
 
 
 class SessionField(object):
-    """Like :class:`~zipline.finance.metrics.metrics.SimpleLedgerField` but
+    """Like :class:`~zipline.finance.metric.metric.SimpleLedgerField` but
     also puts the current value in the ``cumulative_perf`` section.
 
     Parameters
@@ -50,7 +56,7 @@ class SessionField(object):
 
 
 class DailyLedgerField(object):
-    """Like :class:`~zipline.finance.metrics.metrics.SimpleLedgerField` but
+    """Like :class:`~zipline.finance.metric.metric.SimpleLedgerField` but
     also puts the current value in the ``cumulative_perf`` section.
 
     Parameters
@@ -362,7 +368,7 @@ class AlphaBeta(object):
 
 
 class ReturnsStatistic(object):
-    """A metrics that reports an end of nakedquant scalar or time series
+    """A metric that reports an end of nakedquant scalar or time series
     computed from the algorithm returns.
 
     Parameters
@@ -409,7 +415,7 @@ class ReturnsStatistic(object):
                             ledger,
                             benchmark,
                             sessions):
-        #计算基准收益率
+        # 计算基准收益率
         return_series = get_benchmark_returns(benchmark)
         self.return_series = return_series[sessions]
 

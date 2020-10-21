@@ -34,10 +34,6 @@ class Position(object):
         self._closed = False
 
     @property
-    def name(self):
-        return self.asset.tag
-
-    @property
     def closed(self):
         return self._closed
 

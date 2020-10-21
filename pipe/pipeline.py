@@ -137,7 +137,8 @@ class Pipeline(object):
     def _finalize(self, alternative):
         """将pipeline.name --- outs"""
         final = self._workspace.popitem(last=True).values()
-        outputs = [asset.set_tag(self.name) for asset in final[:alternative]]
+        outputs = [asset.source_id(self.name) for asset in final[:alternative]]
+        # pipeline_name : 可能存在相同的持仓但是由不同的pipeline产生
         return {self.name: outputs}
 
     def to_withdraw_plan(self, position, metadata):

@@ -8,33 +8,27 @@ Created on Sun Feb 17 16:11:34 2019
 import numpy as np, pandas as pd, datetime
 from toolz import partition_all
 from functools import partial
-from metrics.analyzers import (
+from metric.analyzers import (
                         sortino_ratio,
                         sharpe_ratio,
                         downside_risk,
                         annual_volatility,
                         max_drawdown,
                         )
-from metrics.exposure import alpha_beta_aligned
+from metric.exposure import alpha_beta_aligned
 
 
 class MetricsTracker(object):
     """
     The algorithm's interface to the registered risk and performance
-    metrics.
+    metric.
 
     Parameters
     ----------
-    trading_calendar : TrandingCalendar
-        The trading _calendar used in the nakedquant.
-    first_session : pd.Timestamp
-        The label of the first trading session in the nakedquant.
-    last_session : pd.Timestamp
-        The label of the last trading session in the nakedquant.
-    capital_base : float
-        The starting capital for the nakedquant.
-    metrics : list[Metric]
-        The metrics to track.
+    sim_params : first_session, last_session, capital_base
+        The params object
+    metrics_sets : list[Metric]
+        The metric to track.
     emission_rate : {'daily', 'minute'}
         How frequently should a performance packet be generated?
     """
@@ -49,13 +43,15 @@ class MetricsTracker(object):
                  ledger,
                  sim_params,
                  metrics_sets,
+                 emission_rate='daily'
                  ):
         self._ledger = ledger
         self._session = sim_params.session
         self._capital_base = sim_params.capital_base
         self._benchmark = sim_params.benchmark
+        self._emission_rate = emission_rate
 
-        # bind all of the hooks from the passed metrics objects.
+        # bind all of the hooks from the passed metric objects.
         for hook in self._hooks:
             registered = []
             for metric in metrics_sets:
@@ -113,6 +109,7 @@ class MetricsTracker(object):
             'period_start': self._sessions[0],
             'period_end': self._sessions[-1],
             'capital_base': self._capital_base,
+            'emission_rate': self._emission_rate,
             'daily_perf': {},
             'cumulative_perf': {},
             'cumulative_risk_metrics': {},
@@ -157,20 +154,20 @@ class _ClassicRiskMetrics(object):
         Parameters
         ----------
         start_session : pd.Timestamp
-            Start of period (inclusive) to produce metrics on
+            Start of period (inclusive) to produce metric on
         end_session : pd.Timestamp
-            End of period (inclusive) to produce metrics on
+            End of period (inclusive) to produce metric on
         algorithm_returns : pd.Series(pd.Timestamp -> float)
             Series of algorithm returns as of the end of each session
         benchmark_returns : pd.Series(pd.Timestamp -> float)
             Series of benchmark returns as of the end of each session
-        algorithm_leverages : pd.Series(pd.Timestamp -> float)
-            Series of algorithm leverages as of the end of each session
+        # algorithm_leverages : pd.Series(pd.Timestamp -> float)
+        #     Series of algorithm leverages as of the end of each session
 
         Returns
         -------
         risk_metric : dict[str, any]
-            Dict of metrics that with fields like:
+            Dict of metric that with fields like:
                 {
                     'algorithm_period_return': 0.0,
                     'benchmark_period_return': 0.0,
@@ -205,7 +202,7 @@ class _ClassicRiskMetrics(object):
         algorithm_period_returns = np.prod(algorithm_returns + 1) - 1
         excess_period_returens = np.prod(excess_returns +1) - 1
 
-        #组合胜率、超额胜率
+        # 组合胜率、超额胜率
         absolute_winrate = [algorithm_period_returns > 0].sum() / len(algorithm_period_returns)
         excess_winrate = (algorithm_period_returns > benchmark_period_returns).sum() / len(algorithm_period_returns)
 
@@ -228,8 +225,7 @@ class _ClassicRiskMetrics(object):
 
         sortino = sortino_ratio(
             algorithm_returns.values,
-            # 回撤
-            _downside_risk = downside_risk(algorithm_returns.values),
+            _downside_risk=downside_risk(algorithm_returns.values),
         )
         rval = {
             'algorithm_period_return': algorithm_period_returns,
@@ -270,17 +266,17 @@ class _ClassicRiskMetrics(object):
 
         months_sequence = list(months)
         months_sequence.append(end_session)
-        for period_timestamp in partition_all(months_per,months_sequence):
+        for period_timestamp in partition_all(months_per, months_sequence):
             try:
                 start_time = period_timestamp[0]
                 end_time = period_timestamp[-1]
-            except:
+            except KeyError:
                 start_time = months_sequence[-2] + datetime.timedelta(days=1)
                 end_time = period_timestamp[0]
 
             yield cls.risk_metric_period(
-                start_session = start_time,
-                end_session = end_time,
+                start_session=start_time,
+                end_session=end_time,
                 algorithm_returns=algorithm_returns,
                 benchmark_returns=benchmark_returns,
                 # algorithm_leverages=algorithm_leverages,
@@ -299,7 +295,7 @@ class _ClassicRiskMetrics(object):
             end=end_session,
             freq='M',
             tz='utc',
-            closed = 'left'
+            closed='left'
         )
 
         periods_in_range = partial(

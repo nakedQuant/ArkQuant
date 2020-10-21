@@ -34,7 +34,7 @@ class AbstractStatistics(ABC):
 
     Ideally, Statistics should be subclassed according to the strategy
     and timeframes-traded by the user. Different trading strategy
-    may require different metrics or frequencies-of-metrics to be updated,
+    may require different metric or frequencies-of-metric to be updated,
     however the example given is suitable for longer timeframes.
     """
 

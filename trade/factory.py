@@ -130,7 +130,6 @@ class SpecificEquityTrades(object):
     """
     def __init__(self,
                  trading_calendar,
-                 asset_finder,
                  sids,
                  start,
                  end,
@@ -218,16 +217,6 @@ def create_trade_history(sid, prices, amounts, interval, sim_params,
 
     assert len(trades) == len(prices)
     return trades
-
-
-def create_returns_from_range(sim_params):
-    return pd.Series(index=sim_params.sessions,
-                     data=np.random.rand(len(sim_params.sessions)))
-
-
-def create_returns_from_list(returns, sim_params):
-    return pd.Series(index=sim_params.sessions[:len(returns)],
-                     data=returns)
 
 
 def create_daily_trade_source(sids,

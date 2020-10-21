@@ -10,23 +10,23 @@ from itertools import chain
 from abc import ABC, abstractmethod
 
 
-class Simulation(ABC):
+class BaseDist(ABC):
 
-    @staticmethod
+    @classmethod
     @abstractmethod
-    def simulate_dist(num, open_pct):
+    def simulate_dist(cls, num, open_pct):
         raise NotImplementedError('distribution of price')
 
-    @staticmethod
+    @classmethod
     @abstractmethod
-    def simulate_ticker(self, num):
+    def simulate_ticker(cls, num):
         raise NotImplementedError('simulate ticker of trading_day')
 
 
-class SimpleSimulation(Simulation):
+class SimpleDist(BaseDist):
 
-    @staticmethod
-    def simulate_dist(num, open_pct):
+    @classmethod
+    def simulate_dist(cls, num, open_pct):
         """模拟价格分布，以开盘振幅为参数"""
         alpha = 1 if open_pct == 0.00 else 100 * open_pct
         if num > 0:
@@ -36,8 +36,8 @@ class SimpleSimulation(Simulation):
             dist = [1 + alpha / 100]
         return dist
 
-    @staticmethod
-    def simulate_ticker(num):
+    @classmethod
+    def simulate_ticker(cls, num):
         # ticker arranged on sequence
         interval = 4 * 60 / num
         # 按照固定时间去执行
@@ -47,3 +47,8 @@ class SimpleSimulation(Simulation):
         tick_intervals = list(chain(*zip(upper, bottom)))[:num - 1]
         tick_intervals.append(pd.Timestamp('2020-06-17 14:57:00', freq='%dmin' % interval))
         return tick_intervals
+
+
+simple = SimpleDist()
+
+__all__ = ['simple']
