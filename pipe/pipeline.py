@@ -21,12 +21,12 @@ class Pipeline(object):
         b. withdraw logic of pipe --- instance of ump_picker
         c. pipe --- ump_picker
     """
-    __slots__ = ['_terms_store', 'graph', '_workspace', '_ump']
+    __slots__ = ['_terms_store', '_graph', '_workspace', '_ump']
 
-    def __init__(self, terms, ump_picker=None):
+    def __init__(self, terms, ump_picker=None, ):
         self._terms_store = terms
         self._workspace = OrderedDict()
-        self.graph = self._init_graph()
+        self._graph = self._init_graph()
         self._ump = UmpPickers(ump_picker) if ump_picker else UmpPickers(terms)
 
     @property
@@ -56,7 +56,7 @@ class Pipeline(object):
         graph : zipline.pipeline.graph.TermGraph
             Graph encoding term dependencies.
         """
-        graph = TermGraph(self._terms_store).graph
+        graph = TermGraph(self._terms_store)
         return graph
 
     def __add__(self, term):
@@ -95,7 +95,7 @@ class Pipeline(object):
             decrease by layer
         """
         # return in_degree == 0 nodes
-        decref_nodes = self.graph.decref_dependencies()
+        decref_nodes = self._graph.decref_dependencies()
         for node in decref_nodes:
             node_mask = self._load_term(node, mask)
             output = node.compute(node_mask, metadata)
@@ -123,7 +123,17 @@ class Pipeline(object):
         self._initialize_workspace()
         self._decref_recursive(metadata, mask)
 
-    def to_execution_plan(self, metadata, alternative, mask):
+    def compute_eager_pipeline(self, final):
+        """
+        Compute pipeline to get eager asset
+        """
+        outputs = self._workspace.popitem(last=True)
+        # asset tag pipeline_name --- 可能存在相同的持仓但是由不同的pipeline产生
+        outputs = [f.source_id(self.name) for f in outputs]
+        final.resolve_final(outputs)
+        return {self.name: outputs}
+
+    def to_execution_plan(self, metadata, mask, final):
         """
             to execute pipe logic
         """
@@ -131,15 +141,8 @@ class Pipeline(object):
             self._decref_dependence(metadata, mask)
         except Exception as e:
             print('error means graph decrease to top occur %s' % e)
-        result = self._finalize(alternative)
+        result = self.compute_eager_pipeline(final)
         return result
-
-    def _finalize(self, alternative):
-        """将pipeline.name --- outs"""
-        final = self._workspace.popitem(last=True).values()
-        outputs = [asset.source_id(self.name) for asset in final[:alternative]]
-        # pipeline_name : 可能存在相同的持仓但是由不同的pipeline产生
-        return {self.name: outputs}
 
     def to_withdraw_plan(self, position, metadata):
         """

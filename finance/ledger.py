@@ -17,18 +17,23 @@ class Ledger(object):
         the ledger tracks all orders and transactions as well as the current state of the portfolio and positions
         逻辑 --- 核心position_tracker （ process_execution ,handle_splits , handle_dividend ) --- 生成position_stats
         更新portfolio --- 基于portfolio更新account
-        --- 简化 在交易开始之前决定是否退出position 由于risk management
+        --- 在交易开始之前决定是否退出position 由于risk management
+        优化:
+        # event manager 用于处理ledger(righted violated expired postion) trigger -- callback pattern
     """
-    __slots__ = ['_portfolio', 'position_tracker',
+    __slots__ = ['_portfolio', 'position_tracker', 'fuse_model','risk_alert',
                  '_processed_transaction', '_previous_total_returns',
-                 '_dirty_portfolio', '_dirty_positions',
-                 'daily_returns_series', 'risk_alert']
+                 '_dirty_portfolio', '_dirty_positions', 'daily_returns_series']
 
-    def __init__(self, sim_params, risk_models):
+    def __init__(self,
+                 sim_params,
+                 risk_models,
+                 fuse_model):
         """构建可变、不可变的组合、账户"""
         self._portfolio = MutableView(Portfolio(sim_params.capital_base))
         self.position_tracker = PositionTracker()
         self.risk_alert = UnionRisk(risk_models)
+        self.fuse_model = fuse_model
         self._processed_transaction = []
         self._previous_total_returns = 0
         self._dirty_positions = True
@@ -117,6 +122,7 @@ class Ledger(object):
         self._calculate_portfolio_stats()
         self.portfolio.daily_returns(session_ix)
         self._dirty_portfolio = False
+        self.fuse_model.trigger(self._portfolio)
 
     def get_transactions(self, dt):
         """

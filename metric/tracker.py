@@ -317,12 +317,8 @@ class _ClassicRiskMetrics(object):
     def end_of_simulation(self,
                           packet,
                           ledger,
-                          sessions,
-                          benchmark_source):
+                          benchmark_ret):
         packet.update(self.risk_report(
             algorithm_returns=ledger.daily_returns_series,
-            benchmark_returns=benchmark_source.daily_returns(
-                sessions[0],
-                sessions[-1],
-            ),
+            benchmark_returns=benchmark_ret
         ))

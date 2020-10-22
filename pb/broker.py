@@ -75,7 +75,7 @@ class Broker(object):
         return txn_mappings
 
     @staticmethod
-    def process(ledger, iterable):
+    def multi_process(ledger, iterable):
         def proc(dct):
             for k, v in dct.items():
                 ledger.process_transaction(v)
@@ -96,7 +96,7 @@ class Broker(object):
         # 卖出 --- 买入
         dual_txns = self.implement_duals(duals, dts)
         # portfolio的资金使用效率评估引擎撮合的的效率 --- 并行执行成交
-        self.process(ledger, [call_txns, put_txns, dual_txns])
+        self.multi_process(ledger, [call_txns, put_txns, dual_txns])
 
 
 __all__ = ['Broker']

@@ -5,12 +5,10 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-import uuid, networkx as nx
+import uuid, networkx as nx, numpy as np
 import matplotlib.pyplot as plt
 from toolz import valfilter
 from pipe.term import NotSpecific, Term
-
-__all__ = ['TermGraph']
 
 
 class TermGraph(object):
@@ -30,7 +28,8 @@ class TermGraph(object):
     often needed when a term is an input to a rolling window computation.
     """
     def __init__(self, terms):
-
+        assert np.all([t for t in terms if isinstance(t, Term)]), \
+            'terms must be subclass of term'
         self.graph = nx.DiGraph()
         self._frozen = False
         for term in terms:
@@ -65,8 +64,12 @@ class TermGraph(object):
     def screen_name(self):
         """Name of the specially-designated ``screen`` term for the pipe.
         """
-        SCREEN_NAME = 'screen_' + uuid.uuid4().hex
-        return SCREEN_NAME
+        screen = 'screen_' + uuid.uuid4().hex
+        return screen
+
+    @property
+    def nodes(self):
+        return self.graph.nodes
 
     def __contains__(self, term):
         return term in self.graph
@@ -81,18 +84,12 @@ class TermGraph(object):
         """
         Decrement in-edges for ``term`` after computation.
 
-        Parameters
-        ----------
-        term : zipline.pipeline.Term
-            The term whose parents should be decref'ed.
-        refcounts : dict[Term -> int]
-            Dictionary of refcounts.
-
         Return
         ------
         terms which need to decref
         """
-        refcounts = dict(self.graph.in_degree)
+        refcounts = dict(self.graph.in_degree())
+        print('refcounts', refcounts)
         nodes = valfilter(lambda x: x == 0, refcounts)
         for node in nodes:
             self.graph.remove_node(node)
@@ -109,15 +106,20 @@ class TermGraph(object):
         plt.show()
 
 
-if __name__ == '__main__':
+__all__ = ['TermGraph']
 
-    kw = {'window': (5, 10)}
-    cross_term = Term('cross', kw)
-    print('sma_term', cross_term)
-    kw = {'window': 10, 'fast': 12, 'slow': 26, 'period': 9}
-    break_term = Term('break', kw, cross_term)
-    terms = [cross_term, break_term]
-    # init
-    graph = TermGraph(terms)
-    # print('graph', list(graph.ordered()))
-    graph.draw()
+
+# if __name__ == '__main__':
+#
+#     kw = {'window': (5, 10)}
+#     cross_term = Term('cross', kw)
+#     print('sma_term', cross_term)
+#     kw = {'window': 10, 'fast': 12, 'slow': 26, 'period': 9}
+#     break_term = Term('break', kw, cross_term)
+#     terms = [cross_term, break_term]
+#     graph = TermGraph(terms)
+#     print('ordered graph', list(graph.ordered()))
+#     print('nodes', graph.nodes)
+#     print('length', len(graph))
+#     graph.decref_dependencies()
+#     graph.draw()

@@ -6,47 +6,10 @@ Created on Tue Mar 12 15:37:47 2019
 """
 from abc import ABC, abstractmethod
 from collections import namedtuple
-import warnings
-from toolz import curry
-from .context_tricks import nop_context
+from util.context_tricks import nop_context
 
 
-__all__ = [
-    'EventManager',
-    'Event',
-    'EventRule',
-    'StatelessRule',
-    'ComposedRule',
-    'Always',
-    'Never',
-]
-
-
-@curry
-def lossless_float_to_int(funcname, func, argname, arg):
-    """
-    A preprocessor that coerces integral floats to ints.
-
-    Receipt of non-integral floats raises a TypeError.
-    """
-    if not isinstance(arg, float):
-        return arg
-
-    arg_as_int = int(arg)
-    if arg == arg_as_int:
-        warnings.warn(
-            "{f} expected an int for argument {name!r}, but got float {arg}."
-            " Coercing to int.".format(
-                f=funcname,
-                name=argname,
-                arg=arg,
-            ),
-        )
-        return arg_as_int
-
-    raise TypeError(arg)
-
-
+# --- event manager 用于处理ledger(righted violated expired postion)
 class EventManager(object):
     """Manages a list of Event objects.
     This manages the logic for checking the rules and dispatching to the
@@ -137,6 +100,9 @@ class StatelessRule(EventRule):
     same datetime.
     Because these are pure, they can be composed to create new rules.
     """
+    def should_trigger(self, dt):
+        raise NotImplementedError
+
     def and_(self, rule):
         """
         Logical and of two rules, triggers only when both rules trigger.
@@ -220,3 +186,14 @@ class Never(StatelessRule):
         """
         return False
     should_trigger = never_trigger
+
+
+__all__ = [
+    'EventManager',
+    'Event',
+    'EventRule',
+    'StatelessRule',
+    'ComposedRule',
+    'Always',
+    'Never',
+]

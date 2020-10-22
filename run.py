@@ -5,11 +5,10 @@ Created on Sun Feb 17 16:11:34 2019
 
 @author: python
 """
-import os, sys, click
+import subprocess, signal, time, os
+
 from .algorithm import TradingAlgorithm
 from trade.params import SimulationParameters
-
-__all__ = ['run_algorithm']
 
 
 def run_algorithm(start,
@@ -274,3 +273,19 @@ def _run(handle_data,
     #     perf.to_pickle(output)
     #
     # return perf
+
+
+if __name__ == '__main__':
+
+    def handler(signum, frame):
+        print(signum, frame)
+        print('unexpected action')
+
+    # signal.signal(signal.SIGALRM, handler)
+    # signal.alarm(1)
+
+    signal.signal(signal.SIGINT, handler)
+    signal.pause()
+    print('End of Signal Demo')
+
+

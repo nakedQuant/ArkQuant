@@ -35,12 +35,12 @@ class Term(object):
             2 compute ---- algorithm list
             3 outputs --- algorithm list & asset list
         term --- 不可变通过改变不同的dependence重构pipeline --- params (final attr to define term)
+        logic of term is indicator( return targeted assets)
     """
     default_type = (tuple,)
     _term_cache = WeakValueDictionary()
     namespace = dict()
-    # base_dir = '/Users/python/Library/Mobile Documents/com~apple~CloudDocs/nakedquant/signal'
-    base_dir = os.path.join(os.path.split(os.getcwd())[0], 'signal')
+    base_dir = os.path.join(os.path.split(os.getcwd())[0], 'strat')
 
     def __new__(cls,
                 script,
@@ -150,8 +150,8 @@ class Term(object):
         return output
 
     def withdraw(self, feed):
-        sema = self.signal.short_singal(feed)
-        return sema
+        signal = self.signal.short_singal(feed)
+        return signal
 
     def __repr__(self):
         return (
@@ -159,7 +159,7 @@ class Term(object):
         ).format(
             type=type(self).__name__,
             # args=', '.join([k for i, k in self.__dict__]),
-            args=self.signal._name)
+            args=self.signal.name)
 
     def recursive_repr(self):
         """A short repr to use when recursively rendering terms with inputs.

@@ -6,9 +6,9 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 import pandas as pd
+from functools import partial
 from contextlib import ExitStack
 from util.api_support import ZiplineAPI
-from trade.clock import MinuteSimulationClock
 from trade import (
     SESSION_START,
     SESSION_END,
@@ -40,22 +40,23 @@ class AlgorithmSimulator(object):
 
     def __init__(self,
                  algorithm,
-                 sim_params):
+                 clock):
 
         self.algorithm = algorithm
-        self.clock = MinuteSimulationClock(sim_params)
+        self.clock = clock
 
     def transform(self):
         """
         Main generator work loop.
         """
-        broker = self.algorithm.broke_class
-        algorithm_engine = self.algorithm.pipeline_engine
         ledger = self.algorithm.ledger
-        manual_control = self.algorithm.manual_controls
+        broker = self.algorithm.broker
+        metrics_tracker = self.algorithm.tracker
+        # set daily message function
+        daily_func = partial(self._get_daily_message, tracker=metrics_tracker)
 
-        def once_a_day():
-            broker.carry_out(algorithm_engine, ledger)
+        def once_a_day(dts):
+            broker.implement_broke(ledger, dts)
 
         def on_exit():
             # Remove references to algo, data portal, et al to break cycles
@@ -71,34 +72,29 @@ class AlgorithmSimulator(object):
             """
             stack.callback(on_exit)
             stack.enter_context(ZiplineAPI(self.algorithm))
-            clock = self.algorithm.clock
 
-            self.metrics_tracker.handle_start_of_simulation()
+            metrics_tracker.handle_start_of_simulation()
 
             # 生成器yield方法 ，返回yield 生成的数据，next 执行yield 之后的方法
-            for session_label, action in clock:
-                # # 如果执行manual --- 直接return退出函数
-                # if manual_control.execute_manual_process(ledger, broker, session_label):
-                #     perf = self._get_daily_message()
-                #     return perf
-                # normal action
+            for session_label, action in self.clock:
+
                 if action == BEFORE_TRADING_START:
-                    self.metrics_tracker.handle_market_open(session_label)
+                    metrics_tracker.handle_market_open(session_label)
                 elif action == SESSION_START:
-                    once_a_day()
+                    once_a_day(session_label)
                 elif action == SESSION_END:
-                    # End of the session.
-                    daily_perf_metrics = self._get_daily_message(session_label)
+                    daily_perf_metrics = daily_func(session_label)
                     yield daily_perf_metrics
 
-            risk_message = self.metrics_tracker.handle_simulation_end()
+            risk_message = metrics_tracker.handle_simulation_end()
             yield risk_message
 
-    def _get_daily_message(self, session_label):
+    @staticmethod
+    def _get_daily_message(tracker, session_label):
         """
         Get a perf message for the given datetime.
         """
         if isinstance(session_label, pd.Timestamp):
             session_label = session_label.strftime('%Y%m%d')
-        perf_message = self.metrics_tracker.handle_market_close(session_label)
+        perf_message = tracker.handle_market_close(session_label)
         return perf_message

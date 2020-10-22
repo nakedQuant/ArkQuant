@@ -13,16 +13,8 @@ from indicator import (
      ExponentialMovingAverage
 )
 from util.mathmatics import zoom
-# from gateway.driver._ext_vwap import  VWAP
-# from gateway.driver.data_portal import DataPortal
-# from gateway.asset.assets import Equity, Convertible, Fund
 
-__all__ = ['TEMA', 'DEMA', 'IMI', 'ER', 'CMO', 'Jump', 'Gap', 'Power', 'BreakPower', 'Speed', 'MassIndex',
-           'Dpo', 'RVI', 'RI', 'Stochastic', 'SMI', 'RPower', 'DPower', 'MFI', 'VHF', 'VCK', 'Rsi', 'Aroon',
-           'WAD', 'WR', 'SO', 'ADX', 'TRIX', 'PVT', 'KDJ', 'CurveScorer', 'RAVI', 'DMI', 'DMA', 'VO', 'MAO',
-           'KVO', 'Macd', 'AMA', 'VEMA', 'Vidya']
 
-# init
 ema = EMA()
 sma = SMA()
 ma = MA()
@@ -708,15 +700,15 @@ class KVO(BaseFeature):
     """
     @staticmethod
     def _calc(frame):
-        frame.loc[:, 'signal'] = -1
+        frame.loc[:, 'strat'] = -1
         print('frame', frame)
         dm = frame['high'] - frame['low']
         cm = dm.cumsum()
         print('cm', cm)
         avg = frame.loc[:, ['high', 'low', 'close']].mean(axis=1)
-        frame.loc[avg > avg.shift(1), 'signal'] = 1
-        print('frame - signal', frame)
-        vo = frame['volume'] * abs(2 * dm / cm - 1) * frame['signal'] * 100
+        frame.loc[avg > avg.shift(1), 'strat'] = 1
+        print('frame - strat', frame)
+        vo = frame['volume'] * abs(2 * dm / cm - 1) * frame['strat'] * 100
         print('vo', vo)
         return vo
 
@@ -753,7 +745,7 @@ class Macd(BaseFeature):
     slow_period : int > 0, > fast_period, optional
         The window length for the "slow" EWMA. Default is 26.
     signal_period : int > 0, < fast_period, optional
-        The window length for the signal line. Default is 9.
+        The window length for the strat line. Default is 9.
 
     DIF : MACD称为指数平滑异动移动平均线，是从双指数移动平均线发展而来的，由快的加权移动均线（EMA12）减去慢的加权移动均线（EMA26）
     DEA : DIF - (快线 - 慢线的9日加权移动均线DEA（时间远的赋予小权重，进的赋予大权重））得到MACD柱
@@ -849,7 +841,33 @@ class Vidya(ExponentialMovingAverage):
         return out
 
 
+__all__ = ['TEMA', 'DEMA',
+           'IMI',  'ER',
+           'CMO', 'Jump',
+           'Gap', 'Power',
+           'BreakPower', 'Speed',
+           'MassIndex', 'Dpo',
+           'RVI', 'RI',
+           'Stochastic', 'SMI',
+           'RPower', 'DPower',
+           'MFI', 'VHF',
+           'VCK', 'Rsi',
+           'Aroon', 'WAD',
+           'WR', 'SO',
+           'ADX', 'TRIX',
+           'PVT', 'KDJ',
+           'CurveScorer', 'RAVI',
+           'DMI', 'DMA',
+           'VO', 'MAO',
+           'KVO', 'Macd',
+           'AMA', 'VEMA',
+           'Vidya']
+
 # if __name__ == '__main__':
+
+#     from gateway.driver._ext_vwap import  VWAP
+#     from gateway.driver.data_portal import DataPortal
+#     from gateway.asset.assets import Equity, Convertible, Fund
 #
 #     asset = Equity('600000')
 #     session = '2015-01-01'

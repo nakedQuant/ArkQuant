@@ -12,11 +12,7 @@ from indicator import (
     EMA
 )
 from util.mathmatics import zoom, coef2deg, _fit_poly
-# from gateway.driver.data_portal import DataPortal
-# from gateway.asset.assets import Equity, Convertible, Fund
 
-__all__ = ['MedianFilter', 'MMedianFilter', 'AmplitudeFilter',
-           'GaussianFilter', 'Detrend', 'RegRatio', 'Resistence', 'Golden']
 # init
 ema = EMA()
 
@@ -79,7 +75,7 @@ class GaussianFilter(BaseFeature):
     """ 高斯滤波器
         低通滤波器，高斯平滑比简单平滑要好
         M为元素个数 ；std为高斯分布的标准差
-        guassian = scipy.signal.guassian(M=11, std=2)
+        guassian = scipy.strat.guassian(M=11, std=2)
         guassian / = sum(guassian)
         gaussian_process module:
             Squared exponential correlation model (Radial Basis Function).
@@ -201,7 +197,19 @@ class EMD(BaseFeature):
         raise NotImplementedError()
 
 
+__all__ = ['MedianFilter',
+           'MMedianFilter',
+           'AmplitudeFilter',
+           'GaussianFilter',
+           'Detrend',
+           'RegRatio',
+           'Resistence',
+           'Golden']
+
 # if __name__ == '__main__':
+
+#     from gateway.driver.data_portal import DataPortal
+#     from gateway.asset.assets import Equity, Convertible, Fund
 #
 #     asset = Equity('600000')
 #     session = '2015-01-01'

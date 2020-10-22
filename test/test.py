@@ -10721,12 +10721,12 @@ print(test)
 # print('now directory', p_dir)
 # test = os.path.split(os.getcwd())
 # print('test', test)
-# target = os.path.join(os.path.split(os.getcwd())[0], 'signal')
+# target = os.path.join(os.path.split(os.getcwd())[0], 'strat')
 # print('target', target)
 # files = os.path.join(target, '*')
 # p = glob.glob(target + os.sep + 'cross.py')
 # print('p', p)
-# files = glob.glob('signal/*')
+# files = glob.glob('strat/*')
 # print('files', files)
 # LRU 缓存只在当你想要重用之前计算的结果时使用
 from functools import lru_cache
@@ -10977,4 +10977,122 @@ def _fit_statsmodel(x, y):
         b.回溯测试（获取数据 ， 分析策略性能 ，剔除偏差）
         c.交割系统（经纪商接口 ，交易自动化 ， 交易成本最小化）
         d.风险管理（最优资本配置 ， 最优赌注或者凯利准则 ， 海龟仓位管理）
+"""
+
+# base_dir = '/Users/python/Library/Mobile Documents/com~apple~CloudDocs/nakedquant/strat'
+
+# @staticmethod
+# def resolve_pipeline_final(outputs):
+#     group_sorted = dict()
+#     for item in outputs:
+#         group_sorted.update(item)
+#     finals = valmap(lambda x: x[0], group_sorted)
+#     return finals
+
+
+# class CancelPolicy(ABC):
+#     """
+#         Abstract cancellation policy interface.
+#         --- manual interface
+#     """
+#     @abstractmethod
+#     def should_cancel(self, asset):
+#         """Should open order be cancelled
+#         Returns
+#         -------
+#         should_cancel : bool
+#         """
+#         raise NotImplementedError()
+#
+#
+# class NoCancel(CancelPolicy):
+#     """Orders are never automatically canceled.
+#     """
+#
+#     def __init__(self):
+#         self.warn_on_cancel = False
+#
+#     def should_cancel(self, asset):
+#         return False
+#
+#
+# class EODCancel(CancelPolicy):
+#     """
+#         This policy cancels open orders which created dt in session of last_traded and eod_window
+#         --- 取消标的退市之前的一段时间的内订单
+#     """
+#     def __init__(self, window):
+#         """
+#         :param window: int
+#         """
+#         self.eod_window = window
+#
+#     def should_cancel(self, asset):
+#         last_traded = asset.last_traded
+#         previous = calendar.dt_window_size(last_traded, self.eod_window)
+#         return previous <= last_traded.strftime('%Y-%m-%d')
+#
+#
+# class ExtraCancel(CancelPolicy):
+#     """
+#         the policy cancel order which order asset is suffer negative affairs  --- black swat
+#     """
+#
+#
+# class ComposedCancel(CancelPolicy):
+#     """
+#      compose rules with some composing function
+#     """
+#     def __init__(self, policies):
+#
+#         if not np.all([isinstance(p, CancelPolicy) for p in policies]):
+#             raise ValueError('only cancel policy can be composed')
+#         self.sub_policies = policies
+#
+#     def should_cancel(self, asset):
+#         return np.all([p.shoud_cancel(asset) for p in self.sub_policies])
+#
+# def protect(cls):
+#     def handler(signum, frame):
+#         print(signum, frame)
+#         raise SystemExit
+#
+#     while True:
+#         # signal.signal(signal.SIGINT, handler)
+#         signal.signal(signal.SIGINT, signal.SIG_IGN)
+#         # signal.signal(signal.SIGINT, signal.SIG_DFL)
+#
+# def protect(cls):
+#     def handler(signum, frame):
+#         print(signum, frame)
+#         print('now time', time.time())
+#         time.sleep(10)
+#         # raise SystemExit
+#
+#     signal.signal(signal.SIGALRM, handler)
+#     signal.alarm(1)
+#     while True:
+#         print('test')
+#
+# def protect(cls):
+#     # Define signal handler function
+#     def myHandler(signum, frame):
+#         print('I received: ', signum)
+#
+#     # register signal.SIGTSTP's handler
+#     signal.signal(signal.SIGINT, myHandler)
+#     signal.pause()
+#     print('End of Signal Demo')
+"""
+       name : str
+            The name of the pipeline.
+        chunks : int or iterator, optional
+            The number of days to compute pipeline results for. Increasing
+            this number will make it longer to get the first results but
+            may improve the total runtime of the simulation. If an iterator
+            is passed, we will run in chunks based on values of the iterator.
+            Default is True.
+        eager : bool, optional
+            Whether or not to compute this pipeline prior to
+            before_trading_start.
 """

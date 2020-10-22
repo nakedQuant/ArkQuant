@@ -7,7 +7,7 @@ Created on Tue Mar 12 15:37:47 2019
 from textwrap import dedent
 # from types import CodeType
 from uuid import uuid4
-from six import  exec_
+from six import exec_
 from functools import wraps
 import inspect
 from numpy import dtype
@@ -15,8 +15,42 @@ import pandas as pd
 from operator import attrgetter
 from datetime import tzinfo
 from pytz import timezone
+from toolz import curry
+
+# @api_method
+# @require_not_initialized(AttachPipelineAfterInitialize())
+# @expect_types(
+#     pipeline=Pipeline,
+#     name=string_types,
+#     chunks=(int, Iterable, type(None)),
+# )
 
 _qualified_name = attrgetter('__qualname__')
+
+
+@curry
+def lossless_float_to_int(funcname, func, argname, arg):
+    """
+    A preprocessor that coerces integral floats to ints.
+
+    Receipt of non-integral floats raises a TypeError.
+    """
+    if not isinstance(arg, float):
+        return arg
+
+    arg_as_int = int(arg)
+    if arg == arg_as_int:
+        warnings.warn(
+            "{f} expected an int for argument {name!r}, but got float {arg}."
+            " Coercing to int.".format(
+                f=funcname,
+                name=argname,
+                arg=arg,
+            ),
+        )
+        return arg_as_int
+
+    raise TypeError(arg)
 
 
 def getargspec(f):

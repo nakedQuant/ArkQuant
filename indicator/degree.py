@@ -11,8 +11,6 @@ from indicator import (
     EMA,
     MA
 )
-# from gateway.driver.data_portal import DataPortal
-# from gateway.asset.assets import Equity, Convertible, Fund
 
 ma = MA()
 ema = EMA()
@@ -156,6 +154,9 @@ class NHL(BaseFeature):
 
 
 # if __name__ == '__main__':
+
+#     from gateway.driver.data_portal import DataPortal
+#     from gateway.asset.assets import Equity, Convertible, Fund
 #
 #     asset = Equity('600000')
 #     session = '2015-01-01'

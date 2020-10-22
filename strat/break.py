@@ -7,17 +7,20 @@ Created on Sat Feb 16 14:00:14 2019
 """
 from multiprocessing import Pool
 from toolz import valmap
-from indicator import MA
-from signal import Signal
+from indicator import EMA
+from indicator.technic import Macd
+from strat import Signal
 
 
-class Cross(Signal):
+class Break(Signal):
 
-    _name = 'Cross'
+    name = 'Break'
 
     def __init__(self, params):
+        # p --- window fast slow period
         self.p = params
-        self.ma = MA()
+        self.ema = EMA()
+        self.macd = Macd()
 
     @property
     def final(self):
@@ -26,17 +29,18 @@ class Cross(Signal):
 
     def _run_signal(self, feed):
         # default -- buy operation
-        long = self.ma.compute(feed, {'window': self.p['long']})
-        short = self.ma.compute(feed, {'window': self.p['short']})
-        deviation = short[-1] - long[-1]
+        ema = self.ema.compute(feed, self.p)
+        macd = self.macd.compute(feed, self.p)
+        deviation = ema[-1] - macd[-1]
         return deviation
 
-    def long_signal(self, mask, aggdata) -> bool:
+    def long_signal(self, mask, meta) -> bool:
         with Pool(processes=len(mask)) as pool:
-            signals = [pool.apply_async(self._run_signal, (aggdata[m]))
+            signals = [pool.apply_async(self._run_signal, (meta[m]))
                        for m in mask]
             zp = valmap(lambda x: x > self.p.get('threshold', 0), dict(zip(mask, signals)))
             if self.final:
+                # priority according to val of long_signal
                 sorted_zp = sorted(zp.items(), key=lambda x: x[1])
                 out = [i[0] for i in sorted_zp]
             else:

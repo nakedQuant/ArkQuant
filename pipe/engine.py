@@ -5,7 +5,7 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-from toolz import keyfilter, valmap
+from toolz import keyfilter
 from functools import partial
 from multiprocessing import Pool
 from itertools import chain
@@ -29,16 +29,16 @@ class Engine(ABC):
         _get_loader = PricingLoader(engine_terms)
         return pipelines, _get_loader
 
-    def compute_mask(self, dts):
+    def _calculate_universe(self, dts):
         # default assets
         equities = self.asset_finder.retrieve_type_assets('equity')
         # save the high priority and asset which can be traded
         default_mask = self.restricted_rules.is_restricted(equities, dts)
         return default_mask
 
-    def _init_metadata(self, dts):
+    def _initialize_metadata(self, dts):
         # 判断ledger 是否update
-        mask = self.compute_mask(dts)
+        mask = self._calculate_universe(dts)
         metadata = self._get_loader.load_pipeline_arrays(dts, mask)
         return metadata, mask
 
@@ -68,21 +68,13 @@ class Engine(ABC):
         traded_positions = set(ledger.positions) - remove_positions
         return traded_positions, remove_positions
 
-    @staticmethod
-    def resolve_pipeline_final(outputs):
-        group_sorted = dict()
-        for item in outputs:
-            group_sorted.update(item)
-        finals = valmap(lambda x: x[0], group_sorted)
-        return finals
-
     def _run_pipeline(self, pipeline, metadata, mask):
         """
         ----------
         pipe : zipline.pipe.Pipeline
             The pipe to run.
         """
-        yield pipeline.to_execution_plan(metadata, self.alternatives, mask)
+        yield pipeline.to_execution_plan(metadata, mask, self.final)
 
     def run_pipeline(self, pipeline_metadata, mask):
         """
@@ -92,7 +84,7 @@ class Engine(ABC):
         pipeline_metadata : cache data for pipe
         mask : default asset list
         ----------
-        return --- event
+        return --- assets which tag by pipeline name
         """
         _pipe_func = partial(self._run_pipeline,
                              mask=mask,
@@ -101,8 +93,7 @@ class Engine(ABC):
         with Pool(processes=len(self.pipelines))as pool:
             results = [pool.apply_async(_pipe_func, pipeline)
                        for pipeline in self.pipelines]
-
-        yield self.resolve_pipeline_final(results)
+        yield results
 
     @staticmethod
     def _run_ump(pipeline, position, metadata):
@@ -130,13 +121,13 @@ class Engine(ABC):
         """
             calculate pipelines and ump
         """
-        metadata, default_mask = self._init_metadata(dts)
+        metadata, default_mask = self._initialize_metadata(dts)
         traded_positions, removed_positions = self._divide_positions(ledger, dts)
         # 执行算法逻辑
-        pipe_proxy = self.run_pipeline(metadata, default_mask)
+        pipes = self.run_pipeline(metadata, default_mask)
         # 剔除righted positions, violate_positions, expired_positions
         ump_positions = set(self.run_ump(metadata, traded_positions)) | removed_positions
-        yield self.resolve_conflicts(pipe_proxy, ump_positions, ledger.positions)
+        yield self.resolve_conflicts(pipes, ump_positions, ledger.positions)
 
     @staticmethod
     @abstractmethod
@@ -145,7 +136,6 @@ class Engine(ABC):
         :param calls: dict --- pipe_name : asset --- all pipeline
         :param puts: (ump position) + righted position + violate position + expired position
         :param holdings: ledger positions
-
         instructions:
             防止策略冲突 当pipeline的结果与ump的结果出现重叠 --- 说明存在问题，正常情况退出策略与买入策略应该不存交集
 
@@ -209,7 +199,6 @@ class SimplePipelineEngine(Engine):
     ump_picker : strategy for putting positions
     """
     # __slots__ = [
-    #     'asset_finder',
     #     'alternatives',
     #     'disallowed_righted',
     #     'disallowed_violation',
@@ -218,12 +207,12 @@ class SimplePipelineEngine(Engine):
 
     def __init__(self,
                  pipelines,
+                 final_model,
                  restrictions,
-                 alternatives=10,
                  disallow_righted=True,
                  disallow_violation=True):
+        self.final = final_model
         self.asset_finder = init_finder()
-        self.alternatives = alternatives
         self.disallowed_righted = disallow_righted
         self.disallowed_violation = disallow_violation
         self.restricted_rules = UnionRestrictions(restrictions)
@@ -232,24 +221,25 @@ class SimplePipelineEngine(Engine):
     @staticmethod
     def resolve_conflicts(calls, puts, holdings):
         # mappings {pipe_name:position}
+        call_proxy = {r.tag: r for r in calls}
         put_proxy = {r.name: r for r in puts}
         hold_proxy = {p.name: p for p in holdings}
         # 基于capital执行直接买入标的的
-        extra = set(calls) - set(hold_proxy)
+        extra = set(call_proxy) - set(hold_proxy)
         if extra:
-            direct_positives = keyfilter(lambda x: x in extra, calls)
+            direct_positives = keyfilter(lambda x: x in extra, call_proxy)
         else:
             direct_positives = dict()
         # common pipe name
-        common_pipe = set(put_proxy) & set(calls)
+        common_pipe = set(put_proxy) & set(call_proxy)
         # 直接卖出持仓，无买入标的
         negatives = set(put_proxy) - set(common_pipe)
         direct_negatives = keyfilter(lambda x: x in negatives, put_proxy)
         # 卖出持仓买入对应标的 --- (position, asset)
         if common_pipe:
-            conflicts = [name for name in common_pipe if put_proxy[name].asset == calls[name]]
+            conflicts = [name for name in common_pipe if put_proxy[name].asset == call_proxy[name]]
             assert not conflicts, ValueError('name : %r have conflicts between ump and pipe ' % conflicts)
-            dual = [(put_proxy[name], calls[name]) for name in common_pipe]
+            dual = [(put_proxy[name], call_proxy[name]) for name in common_pipe]
         else:
             dual = set()
         return direct_positives, direct_negatives, dual
