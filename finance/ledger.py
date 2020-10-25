@@ -30,7 +30,7 @@ class Ledger(object):
                  risk_models,
                  fuse_model):
         """构建可变、不可变的组合、账户"""
-        self._portfolio = MutableView(Portfolio(sim_params.capital_base))
+        self._portfolio = MutableView(Portfolio(sim_params))
         self.position_tracker = PositionTracker()
         self.risk_alert = UnionRisk(risk_models)
         self.fuse_model = fuse_model

@@ -99,7 +99,7 @@ DocXMLRPCServer.set_server_documentation（server_documentation ）
 """
 
 ###########################################################
-#Examples of Client
+# Examples of Client
 # simple test program (from the XML-RPC specification)
 # from xmlrpc.client import ServerProxy, Error
 #

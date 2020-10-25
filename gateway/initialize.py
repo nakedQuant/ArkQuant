@@ -14,7 +14,6 @@ from gateway.spider.ownership import OwnershipWriter
 from gateway.spider.events import EventWriter
 from gateway.driver._ext_mkt import MarketValue
 
-__all__ = ['SyncSpider']
 
 # 初始化各个spider module
 router_writer = AssetRouterWriter()

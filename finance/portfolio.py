@@ -22,18 +22,19 @@ class Portfolio(object):
         Dict-like object containing information about currently-held positions.
 
     """
-    __slots__ = ['start_cash', 'portfolio_value', 'positions_values',
-                 '_cash_flow', 'pnl', 'returns', 'utility',
-                 'positions', 'portfolio_daily_value']
+    __slots__ = ['start_cash', 'loan', 'pnl', 'returns', '_cash_flow', 'utility', 'positions',
+                 'portfolio_value', 'positions_values', 'portfolio_daily_value']
 
-    def __init__(self, capital_base=0.0):
-        self.positions = None
-        self.positions_values = 0.0
-        self.portfolio_value = capital_base
+    def __init__(self, sim_params):
+        capital_base = sim_params.capital_base
+        self.loan = sim_params.loan
         self.pnl = 0.0
         self.returns = 0.0
         self.utility = 0.0
         self._cash_flow = 0.0
+        self.positions = None
+        self.positions_values = 0.0
+        self.portfolio_value = capital_base
         self.start_cash = capital_base - self._cash_flow
         self.portfolio_daily_value = pd.Series(capital_base, dtype='float64')
 

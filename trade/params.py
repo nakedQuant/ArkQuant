@@ -8,10 +8,11 @@ Created on Sun Feb 17 16:11:34 2019
 import pandas as pd
 from datetime import datetime
 from _calendar.trading_calendar import calendar
-
-# __func__ ---指向函数对象
-DEFAULT_CAPITAL_BASE = 1e5
-DEFAULT_DELAY_BASE = 1
+from trade import (
+    DEFAULT_DELAY_BASE,
+    DEFAULT_CAPITAL_BASE,
+    DEFAULT_PER_CAPITAL_BASE
+)
 
 
 class SimulationParameters(object):
@@ -25,18 +26,28 @@ class SimulationParameters(object):
     def __init__(self,
                  start_session,
                  end_session,
-                 capital_base=DEFAULT_CAPITAL_BASE,
-                 delay=DEFAULT_DELAY_BASE,
-                 data_frequency='daily'):
+                 delay,
+                 capital_base,
+                 loan_base,
+                 per_capital,
+                 data_frequency):
 
-        self._capital_base = capital_base
         self._delay = delay
+        self._loan = loan_base
+        # per_capital used to calculate and split capital or position
+        self.per_capital = per_capital
+        self._capital_base = capital_base
+
         self._data_frequency = data_frequency
         self._sessions = calendar.session_in_range(start_session, end_session)
 
     @property
     def capital_base(self):
         return self._capital_base
+
+    @property
+    def loan(self):
+        return self._loan
 
     @property
     def data_frequency(self):
@@ -84,14 +95,16 @@ class SimulationParameters(object):
            data_frequency=self.data_frequency)
 
 
-def create_simulation_parameters(year=2004,
-                                 start=None,
+def create_simulation_parameters(start=None,
                                  end=None,
-                                 capital_base=float("1.0e5"),
+                                 delay=DEFAULT_DELAY_BASE,
+                                 per_capital=DEFAULT_PER_CAPITAL_BASE,
+                                 capital_base=DEFAULT_CAPITAL_BASE,
+                                 loan_base=0.0,
                                  data_frequency='daily'):
 
     if start is None:
-        start = "{0}-01-01".format(year)
+        start = "{0}-01-01".format(2004)
     elif isinstance(start, str):
         start = start
     else:
@@ -107,7 +120,10 @@ def create_simulation_parameters(year=2004,
     sim_params = SimulationParameters(
         start_session=start,
         end_session=end,
+        delay=delay,
         capital_base=capital_base,
+        loan_base=loan_base,
+        per_capital=per_capital,
         data_frequency=data_frequency
     )
     return sim_params

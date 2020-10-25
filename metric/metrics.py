@@ -7,7 +7,7 @@ Created on Sun Feb 17 16:11:34 2019
 """
 import numpy as np, operator as op
 from toolz import groupby
-from gateway.driver.benchmark import get_benchmark_returns
+from gateway.driver.benchmark_source import get_benchmark_returns
 from metric.exposure import alpha_beta_aligned
 
 
@@ -315,7 +315,7 @@ class BenchmarkReturnsAndVolatility(object):
                             ledger,
                             benchmark,
                             sessions):
-        #计算基准收益率
+        # 计算基准收益率
         return_series = get_benchmark_returns(benchmark)
         self.return_series = return_series[sessions]
 

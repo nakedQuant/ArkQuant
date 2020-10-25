@@ -10,9 +10,7 @@ from sqlalchemy import select
 from gateway.database import engine, metadata
 from _calendar.trading_calendar import calendar
 from gateway.driver.data_portal import portal
-
-# 科创板股票上市后的前5个交易日不设涨跌幅限制，从第六个交易日开始设置20%涨跌幅限制
-RestrictedWindow = 5
+from gateway.asset import RestrictedWindow
 
 
 class Asset(object):
@@ -74,9 +72,13 @@ class Asset(object):
     def tick_size(self):
         return 100
 
+    # @property
+    # def increment(self):
+    #     return self.tick_size
     @property
     def increment(self):
-        return self.tick_size
+        # increment True means increment by tick_size
+        return True
 
     @property
     def is_interday(self):
@@ -192,10 +194,15 @@ class Equity(Asset):
         _tick_size = 200 if self.sid.startswith('688') else 100
         return _tick_size
 
+    # @property
+    # def increment(self):
+    #     per = 1 if self.sid.startswith('688') else self.tick_size
+    #     return per
+
     @property
     def increment(self):
-        per = 1 if self.sid.startswith('688') else self.tick_size
-        return per
+        incre = False if self.sid.startswith('688') else True
+        return incre
 
     def restricted(self, dt):
         """

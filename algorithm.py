@@ -9,6 +9,7 @@ import pandas as pd
 # error module
 from error.errors import (
     RegisterTradingControlPostInit,
+    RegisterAccountControlPostInit,
     SetBenchmarkOutsideInitialize,
     SetCancelPolicyPostInit,
     SetCommissionPostInit,
@@ -16,12 +17,9 @@ from error.errors import (
     ZeroCapitalError
 )
 # gateway api
-from gateway.asset._finder import init_finder
+from gateway.asset.finder import init_finder
 from gateway.driver.data_portal import portal
-from gateway.driver.benchmark import (
-    get_benchmark_returns,
-    get_foreign_benchmark_returns
-)
+from gateway.driver.benchmark_source import BenchmarkSource
 # finance module
 from finance.ledger import Ledger
 from finance.slippage import NoSlippage
@@ -29,17 +27,19 @@ from finance.execution import MarketOrder
 from finance.commission import NoCommission
 from finance.restrictions import NoRestrictions
 from finance.control import (
-    NoControl,
     MaxPositionSize,
-    MaxOrderAmount,
-    MaxOrderProportion
+    MaxOrderSize,
+    MaxProportion,
+    LongOnly,
+    NoControl,
+    NetLeverage
 )
 # pb module
-from pb.dist import BaseDist
 from pb.broker import Broker
+from pb.division import Division
 from pb.generator import Generator
 from pb.blotter import SimulationBlotter
-from pb.division import PositionDivision, CapitalDivision
+from pb.underneath import UncoverAlgorithm
 # pipe engine
 from pipe.final import Final
 from pipe.pipeline import Pipeline
@@ -101,13 +101,15 @@ class TradingAlgorithm(object):
                  sim_params,
                  on_error='log',
                  # finance module
-                 control=None,
                  slippage=None,
                  commission=None,
                  restrictions=None,
                  execution_style=None,
-                 # dist
-                 dist=None,
+                 trading_controls=None,
+                 account_controls=None,
+                 # pd
+                 uncover_algo=None,
+                 divison_model=None,
                  # pipe API
                  pipelines=None,
                  final=None,
@@ -125,7 +127,7 @@ class TradingAlgorithm(object):
                  namespace=None,
                  initialize=None,
                  platform='px_trader',
-                 handle_data=None,
+                 _handle_data=None,
                  logger=None,
                  before_trading_start=None,
                  create_event_context=None,
@@ -133,7 +135,6 @@ class TradingAlgorithm(object):
 
         assert sim_params.capital_base <= 0, ZeroCapitalError()
         self.sim_params = sim_params
-        self.on_error = on_error
         # set benchmark returns
         self.benchmark_returns = self._calculate_benchmark_returns()
         # data interface
@@ -153,20 +154,26 @@ class TradingAlgorithm(object):
                                          self.slippage,
                                          self.execution_style)
         # init generator
-        self.generator = self._create_generator(dist)
+        self.uncover_algo = uncover_algo or UncoverAlgorithm()
+        self.trading_controls = trading_controls or NoControl()
+        self.division_model = divison_model or Division(
+                                            self.uncover_algo,
+                                            self.trading_controls,
+                                            sim_params.per_capital)
+        self.generator = self._create_generator()
         # Initialize pipe_engine API
         self.final = final or Final()
         self.restrictions = restrictions
-        self.pipelines, self.pipeline_engine = self._construct_engine(
+        self.pipelines, self.pipeline_engine = self._construct_pipeline_engine(
                                                         pipelines,
                                                         disallow_righted,
                                                         disallowed_violation)
-        # set controls
-        self.trading_controls = control or NoControl()
         # set allocation policy
         risk_allocation = risk_allocation or Equal()
         # init broker
         self.broker = self._initialize_broker(risk_allocation)
+        # set account controls
+        self.account_controls= account_controls
         # metric tracker
         if metrics_set is not None:
             self._metrics_set = metrics_set
@@ -176,19 +183,20 @@ class TradingAlgorithm(object):
             self.tracker = metrics_tracker
         else:
             self.tracker = self._create_metrics_tracker()
-        # anlyse
+        # analyse
         self._analyze = _ClassicRiskMetrics()
 
         # set event manager
         self.event_manager = EventManager(create_event_context)
         self.event_manager.add_event(
-            Event(Always(), self._handle_data.__func__),
+            Event(Always(), _handle_data.__func__),
             prepend=True,
         )
 
         self.initialized = False
         self.logger = logger
         self._platform = platform
+        self.on_error = on_error
         self.initialize_kwargs = initialize_kwargs or {}
         self._recorded_vars = {}
         self.namespace = namespace or {}
@@ -200,18 +208,17 @@ class TradingAlgorithm(object):
         self._before_trading_start = before_trading_start or noop
         self._initialize = initialize(initialize_kwargs) or noop
 
-    def _create_generator(self, dist):
+    def _create_generator(self):
         """
         :param dist: distribution module (simulate_dist , simulate_ticker)
                     to generate price timeseries or ticker timeseries
         generator --- compute capital or position to transactions
         """
-        # set division
-        divisions = [CapitalDivision(dist), PositionDivision(dist)]
         # generator
-        generator_class = Generator(self.sim_params.delay,
+        delay = self.sim_params.delay
+        generator_class = Generator(delay,
                                     self.blotter,
-                                    divisions)
+                                    self.division_model)
         return generator_class
 
     def _construct_pipeline_engine(self,
@@ -248,7 +255,6 @@ class TradingAlgorithm(object):
         """
         broker_class = Broker(self.pipeline_engine,
                               self.generator,
-                              self.trading_controls,
                               allocation_model)
         return broker_class
 
@@ -321,20 +327,18 @@ class TradingAlgorithm(object):
         """
             benchmark returns
         """
+        source = BenchmarkSource(self.sim_params.sessions)
         benchmark = self.sim_params.benchmark
-        try:
-            returns = get_benchmark_returns(benchmark)
-        except Exception as e:
-            print('error:', e)
-            returns = get_foreign_benchmark_returns(benchmark)
-        return returns.loc[self.sim_params.sessions, :]
+        returns = source.calculate_returns(benchmark)
+        return returns
 
     def analyse(self, perf):
         with ZiplineAPI(self):
-            self._analyze.end_of_simulation(
+            stats = self._analyze.end_of_simulation(
                 perf,
                 self.ledger,
                 self.benchmark_returns)
+        return stats
 
     def run(self):
         """Run the algorithm.
@@ -347,11 +351,10 @@ class TradingAlgorithm(object):
                 perfs.append(perf)
             # convert perf dict to pandas frame
             daily_stats = self._create_daily_stats(perfs)
-            self.analyze(daily_stats)
-        finally:
-            self.data_portal = None
-            self.analyze = None
-        return daily_stats
+            analysis = self.analyse(daily_stats)
+            return analysis
+        except Exception as e:
+            print('error:', e)
 
     @api_method
     def get_environment(self, field='platform'):
@@ -408,96 +411,6 @@ class TradingAlgorithm(object):
                 raise ValueError(
                     '%r is not a valid field for get_environment' % field,
                 )
-
-    @api_method
-    def fetch_csv(self,
-                  url,
-                  pre_func=None,
-                  post_func=None,
-                  date_column='date',
-                  date_format=None,
-                  timezone=pytz.utc.zone,
-                  symbol=None,
-                  mask=True,
-                  symbol_column=None,
-                  special_params_checker=None,
-                  country_code=None,
-                  **kwargs):
-        """Fetch a csv from a remote url and register the data so that it is
-        queryable from the ``data`` object.
-
-        Parameters
-        ----------
-        url : str
-            The url of the csv file to load.
-        pre_func : callable[pd.DataFrame -> pd.DataFrame], optional
-            A callback to allow preprocessing the raw data returned from
-            fetch_csv before dates are paresed or symbols are mapped.
-        post_func : callable[pd.DataFrame -> pd.DataFrame], optional
-            A callback to allow postprocessing of the data after dates and
-            symbols have been mapped.
-        date_column : str, optional
-            The name of the column in the preprocessed dataframe containing
-            datetime information to map the data.
-        date_format : str, optional
-            The format of the dates in the ``date_column``. If not provided
-            ``fetch_csv`` will attempt to infer the format. For information
-            about the format of this string, see :func:`pandas.read_csv`.
-        timezone : tzinfo or str, optional
-            The timezone for the datetime in the ``date_column``.
-        symbol : str, optional
-            If the data is about a new asset or index then this string will
-            be the name used to identify the values in ``data``. For example,
-            one may use ``fetch_csv`` to load data for VIX, then this field
-            could be the string ``'VIX'``.
-        mask : bool, optional
-            Drop any rows which cannot be symbol mapped.
-        symbol_column : str
-            If the data is attaching some new attribute to each asset then this
-            argument is the name of the column in the preprocessed dataframe
-            containing the symbols. This will be used along with the date
-            information to map the sids in the asset finder.
-        country_code : str, optional
-            Country code to use to disambiguate symbol lookups.
-        **kwargs
-            Forwarded to :func:`pandas.read_csv`.
-
-        Returns
-        -------
-        csv_data_source : zipline.sources.requests_csv.PandasRequestsCSV
-            A requests source that will pull data from the url specified.
-        """
-        if country_code is None:
-            country_code = self.default_fetch_csv_country_code(
-                self.trading_calendar,
-            )
-
-        # Show all the logs every time fetcher is used.
-        csv_data_source = PandasRequestsCSV(
-            url,
-            pre_func,
-            post_func,
-            self.asset_finder,
-            self.trading_calendar.day,
-            self.sim_params.start_session,
-            self.sim_params.end_session,
-            date_column,
-            date_format,
-            timezone,
-            symbol,
-            mask,
-            symbol_column,
-            data_frequency=self.data_frequency,
-            country_code=country_code,
-            special_params_checker=special_params_checker,
-            **kwargs
-        )
-
-        # ingest this into dataportal
-        self.data_portal.handle_extra_source(csv_data_source.df,
-                                             self.sim_params)
-
-        return csv_data_source
 
     def add_event(self, rule, callback):
         """Adds an event to the algorithm's EventManager.
@@ -654,12 +567,12 @@ class TradingAlgorithm(object):
     # Pb Controls #
     ####################
 
-    def set_dist_func(self, dist_model):
-        assert isinstance(dist_model, BaseDist), \
-            'dist_model must be subclass of BaseDist'
-        self.generator = self._init_generator(dist_model)
+    def set_uncover_policy(self, uncover_model):
+        if self.initialized:
+            raise InterruptedError
+        self.uncover_algo = uncover_model
 
-    def set_risk_allocation(self, allocation_model):
+    def set_allocation_policy(self, allocation_model):
         if self.initialized:
             raise AttributeError
         self.broker.capital_model = allocation_model
@@ -697,15 +610,15 @@ class TradingAlgorithm(object):
         max_notional : float, optional
                 The maximum value to hold for an asset.
         """
-        control = MaxPositionSize(window=window,
-                                  max_notional=max_notional,
+        control = MaxPositionSize(max_notional,
+                                  sliding_window=window,
                                   on_error=self.on_error)
         self.register_trading_control(control)
 
     @api_method
-    def set_max_order_amount(self,
-                             window,
-                             max_notional):
+    def set_max_order_size(self,
+                           window,
+                           max_notional):
         """Set a limit on the number of shares and/or dollar value of any single
         order placed for sid.  Limits are treated as absolute values and are
         enforced at the time that the algo attempts to place an order for sid.
@@ -719,19 +632,41 @@ class TradingAlgorithm(object):
             window  that measure the max amount can be ordered at one time
         max_notional : float
         """
-        control = MaxOrderAmount(window=window,
-                                 max_notional=max_notional,
-                                 on_error=self.on_error)
+        control = MaxOrderSize(max_notional,
+                               sliding_window=window,
+                               on_error=self.on_error)
         self.register_trading_control(control)
 
     @api_method
-    def set_max_order_proportion(self, max_notional):
+    def set_max_proportion(self, max_notional):
+        """Set a rule specifying max proportion of position
+        """
+        control = MaxProportion(max_notional=max_notional,
+                                on_error=self.on_error)
+        self.register_trading_control(control)
+
+    # def set_asset_restrictions(self, restrictions, on_error='fail'):
+    #     """Set a restriction on which assets can be ordered.
+    #
+    #     Parameters
+    #     ----------
+    #     restricted_list : Restrictions
+    #         An object providing information about restricted assets.
+    #
+    #     See Also
+    #     --------
+    #     zipline.finance.asset_restrictions.Restrictions
+    #     """
+    #     control = RestrictedListOrder(on_error, restrictions)
+    #     self.register_trading_control(control)
+    #     self.restrictions |= restrictions
+
+    @api_method
+    def set_long_only(self):
         """Set a rule specifying that this algorithm cannot take short
         positions.
         """
-        control = MaxOrderProportion(max_notional=max_notional,
-                                     on_error=self.on_error)
-        self.register_trading_control(control)
+        self.register_trading_control(LongOnly())
 
     ####################
     # Account Controls #
@@ -749,36 +684,35 @@ class TradingAlgorithm(object):
         for control in self.account_controls:
             control.validate(self.portfolio,
                              self.account,
-                             self.get_datetime(),
-                             self.trading_client.current_data)
+                             self.get_datetime())
 
     @api_method
-    def set_max_leverage(self, max_leverage):
+    def set_net_leverage(self, net_leverage):
         """Set a limit on the maximum leverage of the algorithm.
 
         Parameters
         ----------
-        max_leverage : float
-            The maximum leverage for the algorithm. If not provided there will
-            be no maximum.
+        net_leverage : float
+            The net leverage for the algorithm. If not provided there will
+            be 1.0
         """
-        control = MaxLeverage(max_leverage)
+        control = NetLeverage(base_leverage=net_leverage)
         self.register_account_control(control)
 
-    @api_method
-    def set_min_leverage(self, min_leverage, grace_period):
-        """Set a limit on the minimum leverage of the algorithm.
-
-        Parameters
-        ----------
-        min_leverage : float
-            The minimum leverage for the algorithm.
-        grace_period : pd.Timedelta
-            The offset from the start date used to enforce a minimum leverage.
-        """
-        deadline = self.sim_params.start_session + grace_period
-        control = MinLeverage(min_leverage, deadline)
-        self.register_account_control(control)
+    # @api_method
+    # def set_min_leverage(self, min_leverage, grace_period):
+    #     """Set a limit on the minimum leverage of the algorithm.
+    #
+    #     Parameters
+    #     ----------
+    #     min_leverage : float
+    #         The minimum leverage for the algorithm.
+    #     grace_period : pd.Timedelta
+    #         The offset from the start date used to enforce a minimum leverage.
+    #     """
+    #     deadline = self.sim_params.start_session + grace_period
+    #     control = MinLeverage(min_leverage, deadline)
+    #     self.register_account_control(control)
 
 
     ##################

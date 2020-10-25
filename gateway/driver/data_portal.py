@@ -211,7 +211,13 @@ class DataPortal(object):
         history_window_arrays = history.history(assets, fields, end_date, bar_count)
         return history_window_arrays
 
-    def resample_by_freq(self, freq, args, kwargs):
+    def handle_extra_source(self):
+        """
+            extra data source
+        """
+        raise NotImplementedError()
+
+    def sample_by_freq(self, freq, args, kwargs):
         """
             by_minute  :param kwargs: hour,minute
             by_week :param delta: int , the number day of week (1-7) which is trading_day

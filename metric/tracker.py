@@ -322,3 +322,4 @@ class _ClassicRiskMetrics(object):
             algorithm_returns=ledger.daily_returns_series,
             benchmark_returns=benchmark_ret
         ))
+        return packet

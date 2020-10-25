@@ -6,8 +6,6 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 from multiprocessing import Pool
-from functools import partial
-from finance.control import UnionControl
 
 
 class Broker(object):
@@ -28,39 +26,30 @@ class Broker(object):
     """
     def __init__(self,
                  engine,
-                 trigger,
-                 controls,
+                 generator,
                  allocation_model):
         self.engine = engine
-        self.trigger = trigger
+        self.generator = generator
         self.capital_model = allocation_model
-        self.trade_controls = UnionControl(controls)
 
-    def set_controls_func(self, portfolio):
-        cap_controls = partial(self.trade_controls.validate_call, porfolio=portfolio)
-        position_controls = partial(self.trade_controls.validate_put, porfolio=portfolio)
-        return cap_controls, position_controls
-
-    def implement_capital(self, positives, capital, algo_control, dts):
+    def implement_capital(self, positives, capital, portfolio, dts):
         """基于资金买入对应仓位"""
         assets = list(positives.values())
         txn_mappings = dict()
         # controls
         allocation = self.capital_model.compute(assets, capital, dts)
-        for asset, cap in allocation.items():
-            asset, control_cap = algo_control(asset=asset, capital=cap, algo_datetime=dts)
-            txn_mappings[asset] = self.trigger.yield_capital(asset, control_cap, dts)
+        for asset, available in allocation.items():
+            txn_mappings[asset] = self.generator.yield_capital(asset, available, portfolio, dts)
         return txn_mappings
 
-    def implement_position(self, negatives, algo_control, dts):
+    def implement_position(self, negatives, portfolio, dts):
         """单独的卖出仓位"""
         txn_mappings = dict()
         for p in negatives.values():
-            p = algo_control(p)
-            txn_mappings[p.asset] = self.trigger.yield_position(p, dts)
+            txn_mappings[p.asset] = self.generator.yield_position(p, portfolio, dts)
         return txn_mappings
 
-    def implement_duals(self, duals, dts):
+    def implement_duals(self, duals, portfolio, dts):
         """
             针对一个pipeline算法，卖出 -- 买入
             防止策略冲突 当pipeline的结果与ump的结果出现重叠 --- 说明存在问题，正常情况退出策略与买入策略应该不存交集
@@ -69,7 +58,7 @@ class Broker(object):
         for dual in duals:
             p, asset = dual
             # p.asset 与 asset 不一样
-            short, long = self.trigger.yield_interactive(p, asset, dts)
+            short, long = self.generator.yield_interactive(p, asset, portfolio, dts)
             txn_mappings[p.asset] = short
             txn_mappings[asset] = long
         return txn_mappings
@@ -87,14 +76,13 @@ class Broker(object):
         capital = ledger.portfolio.start_cash.copy()
         # {pipeline_name : asset} , {pipeline_name : position} , (position, asset)
         positives, negatives, duals = self.engine.execute_algorithm(ledger)
-        # init controls
-        capital_controls, position_controls = self.set_controls_func(ledger.portfolio)
+        portfolio = ledger.portfolio
         # 直接买入
-        call_txns = self.implement_capital(positives, capital, capital_controls, dts)
+        call_txns = self.implement_capital(positives, capital, portfolio, dts)
         # 直接卖出
-        put_txns = self.implement_position(negatives, position_controls, dts)
+        put_txns = self.implement_position(negatives, portfolio, dts)
         # 卖出 --- 买入
-        dual_txns = self.implement_duals(duals, dts)
+        dual_txns = self.implement_duals(duals, portfolio, dts)
         # portfolio的资金使用效率评估引擎撮合的的效率 --- 并行执行成交
         self.multi_process(ledger, [call_txns, put_txns, dual_txns])
 

@@ -9,7 +9,6 @@ from gateway.database import engine, metadata
 from gateway.database.db_writer import db
 from gateway.driver.tools import unpack_df_to_component_dict
 
-__all__ = ['MarketValue']
 
 OWNERSHIP_TYPE = {'general': np.double,
                   'float': np.double,
@@ -92,7 +91,4 @@ class MarketValue:
                 db.writer('m_cap', mcap)
 
 
-# if __name__ == '__main__':
-#
-#     m = MarketValue(False)
-#     m.calculate_mcap()
+__all__ = ['MarketValue']

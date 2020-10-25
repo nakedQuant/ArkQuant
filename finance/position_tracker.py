@@ -109,6 +109,8 @@ class PositionTracker(object):
     def get_positions(self):
         # protocol list
         protocols = [position.protocol for position in self.positions.values()]
+        protocols = {position.protocol for position in self.positions.values()}
+
         return protocols
 
 

@@ -69,12 +69,16 @@ ASSET_FUNDAMENTAL_URL = {
 }
 
 # benchmark
+symbols = 'http://33.push2.eastmoney.com/api/qt/clist/get?pn=1&pz=50&po=1&np=1&' \
+      'ut=bd1d9ddb04089700cf9c27f6f7426281&fltt=2&invt=2&fid=&fs=b:MK0010&fields=f12,f14'
+
 benchmark_kline = 'http://push2his.eastmoney.com/api/qt/stock/kline/get?secid={}&fields1=f1&' \
                   'fields2=f51%2Cf52%2Cf53%2Cf54%2Cf55%2Cf56%2Cf57%2Cf58&klt=101&fqt=0&beg=19900101&end={}'
 periphera_kline = 'http://web.ifzq.gtimg.cn/appstock/app/fqkline/get?&param=%s,day,1990-01-01,%s,100000,qfq'
 
 
 BENCHMARK_URL = {
+    'symbols': symbols,
     'kline': benchmark_kline,
     'periphera_kline': periphera_kline
 }

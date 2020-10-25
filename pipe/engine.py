@@ -12,7 +12,7 @@ from itertools import chain
 from abc import ABC, abstractmethod
 from pipe.loader.loader import PricingLoader
 from finance.restrictions import UnionRestrictions
-from gateway.asset._finder import init_finder
+from gateway.asset.finder import init_finder
 
 
 class Engine(ABC):
@@ -224,6 +224,9 @@ class SimplePipelineEngine(Engine):
         call_proxy = {r.tag: r for r in calls}
         put_proxy = {r.name: r for r in puts}
         hold_proxy = {p.name: p for p in holdings}
+        # union asset
+        union_assets = set(call_proxy) & set(put_proxy)
+        assert union_assets, 'call assets should not be put at the same day'
         # 基于capital执行直接买入标的的
         extra = set(call_proxy) - set(hold_proxy)
         if extra:

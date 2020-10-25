@@ -11096,3 +11096,153 @@ def _fit_statsmodel(x, y):
             Whether or not to compute this pipeline prior to
             before_trading_start.
 """
+
+# def _validate_benchmark(self, benchmark_asset):
+#     # check if this security has a stock dividend.  if so, raise an
+#     # error suggesting that the user pick a different asset to use
+#     # as benchmark.
+#     stock_dividends = \
+#         self.data_portal.get_stock_dividends(self.benchmark_asset,
+#                                              self.sessions)
+#
+#     if len(stock_dividends) > 0:
+#         raise InvalidBenchmarkAsset(
+#             sid=str(self.benchmark_asset),
+#             dt=stock_dividends[0]["ex_date"]
+#         )
+#
+#     if benchmark_asset.start_date > self.sessions[0]:
+#         # the asset started trading after the first simulation day
+#         raise BenchmarkAssetNotAvailableTooEarly(
+#             sid=str(self.benchmark_asset),
+#             dt=self.sessions[0],
+#             start_dt=benchmark_asset.start_date
+#         )
+#
+#     if benchmark_asset.end_date < self.sessions[-1]:
+#         # the asset stopped trading before the last simulation day
+#         raise BenchmarkAssetNotAvailableTooLate(
+#             sid=str(self.benchmark_asset),
+#             dt=self.sessions[-1],
+#             end_dt=benchmark_asset.end_date
+#         )
+# ----------- asset deadlines
+#
+# class AssetDateBounds(TradingControl):
+#     """
+#     TradingControl representing a prohibition against ordering an asset before
+#     its start_date, or after its end_date.
+#     """
+#
+#     def __init__(self, on_error):
+#         super(AssetDateBounds, self).__init__(on_error)
+#
+#     def validate(self,
+#                  asset,
+#                  amount,
+#                  portfolio,
+#                  algo_datetime,
+#                  algo_current_data):
+#         """
+#         Fail if the algo has passed this Asset's end_date, or before the
+#         Asset's start date.
+#         """
+#         # If the order is for 0 shares, then silently pass through.
+#         if amount == 0:
+#             return
+#
+#         normalized_algo_dt = pd.Timestamp(algo_datetime).normalize()
+#
+#         # Fail if the algo is before this Asset's start_date
+#         if asset.start_date:
+#             normalized_start = pd.Timestamp(asset.start_date).normalize()
+#             if normalized_algo_dt < normalized_start:
+#                 metadata = {
+#                     'asset_start_date': normalized_start
+#                 }
+#                 self.handle_violation(
+#                     asset, amount, algo_datetime, metadata=metadata)
+#         # Fail if the algo has passed this Asset's end_date
+#         if asset.end_date:
+#             normalized_end = pd.Timestamp(asset.end_date).normalize()
+#             if normalized_algo_dt > normalized_end:
+#                 metadata = {
+#                     'asset_end_date': normalized_end
+#                 }
+#                 self.handle_violation(
+#                     asset, amount, algo_datetime, metadata=metadata)
+
+# @expect_types(
+#     __funcname='MinLeverage',
+#     min_leverage=(int, float),
+#     deadline=datetime
+# )
+# @expect_bounded(__funcname='MinLeverage', min_leverage=(0, None))
+
+# class MaxLeverage(AccountControl):
+#     """
+#     AccountControl representing a limit on the maximum leverage allowed
+#     by the algorithm.
+#     """
+#
+#     def __init__(self, max_leverage):
+#         """
+#         max_leverage is the gross leverage in decimal form. For example,
+#         2, limits an algorithm to trading at most double the account value.
+#         """
+#         super(MaxLeverage, self).__init__(max_leverage=max_leverage)
+#         self.max_leverage = max_leverage
+#
+#         if max_leverage is None:
+#             raise ValueError(
+#                 "Must supply max_leverage"
+#             )
+#
+#         if max_leverage < 0:
+#             raise ValueError(
+#                 "max_leverage must be positive"
+#             )
+#
+#     def validate(self,
+#                  portfolio,
+#                  account,
+#                  algo_datetime):
+#         """
+#         Fail if the leverage is greater than the allowed leverage.
+#         """
+#         if account.leverage > self.max_leverage:
+#             self.fail()
+#
+#
+# class MinLeverage(AccountControl):
+#     """AccountControl representing a limit on the minimum leverage allowed
+#     by the algorithm after a threshold period of time.
+#
+#     Parameters
+#     ----------
+#     min_leverage : float
+#         The gross leverage in decimal form.
+#     deadline : datetime
+#         The date the min leverage must be achieved by.
+#
+#     For example, min_leverage=2 limits an algorithm to trading at minimum
+#     double the account value by the deadline date.
+#     """
+#     def __init__(self, min_leverage, deadline):
+#         super(MinLeverage, self).__init__(min_leverage=min_leverage,
+#                                           deadline=deadline)
+#         self.min_leverage = min_leverage
+#         self.deadline = deadline
+#
+#     def validate(self,
+#                  portfolio,
+#                  account,
+#                  algo_datetime):
+#         """
+#         Make validation checks if we are after the deadline.
+#         Fail if the leverage is less than the min leverage.
+#         """
+#         if (algo_datetime > self.deadline and
+#                 account.leverage < self.min_leverage):
+#             self.fail()
+# __func__ ---指向函数对象

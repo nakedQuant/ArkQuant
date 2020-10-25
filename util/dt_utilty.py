@@ -6,6 +6,7 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 import numpy as np, datetime, pandas as pd, pytz
+from datetime import timedelta
 
 MAX_MONTH_RANGE = 23
 MAX_WEEK_RANGE = 5
@@ -230,3 +231,52 @@ def aggregate_returns(returns, convert_to):
         )
 
     return returns.groupby(grouping).apply(cumulate_returns)
+
+
+def date_gen(start,
+             end,
+             trading_calendar,
+             delta=timedelta(minutes=1),
+             repeats=None):
+    """
+    Utility to generate a stream of dates.
+    """
+    daily_delta = not (delta.total_seconds()
+                       % timedelta(days=1).total_seconds())
+    cur = start
+    if daily_delta:
+        # if we are producing daily timestamps, we
+        # use midnight
+        cur = cur.replace(hour=0, minute=0, second=0,
+                          microsecond=0)
+
+    def advance_current(cur):
+        """
+        Advances the current dt skipping non market days and minutes.
+        """
+        cur = cur + delta
+
+        currently_executing = \
+            (daily_delta and (cur in trading_calendar.all_sessions)) or \
+            (trading_calendar.is_open_on_minute(cur))
+
+        if currently_executing:
+            return cur
+        else:
+            if daily_delta:
+                return trading_calendar.minute_to_session_label(cur)
+            else:
+                return trading_calendar.open_and_close_for_session(
+                    trading_calendar.minute_to_session_label(cur)
+                )[0]
+
+    # yield count trade events, all on trading days, and
+    # during trading hours.
+    while cur < end:
+        if repeats:
+            for j in range(repeats):
+                yield cur
+        else:
+            yield cur
+
+        cur = advance_current(cur)

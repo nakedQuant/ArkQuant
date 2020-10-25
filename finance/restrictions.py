@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 from functools import reduce
 import pandas as pd, operator
 from gateway.asset.assets import Asset
-from gateway.asset._finder import init_finder
+from gateway.asset.finder import init_finder
 from _calendar.trading_calendar import calendar
 
 

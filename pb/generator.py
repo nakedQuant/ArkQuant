@@ -17,27 +17,22 @@ class Generator(object):
     def __init__(self,
                  delay,
                  blotter,
-                 divisions):
-        try:
-            mp = {d.name: d for d in divisions}
-            self.holding_division = mp['position']
-            self.capital_division = mp['capital']
-        except TypeError:
-            raise ValueError('divisions must be tuple or list')
+                 division_model):
         self.delay = delay
         self.blotter = blotter
+        self.division_model = division_model
 
-    def yield_capital(self, asset, capital, dts):
-        capital_orders = self.capital_division.simulate_iterator(asset, capital, dts)
+    def yield_capital(self, asset, capital, portfolio, dts):
+        capital_orders = self.division_model.divided_by_capital(asset, capital, portfolio, dts)
         capital_transactions = self.blotter.create_transaction(capital_orders, dts)
         return capital_transactions
 
-    def yield_position(self, position, dts):
-        holding_orders = self.holding_division.simulate_iterator(position, dts)
+    def yield_position(self, position, portfolio, dts):
+        holding_orders = self.division_model.divided_by_position(position, portfolio, dts)
         holding_transactions = self.blotter.create_transaction(holding_orders, dts)
         return holding_transactions
 
-    def yield_interactive(self, position, asset, dts):
+    def yield_interactive(self, position, asset, portfolio, dts):
         """
             p -- position , c --- event , dts --- pd.Timestamp or str
             基于触发器构建 通道 基于策略 卖出 --- 买入
@@ -60,7 +55,7 @@ class Generator(object):
             卖出标的 --- 对应买入标的 ，闲于的资金
         """
         # 卖出持仓
-        short_transactions = self.yield_position(position, dts)
+        short_transactions = self.yield_position(position, portfolio, dts)
         short_prices = np.array([txn.price for txn in short_transactions])
         short_amount = np.array([txn.amount for txn in short_transactions])
         # 切换之间存在时间差，默认以minutes为单位

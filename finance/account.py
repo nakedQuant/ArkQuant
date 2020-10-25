@@ -5,6 +5,7 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
+import numpy as np
 from util.wrapper import _deprecated_getitem_method
 
 
@@ -15,15 +16,21 @@ class Account(object):
     If connected to a broker, one can update these values with the trading
     account values as reported by the broker.
     """
-    __slots__ = ['settled_cash', 'total_value', 'position_values', 'positions', 'pnl']
+    __slots__ = ['settled_cash', 'loan', 'total_value',
+                 'position_values', 'positions', 'pnl']
 
     def __init__(self, portfolio):
+        self.loan = portfolio.loan
         self.settled_cash = portfolio.start_cash
         self.total_value = portfolio.portfolio_value
         self.position_values = portfolio.position_values
         self.positions = portfolio.positions
         self.pnl = portfolio.pnl
-        # leverage = np.inf
+
+    @property
+    def leverage(self):
+        leverage = self.total_value / self.loan if self.loan > 0 else np.inf
+        return leverage
 
     def __repr__(self):
         return "Account({0})".format(self.__dict__)
@@ -43,8 +50,3 @@ class Account(object):
             'positions',
         },
     )
-
-
-__all__ = [
-    'Account'
-]
