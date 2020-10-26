@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 from functools import reduce
 import pandas as pd, operator
 from gateway.asset.assets import Asset
-from gateway.asset.finder import init_finder
+from gateway.asset.finder import asset_finder
 from _calendar.trading_calendar import calendar
 
 
@@ -88,12 +88,13 @@ class DataBoundsRestrictions(Restrictions):
     """
     def __init__(self, length=30):
         self.window = length
-        self.asset_finder = init_finder()
+        # self.asset_finder = init_finder()
 
     def is_restricted(self, assets, dt):
+        asset_finder.synchronize()
         s_date = calendar.dt_window_size(dt, self.window)
         # a --- asset ipo date and dt excess 30 days
-        alive_assets = self.asset_finder.lifetimes([s_date, dt])
+        alive_assets = asset_finder.lifetimes([s_date, dt])
         final_assets = set(assets) & set(alive_assets)
         return final_assets
 
@@ -105,13 +106,15 @@ class StatusRestrictions(Restrictions):
     """
     def __init__(self, length=0):
         self.length = length
-        self.asset_finder = init_finder()
+        # self.asset_finder = init_finder()
 
     def is_restricted(self, assets, dt):
+        # 由于
+        asset_finder.synchronize()
         # a category
-        trade_assets = self.asset_finder.can_be_traded(dt)
+        trade_assets = asset_finder.can_be_traded(dt)
         # b category
-        del_assets = self.asset_finder.delist_assets(dt, self.length)
+        del_assets = asset_finder.delist_assets(dt, self.length)
         final_assets = (set(assets) - set(del_assets)) & set(trade_assets)
         return final_assets
 

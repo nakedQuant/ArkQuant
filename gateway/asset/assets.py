@@ -21,67 +21,38 @@ class Asset(object):
     ----------
     sid : str
         Persistent unique identifier assigned to the asset.
-    engine : str
-        sqlalchemy engine
-
-    extend :
-        __get__(self, instance, owner):调用一个属性时,触发
-        __set__(self, instance, value):为一个属性赋值时,触发
-        __delete__(self, instance):采用del删除属性时,触发
     """
     __slots__ = ['sid', '_tag']
 
     def __init__(self, sid):
         self.sid = sid
         self._tag = None
-        self._retrieve_asset_mappings()
-        self._supplementary_for_asset()
 
-    def _retrieve_asset_mappings(self):
-        table = self.metadata.tables['asset_router']
+    def _initialize_basics_mappings(self):
+        table = metadata.tables['asset_router']
         ins = select([table.c.asset_type, table.c.asset_name, table.c.first_traded,
                       table.c.last_traded, table.c.country_code, table.c.exchange])
         ins = ins.where(table.c.sid == self.sid)
-        rp = self.engine.execute(ins)
+        rp = engine.execute(ins)
         basics = pd.DataFrame(rp.fetchall(), columns=['asset_type', 'asset_name', 'first_traded',
                                                       'last_traded', 'country_code', 'exchange'])
         for k, v in basics.iloc[0, :].items():
             self.__setattr__(k, v)
 
-    def _supplementary_for_asset(self):
+    def _implement_supplementary(self):
         raise NotImplementedError()
-
-    @property
-    def trading_calendar(self):
-        return calendar
-
-    @property
-    def price_multiplier(self):
-        return 1.0
-
-    @property
-    def engine(self):
-        return engine
-
-    @property
-    def metadata(self):
-        metadata.reflect(bind=engine)
-        return metadata
 
     @property
     def tick_size(self):
         return 100
 
-    # @property
-    # def increment(self):
-    #     return self.tick_size
     @property
     def increment(self):
         # increment True means increment by tick_size
         return True
 
     @property
-    def is_interday(self):
+    def inter_day(self):
         # 日内交易日
         return False
 
@@ -89,14 +60,25 @@ class Asset(object):
     def tag(self):
         return self._tag
 
+    def bid_mechanism(self):
+        """
+            科创板 : 在临时停牌阶段，投资者可以继续申报也可以撤销申报，并且申报价格不受2%的报价限制。
+            复牌时，对已经接受的申报实行集合竞价撮合交易，申报价格最小变动单位为0.01
+            超出价位 --- 申报单为废单
+            创业板也有竞价机制但是超出价格的单子缓存在后台，当价格触及是成交
+        """
+        return False
+
     def source_id(self, tg):
         self._tag = tg
         return self
 
-    def restricted(self, dt):
-        raise NotImplementedError()
-
-    def bid_mechanism(self):
+    def restricted_change(self, dt):
+        """
+        the limit pctchange of asset on dt
+        :param dt: str
+        :return: float
+        """
         raise NotImplementedError()
 
     def _is_active(self, session_label):
@@ -144,7 +126,6 @@ class Asset(object):
                                  self.first_traded,
                                  self.last_traded,
                                  self.tick_size,
-                                 self.price_multiplier
                                  ))
 
     def to_dict(self):
@@ -163,7 +144,6 @@ class Asset(object):
             'last_traded': self.last_traded,
             'exchange': self.exchange,
             'tick_size': self.tick_size,
-            'multiplier': self.price_multiplier
         }
 
 
@@ -172,16 +152,19 @@ class Equity(Asset):
     Asset subclass representing partial ownership of a company, trust, or
     partnership.
     """
+
     def __init__(self, sid):
         super(Equity, self).__init__(sid)
+        super()._initialize_basics_mappings()
+        self._implement_supplementary()
 
-    def _supplementary_for_asset(self):
-        tbl = self.metadata.tables['equity_basics']
+    def _implement_supplementary(self):
+        tbl = metadata.tables['equity_basics']
         ins = sa.select([tbl.c.dual_sid,
                          tbl.c.broker,
                          tbl.c.district,
                          tbl.c.initial_price]).where(tbl.c.sid == self.sid)
-        rp = self.engine.execute(ins)
+        rp = engine.execute(ins)
         raw = pd.DataFrame(rp.fetchall(), columns=['dual',
                                                    'broker',
                                                    'district',
@@ -194,35 +177,29 @@ class Equity(Asset):
         _tick_size = 200 if self.sid.startswith('688') else 100
         return _tick_size
 
-    # @property
-    # def increment(self):
-    #     per = 1 if self.sid.startswith('688') else self.tick_size
-    #     return per
-
     @property
     def increment(self):
         augment = False if self.sid.startswith('688') else True
         return augment
 
-    def restricted(self, dt):
+    def restricted_change(self, dt):
         """
             科创板股票上市后的前5个交易日不设涨跌幅限制，从第六个交易日开始设置20%涨跌幅限制
+            创业版上市首日不设立涨跌停限制， 以后20%
         """
-        end_dt = self.trading_calendar.dt_window_size(dt, RestrictedWindow)
+        end_dt = calendar.dt_window_size(dt, RestrictedWindow)
 
         if self.first_traded == dt:
-            _limit = np.inf if self.sid.startswith('688') else 0.44
-        elif self.first_traded >= end_dt:
-            _limit = np.inf if self.sid.startswith('688') else 0.1
+            pct = np.inf if self.sid.startswith('688') or self.sid.startswith('3') else 0.44
+        elif self.first_traded <= end_dt:
+            pct = np.inf if self.sid.startswith('688') else (0.2 if self.sid.startswith('3') else 0.1)
         else:
-            _limit = 0.2 if self.sid.startswith('688') else 0.1
-        return _limit
+            pct = 0.2 if self.sid.startswith('688') or self.sid.startswith('3') else 0.1
+        return pct
 
     @property
     def bid_mechanism(self):
-        """在临时停牌阶段，投资者可以继续申报也可以撤销申报，并且申报价格不受2%的报价限制。
-            复牌时，对已经接受的申报实行集合竞价撮合交易，申报价格最小变动单位为0.01"""
-        bid_mechanism = 0.02 if self.sid.startwith('688') else None
+        bid_mechanism = True if self.sid.startwith('688') else False
         return bid_mechanism
 
     def is_specialized(self, dt):
@@ -246,11 +223,14 @@ class Convertible(Asset):
        2.可转换公司债券转换期结束前的10个交易日停止交易
        3.中国证监会和交易所认为必须停止交易
     """
+
     def __init__(self, bond_id):
         super(Convertible, self).__init__(bond_id)
+        super()._initialize_basics_mappings()
+        self._implement_supplementary()
 
-    def _supplementary_for_asset(self):
-        tbl = self.metadata.tables['convertible_basics']
+    def _implement_supplementary(self):
+        tbl = metadata.tables['convertible_basics']
         ins = sa.select([tbl.c.swap_code,
                          tbl.c.put_price,
                          tbl.c.redeem_price,
@@ -259,7 +239,7 @@ class Convertible(Asset):
                          tbl.c.put_convert_price,
                          tbl.c.guarantor]).\
             where(tbl.c.sid == self.sid)
-        rp = self.engine.execute(ins)
+        rp = engine.execute(ins)
         df = pd.DataFrame(rp.fetchall(), columns=['swap_code',
                                                   'put_price',
                                                   'redeem_price',
@@ -272,14 +252,10 @@ class Convertible(Asset):
             self.__setattr__(k, v)
 
     @property
-    def is_interday(self):
+    def inter_day(self):
         return True
 
-    @property
-    def bid_mechanism(self):
-        return None
-
-    def restricted(self, dt):
+    def restricted_change(self, dt):
         return None
 
 
@@ -289,21 +265,14 @@ class Fund(Asset):
     目前不是所有的ETF都是t+0的，只有跨境ETF、债券ETF、黄金ETF、货币ETF实行的是t+0，境内A股ETF暂不支持t+0
     10%
     """
+
     def __init__(self, fund_id):
         super(Fund, self).__init__(fund_id)
+        super()._initialize_basics_mappings()
 
-    def _supplementary_for_asset(self):
-        """
-            fund has no extraordinary basics
-        """
-
-    @property
-    def bid_mechanism(self):
-        return None
-
-    def restricted(self, dt):
+    def restricted_change(self, dt):
         # fund 以1或者5开头 --- 5（SH） 1（SZ）
-        return 0.1 if self.sid.startswith('5') else 0.2
+        raise  NotImplementedError('创业板ETF或者科创板ETF为20%， 其他为10% 具体分析')
 
 
 __all__ = [
@@ -317,10 +286,12 @@ __all__ = [
 # if __name__ == '__main__':
 #
 #     asset = Equity('300570')
-#     # asset = Fund('515500')
-#     # asset = Convertible('123013')
-#     # p = pickle.dumps(asset)
-#     limit = asset.restricted('2020-03-05')
+#     asset = Convertible('123013')
+#     asset = Fund('515500')
+#     import pickle
+#     p = pickle.dumps(asset)
+#     print('p', p)
+#     limit = asset.restricted_change('2020-03-05')
 #     limit = asset.is_active('2020-03-05')
-#     # limit = asset.suspend('2020-09-04')
+#     limit = asset.suspend('2020-09-04')
 #     print('limit', limit)

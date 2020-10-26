@@ -48,8 +48,8 @@ class AssetFinder(object):
             setattr(self, table_name, metadata.tables[table_name])
         self._asset_type_cache = defaultdict(set)
 
-    # daily synchronize ---- change every day
     def synchronize(self):
+        # daily synchronize ---- change every day
         ins = sa.select([self.asset_router.c.sid, self.asset_router.c.asset_type])
         rp = engine.execute(ins)
         asset_frame = pd.DataFrame(rp.fetchall(), columns=['sid', 'asset_type'])
@@ -90,7 +90,7 @@ class AssetFinder(object):
 
     def retrieve_type_assets(self, category):
         if category == 'fund':
-            fund_assets = keyfilter(lambda x: x not in set(['equity', 'convertible']), self._asset_type_cache)
+            fund_assets = keyfilter(lambda x: x not in ['equity', 'convertible'], self._asset_type_cache)
             category_assets = set(chain(*fund_assets.values()))
         else:
             category_assets = self._asset_type_cache[category]
@@ -104,9 +104,6 @@ class AssetFinder(object):
         ----------
         sids : iterable of int
             Assets to retrieve.
-        default_none : bool
-            If True, return None for failed lookups.
-            If False, raise `SidsNotFound`.
 
         Returns
         -------
@@ -314,13 +311,15 @@ class AssetFinder(object):
         return frame
 
 
-def init_finder():
-    _finder = AssetFinder()
-    _finder.synchronize()
-    return _finder
+# def init_finder():
+#     _finder = AssetFinder()
+#     _finder.synchronize()
+#     return _finder
+
+asset_finder = AssetFinder()
 
 
-__all__ = ['init_finder']
+__all__ = ['asset_finder']
 
 
 # if __name__ == '__main__':

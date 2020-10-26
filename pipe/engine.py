@@ -12,7 +12,7 @@ from itertools import chain
 from abc import ABC, abstractmethod
 from pipe.loader.loader import PricingLoader
 from finance.restrictions import UnionRestrictions
-from gateway.asset.finder import init_finder
+from gateway.asset.finder import asset_finder
 
 
 class Engine(ABC):
@@ -31,7 +31,8 @@ class Engine(ABC):
 
     def _calculate_universe(self, dts):
         # default assets
-        equities = self.asset_finder.retrieve_type_assets('equity')
+        asset_finder.synchronize()
+        equities = asset_finder.retrieve_type_assets('equity')
         # save the high priority and asset which can be traded
         default_mask = self.restricted_rules.is_restricted(equities, dts)
         return default_mask
@@ -212,7 +213,7 @@ class SimplePipelineEngine(Engine):
                  disallow_righted=True,
                  disallow_violation=True):
         self.final = final_model
-        self.asset_finder = init_finder()
+        # self.asset_finder = init_finder()
         self.disallowed_righted = disallow_righted
         self.disallowed_violation = disallow_violation
         self.restricted_rules = UnionRestrictions(restrictions)

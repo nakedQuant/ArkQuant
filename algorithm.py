@@ -17,8 +17,8 @@ from error.errors import (
     ZeroCapitalError
 )
 # gateway api
-from gateway.asset.finder import init_finder
-from gateway.driver.data_portal import portal
+# from gateway.asset.finder import init_finder
+# from gateway.driver.data_portal import portal
 from gateway.driver.benchmark_source import BenchmarkSource
 # finance module
 from finance.ledger import Ledger
@@ -135,9 +135,9 @@ class TradingAlgorithm(object):
         assert sim_params.capital_base <= 0, ZeroCapitalError()
         self.sim_params = sim_params
         self.benchmark_returns = self._calculate_benchmark_returns()
-        # data interface
-        self.data_portal = portal
-        self.asset_finder = init_finder()
+        # # data interface
+        # self.data_portal = portal
+        # self.asset_finder = init_finder()
         # restrictions
         restrictions = restrictions or NoRestrictions()
         # set ledger

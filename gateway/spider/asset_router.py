@@ -14,7 +14,6 @@ from gateway.spider import Crawler
 from gateway.database.asset_writer import AssetWriter
 from gateway.driver.tools import _parse_url
 
-__all__ = ['AssetSpider', 'AssetRouterWriter']
 
 AssetData = namedtuple(
     'AssetData', (
@@ -235,6 +234,9 @@ class AssetRouterWriter(Crawler):
         self._writer_internal()
         # in case of pressure on spider network
         time.sleep(5)
+
+
+__all__ = ['AssetSpider', 'AssetRouterWriter']
 
 
 # if __name__ == '__main__':

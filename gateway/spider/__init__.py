@@ -12,9 +12,6 @@ from sqlalchemy import select, func
 from gateway.database import metadata, engine
 
 
-__all__ = ['Crawler']
-
-
 class Crawler(ABC):
 
     @property
@@ -80,3 +77,6 @@ class Crawler(ABC):
             intend to api _writer_internal
         """
         raise NotImplementedError()
+
+
+__all__ = ['Crawler']

@@ -392,5 +392,32 @@ strict_extensions : bool, optional
 environ : mapping[str -> str], optional
     The os environment to use. Many extensions use this to get parameters.
     This defaults to ``os.environ``.
+
+    extend :
+        __get__(self, instance, owner):调用一个属性时,触发
+        __set__(self, instance, value):为一个属性赋值时,触发
+        __delete__(self, instance):采用del删除属性时,触发
+
+创业板:
+1、申报数量100股及其整数倍；
+
+2、限价申报不超过30万股；
+
+3、市价申报不超过15万股；
+
+4、盘后定价申报的单笔申报数量不得超过100万股。
+
+
+规则变化之后，自上市首日起就可以作为融资融券标的。
+“N”---上市首日；
+
+“C”上市次日至第五日；
+
+“U”发行人未盈利，若发行人首次实现盈利，该特别标识取消；
+
+“W”发行人具有表决权差异安排，若发行人不再具有表决权差异安排，该特别标识取消；
+
+“V”发行人具有协议控制架构或类似特殊安排，若上市后不再具有相关安排，该特别标识取消；
+
 '''
 
