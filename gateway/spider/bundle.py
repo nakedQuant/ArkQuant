@@ -15,8 +15,6 @@ from gateway.spider import Crawler
 from gateway.spider.url import ASSETS_BUNDLES_URL
 from gateway.driver.tools import _parse_url
 
-__all__ = ['BundlesWriter']
-
 sema = threading.Semaphore(100)
 
 
@@ -156,8 +154,4 @@ class BundlesWriter(Crawler):
         self.rerun()
 
 
-# if __name__ == '__main__':
-#
-#     bundle = BundlesWriter(lmt=1)
-#     bundle.writer()
-#     bundle.request_convertible_kline('110055')
+__all__ = ['BundlesWriter']

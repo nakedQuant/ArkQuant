@@ -11246,3 +11246,100 @@ def _fit_statsmodel(x, y):
 #                 account.leverage < self.min_leverage):
 #             self.fail()
 # __func__ ---指向函数对象
+
+# max_capital = portfolio.portfolio_value * (self.max_notional - weights)
+#     agg_shares = current_share + amount
+#     price = portfolio.positions[asset].last_sync_price
+#     multiplier = np.floor(max_capital / (price * asset.tick_size))
+#     amount = asset.tick_size * multiplier
+#
+# if weights[asset.sid] >= self.max_notional and amount > 0:
+#     self.handle_violation(asset, amount, algo_datetime)
+#     amount = 0
+# else:
+#     max_capital = portfolio.portfolio_value * (self.max_notional - weights)
+#     price = portfolio.positions[asset].last_sync_price
+#     multiplier = np.floor(max_capital / (price * asset.tick_size))
+#     amount = asset.tick_size * multiplier
+
+
+# class MaxPositionSize(TradingControl):
+#     """
+#     TradingControl representing a limit on the magnitude of any single order
+#     placed with the given asset.  Can be specified by share or by dollar
+#     value. 深圳ST股票买入卖出都不受限制，上海买入限制50万股，卖出没有限制
+#     """
+#
+#     def __init__(self,
+#                  max_notional,
+#                  sliding_window=1,
+#                  on_error='log',
+#                  _fail_args='position amount exceed'):
+#         super(MaxPositionSize, self).__init__(
+#                                             on_error=on_error,
+#                                             _fail_args=_fail_args)
+#         self.max_notional = max_notional
+#         self.window = sliding_window
+#
+#     def validate(self,
+#                  asset,
+#                  amount,
+#                  portfolio,
+#                  algo_datetime):
+#         """
+#         Fail if the magnitude of the given order exceeds either self.max_shares
+#         or self.max_notional.
+#         """
+#         try:
+#             p = portfolio.positions[asset]
+#             current_share = p.amount
+#             sync_price = p.last_sync_price
+#         except KeyError:
+#             current_share = 0
+#             sync_price = 0.0
+#         agg_shares = current_share + amount
+#
+#         volume_window = portal.get_window([asset], algo_datetime, - abs(self.window), ['volume'])
+#         max_share = volume_window[asset.sid].mean() * self.max_notional
+#         too_many_shares = agg_shares > max_share
+#         if too_many_shares:
+#             self.handle_violation(asset, amount, algo_datetime)
+#             amount = max_share
+#         return amount
+
+# def set_asset_restrictions(self, restrictions, on_error='fail'):
+#     """Set a restriction on which assets can be ordered.
+#
+#     Parameters
+#     ----------
+#     restricted_list : Restrictions
+#         An object providing information about restricted assets.
+#
+#     See Also
+#     --------
+#     zipline.finance.asset_restrictions.Restrictions
+#     """
+#     control = RestrictedListOrder(on_error, restrictions)
+#     self.register_trading_control(control)
+#     self.restrictions |= restrictions
+
+# @api_method
+# def set_min_leverage(self, min_leverage, grace_period):
+#     """Set a limit on the minimum leverage of the algorithm.
+#
+#     Parameters
+#     ----------
+#     min_leverage : float
+#         The minimum leverage for the algorithm.
+#     grace_period : pd.Timedelta
+#         The offset from the start date used to enforce a minimum leverage.
+#     """
+#     deadline = self.sim_params.start_session + grace_period
+#     control = MinLeverage(min_leverage, deadline)
+#     self.register_account_control(control)
+
+def validate_account_controls(self):
+    for control in self.account_controls:
+        control.validate(self.portfolio,
+                         self.account,
+                         self.get_datetime())

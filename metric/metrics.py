@@ -7,7 +7,6 @@ Created on Sun Feb 17 16:11:34 2019
 """
 import numpy as np, operator as op
 from toolz import groupby
-from gateway.driver.benchmark_source import get_benchmark_returns
 from metric.exposure import alpha_beta_aligned
 
 
@@ -90,7 +89,7 @@ class PNL(object):
 
     def start_of_simulation(self,
                             ledger,
-                            benchmark,
+                            benchmark_returns,
                             sessions):
         self._previous_pnl = 0.0
 
@@ -121,7 +120,7 @@ class CashFlow(object):
 
     def start_of_simulation(self,
                             ledger,
-                            benchmark,
+                            benchmark_returns,
                             sessions):
         self._previous_cash_flow = 0.0
 
@@ -181,7 +180,7 @@ class Utility(object):
 
     def start_of_simulation(self,
                             ledger,
-                            benchmark,
+                            benchmark_returns,
                             sessions):
         self._capital_usage = 0.0
 
@@ -200,7 +199,7 @@ class Cushion(object):
 
     def start_of_simulation(self,
                             ledger,
-                            benchmark,
+                            benchmark_returns,
                             sessions):
         self.cushion = 1.0
 
@@ -286,7 +285,7 @@ class NumTradingDays(object):
 
     def start_of_simulation(self,
                             ledger,
-                            benchmark,
+                            benchmark_returns,
                             sessions):
         self._num_trading_days = 0
 
@@ -313,11 +312,10 @@ class BenchmarkReturnsAndVolatility(object):
 
     def start_of_simulation(self,
                             ledger,
-                            benchmark,
+                            benchmark_returns,
                             sessions):
         # 计算基准收益率
-        return_series = get_benchmark_returns(benchmark)
-        self.return_series = return_series[sessions]
+        self.return_series = benchmark_returns[sessions]
 
     def end_of_session(self,
                         packet,
@@ -339,14 +337,13 @@ class AlphaBeta(object):
     """End of nakedquant alpha and beta to the benchmark.
     """
     def __init__(self):
-        self.return_series  = None
+        self.return_series = None
 
     def start_of_simulation(self,
                             ledger,
-                            benchmark,
+                            benchmark_returns,
                             sessions):
-        return_series = get_benchmark_returns(benchmark)
-        self.return_series = return_series[sessions]
+        self.return_series = benchmark_returns[sessions]
 
     def end_of_simulation(self,
                    packet,
@@ -413,10 +410,10 @@ class ReturnsStatistic(object):
 
     def start_of_simulation(self,
                             ledger,
-                            benchmark,
+                            benchmark_returns,
                             sessions):
         # 计算基准收益率
-        return_series = get_benchmark_returns(benchmark)
+        return_series = benchmark_returns
         self.return_series = return_series[sessions]
 
     def end_of_session(self,

@@ -82,7 +82,7 @@ class StaticRestrictions(Restrictions):
         return selector
 
 
-class DtRestrictions(Restrictions):
+class DataBoundsRestrictions(Restrictions):
     """
         a. 剔除上市不足一个月的 --- 次新股波动性太大
     """
@@ -182,6 +182,6 @@ __all__ = [
     'UnionRestrictions',
     'NoRestrictions',
     'StaticRestrictions',
-    'DtRestrictions',
+    'DataBoundsRestrictions',
     'StatusRestrictions'
 ]

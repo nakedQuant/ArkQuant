@@ -87,6 +87,4 @@ class BenchmarkSource(object):
         return returns
 
 
-__all__ = [
-    'BenchmarkSource'
-]
+__all__ = ['BenchmarkSource']

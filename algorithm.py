@@ -29,7 +29,6 @@ from finance.restrictions import NoRestrictions
 from finance.control import (
     MaxPositionSize,
     MaxOrderSize,
-    MaxProportion,
     LongOnly,
     NoControl,
     NetLeverage
@@ -135,7 +134,6 @@ class TradingAlgorithm(object):
 
         assert sim_params.capital_base <= 0, ZeroCapitalError()
         self.sim_params = sim_params
-        # set benchmark returns
         self.benchmark_returns = self._calculate_benchmark_returns()
         # data interface
         self.data_portal = portal
@@ -258,16 +256,6 @@ class TradingAlgorithm(object):
                               allocation_model)
         return broker_class
 
-    def _create_metrics_tracker(self):
-        """
-            measure metrics of ledger
-        """
-        return MetricsTracker(
-            ledger=self.ledger,
-            sim_params=self.sim_params,
-            metrics_sets=self._metrics_set
-        )
-
     def _create_clock(self):
         """
         If the clock property is not set, then create one based on frequency.
@@ -308,6 +296,26 @@ class TradingAlgorithm(object):
         """
         return self._create_simulation()
 
+    def _create_metrics_tracker(self):
+        """
+            measure metrics of ledger
+        """
+        return MetricsTracker(
+            ledger=self.ledger,
+            sim_params=self.sim_params,
+            benchmark_rets=self.benchmark_returns,
+            metrics_sets=self._metrics_set
+        )
+
+    def _calculate_benchmark_returns(self):
+        """
+            benchmark returns
+        """
+        source = BenchmarkSource(self.sim_params.sessions)
+        benchmark = self.sim_params.benchmark
+        returns = source.calculate_returns(benchmark)
+        return returns
+
     @staticmethod
     def _create_daily_stats(perfs):
         # create daily and cumulative stats frame
@@ -322,15 +330,6 @@ class TradingAlgorithm(object):
         )
         daily_stats = pd.DataFrame(daily_perfs, index=daily_dts)
         return daily_stats
-
-    def _calculate_benchmark_returns(self):
-        """
-            benchmark returns
-        """
-        source = BenchmarkSource(self.sim_params.sessions)
-        benchmark = self.sim_params.benchmark
-        returns = source.calculate_returns(benchmark)
-        return returns
 
     def analyse(self, perf):
         with ZiplineAPI(self):
@@ -590,9 +589,7 @@ class TradingAlgorithm(object):
         self.trading_controls.append(control)
 
     @api_method
-    def set_max_position_size(self,
-                              window,
-                              max_notional):
+    def set_max_position_size(self, max_notional):
         """Set a limit on the number of shares and/or dollar value held for the
         given sid. Limits are treated as absolute values and are enforced at
         the time that the algo attempts to place an order for sid. This means
@@ -611,7 +608,6 @@ class TradingAlgorithm(object):
                 The maximum value to hold for an asset.
         """
         control = MaxPositionSize(max_notional,
-                                  sliding_window=window,
                                   on_error=self.on_error)
         self.register_trading_control(control)
 
@@ -638,30 +634,6 @@ class TradingAlgorithm(object):
         self.register_trading_control(control)
 
     @api_method
-    def set_max_proportion(self, max_notional):
-        """Set a rule specifying max proportion of position
-        """
-        control = MaxProportion(max_notional=max_notional,
-                                on_error=self.on_error)
-        self.register_trading_control(control)
-
-    # def set_asset_restrictions(self, restrictions, on_error='fail'):
-    #     """Set a restriction on which assets can be ordered.
-    #
-    #     Parameters
-    #     ----------
-    #     restricted_list : Restrictions
-    #         An object providing information about restricted assets.
-    #
-    #     See Also
-    #     --------
-    #     zipline.finance.asset_restrictions.Restrictions
-    #     """
-    #     control = RestrictedListOrder(on_error, restrictions)
-    #     self.register_trading_control(control)
-    #     self.restrictions |= restrictions
-
-    @api_method
     def set_long_only(self):
         """Set a rule specifying that this algorithm cannot take short
         positions.
@@ -680,12 +652,6 @@ class TradingAlgorithm(object):
             raise RegisterAccountControlPostInit()
         self.account_controls.append(control)
 
-    def validate_account_controls(self):
-        for control in self.account_controls:
-            control.validate(self.portfolio,
-                             self.account,
-                             self.get_datetime())
-
     @api_method
     def set_net_leverage(self, net_leverage):
         """Set a limit on the maximum leverage of the algorithm.
@@ -698,22 +664,6 @@ class TradingAlgorithm(object):
         """
         control = NetLeverage(base_leverage=net_leverage)
         self.register_account_control(control)
-
-    # @api_method
-    # def set_min_leverage(self, min_leverage, grace_period):
-    #     """Set a limit on the minimum leverage of the algorithm.
-    #
-    #     Parameters
-    #     ----------
-    #     min_leverage : float
-    #         The minimum leverage for the algorithm.
-    #     grace_period : pd.Timedelta
-    #         The offset from the start date used to enforce a minimum leverage.
-    #     """
-    #     deadline = self.sim_params.start_session + grace_period
-    #     control = MinLeverage(min_leverage, deadline)
-    #     self.register_account_control(control)
-
 
     ##################
     # End pipe API
@@ -756,3 +706,8 @@ class TradingAlgorithm(object):
 
 
 __all__ = ['TradingAlgorithm']
+
+
+if __name__ == '__main__':
+
+    TradingAlgorithm()

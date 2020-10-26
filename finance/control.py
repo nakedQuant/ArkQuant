@@ -5,7 +5,7 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-import warnings, logging, numpy as np
+import warnings, logging
 from abc import ABC, abstractmethod
 from error.errors import ZiplineError, AccountControlViolation
 from gateway.driver.data_portal import portal
@@ -26,8 +26,11 @@ class TradingControl(object):
     Abstract base class representing a fail-safe control on the behavior of any
     algorithm.
     """
-    def __init__(self, on_error='log'):
+    def __init__(self,
+                 on_error='log',
+                 _fail_args='violate_trading_controls'):
         self.on_error = on_error
+        self._fail_args = _fail_args
 
     def validate(self,
                  asset,
@@ -85,7 +88,7 @@ class TradingControl(object):
 
     def __repr__(self):
         return "{name}({attrs})".format(name=self.__class__.__name__,
-                                        attrs=self.__fail_args)
+                                        attrs=self._fail_args)
 
 
 class MaxOrderSize(TradingControl):
@@ -96,12 +99,13 @@ class MaxOrderSize(TradingControl):
     def __init__(self,
                  max_notional,
                  sliding_window=1,
-                 on_error='log'):
-        super(MaxOrderSize, self).__init__(on_error)
+                 on_error='log',
+                 _fail_args='order capital exceed'):
+        super(MaxOrderSize, self).__init__(on_error=on_error,
+                                           _fail_args=_fail_args
+                                           )
         self.max_notional = max_notional
         self.window = sliding_window
-        self.on_error = on_error
-        self.__fail_args = 'order capital exceed average asset amount'
 
     def validate(self,
                  asset,
@@ -112,85 +116,31 @@ class MaxOrderSize(TradingControl):
         Fail if the magnitude of the given order exceeds either self.max_shares
         or self.max_notional.
         """
-        amount_window = portal.get_window([asset], algo_datetime, - abs(self.window), ['volume'])
-        thres_amount = amount_window[asset.sid].mean() * self.max_notional
-        if amount > thres_amount:
+        sliding_window = portal.get_window([asset], algo_datetime, - abs(self.window), ['volume'])
+        threshold = sliding_window[asset.sid].mean() * self.max_notional
+        if amount > threshold:
             self.handle_violation(asset, amount, algo_datetime)
-            amount = thres_amount
+            amount = threshold
         return amount
 
 
 class MaxPositionSize(TradingControl):
     """
-    TradingControl representing a limit on the magnitude of any single order
-    placed with the given asset.  Can be specified by share or by dollar
-    value. 深圳ST股票买入卖出都不受限制，上海买入限制50万股，卖出没有限制
-    """
-
-    def __init__(self,
-                 max_notional,
-                 sliding_window=1,
-                 on_error='log'
-                 ):
-        super(MaxPositionSize, self).__init__(on_error)
-        self.max_notional = max_notional
-        self.window = sliding_window
-        self.on_error = on_error
-        self.__fail_args = 'order amount exceed average asset volume'
-
-    def validate(self,
-                 asset,
-                 amount,
-                 portfolio,
-                 algo_datetime):
-        """
-        Fail if the magnitude of the given order exceeds either self.max_shares
-        or self.max_notional.
-        """
-        current_share = portfolio.positions[asset].amount
-        agg_shares = current_share + amount
-        volume_window = portal.get_window([asset], algo_datetime, - abs(self.window), ['volume'])
-        max_share = volume_window[asset.sid].mean() * self.max_notional
-        too_many_shares = agg_shares > max_share
-        if too_many_shares:
-            self.handle_violation(asset, amount, algo_datetime)
-            amount = max_share
-        return amount
-
-
-class LongOnly(TradingControl):
-    """
-    TradingControl representing a prohibition against holding short positions.
-    """
-
-    def __init__(self):
-        super(LongOnly, self).__init__(on_error='fail')
-
-    def validate(self,
-                 asset,
-                 amount,
-                 portfolio,
-                 algo_datetime):
-        """
-        Fail if we would hold negative shares of asset after completing this
-        order.
-        """
-        if portfolio.positions[asset].amount + amount < 0:
-            self.handle_violation(asset, amount, algo_datetime)
-
-
-class MaxProportion(TradingControl):
-    """
-    TradingControl representing a limit on the maximum position size that can
-    be held by an algo for a given asset.
+        TradingControl representing a limit on the magnitude of any single order
+        placed with the given asset.  Can be specified by share or by dollar
+        value. 深圳ST股票买入卖出都不受限制，上海买入限制50万股，卖出没有限制
+        TradingControl representing a limit on the maximum position size that can
+        be held by an algo for a given asset.
+        --- 策略不可能存在卖出的买入相同的sid
     """
     def __init__(self,
                  max_notional,
-                 on_error='log'):
-        super(MaxProportion, self).__init__(on_error)
+                 on_error='log',
+                 _fail_args='position amount exceed proportion limit'):
+        super(MaxPositionSize, self).__init__(
+                                        on_error=on_error,
+                                        _fail_args=_fail_args)
         self.max_notional = max_notional
-        self.on_error = on_error
-        self.__fail_args = 'asset position proportion exceed portfolio limit'
 
     def validate(self,
                  asset,
@@ -202,17 +152,69 @@ class MaxProportion(TradingControl):
         greater in shares than self.max_shares or greater in dollar value than
         self.max_notional.
         """
+        # 基于sid 不是asset(由于不同的pipeline作为asset属性)
         weights = portfolio.current_portfolio_weights
 
-        if weights[asset.sid] >= self.max_notional:
+        if amount < 0:
+            return amount
+        elif weights[asset.sid] >= self.max_notional:
             self.handle_violation(asset, amount, algo_datetime)
             amount = 0
         else:
-            max_capital = portfolio.portfolio_value * (self.max_notional - weights)
-            price = portfolio.positions[asset].last_sync_price
-            multiplier = np.floor(max_capital / (price * asset.tick_size))
-            amount = asset.tick_size * multiplier
+            try:
+                p = portfolio.positions[asset]
+                current_share = p.amount
+                sync_price = p.last_sync_price
+            except KeyError:
+                current_share = 0
+                pctchange, pre_close = portal.get_open_pct(asset, algo_datetime)
+                sync_price = pre_close * (1 + asset.restricted(algo_datetime))
+            # calculate amount
+            max_capital = portfolio.portfolio_value * self.max_notional
+            max_amount = int(max_capital / sync_price)
+            amount = max_amount - current_share
         return amount
+
+
+class LongOnly(TradingControl):
+    """
+    TradingControl representing a prohibition against holding short positions.
+    """
+
+    def __init__(self):
+        super(LongOnly, self).__init__(on_error='fail',
+                                       _fail_args='violate long only control')
+
+    def validate(self,
+                 asset,
+                 amount,
+                 portfolio,
+                 algo_datetime):
+        """
+        Fail if we would hold negative shares of asset after completing this
+        order.
+        """
+        try:
+            current_share = portfolio.positions[asset].amount
+        except KeyError:
+            current_share = 0
+        if current_share + amount < 0:
+            self.handle_violation(asset, amount, algo_datetime)
+
+
+class MaxHolding(TradingControl):
+
+    def __init__(self):
+        super(MaxHolding, self).__init__()
+
+    def validate(self,
+                 asset,
+                 amount,
+                 portfolio,
+                 algo_datetime):
+        """
+            the num of pipelines means the num of holdings
+        """
 
 
 class NoControl(TradingControl):
@@ -221,7 +223,6 @@ class NoControl(TradingControl):
     """
     def __init__(self):
         super(NoControl, self).__init__()
-        self.__fail_args = 'short action is not allowed'
 
     def validate(self,
                  asset,
@@ -335,9 +336,8 @@ class NetLeverage(AccountControl):
             self.fail()
 
 
-__all__ = ['MaxPositionSize',
-           'MaxOrderSize',
-           'MaxProportion',
+__all__ = ['MaxOrderSize',
+           'MaxPositionSize',
            'LongOnly',
            'NoControl',
            'UnionControl',

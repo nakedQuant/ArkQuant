@@ -6,6 +6,7 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 import pandas as pd
+from toolz import valmap, keymap, merge_with
 from util.wrapper import _deprecated_getitem_method
 
 
@@ -32,6 +33,7 @@ class Portfolio(object):
         self.returns = 0.0
         self.utility = 0.0
         self._cash_flow = 0.0
+        # positions --- mappings
         self.positions = None
         self.positions_values = 0.0
         self.portfolio_value = capital_base
@@ -62,7 +64,7 @@ class Portfolio(object):
             'returns',
             'cash',
             'positions',
-            'uility'
+            'utility'
         },
     )
 
@@ -77,16 +79,13 @@ class Portfolio(object):
         times the multiplier.
         """
         if self.positions:
-            position_values = pd.Series({
-                p.sid: (
-                        p.last_sale_price *
-                        p.amount
-                )
-                for p in self.positions
-            })
-            weights = position_values / self.portfolio_value
+            # due to asset varies from tag name --- different pipelines has the same sid
+            p_values = valmap(lambda x:  x.last_sale_price * x.amount, self.positions)
+            p_values = keymap(lambda x: x.sid, p_values)
+            aggregate = merge_with(sum, p_values)
+            weights = pd.Series(aggregate) / self.portfolio_value
         else:
-            weights = None
+            weights = pd.Series(dtype='float')
         return weights
 
     def to_dict(self):

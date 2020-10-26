@@ -5,6 +5,7 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
+from toolz import valmap
 from collections import defaultdict, OrderedDict
 from functools import partial
 from finance.position import Position
@@ -107,10 +108,8 @@ class PositionTracker(object):
         return rights
 
     def get_positions(self):
-        # protocol list
-        protocols = [position.protocol for position in self.positions.values()]
-        protocols = {position.protocol for position in self.positions.values()}
-
+        # return protocol mappings
+        protocols = valmap(lambda x: x.protocol, self.positions)
         return protocols
 
 

@@ -135,7 +135,7 @@ class Engine(ABC):
         """
         :param calls: dict --- pipe_name : asset --- all pipeline
         :param puts: (ump position) + righted position + violate position + expired position
-        :param holdings: ledger positions
+        :param holding: ledger positions
         instructions:
             防止策略冲突 当pipeline的结果与ump的结果出现重叠 --- 说明存在问题，正常情况退出策略与买入策略应该不存交集
 
@@ -226,7 +226,7 @@ class SimplePipelineEngine(Engine):
         hold_proxy = {p.name: p for p in holdings}
         # union asset
         union_assets = set(call_proxy) & set(put_proxy)
-        assert union_assets, 'call assets should not be put at the same day'
+        assert union_assets, 'call assets should not be put at meantime'
         # 基于capital执行直接买入标的的
         extra = set(call_proxy) - set(hold_proxy)
         if extra:

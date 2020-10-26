@@ -201,8 +201,8 @@ class Equity(Asset):
 
     @property
     def increment(self):
-        incre = False if self.sid.startswith('688') else True
-        return incre
+        augment = False if self.sid.startswith('688') else True
+        return augment
 
     def restricted(self, dt):
         """
@@ -302,7 +302,8 @@ class Fund(Asset):
         return None
 
     def restricted(self, dt):
-        return 0.1
+        # fund 以1或者5开头 --- 5（SH） 1（SZ）
+        return 0.1 if self.sid.startswith('5') else 0.2
 
 
 __all__ = [

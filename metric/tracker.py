@@ -42,13 +42,14 @@ class MetricsTracker(object):
     def __init__(self,
                  ledger,
                  sim_params,
+                 benchmark_rets,
                  metrics_sets,
                  emission_rate='daily'
                  ):
         self._ledger = ledger
         self._session = sim_params.session
         self._capital_base = sim_params.capital_base
-        self._benchmark = sim_params.benchmark
+        self._benchmark_returns = benchmark_rets
         self._emission_rate = emission_rate
 
         # bind all of the hooks from the passed metric objects.
@@ -74,7 +75,7 @@ class MetricsTracker(object):
     def handle_start_of_simulation(self):
         self.start_of_simulation(
             self._ledger,
-            self._benchmark,
+            self._benchmark_returns,
             self._sessions
         )
 
