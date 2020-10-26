@@ -7,7 +7,7 @@ Created on Sun Feb 17 16:11:34 2019
 """
 import numpy as np, pandas as pd, datetime
 from toolz import partition_all
-from functools import partial
+from functools import partial, wraps
 from metric.analyzers import (
                         sortino_ratio,
                         sharpe_ratio,
@@ -51,52 +51,48 @@ class MetricsTracker(object):
         self._emission_rate = emission_rate
         self._metrics_set = metrics_sets
 
-        # # bind all of the hooks from the passed metric objects.
-        # for hook in self._hooks:
-        #     registered = []
-        #     for metric in metrics_sets:
-        #         try:
-        #             registered.append(getattr(metric, hook))
-        #         except AttributeError:
-        #             pass
-        #
-        #     def closing_over_loop_variables_is_hard():
-        #
-        #         def hook_implementation(*args, **kwargs):
-        #             for impl in registered:
-        #                 impl(*args, **kwargs)
-        #         return hook_implementation
-        #     # 属性 --- 方法
-        #     hook_implementation = closing_over_loop_variables_is_hard()
-        #     hook_implementation.__name__ = hook
-        #     # 属性 --- 方法
-        #     setattr(self, hook, hook_implementation)
+        # bind all of the hooks from the passed metric objects.
+        for hook in self._hooks:
+            registered = []
+            for metric in metrics_sets:
+                if hasattr(metric, hook):
+                    registered.append(metric)
+                # try:
+                #     registered.append(getattr(metric, hook))
+                # except AttributeError:
+                #     pass
+
+            def closing_over_loop_variables_is_hard(*args, **kwargs):
+
+                def hook_implementation():
+                    for impl in registered:
+                        getattr(impl, hook)(*args, **kwargs)
+                return hook_implementation
+            # 属性 --- 方法
+            setattr(self, hook, closing_over_loop_variables_is_hard)
 
     def handle_start_of_simulation(self, ledger):
-        print('handle_start_of_simulation', ledger)
-        for metric in self._metrics_set:
-            if hasattr(metric, 'start_of_simulation'):
-                print('metric', metric)
-                getattr(metric, 'start_of_simulation')(ledger,
-                                                       self._benchmark_returns,
-                                                       self._sessions)
+        self.start_of_simulation(
+            # self._ledger,
+            ledger,
+            self._benchmark_returns,
+            self._sessions
+        )
 
-    def handle_market_open(self, ledger):
+    def handle_market_open(self, session_label, ledger):
         """Handles the start of each session.
 
         Parameters
         ----------
         session_label : Timestamp
             The label of the session that is about to begin.
+        ledger : ledger object
         """
-        # ledger.start_of_session(session_label)
-        # print('handle_market_open ledger', ledger)
-        # self.start_of_session(ledger)
-        print('handle_market_open', ledger)
-        for metric in self._metrics_set:
-            if hasattr(metric, 'start_of_session'):
-                print('metric', metric)
-                getattr(metric, 'start_of_session')(ledger)
+        # ledger = self._ledger
+        # 账户初始化
+        ledger.start_of_session(session_label)
+        print('handle_market_open ledger', ledger)
+        self.start_of_session(ledger)
 
     def handle_market_close(self, completed_session, ledger):
         """Handles the close of the given day.

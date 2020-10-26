@@ -15,7 +15,7 @@ from gateway.driver.adjustArray import (
 DefaultFields = frozenset(['open', 'high', 'low', 'close', 'amount', 'volume'])
 
 
-# cacheobject --- bar_reader
+# cacheObject --- bar_reader
 class Expired(Exception):
     """
         mark a cacheobject has expired
@@ -187,20 +187,18 @@ class HistoryLoader(ABC):
             try:
                 cache_window = self._window_blocks.get(
                     asset_obj, session)
-                print('cache_window', cache_window)
+                # print('cache_window', cache_window)
             except Expired:
                 del self._window_blocks[asset_obj]
             except KeyError:
                 needed_assets.append(asset_obj)
             else:
                 slice_window = self._compute_slice_window(cache_window, session)
-                print('slice_window', slice_window['close'].iloc[-1])
-                slice_orig = orig_window[asset_obj.sid]
-                slice_orig.sort_index(inplace=True)
-                print('slice_orig', slice_orig['close'].iloc[-1])
+                slice_origin = orig_window[asset_obj.sid]
+                slice_origin.sort_index(inplace=True)
                 # series index
-                ratio = slice_orig['close'].iloc[-1] / slice_window['close'].iloc[-1]
-                print('ratio', ratio)
+                ratio = slice_origin['close'].iloc[-1] / slice_window['close'].iloc[-1]
+                # print('ratio', ratio)
                 asset_windows[asset_obj.sid] = slice_window.loc[:, fields] * ratio
 
         if needed_assets:
@@ -262,7 +260,7 @@ class HistoryLoader(ABC):
                                             window
                                             )
         else:
-             block_arrays = self.window(assets, field, dts, window)
+            block_arrays = self.window(assets, field, dts, window)
         return block_arrays
 
 
@@ -312,7 +310,7 @@ class HistoryMinuteLoader(HistoryLoader):
 
     @staticmethod
     def _compute_slice_window(_window, dts):
-        print('dts', dts)
+        # print('dts', dts)
         s_timestamp = pd.Timestamp(dts[0]).timestamp()
         e_timestamp = pd.Timestamp(dts[1]).timestamp()
         _idn = np.array(_window.index)

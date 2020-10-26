@@ -38,26 +38,25 @@ class HistoryCompatibleAdjustments(object):
                 # minutes --- 14:29
                 frame.index = [int(pd.Timestamp(i).timestamp() + 15 * 60 * 60 - 60) for i in frame.index]
                 return frame
-            adjustments['divdends'] = valmap(lambda x: reformat(x), adjustments['divdends'])
+            adjustments['dividends'] = valmap(lambda x: reformat(x), adjustments['dividends'])
             adjustments['rights'] = valmap(lambda x: reformat(x), adjustments['rights'])
         return adjustments
 
     @staticmethod
-    def _calculate_divdends_for_sid(adjustment, data, sid):
+    def _calculate_dividends_for_sid(adjustment, data, sid):
         """
            股权登记日后的下一个交易日就是除权日或除息日，这一天购入该公司股票的股东不再享有公司此次分红配股
            前复权：复权后价格=(复权前价格-现金红利)/(1+流通股份变动比例)
            后复权：复权后价格=复权前价格×(1+流通股份变动比例)+现金红利
         """
         # kline.index = [datetime.datetime.utcfromtimestamp(i).strftime('%Y-%m-%d %H:%M') for i in data['600000'].index]
-
         kline = data[sid]
         try:
-            divdends = adjustment['divdends'][sid]
-            print('divdends union', set(divdends.index) & set(kline.index))
-            ex_close = kline['close'].reindex(index=divdends.index)
-            qfq = (1 - divdends['bonus']/(10 * ex_close)) / \
-                  (1 + (divdends['sid_bonus'] + divdends['sid_transfer']) / 10)
+            dividends = adjustment['dividends'][sid]
+            # print('dividends union', set(dividends.index) & set(kline.index))
+            ex_close = kline['close'].reindex(index=dividends.index)
+            qfq = (1 - dividends['bonus']/(10 * ex_close)) / \
+                  (1 + (dividends['sid_bonus'] + dividends['sid_transfer']) / 10)
         except KeyError:
             qfq = pd.Series(dtype=float)
         return qfq
@@ -78,13 +77,13 @@ class HistoryCompatibleAdjustments(object):
         return qfq
 
     def calculate_coef_for_sid(self, adjustment, data, sid):
-        fq_divdends = self._calculate_divdends_for_sid(adjustment, data, sid)
+        fq_dividends = self._calculate_dividends_for_sid(adjustment, data, sid)
         fq_rights = self._calculate_rights_for_sid(adjustment, data, sid)
         # print('rights', fq_rights)
-        fq = fq_divdends.append(fq_rights)
+        fq = fq_dividends.append(fq_rights)
         fq.sort_index(ascending=False, inplace=True)
         qfq = 1 / fq.cumprod()
-        print('qfq', qfq)
+        # print('qfq', qfq)
         return qfq
 
     def calculate_adjustments_in_sessions(self, sessions, assets):

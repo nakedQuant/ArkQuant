@@ -44,6 +44,10 @@ class Portfolio(object):
     def cash_flow(self):
         return self._cash_flow
 
+    @cash_flow.setter
+    def cash_flow(self, val):
+        self._cash_flow = val
+
     def daily_value(self, session_ix):
         self.portfolio_daily_value[session_ix] = self.portfolio_value
 

@@ -127,11 +127,12 @@ class Pipeline(object):
         """
         Compute pipeline to get eager asset
         """
+        print('workspace', self._workspace.items())
         outputs = self._workspace.popitem(last=True)
         # asset tag pipeline_name --- 可能存在相同的持仓但是由不同的pipeline产生
         outputs = [f.source_id(self.name) for f in outputs]
-        final.resolve_final(outputs)
-        return {self.name: outputs}
+        final_out = final.resolve_final(outputs)
+        return {self.name: final_out}
 
     def to_execution_plan(self, metadata, mask, final):
         """

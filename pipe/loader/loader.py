@@ -69,7 +69,7 @@ class EventLoader(PipelineLoader):
         window = self.pipeline_domain.domain_window
         sdate = calendar.dt_window_size(dt, - window)
         for field in fields:
-            raw =  EVENT[field].load_raw_arrays([sdate, dt], assets)
+            raw = EVENT[field].load_raw_arrays([sdate, dt], assets)
             event_mappings[field] = raw
         return event_mappings
 
@@ -77,24 +77,24 @@ class EventLoader(PipelineLoader):
 __all__ = ['PricingLoader', 'EventLoader']
 
 
-if __name__ == '__main__':
-
-    asset = [Equity('600000')]
-    date = '2020-09-30'
-    kw_p = {'window': (5, 10), 'fields': ['close']}
-    cross_term_p = Term('cross', kw_p)
-    kw_p_1 = {'window': 10, 'fast': 12, 'slow': 26, 'period': 9, 'fields': ['high', 'amount']}
-    break_term_p = Term('break', kw_p_1, cross_term_p)
-    terms = [break_term_p, cross_term_p]
-    pricing = PricingLoader(terms)
-    kline = pricing.load_pipeline_arrays(date, asset, 'daily')
-    print('kline', kline)
-    kw = {'window': (5, 10), 'fields': ['massive', 'release']}
-    cross_term = Term('cross', kw)
-    kw = {'window': 10, 'fast': 12, 'slow': 26, 'period': 9, 'fields': ['ownership', 'holder']}
-    break_term = Term('break', kw, cross_term)
-    terms = [break_term, cross_term]
-    event = EventLoader(terms)
-    event_kline = event.load_pipeline_arrays(date, asset)
-    print('event_kline', event_kline)
+# if __name__ == '__main__':
+#
+#     asset = [Equity('600000')]
+#     date = '2020-09-30'
+#     kw_p = {'window': (5, 10), 'fields': ['close']}
+#     cross_term_p = Term('cross', kw_p)
+#     kw_p_1 = {'window': 10, 'fast': 12, 'slow': 26, 'period': 9, 'fields': ['high', 'amount']}
+#     break_term_p = Term('break', kw_p_1, cross_term_p)
+#     terms = [break_term_p, cross_term_p]
+#     pricing = PricingLoader(terms)
+#     kline = pricing.load_pipeline_arrays(date, asset, 'daily')
+#     print('kline', kline)
+#     kw = {'window': (5, 10), 'fields': ['massive', 'release']}
+#     cross_term = Term('cross', kw)
+#     kw = {'window': 10, 'fast': 12, 'slow': 26, 'period': 9, 'fields': ['ownership', 'holder']}
+#     break_term = Term('break', kw, cross_term)
+#     terms = [break_term, cross_term]
+#     event = EventLoader(terms)
+#     event_kline = event.load_pipeline_arrays(date, asset)
+#     print('event_kline', event_kline)
 

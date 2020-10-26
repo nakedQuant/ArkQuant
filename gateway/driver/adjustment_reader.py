@@ -49,7 +49,7 @@ class SQLiteAdjustmentReader(object):
                 raise TypeError('%s cannot mutate into %s' % (col, col_type))
         return df
 
-    def _get_divdends_with_ex_date(self, sessions):
+    def _get_dividends_with_ex_date(self, sessions):
         sdate, edate = sessions
         sql_dialect = sa.select([self.equity_splits.c.sid,
                                 self.equity_splits.c.ex_date,
@@ -82,7 +82,7 @@ class SQLiteAdjustmentReader(object):
 
     def _load_adjustments_from_sqlite(self, sessions):
         adjustments = dict()
-        adjustments['divdends'] = self._get_divdends_with_ex_date(sessions)
+        adjustments['dividends'] = self._get_dividends_with_ex_date(sessions)
         adjustments['rights'] = self._get_rights_with_ex_date(sessions)
         return adjustments
 
@@ -90,7 +90,7 @@ class SQLiteAdjustmentReader(object):
         pricing_adjustments = self._load_adjustments_from_sqlite(sessions)
         return pricing_adjustments
 
-    def retrieve_pay_date_divdends(self, assets, date):
+    def retrieve_pay_date_dividends(self, assets, date):
         sql_dialect = sa.select([self.equity_splits.c.sid,
                                  sa.cast(self.equity_splits.c.sid_bonus, sa.Numeric(5, 2)),
                                  sa.cast(self.equity_splits.c.sid_transfer, sa.Numeric(5, 2)),
@@ -104,8 +104,8 @@ class SQLiteAdjustmentReader(object):
         sids = [asset.sid for asset in assets]
         dividends = dividends.reindex(sids)
         dividends.dropna(how='all', inplace=True)
-        adjust_divdends = self._adjust_frame_type(dividends)
-        return adjust_divdends
+        adjust_dividends = self._adjust_frame_type(dividends)
+        return adjust_dividends
 
     def retrieve_ex_date_rights(self, assets, date):
         sql = sa.select([self.equity_rights.c.sid,

@@ -26,7 +26,6 @@ class _ConstantCumulativeRiskMetric(object):
                        packet,
                        ledger,
                        session_ix):
-        print('ledger', ledger)
         packet['cumulative_risk_metrics'][self._field] = self._value
 
     def end_of_simulation(self,
@@ -52,7 +51,6 @@ class SessionField(object):
                        packet,
                        ledger,
                        session_ix):
-        print('SessionField ledger', ledger)
         packet['daily_perf']['period_close'] = session_ix
 
 
@@ -79,7 +77,6 @@ class DailyLedgerField(object):
                        packet,
                        ledger,
                        session_ix):
-        # print('ledger', ledger)
         field = self._packet_field
         packet['daily_perf'][field] = self._get_ledger_field(ledger)
 
@@ -108,7 +105,6 @@ class PNL(object):
                        packet,
                        ledger,
                        session_ix):
-        # print('ledger', ledger)
         self._end_of_period('daily_perf', packet, ledger)
 
 
@@ -135,7 +131,6 @@ class CashFlow(object):
                        packet,
                        ledger,
                        session_ix):
-        # print('ledger', ledger)
         cash_flow = ledger.portfolio.cash_flow
         packet['daily_perf']['capital_used'] = (
                 cash_flow - self._previous_cash_flow
@@ -151,7 +146,6 @@ class Returns(object):
                        packet,
                        ledger,
                        session_ix):
-        # print('ledger', ledger)
         packet['daily_perf']['returns'] = ledger.daily_returns
         packet['cumulative_perf']['returns'] = ledger.portfolio.returns
 
@@ -165,7 +159,6 @@ class Profits(object):
                        packet,
                        ledger,
                        session_ix):
-        # print('ledger', ledger)
         packet['daily_perf']['profit'] = ledger.daily_position_stats(session_ix)
 
 
@@ -196,7 +189,6 @@ class Utility(object):
                        packet,
                        ledger,
                        session_ix):
-        # print('ledger', ledger)
         packet['cumulative_risk_metrics']['capital_usage'] = ledger.portfolio.uility
 
 
@@ -216,7 +208,6 @@ class Cushion(object):
                        packet,
                        ledger,
                        session_ix):
-        print('ledger', ledger)
         packet['cumulative_risk_metrics']['cushion'] = 1 - ledger.portfolio.uility
 
 
@@ -228,7 +219,6 @@ class Proportion(object):
                        packet,
                        ledger,
                        session_ix):
-        print('ledger', ledger)
         # 按照资产类别计算持仓
         portfolio = ledger.portfolio
         portfolio_position_values = portfolio.portfolio_value - portfolio.start_cash
@@ -265,7 +255,6 @@ class Positions(object):
                        packet,
                        ledger,
                        session_ix):
-        print('ledger', ledger)
         packet['daily_perf']['positions'] = ledger.positions()
 
 
@@ -276,7 +265,6 @@ class Transactions(object):
                        packet,
                        ledger,
                        session_ix):
-        print('ledger', ledger)
         packet['daily_perf']['transactions'] = ledger.get_transactions(session_ix)
 
 
@@ -287,7 +275,6 @@ class PeriodLabel(object):
                        packet,
                        ledger,
                        session_ix):
-        print('ledger', ledger)
         packet['cumulative_risk_metrics']['period_label'] = session_ix.strftime('%Y-%m')
 
 
@@ -307,7 +294,6 @@ class NumTradingDays(object):
                        packet,
                        ledger,
                        session_ix):
-        print('ledger', ledger)
         self._num_trading_days += 1
 
     def end_of_simulation(self,
@@ -336,7 +322,6 @@ class BenchmarkReturnsAndVolatility(object):
                         packet,
                         ledger,
                         session_ix):
-        print('ledger', ledger)
         return_series = self.returns_series
         daily_returns_series = return_series[return_series.index <= session_ix]
         # Series.expanding(self, min_periods=1, center=False, axis=0)
@@ -437,7 +422,6 @@ class ReturnsStatistic(object):
                         ledger,
                         session_ix
                         ):
-        print('ledger', ledger)
         daily_returns_series = ledger.daily_returns_series
         return_series = self.returns_series
         #

@@ -35,7 +35,8 @@ class Engine(ABC):
     def _calculate_universe(self, dts):
         # default assets
         asset_finder.synchronize()
-        equities = asset_finder.retrieve_type_assets('equity')
+        # equities = asset_finder.retrieve_type_assets('equity')
+        equities = list(asset_finder.retrieve_type_assets('equity'))[:30]
         # save the high priority and asset which can be traded
         default_mask = self.restricted_rules.is_restricted(equities, dts)
         return default_mask
@@ -78,7 +79,8 @@ class Engine(ABC):
         pipe : zipline.pipe.Pipeline
             The pipe to run.
         """
-        yield pipeline.to_execution_plan(metadata, mask, self.final)
+        out = pipeline.to_execution_plan(metadata, mask, self.final)
+        return out
 
     def run_pipeline(self, pipeline_metadata, mask):
         """
@@ -90,14 +92,21 @@ class Engine(ABC):
         ----------
         return --- assets which tag by pipeline name
         """
-        _pipe_func = partial(self._run_pipeline,
-                             mask=mask,
-                             metadata=pipeline_metadata)
+        _gen_func = partial(self._run_pipeline,
+                            mask=mask,
+                            metadata=pipeline_metadata)
 
-        with Pool(processes=len(self.pipelines))as pool:
-            results = [pool.apply_async(_pipe_func, pipeline)
-                       for pipeline in self.pipelines]
-        yield results
+        # with Pool(processes=len(self.pipelines))as pool:
+        #     results = [pool.apply_async(_gen_func, pipeline)
+        #                for pipeline in self.pipelines]
+        #     res = [r.get() for r in results]
+
+        results = []
+        for pipeline in self.pipelines:
+            out = _gen_func(pipeline)
+            print('out', out)
+            results.append(out)
+        return results
 
     @staticmethod
     def _run_ump(pipeline, position, metadata):
@@ -118,7 +127,8 @@ class Engine(ABC):
         with Pool(processes=len(proxy_pipeline))as pool:
             results = [pool.apply_async(_ump_func, proxy_pipeline[name], p)
                        for name, p in proxy_position.items()]
-        output = [r for r in results if r]
+            res = [r.get() for r in results]
+        output = [r for r in res if r]
         return output
 
     def execute_algorithm(self, ledger, dts):
@@ -126,9 +136,12 @@ class Engine(ABC):
             calculate pipelines and ump
         """
         metadata, default_mask = self._initialize_metadata(dts)
+        print('step one')
         traded_positions, removed_positions = self._divide_positions(ledger, dts)
+        print('step two')
         # 执行算法逻辑
         pipes = self.run_pipeline(metadata, default_mask)
+        print('pipes step three', pipes)
         # 剔除righted positions, violate_positions, expired_positions
         ump_positions = set(self.run_ump(metadata, traded_positions)) | removed_positions
         yield self.resolve_conflicts(pipes, ump_positions, ledger.positions)

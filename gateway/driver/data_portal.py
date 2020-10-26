@@ -78,7 +78,7 @@ class DataPortal(object):
         -------
             equity divdends or cash divdends
         """
-        dividends = self._adjustment_reader.retrieve_pay_date_divdends(assets, trading_day)
+        dividends = self._adjustment_reader.retrieve_pay_date_dividends(assets, trading_day)
         return dividends
 
     def get_rights(self, assets, trading_day):

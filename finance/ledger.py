@@ -43,7 +43,7 @@ class Ledger(object):
     @property
     def positions(self):
         # 获取position protocol
-        assert not self._dirty_positions, 'positions are not accurate'
+        # assert not self._dirty_positions, 'positions are not accurate'
         return self.position_tracker.get_positions()
 
     @property
@@ -67,7 +67,7 @@ class Ledger(object):
         self._cash_flow(left_cash)
         self._previous_total_returns = self._portfolio.returns
         self._dirty_portfolio = True
-        self._dirty_positions = True
+        # self._dirty_positions = True
 
     def process_transaction(self, transactions):
         txn_capital = self.position_tracker.handle_transaction(transactions)
@@ -119,7 +119,7 @@ class Ledger(object):
 
     def end_of_session(self):
         session_ix = self.position_tracker.synchronize()
-        self._dirty_positions = False
+        # self._dirty_positions = False
         self._calculate_portfolio_stats()
         self.portfolio.daily_returns(session_ix)
         self._dirty_portfolio = False

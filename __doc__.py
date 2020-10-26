@@ -419,5 +419,10 @@ environ : mapping[str -> str], optional
 
 “V”发行人具有协议控制架构或类似特殊安排，若上市后不再具有相关安排，该特别标识取消；
 
+
+
+优化:
+1. price_loader ---- all equity assets consumer too much time
+
 '''
 

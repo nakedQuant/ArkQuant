@@ -104,7 +104,7 @@ class PositionTracker(object):
             配股机制有点复杂 ， freeze capital
             如果不缴纳款，自动放弃到期除权相当于亏损,在股权登记日卖出，一般的配股缴款起止日为5个交易日
         """
-        rights = portal.get_rights_for_asset(assets, dt)
+        rights = portal.get_rights(assets, dt)
         return rights
 
     def get_positions(self):
