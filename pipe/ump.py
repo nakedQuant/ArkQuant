@@ -24,6 +24,7 @@ class UmpPickers(object):
         self._validate_features(pickers)
 
     def _validate_features(self, features):
+        features = [features] if isinstance(features, Term) else features
         for feature in features:
             assert isinstance(feature, Term), 'must term type'
         self._poll_pickers = features

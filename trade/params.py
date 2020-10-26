@@ -30,7 +30,8 @@ class SimulationParameters(object):
                  capital_base,
                  loan_base,
                  per_capital,
-                 data_frequency):
+                 data_frequency,
+                 benchmark):
 
         self._delay = delay
         self._loan = loan_base
@@ -39,6 +40,7 @@ class SimulationParameters(object):
         self._capital_base = capital_base
 
         self._data_frequency = data_frequency
+        self._benchmark = benchmark
         self._sessions = calendar.session_in_range(start_session, end_session)
 
     @property
@@ -52,6 +54,10 @@ class SimulationParameters(object):
     @property
     def data_frequency(self):
         return self._data_frequency
+
+    @property
+    def benchmark(self):
+        return self._benchmark
 
     @property
     def delay(self):
@@ -101,7 +107,8 @@ def create_simulation_parameters(start=None,
                                  per_capital=DEFAULT_PER_CAPITAL_BASE,
                                  capital_base=DEFAULT_CAPITAL_BASE,
                                  loan_base=0.0,
-                                 data_frequency='daily'):
+                                 data_frequency='daily',
+                                 benchmark='000001'):
 
     if start is None:
         start = "{0}-01-01".format(2004)
@@ -124,7 +131,8 @@ def create_simulation_parameters(start=None,
         capital_base=capital_base,
         loan_base=loan_base,
         per_capital=per_capital,
-        data_frequency=data_frequency
+        data_frequency=data_frequency,
+        benchmark=benchmark
     )
     return sim_params
 

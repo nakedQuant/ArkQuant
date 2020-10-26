@@ -24,7 +24,7 @@ class Pipeline(object):
     __slots__ = ['_terms_store', '_graph', '_workspace', '_ump']
 
     def __init__(self, terms, ump_picker=None, ):
-        self._terms_store = terms
+        self._terms_store = [terms] if isinstance(terms, Term) else terms
         self._workspace = OrderedDict()
         self._graph = self._init_graph()
         self._ump = UmpPickers(ump_picker) if ump_picker else UmpPickers(terms)

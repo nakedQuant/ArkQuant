@@ -147,6 +147,7 @@ class Calendar (object):
         :param end_date: pd.Timestamp
         :return: sessions exclude end_date
         """
+        # end_date = end_date.strftime('%Y-%m-%d') if isinstance(end_date, pd.Timestamp) else end_date
         if end_date < start_date:
             raise ValueError("End date %s cannot precede start date %s." %
                              (end_date.strftime("%Y-%m-%d"),

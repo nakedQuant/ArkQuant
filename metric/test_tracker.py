@@ -40,48 +40,48 @@ class MetricsTracker(object):
     )
 
     def __init__(self,
+                 ledger,
                  sim_params,
                  benchmark_rets,
                  metrics_sets,
                  emission_rate='daily'
                  ):
+        self._ledger = ledger
         self._sessions = sim_params.sessions
         self._capital_base = sim_params.capital_base
         self._benchmark_returns = benchmark_rets
         self._emission_rate = emission_rate
-        self._metrics_set = metrics_sets
 
-        # # bind all of the hooks from the passed metric objects.
-        # for hook in self._hooks:
-        #     registered = []
-        #     for metric in metrics_sets:
-        #         try:
-        #             registered.append(getattr(metric, hook))
-        #         except AttributeError:
-        #             pass
-        #
-        #     def closing_over_loop_variables_is_hard():
-        #
-        #         def hook_implementation(*args, **kwargs):
-        #             for impl in registered:
-        #                 impl(*args, **kwargs)
-        #         return hook_implementation
-        #     # 属性 --- 方法
-        #     hook_implementation = closing_over_loop_variables_is_hard()
-        #     hook_implementation.__name__ = hook
-        #     # 属性 --- 方法
-        #     setattr(self, hook, hook_implementation)
+        # bind all of the hooks from the passed metric objects.
+        for hook in self._hooks:
+            registered = []
+            for metric in metrics_sets:
+                try:
+                    registered.append(getattr(metric, hook))
+                except AttributeError:
+                    pass
 
-    def handle_start_of_simulation(self, ledger):
-        print('handle_start_of_simulation', ledger)
-        for metric in self._metrics_set:
-            if hasattr(metric, 'start_of_simulation'):
-                print('metric', metric)
-                getattr(metric, 'start_of_simulation')(ledger,
-                                                       self._benchmark_returns,
-                                                       self._sessions)
+            def closing_over_loop_variables_is_hard():
 
-    def handle_market_open(self, ledger):
+                def hook_implementation(*args, **kwargs):
+                    for impl in registered:
+                        impl(*args, **kwargs)
+                return hook_implementation
+            # 属性 --- 方法
+            hook_implementation = closing_over_loop_variables_is_hard()
+            hook_implementation.__name__ = hook
+            # 属性 --- 方法
+            setattr(self, hook, hook_implementation)
+
+    def handle_start_of_simulation(self):
+        self.start_of_simulation(
+            self._ledger,
+            self._benchmark_returns,
+            self._sessions
+        )
+        print('handle_start_of_simulation ledger', self._ledger)
+
+    def handle_market_open(self, session_label):
         """Handles the start of each session.
 
         Parameters
@@ -89,16 +89,13 @@ class MetricsTracker(object):
         session_label : Timestamp
             The label of the session that is about to begin.
         """
-        # ledger.start_of_session(session_label)
-        # print('handle_market_open ledger', ledger)
-        # self.start_of_session(ledger)
-        print('handle_market_open', ledger)
-        for metric in self._metrics_set:
-            if hasattr(metric, 'start_of_session'):
-                print('metric', metric)
-                getattr(metric, 'start_of_session')(ledger)
+        ledger = self._ledger
+        # 账户初始化
+        ledger.start_of_session(session_label)
+        print('handle_market_open ledger', ledger)
+        self.start_of_session(ledger)
 
-    def handle_market_close(self, completed_session, ledger):
+    def handle_market_close(self, completed_session):
         """Handles the close of the given day.
 
         Parameters
@@ -121,6 +118,7 @@ class MetricsTracker(object):
             'cumulative_perf': {},
             'cumulative_risk_metrics': {},
         }
+        ledger = self._ledger
         ledger.end_of_session()
         print('handle_market_close ledger', ledger)
         self.end_of_session(
@@ -130,7 +128,7 @@ class MetricsTracker(object):
         )
         return packet
 
-    def handle_simulation_end(self, ledger):
+    def handle_simulation_end(self):
         """
         When the nakedquant is complete, run the full period risk report
         and send it out on the results socket.
@@ -138,7 +136,7 @@ class MetricsTracker(object):
         packet = {}
         self.end_of_simulation(
             packet,
-            ledger,
+            self._ledger,
             self._benchmark,
             self._sessions,
         )

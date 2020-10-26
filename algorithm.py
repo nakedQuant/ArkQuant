@@ -16,10 +16,6 @@ from error.errors import (
     SetSlippagePostInit,
     ZeroCapitalError
 )
-# gateway api
-# from gateway.asset.finder import init_finder
-# from gateway.driver.data_portal import portal
-from gateway.driver.benchmark_source import BenchmarkSource
 # finance module
 from finance.ledger import Ledger
 from finance.slippage import NoSlippage
@@ -55,8 +51,12 @@ from metric import default_metrics
 from metric.tracker import MetricsTracker, _ClassicRiskMetrics
 # util api method
 from util.wrapper import api_method
-from util.api_support import ZiplineAPI
+from util.api_support import AlgoAPI
 from util.events import EventManager, Event, Always
+# gateway api
+# from gateway.asset.finder import init_finder
+# from gateway.driver.data_portal import portal
+from gateway.driver.benchmark_source import BenchmarkSource
 
 
 class TradingAlgorithm(object):
@@ -98,6 +98,7 @@ class TradingAlgorithm(object):
     """
     def __init__(self,
                  sim_params,
+                 pipelines,
                  on_error='log',
                  # finance module
                  slippage=None,
@@ -110,7 +111,7 @@ class TradingAlgorithm(object):
                  uncover_algo=None,
                  divison_model=None,
                  # pipe API
-                 pipelines=None,
+                 scripts=None,
                  final=None,
                  disallow_righted=False,
                  disallowed_violation=True,
@@ -132,7 +133,7 @@ class TradingAlgorithm(object):
                  create_event_context=None,
                  **initialize_kwargs):
 
-        assert sim_params.capital_base <= 0, ZeroCapitalError()
+        assert sim_params.capital_base > 0, ZeroCapitalError()
         self.sim_params = sim_params
         self.benchmark_returns = self._calculate_benchmark_returns()
         # # data interface
@@ -162,10 +163,10 @@ class TradingAlgorithm(object):
         # Initialize pipe_engine API
         self.final = final or Final()
         self.restrictions = restrictions
-        self.pipelines, self.pipeline_engine = self._construct_pipeline_engine(
-                                                        pipelines,
-                                                        disallow_righted,
-                                                        disallowed_violation)
+        self.pipelines = self.validate_pipeline(pipelines)
+        self.pipeline_engine = self._construct_pipeline_engine(
+                                                    disallow_righted,
+                                                    disallowed_violation)
         # set allocation policy
         risk_allocation = risk_allocation or Equal()
         # init broker
@@ -187,7 +188,7 @@ class TradingAlgorithm(object):
         # set event manager
         self.event_manager = EventManager(create_event_context)
         self.event_manager.add_event(
-            Event(Always(), _handle_data.__func__),
+            Event(Always(), _handle_data),
             prepend=True,
         )
 
@@ -204,7 +205,7 @@ class TradingAlgorithm(object):
             pass
 
         self._before_trading_start = before_trading_start or noop
-        self._initialize = initialize(initialize_kwargs) or noop
+        self._initialize = initialize or noop
 
     def _create_generator(self):
         """
@@ -219,25 +220,27 @@ class TradingAlgorithm(object):
                                     self.division_model)
         return generator_class
 
-    def _construct_pipeline_engine(self,
-                                   pipelines,
-                                   righted,
-                                   violation):
-        """
-        Construct and store a PipelineEngine from loader.
-        If get_loader is None, constructs an ExplodingPipelineEngine
-        """
+    @staticmethod
+    def validate_pipeline(pipelines):
         # pipelines = []
         # for script_file in scripts:
         #     name = script_file.rsplit('.')[-2]
         #     with open(script_file, 'r') as f:
         #         exec(f.read(), self.namespace)
         #         pipelines.append(self.namespace[name])
-        if pipelines is None:
-            return []
-        pipes = [pipelines] if isinstance(pipelines, Pipeline) else pipelines
+        assert pipelines is not None, 'pipelines must validate and composed by terms '
+        pipes = [pipelines if isinstance(pipelines, Pipeline) else pipelines]
+        return pipes
+
+    def _construct_pipeline_engine(self,
+                                   righted,
+                                   violation):
+        """
+        Construct and store a PipelineEngine from loader.
+        If get_loader is None, constructs an ExplodingPipelineEngine
+        """
         try:
-            engine = SimplePipelineEngine(pipes,
+            engine = SimplePipelineEngine(self.pipelines,
                                           self.final,
                                           self.restrictions,
                                           righted,
@@ -271,7 +274,7 @@ class TradingAlgorithm(object):
         Call self._initialize with `self` made available to Zipline API
         functions.
         """
-        with ZiplineAPI(self):
+        with AlgoAPI(self):
             self._initialize(self, *args, **kwargs)
 
     def _create_simulation(self):
@@ -301,7 +304,7 @@ class TradingAlgorithm(object):
             measure metrics of ledger
         """
         return MetricsTracker(
-            ledger=self.ledger,
+            # ledger=self.ledger,
             sim_params=self.sim_params,
             benchmark_rets=self.benchmark_returns,
             metrics_sets=self._metrics_set
@@ -332,28 +335,41 @@ class TradingAlgorithm(object):
         return daily_stats
 
     def analyse(self, perf):
-        with ZiplineAPI(self):
+        with AlgoAPI(self):
             stats = self._analyze.end_of_simulation(
                 perf,
                 self.ledger,
                 self.benchmark_returns)
         return stats
 
+    # def run(self):
+    #     """Run the algorithm.
+    #     """
+    #     # Create px_trade and loop through simulated_trading.
+    #     # Each iteration returns a perf dictionary
+    #     try:
+    #         perfs = []
+    #         for perf in self.yield_simulation():
+    #             perfs.append(perf)
+    #         # convert perf dict to pandas frame
+    #         daily_stats = self._create_daily_stats(perfs)
+    #         analysis = self.analyse(daily_stats)
+    #         return analysis
+    #     except Exception as e:
+    #         print('error:', e)
+
     def run(self):
         """Run the algorithm.
         """
         # Create px_trade and loop through simulated_trading.
         # Each iteration returns a perf dictionary
-        try:
-            perfs = []
-            for perf in self.yield_simulation():
-                perfs.append(perf)
-            # convert perf dict to pandas frame
-            daily_stats = self._create_daily_stats(perfs)
-            analysis = self.analyse(daily_stats)
-            return analysis
-        except Exception as e:
-            print('error:', e)
+        perfs = []
+        for perf in self.yield_simulation():
+            perfs.append(perf)
+        # convert perf dict to pandas frame
+        daily_stats = self._create_daily_stats(perfs)
+        analysis = self.analyse(daily_stats)
+        return analysis
 
     @api_method
     def get_environment(self, field='platform'):
@@ -710,4 +726,21 @@ __all__ = ['TradingAlgorithm']
 
 if __name__ == '__main__':
 
-    TradingAlgorithm()
+    from trade.params import create_simulation_parameters
+    trading_params=create_simulation_parameters()
+    print('trading_params', trading_params)
+    # set pipeline term
+    from pipe.term import Term
+    kw = {'window': (5, 10)}
+    cross_term = Term('cross', kw)
+    # print('sma_term', cross_term)
+    kw = {'window': 10, 'fast': 12, 'slow': 26, 'period': 9}
+    break_term = Term('break', kw, cross_term)
+    # print(break_term.dependencies)
+    # set pipeline
+    pipeline = Pipeline(break_term)
+    # initialize trading algo
+    trading = TradingAlgorithm(trading_params, pipeline)
+    # run algorithm
+    trading.run()
+

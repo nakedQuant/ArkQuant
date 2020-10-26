@@ -73,9 +73,9 @@ class Broker(object):
 
     def implement_broke(self, ledger, dts):
         """建立执行计划"""
-        capital = ledger.portfolio.start_cash.copy()
+        capital = ledger.portfolio.start_cash
         # {pipeline_name : asset} , {pipeline_name : position} , (position, asset)
-        positives, negatives, duals = self.engine.execute_algorithm(ledger)
+        positives, negatives, duals = self.engine.execute_algorithm(ledger, dts)
         portfolio = ledger.portfolio
         # 直接买入
         call_txns = self.implement_capital(positives, capital, portfolio, dts)

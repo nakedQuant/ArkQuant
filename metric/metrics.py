@@ -26,6 +26,7 @@ class _ConstantCumulativeRiskMetric(object):
                        packet,
                        ledger,
                        session_ix):
+        print('ledger', ledger)
         packet['cumulative_risk_metrics'][self._field] = self._value
 
     def end_of_simulation(self,
@@ -51,6 +52,7 @@ class SessionField(object):
                        packet,
                        ledger,
                        session_ix):
+        print('SessionField ledger', ledger)
         packet['daily_perf']['period_close'] = session_ix
 
 
@@ -77,6 +79,7 @@ class DailyLedgerField(object):
                        packet,
                        ledger,
                        session_ix):
+        # print('ledger', ledger)
         field = self._packet_field
         packet['daily_perf'][field] = self._get_ledger_field(ledger)
 
@@ -87,11 +90,11 @@ class PNL(object):
     def __init__(self):
         self._previous_pnl = 0.0
 
-    def start_of_simulation(self,
-                            ledger,
-                            benchmark_returns,
-                            sessions):
-        self._previous_pnl = 0.0
+    # def start_of_simulation(self,
+    #                         ledger,
+    #                         benchmark_returns,
+    #                         sessions):
+    #     self._previous_pnl = 0.0
 
     def start_of_session(self, ledger):
         self._previous_pnl = ledger.portfolio.pnl
@@ -105,6 +108,7 @@ class PNL(object):
                        packet,
                        ledger,
                        session_ix):
+        # print('ledger', ledger)
         self._end_of_period('daily_perf', packet, ledger)
 
 
@@ -131,6 +135,7 @@ class CashFlow(object):
                        packet,
                        ledger,
                        session_ix):
+        # print('ledger', ledger)
         cash_flow = ledger.portfolio.cash_flow
         packet['daily_perf']['capital_used'] = (
                 cash_flow - self._previous_cash_flow
@@ -146,6 +151,7 @@ class Returns(object):
                        packet,
                        ledger,
                        session_ix):
+        # print('ledger', ledger)
         packet['daily_perf']['returns'] = ledger.daily_returns
         packet['cumulative_perf']['returns'] = ledger.portfolio.returns
 
@@ -159,6 +165,7 @@ class Profits(object):
                        packet,
                        ledger,
                        session_ix):
+        # print('ledger', ledger)
         packet['daily_perf']['profit'] = ledger.daily_position_stats(session_ix)
 
 
@@ -168,7 +175,8 @@ class Weights(object):
                         packet,
                         ledger,
                         session_ix):
-        weights  = ledger.portolio.current_portfolio_weights
+        # print('ledger', ledger)
+        weights = ledger.portolio.current_portfolio_weights
         packet['cumulative_risk_metrics']['portfolio_weights'] = weights
 
 
@@ -188,6 +196,7 @@ class Utility(object):
                        packet,
                        ledger,
                        session_ix):
+        # print('ledger', ledger)
         packet['cumulative_risk_metrics']['capital_usage'] = ledger.portfolio.uility
 
 
@@ -207,6 +216,7 @@ class Cushion(object):
                        packet,
                        ledger,
                        session_ix):
+        print('ledger', ledger)
         packet['cumulative_risk_metrics']['cushion'] = 1 - ledger.portfolio.uility
 
 
@@ -218,6 +228,7 @@ class Proportion(object):
                        packet,
                        ledger,
                        session_ix):
+        print('ledger', ledger)
         # 按照资产类别计算持仓
         portfolio = ledger.portfolio
         portfolio_position_values = portfolio.portfolio_value - portfolio.start_cash
@@ -226,8 +237,8 @@ class Proportion(object):
         mappings = groupby(lambda x : x.asset.asset_type,protocols)
         # 计算大类权重
         from toolz import valmap
-        mappings_value = valmap(lambda x : sum([p.amount * p.last_sync_price for p in x]),mappings)
-        ratio = valmap(lambda x : x / portfolio_position_values , mappings_value)
+        mappings_value = valmap(lambda x: sum([p.amount * p.last_sync_price for p in x]), mappings)
+        ratio = valmap(lambda x : x / portfolio_position_values, mappings_value)
         packet['cumulative_risk_metrics']['proportion'] = ratio
 
 
@@ -254,6 +265,7 @@ class Positions(object):
                        packet,
                        ledger,
                        session_ix):
+        print('ledger', ledger)
         packet['daily_perf']['positions'] = ledger.positions()
 
 
@@ -264,6 +276,7 @@ class Transactions(object):
                        packet,
                        ledger,
                        session_ix):
+        print('ledger', ledger)
         packet['daily_perf']['transactions'] = ledger.get_transactions(session_ix)
 
 
@@ -274,6 +287,7 @@ class PeriodLabel(object):
                        packet,
                        ledger,
                        session_ix):
+        print('ledger', ledger)
         packet['cumulative_risk_metrics']['period_label'] = session_ix.strftime('%Y-%m')
 
 
@@ -293,6 +307,7 @@ class NumTradingDays(object):
                        packet,
                        ledger,
                        session_ix):
+        print('ledger', ledger)
         self._num_trading_days += 1
 
     def end_of_simulation(self,
@@ -321,13 +336,14 @@ class BenchmarkReturnsAndVolatility(object):
                         packet,
                         ledger,
                         session_ix):
+        print('ledger', ledger)
         return_series = self.returns_series
         daily_returns_series = return_series[return_series.index <= session_ix]
         # Series.expanding(self, min_periods=1, center=False, axis=0)
         cumulative_annual_volatility = (
             daily_returns_series.expanding(2).std(ddof=1) * np.sqrt(252)
         ).values[-1]
-        cumulative_return = np.cumprod(np.array(1+ daily_returns_series)) -1
+        cumulative_return = np.cumprod(np.array(1 + daily_returns_series)) - 1
         packet['daily_perf']['benchmark_return'] = daily_returns_series[-1]
         packet['cumulative_perf']['benchmark_return'] = cumulative_return
         packet['cumulative_perf']['benchmark_annual_volatility'] = cumulative_annual_volatility
@@ -421,12 +437,12 @@ class ReturnsStatistic(object):
                         ledger,
                         session_ix
                         ):
+        print('ledger', ledger)
         daily_returns_series = ledger.daily_returns_series
         return_series = self.returns_series
         #
         daily_returns = daily_returns_series[daily_returns_series.index <= session_ix]
         benchmark_returns = return_series[return_series.index <= session_ix]
-        #主体计算
         res = self._function(
             daily_returns,
             benchmark_returns,

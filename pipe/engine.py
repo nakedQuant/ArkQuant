@@ -22,9 +22,12 @@ class Engine(ABC):
     @staticmethod
     def _init_loader(pipelines):
         pipelines = pipelines if isinstance(pipelines, list) else [pipelines]
-        inner_terms = list(chain(pipeline.terms for pipeline in pipelines))
-        inner_pickers = list(chain(pipeline.ump_terms for pipeline in pipelines))
+        inner_terms = list(chain(pipeline.terms for pipeline in pipelines))[0]
+        print('inner terms', inner_terms)
+        inner_pickers = list(chain(pipeline.ump_terms for pipeline in pipelines))[0]
+        print('inner_pickers', inner_pickers)
         engine_terms = set(inner_terms + inner_pickers)
+        print('engine_terms', engine_terms)
         # get_loader
         _get_loader = PricingLoader(engine_terms)
         return pipelines, _get_loader
@@ -40,7 +43,7 @@ class Engine(ABC):
     def _initialize_metadata(self, dts):
         # 判断ledger 是否update
         mask = self._calculate_universe(dts)
-        metadata = self._get_loader.load_pipeline_arrays(dts, mask)
+        metadata = self._get_loader.load_pipeline_arrays(dts, mask, 'daily')
         return metadata, mask
 
     def _divide_positions(self, ledger, dts):

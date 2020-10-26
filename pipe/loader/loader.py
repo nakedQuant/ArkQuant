@@ -8,14 +8,9 @@ Created on Tue Mar 12 15:37:47 2019
 from pipe.loader.base import PipelineLoader
 from _calendar.trading_calendar import calendar
 from pipe.loader import EVENT
-from gateway.driver.data_portal import DataPortal
+from gateway.driver.data_portal import portal
 from pipe.term import Term
 from gateway.asset.assets import Equity
-
-__all__ = ['PricingLoader', 'EventLoader']
-
-# init portal
-portal = DataPortal()
 
 
 class PricingLoader(PipelineLoader):
@@ -29,6 +24,8 @@ class PricingLoader(PipelineLoader):
         self.pipeline_domain = self._resolve_domains(domains)
 
     def load_pipeline_arrays(self, dts, assets, data_frequency):
+        print('dts', dts)
+        print('assets', assets)
         fields = list(self.pipeline_domain.domain_field)
         print('loader fields', fields)
         window = - abs(self.pipeline_domain.domain_window)
@@ -75,6 +72,9 @@ class EventLoader(PipelineLoader):
             raw =  EVENT[field].load_raw_arrays([sdate, dt], assets)
             event_mappings[field] = raw
         return event_mappings
+
+
+__all__ = ['PricingLoader', 'EventLoader']
 
 
 if __name__ == '__main__':

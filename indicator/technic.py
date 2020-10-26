@@ -12,7 +12,7 @@ from indicator import (
      EMA,
      ExponentialMovingAverage
 )
-from util.mathmatics import zoom
+from util.math_utils import zoom
 
 
 ema = EMA()

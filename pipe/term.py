@@ -40,7 +40,8 @@ class Term(object):
     default_type = (tuple,)
     _term_cache = WeakValueDictionary()
     namespace = dict()
-    base_dir = os.path.join(os.path.split(os.getcwd())[0], 'strat')
+    # base_dir = os.path.join(os.path.split(os.getcwd())[0], 'strat')
+    base_dir = os.path.join(os.path.split(os.path.abspath('__file__'))[0], 'strat')
 
     def __new__(cls,
                 script,
@@ -55,7 +56,7 @@ class Term(object):
             return cls._term_cache[identity]
         except KeyError:
             new_instance = cls._term_cache[identity] = super(Term, cls).__new__(cls)._init(script, p, dependencies)
-            print('new_instance', new_instance.domain.domain_window)
+            # print('new_instance', new_instance.domain.domain_window)
             return new_instance
 
     @staticmethod
@@ -82,8 +83,9 @@ class Term(object):
         """
         params = dict(p)
         # 解析信号文件并获取类对象
+        # print('base_dir', self.base_dir)
         file = glob.glob(os.path.join(self.base_dir, '%s.py' % script))[0]
-        print(file)
+        # print(file)
         with open(file, 'r') as f:
             exec(f.read(), self.namespace)
         logic = self.namespace[script.capitalize()]

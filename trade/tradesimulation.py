@@ -8,7 +8,7 @@ Created on Tue Mar 12 15:37:47 2019
 import pandas as pd
 from functools import partial
 from contextlib import ExitStack
-from util.api_support import ZiplineAPI
+from util.api_support import AlgoAPI
 from trade import (
     SESSION_START,
     SESSION_END,
@@ -52,10 +52,9 @@ class AlgorithmSimulator(object):
         ledger = self.algorithm.ledger
         broker = self.algorithm.broker
         metrics_tracker = self.algorithm.tracker
-        # set daily message function
-        daily_func = partial(self._get_daily_message, tracker=metrics_tracker)
 
         def once_a_day(dts):
+            dts = dts.strftime('%Y-%m-%d') if isinstance(dts, pd.Timestamp) else dts
             broker.implement_broke(ledger, dts)
 
         def on_exit():
@@ -71,30 +70,32 @@ class AlgorithmSimulator(object):
             callback（回调，* args，** kwds ）接受任意的回调函数和参数，并将其添加到回调堆栈中。
             """
             stack.callback(on_exit)
-            stack.enter_context(ZiplineAPI(self.algorithm))
+            stack.enter_context(AlgoAPI(self.algorithm))
+            print('ledger', ledger)
 
-            metrics_tracker.handle_start_of_simulation()
+            metrics_tracker.handle_start_of_simulation(ledger)
 
             # 生成器yield方法 ，返回yield 生成的数据，next 执行yield 之后的方法
             for session_label, action in self.clock:
-
+                print('session_label and action', session_label, action)
                 if action == BEFORE_TRADING_START:
-                    metrics_tracker.handle_market_open(session_label)
+                    # metrics_tracker.handle_market_open(session_label)
+                    metrics_tracker.handle_market_open(ledger)
                 elif action == SESSION_START:
                     once_a_day(session_label)
                 elif action == SESSION_END:
-                    daily_perf_metrics = daily_func(session_label)
+                    daily_perf_metrics = self._get_daily_message(metrics_tracker, session_label, ledger)
                     yield daily_perf_metrics
 
             risk_message = metrics_tracker.handle_simulation_end()
             yield risk_message
 
     @staticmethod
-    def _get_daily_message(tracker, session_label):
+    def _get_daily_message(tracker, session_label, ledger):
         """
         Get a perf message for the given datetime.
         """
         if isinstance(session_label, pd.Timestamp):
             session_label = session_label.strftime('%Y%m%d')
-        perf_message = tracker.handle_market_close(session_label)
+        perf_message = tracker.handle_market_close(session_label, ledger)
         return perf_message
