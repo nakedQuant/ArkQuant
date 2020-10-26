@@ -269,6 +269,8 @@ class SequentialPool(object):
         pass
 
 
+# pp
+
 def isprime(n):
     """Returns True if n is prime and False otherwise"""
     if not isinstance(n, int):

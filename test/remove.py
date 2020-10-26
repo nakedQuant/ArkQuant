@@ -56,6 +56,7 @@ def glob_files(_tdx_dir):
         except FileNotFoundError:
             pass
 
+
 if __name__ == '__main__':
 
     tdx = r'D:\通达信-1m\*'

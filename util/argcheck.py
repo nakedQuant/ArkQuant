@@ -4,42 +4,12 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-import argparse, re, heapq
+import argparse, re, heapq, inspect
 from collections import namedtuple
 from hashlib import md5
 
 
 Argspec = namedtuple('Argspec', ['args', 'starargs', 'kwargs'])
-
-
-def parse_argspec(callable_):
-    """
-    Takes a callable and returns a tuple with the list of Argument objects,
-    the name of *args, and the name of **kwargs.
-    If *args or **kwargs is not present, it will be None.
-    This returns a namedtuple called Argspec that has three fields named:
-    args, starargs, and kwargs.
-    """
-    args, varargs, keywords, defaults = getargspec(callable_)
-    defaults = list(defaults or [])
-
-    if getattr(callable_, '__self__', None) is not None:
-        # This is a bound method, drop the self param.
-        args = args[1:]
-
-    first_default = len(args) - len(defaults)
-    return Argspec(
-        [args[n] if n < first_default else defaults[n - first_default]
-         for n, arg in enumerate(args)],
-        varargs,
-        keywords,
-    )
-
-
-class Namespace(object):
-    """
-    A placeholder object representing a namespace level
-    """
 
 
 def create_args(args, root):
@@ -65,6 +35,30 @@ def create_args(args, root):
     for name in sorted(extension_args, key=len):
         path = name.split('.')
         update_namespace(root, path, extension_args[name])
+
+
+def parse_argspec(callable_):
+    """
+    Takes a callable and returns a tuple with the list of Argument objects,
+    the name of *args, and the name of **kwargs.
+    If *args or **kwargs is not present, it will be None.
+    This returns a namedtuple called Argspec that has three fields named:
+    args, starargs, and kwargs.
+    """
+    args, varargs, keywords, defaults = inspect.signature(callable_)
+    defaults = list(defaults or [])
+
+    if getattr(callable_, '__self__', None) is not None:
+        # This is a bound method, drop the self param.
+        args = args[1:]
+
+    first_default = len(args) - len(defaults)
+    return Argspec(
+        [args[n] if n < first_default else defaults[n - first_default]
+         for n, arg in enumerate(args)],
+        varargs,
+        keywords,
+    )
 
 
 def parse_extension_arg(arg, arg_dict):

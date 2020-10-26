@@ -377,7 +377,6 @@ def valid_check(func):
 def singleton(cls):
 
     instance = {}
-
     def _singleton(*args,**kwargs):
         if cls not in instance:
             instance[cls] = cls(*args,**kwargs)
