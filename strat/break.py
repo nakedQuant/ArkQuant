@@ -22,12 +22,13 @@ class Break(Signal):
 
     def _run_signal(self, feed):
         # default -- buy operation
-        category = self.params['fields'][0]
+        # category = self.params['fields'][0]
         ema = self.ema.compute(feed, self.params)
         print('break ema', ema)
         tema = self.tema.compute(feed, self.params)
         print('break macd', tema)
-        deviation = ema[category][-1] - tema[category][-1]
+        # deviation = ema[category][-1] - tema[category][-1]
+        deviation = ema[-1] - tema[-1]
         return deviation
 
     def long_signal(self, data, mask) -> bool:

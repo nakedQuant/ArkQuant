@@ -17,7 +17,7 @@ class BaseFeature(ABC):
 
     def compute(self, feed, kwargs):
         frame = feed.copy()
-        if isinstance(frame, pd.DataFrame):
+        if isinstance(frame, pd.DataFrame) and len(frame.columns) > 1:
             out = dict()
             for col in frame.columns:
                 out[col] = self._calc_feature(frame[col], kwargs)

@@ -23,7 +23,7 @@ class Pipeline(object):
     """
     __slots__ = ['_terms_store', '_graph', '_workspace', '_ump']
 
-    def __init__(self, terms, ump_picker=None, ):
+    def __init__(self, terms, ump_picker=None):
         self._terms_store = [terms] if isinstance(terms, Term) else terms
         self._workspace = OrderedDict()
         self._graph = self._init_graph()
@@ -65,16 +65,16 @@ class Pipeline(object):
         if term in self._graph.nodes:
             raise Exception('term object already exists in pipe')
         self._terms_store.append(term)
-        return self
+        # return self
 
     def __sub__(self, term):
         try:
             self._terms_store.remove(term)
         except Exception as e:
             raise TypeError(e)
-        return self
+        # return self
 
-    def _load_term(self, term, default_mask):
+    def _combine_term_dependence(self, term, default_mask):
         print('dependence', term.dependencies)
         if term.dependencies != [NotSpecific]:
             # 将节点的依赖筛选出来
@@ -94,17 +94,17 @@ class Pipeline(object):
             internal method for decref_recursive
             decrease by layer
         """
+        print('decref graph', self._graph.nodes)
         # return in_degree == 0 nodes
         decref_nodes = self._graph.decref_dependencies()
+        print('decref nodes', decref_nodes)
         if decref_nodes:
-            print('decref_nodes', decref_nodes)
-            print('decref graph', self._graph)
             for node in decref_nodes:
-                node_mask = self._load_term(node, mask)
+                node_mask = self._combine_term_dependence(node, mask)
                 print('node_mask', node_mask)
-                output = node.compute(metadata, list(mask))
-                print('output', output)
+                output = node.compute(metadata, list(node_mask))
                 self._workspace[node] = output
+                print('_workspace', self._workspace)
             self._decref_recursive(metadata, mask)
 
     def _decref_dependence(self, metadata, mask):
@@ -132,8 +132,9 @@ class Pipeline(object):
         """
         print('workspace', self._workspace.items())
         outputs = self._workspace.popitem(last=True)
+        print('pipeline outputs', outputs)
         # asset tag pipeline_name --- 可能存在相同的持仓但是由不同的pipeline产生
-        outputs = [f.source_id(self.name) for f in outputs]
+        outputs = [r.source_id(self.name) for r in outputs]
         final_out = final.resolve_final(outputs)
         return {self.name: final_out}
 

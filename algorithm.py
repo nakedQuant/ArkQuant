@@ -738,8 +738,9 @@ if __name__ == '__main__':
     break_term = Term('break', kw, cross_term)
     # print(break_term.dependencies)
     # set pipeline
-    # pipeline = Pipeline([break_term, cross_term])
     pipeline = Pipeline([cross_term])
+    # pipeline = Pipeline([break_term])
+    # pipeline = Pipeline([break_term, cross_term])
     # initialize trading algo
     trading = TradingAlgorithm(trading_params, pipeline)
     # run algorithm
