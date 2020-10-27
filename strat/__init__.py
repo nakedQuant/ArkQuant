@@ -37,11 +37,12 @@ class Signal(ABC):
         zp = valfilter(lambda x: x > self.params.get('threshold', 0), dict(zip(mask, signals)))
         print('zp', zp)
         if self.final:
-            sorted_zp = sorted(zp.items(), key=lambda x: x[1])
+            sorted_zp = sorted(zp.items(), key=lambda x: x[1], reverse=True)
             out = [i[0] for i in sorted_zp]
+            print('ordered out', out)
         else:
             out = list(zp.keys())
-        print('out', out)
+            print('ordinary out', out)
         return out
 
     def short_signal(self, metadata) -> bool:

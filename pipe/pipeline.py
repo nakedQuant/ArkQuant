@@ -84,7 +84,6 @@ class Pipeline(object):
             # 将依赖的交集作为节点的input
             input_mask = reduce(lambda x, y: set(x) & set(y),
                                 dependence_masks.values())
-            print('input_mask', input_mask)
         else:
             input_mask = default_mask
         return input_mask
@@ -130,13 +129,14 @@ class Pipeline(object):
         """
         Compute pipeline to get eager asset
         """
-        print('workspace', self._workspace.items())
         outputs = self._workspace.popitem(last=True)
         print('pipeline outputs', outputs)
         # asset tag pipeline_name --- 可能存在相同的持仓但是由不同的pipeline产生
-        outputs = [r.source_id(self.name) for r in outputs]
+        outputs = [r.source_id(self.name) for r in outputs[1]]
+        print('tag outputs', outputs)
         final_out = final.resolve_final(outputs)
-        return {self.name: final_out}
+        # return {self.name: final_out}
+        return final_out
 
     def to_execution_plan(self, metadata, mask, final):
         """

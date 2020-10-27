@@ -135,12 +135,17 @@ class Engine(ABC):
         metadata, default_mask = self._initialize_metadata(dts)
         print('step one')
         traded_positions, removed_positions = self._divide_positions(ledger, dts)
+        print('traded_positions', traded_positions)
+        print('removed_positions', removed_positions)
         print('step two')
         # 执行算法逻辑
         pipes = self.run_pipeline(metadata, default_mask)
         print('pipes step three', pipes)
         # 剔除righted positions, violate_positions, expired_positions
-        ump_positions = set(self.run_ump(metadata, traded_positions)) | removed_positions
+        ump_pipes = self.run_ump(metadata, traded_positions)
+        print('ump_pipes', ump_pipes)
+        ump_positions = set(ump_pipes) | removed_positions
+        print('ump_positions', ump_positions)
         yield self.resolve_conflicts(pipes, ump_positions, ledger.positions)
 
     @staticmethod
@@ -238,17 +243,15 @@ class SimplePipelineEngine(Engine):
         call_proxy = {r.tag: r for r in calls}
         put_proxy = {r.name: r for r in puts}
         hold_proxy = {p.name: p for p in holdings}
-        # union asset
-        union_assets = set(call_proxy) & set(put_proxy)
-        assert union_assets, 'call assets should not be put at meantime'
+        # common pipe name
+        common_pipe = set(call_proxy) & set(put_proxy)
+        assert not common_pipe, 'call assets should not be put at meantime'
         # 基于capital执行直接买入标的的
         extra = set(call_proxy) - set(hold_proxy)
         if extra:
             direct_positives = keyfilter(lambda x: x in extra, call_proxy)
         else:
             direct_positives = dict()
-        # common pipe name
-        common_pipe = set(put_proxy) & set(call_proxy)
         # 直接卖出持仓，无买入标的
         negatives = set(put_proxy) - set(common_pipe)
         direct_negatives = keyfilter(lambda x: x in negatives, put_proxy)

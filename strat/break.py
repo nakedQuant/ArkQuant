@@ -6,7 +6,7 @@ Created on Sat Feb 16 14:00:14 2019
 @author: python
 """
 from indicator import EMA
-from indicator.technic import TEMA
+from indicator.technic import MA
 from strat import Signal
 
 
@@ -18,17 +18,15 @@ class Break(Signal):
         # p --- window fast slow period
         super(Break, self).__init__(params)
         self.ema = EMA()
-        self.tema = TEMA()
+        self.ma = MA()
 
     def _run_signal(self, feed):
         # default -- buy operation
-        # category = self.params['fields'][0]
         ema = self.ema.compute(feed, self.params)
         print('break ema', ema)
-        tema = self.tema.compute(feed, self.params)
-        print('break macd', tema)
-        # deviation = ema[category][-1] - tema[category][-1]
-        deviation = ema[-1] - tema[-1]
+        ma = self.ma.compute(feed, self.params)
+        print('break ma', ma)
+        deviation = ema[-1] - ma.iloc[-1]
         return deviation
 
     def long_signal(self, data, mask) -> bool:

@@ -22,6 +22,7 @@ class BaseFeature(ABC):
             for col in frame.columns:
                 out[col] = self._calc_feature(frame[col], kwargs)
         else:
+            frame = frame.iloc[:, 0] if isinstance(frame, pd.DataFrame) else frame
             out = self._calc_feature(frame, kwargs)
         return out
 
@@ -258,7 +259,7 @@ __all__ = ['VMA',
            'ExponentialMovingAverage']
 
 # if __name__ == '__main__':
-
+#
 #     from gateway.driver.data_portal import DataPortal
 #     from gateway.asset.assets import Equity, Convertible, Fund
 #
@@ -266,7 +267,8 @@ __all__ = ['VMA',
 #     session = '2015-01-01'
 #     kw = {'window': 10}
 #     portal = DataPortal()
-#     dct = portal.get_window([asset], session, 11, ['open', 'high', 'low', 'close'], 'daily')
+#     # dct = portal.get_window([asset], session, 50, ['open', 'high', 'low', 'close'], 'daily')
+#     dct = portal.get_window([asset], session, 50, ['close'], 'daily')
 #     feed = dct[asset.sid]
 #     print('feed', feed)
 #     vma = VMA().compute(feed, kw)
