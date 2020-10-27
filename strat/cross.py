@@ -5,8 +5,6 @@ Created on Sat Feb 16 14:00:14 2019
 
 @author: python
 """
-from multiprocessing import Pool
-from toolz import valmap
 from indicator import MA
 from strat import Signal
 
@@ -16,33 +14,24 @@ class Cross(Signal):
     name = 'Cross'
 
     def __init__(self, params):
-        self.p = params
+        super(Cross, self).__init__(params)
         self.ma = MA()
-
-    @property
-    def final(self):
-        # final term --- return sorted assets including priority
-        return self.p.get('final', False)
 
     def _run_signal(self, feed):
         # default -- buy operation
-        long = self.ma.compute(feed, {'window': self.p['long']})
-        short = self.ma.compute(feed, {'window': self.p['short']})
-        deviation = short[-1] - long[-1]
+        category = self.params['fields'][0]
+        long = self.ma.compute(feed, {'window': max(self.params['window'])})
+        print('cross long', long)
+        short = self.ma.compute(feed, {'window': min(self.params['window'])})
+        print('cross short', short)
+        deviation = short[category][-1] - long[category].iloc[-1]
         return deviation
 
-    def long_signal(self, mask, aggdata) -> bool:
-        with Pool(processes=len(mask)) as pool:
-            signals = [pool.apply_async(self._run_signal, (aggdata[m]))
-                       for m in mask]
-            zp = valmap(lambda x: x > self.p.get('threshold', 0), dict(zip(mask, signals)))
-            if self.final:
-                sorted_zp = sorted(zp.items(), key=lambda x: x[1])
-                out = [i[0] for i in sorted_zp]
-            else:
-                out = list(zp.keys())
+    def long_signal(self, data, mask) -> bool:
+        print('params', self.params)
+        out = super().long_signal(data, mask)
         return out
 
     def short_signal(self, feed) -> bool:
-        val = self._run_signal(feed)
-        return val < 0
+        signal = super().short_signal(feed)
+        return signal

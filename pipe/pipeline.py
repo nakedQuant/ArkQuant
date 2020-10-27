@@ -41,9 +41,6 @@ class Pipeline(object):
     def ump_terms(self):
         return self._ump.pickers
 
-    def _initialize_workspace(self):
-        self._workspace = OrderedDict
-
     def _init_graph(self):
         """
         Compile into a simple TermGraph with no extra row metadata.
@@ -78,13 +75,16 @@ class Pipeline(object):
         return self
 
     def _load_term(self, term, default_mask):
-        if term.dependencies != NotSpecific:
+        print('dependence', term.dependencies)
+        if term.dependencies != [NotSpecific]:
             # 将节点的依赖筛选出来
             dependence_masks = keyfilter(lambda x: x in term.dependencies,
                                          self._workspace)
+            print('dependence_masks', dependence_masks)
             # 将依赖的交集作为节点的input
             input_mask = reduce(lambda x, y: set(x) & set(y),
                                 dependence_masks.values())
+            print('input_mask', input_mask)
         else:
             input_mask = default_mask
         return input_mask
@@ -96,11 +96,16 @@ class Pipeline(object):
         """
         # return in_degree == 0 nodes
         decref_nodes = self._graph.decref_dependencies()
-        for node in decref_nodes:
-            node_mask = self._load_term(node, mask)
-            output = node.compute(node_mask, metadata)
-            self._workspace[node] = output
-        self._decref_recursive(metadata, mask)
+        if decref_nodes:
+            print('decref_nodes', decref_nodes)
+            print('decref graph', self._graph)
+            for node in decref_nodes:
+                node_mask = self._load_term(node, mask)
+                print('node_mask', node_mask)
+                output = node.compute(metadata, list(mask))
+                print('output', output)
+                self._workspace[node] = output
+            self._decref_recursive(metadata, mask)
 
     def _decref_dependence(self, metadata, mask):
         """
@@ -118,9 +123,7 @@ class Pipeline(object):
         mask : asset list
             Reference counts for terms to be computed. Terms with reference
             counts of 0 do not need to be computed.
-        return : PIPE list
         """
-        self._initialize_workspace()
         self._decref_recursive(metadata, mask)
 
     def compute_eager_pipeline(self, final):
@@ -138,11 +141,9 @@ class Pipeline(object):
         """
             to execute pipe logic
         """
-        try:
-            self._decref_dependence(metadata, mask)
-        except Exception as e:
-            print('error means graph decrease to top occur %s' % e)
+        self._decref_dependence(metadata, mask)
         result = self.compute_eager_pipeline(final)
+        self._workspace = OrderedDict()
         return result
 
     def to_withdraw_plan(self, position, metadata):

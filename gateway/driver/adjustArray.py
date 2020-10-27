@@ -69,7 +69,9 @@ class HistoryCompatibleAdjustments(object):
         kline = data[sid]
         try:
             rights = adjustment['rights'][sid]
+            print('rights', sid, rights)
             ex_close = kline['close'].reindex(index=rights.index)
+            print('ex_close', ex_close)
             qfq = (ex_close + (rights['rights_price'] * rights['rights_bonus']) / 10) / \
                   (1 + rights['rights_bonus']/10)
         except KeyError:

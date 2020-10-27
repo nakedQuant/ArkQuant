@@ -102,7 +102,8 @@ class Term(object):
         del self._subclass_called_validate
         # infer domain
         self.domain = infer_domain(params)
-        self.dependencies = dependencies if isinstance(dependencies, (list, tuple)) else [dependencies]
+        self.dependencies = [dependencies] if isinstance(dependencies, Term) or dependencies == NotSpecific \
+            else dependencies
         return self
 
     def _validate(self):
@@ -139,20 +140,21 @@ class Term(object):
             1. subclass should implement when _verify_asset_finder is True
             2. self.postprocess()
         """
-        output = self.signal.long_signql(meta, mask)
+        output = self.signal.long_signal(meta, mask)
         validate_output = self.postprocess(output)
         return validate_output
 
-    def compute(self, meta, mask):
+    def compute(self, metadata, mask):
         """
             1. subclass should implement when _verify_asset_finder is True
             2. self.postprocess()
         """
-        output = self._compute(meta, mask)
+        output = self._compute(metadata, mask)
+        # print('term output', output)
         return output
 
     def withdraw(self, feed):
-        signal = self.signal.short_singal(feed)
+        signal = self.signal.short_signal(feed)
         return signal
 
     def __repr__(self):

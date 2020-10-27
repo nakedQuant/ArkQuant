@@ -15,20 +15,21 @@ from gateway.asset.assets import Equity
 
 class PricingLoader(PipelineLoader):
 
-    def __init__(self, terms):
+    def __init__(self, terms, multiplier=3):
         """
             A pipe for loading daily adjusted qfq live OHLCV data.
             terms --- pipe terms and ump terms
         """
         domains = [term.domain for term in terms]
         self.pipeline_domain = self._resolve_domains(domains)
+        self.scale = multiplier
 
     def load_pipeline_arrays(self, dts, assets, data_frequency):
         print('dts', dts)
         print('assets', assets)
         fields = list(self.pipeline_domain.domain_field)
         print('loader fields', fields)
-        window = - abs(self.pipeline_domain.domain_window)
+        window = - self.scale * abs(self.pipeline_domain.domain_window)
         print('loader window', window)
         adjust_kline = portal.get_history_window(assets,
                                                  dts,

@@ -6,19 +6,6 @@ Created on Tue Mar 12 15:37:47 2019
 """
 from abc import ABC, abstractmethod
 import numpy as np, pandas as pd
-# from gateway.driver.data_portal import DataPortal
-# from gateway.asset.assets import Equity, Convertible, Fund
-
-__all__ = ['VMA',
-           'TR',
-           'ATR',
-           'MA',
-           'EMA',
-           'AEMA',
-           'SMA',
-           'BaseFeature',
-           'ExponentialWeightedMovingAverage',
-           'ExponentialMovingAverage']
 
 
 class BaseFeature(ABC):
@@ -259,7 +246,21 @@ class ExponentialWeightedMovingAverage(BaseFeature):
         return out
 
 
+__all__ = ['VMA',
+           'TR',
+           'ATR',
+           'MA',
+           'EMA',
+           'AEMA',
+           'SMA',
+           'BaseFeature',
+           'ExponentialWeightedMovingAverage',
+           'ExponentialMovingAverage']
+
 # if __name__ == '__main__':
+
+#     from gateway.driver.data_portal import DataPortal
+#     from gateway.asset.assets import Equity, Convertible, Fund
 #
 #     asset = Equity('600000')
 #     session = '2015-01-01'

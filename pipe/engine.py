@@ -7,7 +7,6 @@ Created on Tue Mar 12 15:37:47 2019
 """
 from toolz import keyfilter
 from functools import partial
-from multiprocessing import Pool
 from itertools import chain
 from abc import ABC, abstractmethod
 from pipe.loader.loader import PricingLoader
@@ -36,8 +35,8 @@ class Engine(ABC):
         # default assets
         asset_finder.synchronize()
         # equities = asset_finder.retrieve_type_assets('equity')
-        equities = list(asset_finder.retrieve_type_assets('equity'))[:30]
-        # save the high priority and asset which can be traded
+        equities = list(asset_finder.retrieve_type_assets('equity'))[:10]
+        print('num of equities', len(equities))
         default_mask = self.restricted_rules.is_restricted(equities, dts)
         return default_mask
 
@@ -45,6 +44,10 @@ class Engine(ABC):
         # 判断ledger 是否update
         mask = self._calculate_universe(dts)
         metadata = self._get_loader.load_pipeline_arrays(dts, mask, 'daily')
+        # print('engine metadata', metadata)
+        # 过滤没有数据的sid
+        mask = [m for m in mask if m.sid in set(metadata) and not metadata[m.sid].empty]
+        print('engine mask', mask)
         return metadata, mask
 
     def _divide_positions(self, ledger, dts):
@@ -92,18 +95,13 @@ class Engine(ABC):
         ----------
         return --- assets which tag by pipeline name
         """
-        _gen_func = partial(self._run_pipeline,
-                            mask=mask,
-                            metadata=pipeline_metadata)
-
-        # with Pool(processes=len(self.pipelines))as pool:
-        #     results = [pool.apply_async(_gen_func, pipeline)
-        #                for pipeline in self.pipelines]
-        #     res = [r.get() for r in results]
+        _partial_func = partial(self._run_pipeline,
+                                mask=mask,
+                                metadata=pipeline_metadata)
 
         results = []
         for pipeline in self.pipelines:
-            out = _gen_func(pipeline)
+            out = _partial_func(pipeline)
             print('out', out)
             results.append(out)
         return results
@@ -124,11 +122,10 @@ class Engine(ABC):
         proxy_position = {p.name: p for p in positions}
         proxy_pipeline = {pipe.name: pipe for pipe in self.pipelines}
 
-        with Pool(processes=len(proxy_pipeline))as pool:
-            results = [pool.apply_async(_ump_func, proxy_pipeline[name], p)
-                       for name, p in proxy_position.items()]
-            res = [r.get() for r in results]
-        output = [r for r in res if r]
+        output = []
+        for proxy in proxy_position:
+            res = _ump_func(proxy_pipeline[proxy])
+            output.append(res)
         return output
 
     def execute_algorithm(self, ledger, dts):

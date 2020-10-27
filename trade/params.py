@@ -119,10 +119,10 @@ def create_simulation_parameters(start=None,
 
     if end is None:
         end = datetime.now().strftime('%Y-%m-%d')
-    elif isinstance(start, str):
-        end = start
+    elif isinstance(end, str):
+        end = end
     else:
-        end = start.strftime('%Y-%m-%d')
+        end = end.strftime('%Y-%m-%d')
 
     sim_params = SimulationParameters(
         start_session=start,

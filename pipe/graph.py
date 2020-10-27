@@ -91,6 +91,7 @@ class TermGraph(object):
         refcounts = dict(self.graph.in_degree())
         print('refcounts', refcounts)
         nodes = valfilter(lambda x: x == 0, refcounts)
+        print('refcounts == 0', nodes)
         for node in nodes:
             self.graph.remove_node(node)
         return nodes

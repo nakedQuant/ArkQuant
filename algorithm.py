@@ -139,8 +139,6 @@ class TradingAlgorithm(object):
         # # data interface
         # self.data_portal = portal
         # self.asset_finder = init_finder()
-        # restrictions
-        restrictions = restrictions or NoRestrictions()
         # set ledger
         risk_models = risk_models or NoRisk()
         risk_fuse = risk_fuse or Fuse()
@@ -162,6 +160,8 @@ class TradingAlgorithm(object):
         self.generator = self._create_generator()
         # Initialize pipe_engine API
         self.final = final or Final()
+        # restrictions
+        restrictions = restrictions or NoRestrictions()
         self.restrictions = restrictions
         self.pipelines = self.validate_pipeline(pipelines)
         self.pipeline_engine = self._construct_pipeline_engine(
@@ -727,18 +727,19 @@ __all__ = ['TradingAlgorithm']
 if __name__ == '__main__':
 
     from trade.params import create_simulation_parameters
-    trading_params=create_simulation_parameters()
+    trading_params = create_simulation_parameters(start='2019-09-01', end='2020-10-20')
     print('trading_params', trading_params)
     # set pipeline term
     from pipe.term import Term
-    kw = {'window': (5, 10)}
+    kw = {'window': (5, 10), 'fields': ['close']}
     cross_term = Term('cross', kw)
     # print('sma_term', cross_term)
-    kw = {'window': 10, 'fast': 12, 'slow': 26, 'period': 9}
+    kw = {'fields': ['close'], 'window': 5, 'final': True}
     break_term = Term('break', kw, cross_term)
     # print(break_term.dependencies)
     # set pipeline
-    pipeline = Pipeline(break_term)
+    # pipeline = Pipeline([break_term, cross_term])
+    pipeline = Pipeline([cross_term])
     # initialize trading algo
     trading = TradingAlgorithm(trading_params, pipeline)
     # run algorithm
