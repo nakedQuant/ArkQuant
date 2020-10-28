@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 from gateway.driver.data_portal import portal
 
 
-class BaseUncoverAlgo(ABC):
+class BaseUncover(ABC):
 
     @staticmethod
     @abstractmethod
@@ -56,21 +56,25 @@ class BaseUncoverAlgo(ABC):
         return iterables
 
 
-class UncoverAlgorithm(BaseUncoverAlgo):
+class UncoverAlgorithm(BaseUncover):
 
     @staticmethod
     def _uncover_by_price(size, asset, dts):
         print('uncover by price', size, asset, dts)
         # 模拟价格分布
-        open_pct, pre_close = portal.get_open_pct(asset, dts)
-        alpha = 1 if open_pct == 0.00 else 100 * open_pct
-        print('alpha', alpha)
-        if size > 0:
-            dist = 1 + np.copysign(alpha, np.random.beta(abs(alpha), 100, size)) / 100
-        else:
-            dist = [1 + alpha / 100]
-        print('dist', dist)
         restricted_change = asset.restricted_change(dts)
+        open_pct, pre_close = portal.get_open_pct(asset, dts)
+        # alpha = 1 if open_pct == 0.00 else 100 * open_pct
+        # print('alpha', alpha, size)
+        # if size > 0:
+        #     # dist = 1 + np.copysign(alpha, np.random.beta(abs(alpha), 100, size))/10
+        #     dist = np.copysign(alpha, np.random.beta(abs(alpha), 100, size))/10
+        #     print('beta', dist)
+        #     dist = dist + 1
+        # else:
+        #     dist = [1 + alpha / 100]
+        dist = 1 + np.random.normal(- 3 * open_pct, open_pct * 3, size) if size > 0 else 1 + open_pct
+        print('dist', dist)
         print('restricted_change', restricted_change)
         clip_pct = np.clip(dist, (1 - restricted_change), (1 + restricted_change))
         print('clip_pct', clip_pct)

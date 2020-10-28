@@ -26,7 +26,7 @@ class Pipeline(object):
     def __init__(self, terms, ump_picker=None):
         self._terms_store = [terms] if isinstance(terms, Term) else terms
         self._workspace = OrderedDict()
-        self._graph = self._init_graph()
+        # self._graph = self._init_graph()
         self._ump = UmpPickers(ump_picker) if ump_picker else UmpPickers(terms)
 
     @property
@@ -62,8 +62,9 @@ class Pipeline(object):
                 "{term} is not a valid pipe column. Did you mean to "
                 "append '.latest'?".format(term=term)
             )
-        if term in self._graph.nodes:
-            raise Exception('term object already exists in pipe')
+        assert term in self._terms_store, 'term object already exists in pipe'
+        # if term in self._graph.nodes:
+        #     raise Exception('term object already exists in pipe')
         self._terms_store.append(term)
         # return self
 
@@ -88,14 +89,51 @@ class Pipeline(object):
             input_mask = default_mask
         return input_mask
 
-    def _decref_recursive(self, metadata, mask):
+    # def _decref_recursive(self, metadata, mask):
+    #     """
+    #         internal method for decref_recursive
+    #         decrease by layer
+    #     """
+    #     print('decref graph', self._graph.nodes)
+    #     # return in_degree == 0 nodes
+    #     decref_nodes = self._graph.decref_dependencies()
+    #     print('decref nodes', decref_nodes)
+    #     if decref_nodes:
+    #         for node in decref_nodes:
+    #             node_mask = self._combine_term_dependence(node, mask)
+    #             print('node_mask', node_mask)
+    #             output = node.compute(metadata, list(node_mask))
+    #             self._workspace[node] = output
+    #             print('_workspace', self._workspace)
+    #         self._decref_recursive(metadata, mask)
+    #
+    # def _decref_dependence(self, metadata, mask):
+    #     """
+    #     Return a topologically-sorted list of the terms in ``self`` which
+    #     need to be computed.
+    #
+    #     Filters out any terms that are already present in ``workspace``, as
+    #     well as any terms with refcounts of 0.
+    #
+    #     Parameters
+    #     ----------
+    #     metadata : dict[Term, np.ndarray]
+    #         Initial state of workspace for a pipe execution. May contain
+    #         pre-computed values provided by ``populate_initial_workspace``.
+    #     mask : asset list
+    #         Reference counts for terms to be computed. Terms with reference
+    #         counts of 0 do not need to be computed.
+    #     """
+    #     self._decref_recursive(metadata, mask)
+
+    def _decref_recursive(self, graph, metadata, mask):
         """
             internal method for decref_recursive
             decrease by layer
         """
-        print('decref graph', self._graph.nodes)
+        print('decref graph', graph.nodes)
         # return in_degree == 0 nodes
-        decref_nodes = self._graph.decref_dependencies()
+        decref_nodes = graph.decref_dependencies()
         print('decref nodes', decref_nodes)
         if decref_nodes:
             for node in decref_nodes:
@@ -104,9 +142,9 @@ class Pipeline(object):
                 output = node.compute(metadata, list(node_mask))
                 self._workspace[node] = output
                 print('_workspace', self._workspace)
-            self._decref_recursive(metadata, mask)
+            self._decref_recursive(graph, metadata, mask)
 
-    def _decref_dependence(self, metadata, mask):
+    def _decref_dependence(self, graph, metadata, mask):
         """
         Return a topologically-sorted list of the terms in ``self`` which
         need to be computed.
@@ -123,7 +161,7 @@ class Pipeline(object):
             Reference counts for terms to be computed. Terms with reference
             counts of 0 do not need to be computed.
         """
-        self._decref_recursive(metadata, mask)
+        self._decref_recursive(graph, metadata, mask)
 
     def compute_eager_pipeline(self, final):
         """
@@ -142,7 +180,8 @@ class Pipeline(object):
         """
             to execute pipe logic
         """
-        self._decref_dependence(metadata, mask)
+        term_graph = self._init_graph()
+        self._decref_dependence(term_graph, metadata, mask)
         result = self.compute_eager_pipeline(final)
         self._workspace = OrderedDict()
         return result

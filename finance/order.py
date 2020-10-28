@@ -28,10 +28,10 @@ class Order(object):
     __slots__ = ['asset', 'price', 'amount', 'created_dt']
 
     def __init__(self,
-                 asset,
-                 price,
-                 amount,
-                 ticker):
+                 asset=None,
+                 price=None,
+                 amount=None,
+                 ticker=None):
         """
         :param event: namedtuple(asset name) --- asset which is triggered by the name of pipeline
         :param price: float64
@@ -72,7 +72,7 @@ class Order(object):
 
     def __getstate__(self):
         """ pickle -- __getstate__ , __setstate__"""
-        return self.__dict__
+        return self.__slots__
 
 
 class PriceOrder(Order):
@@ -81,16 +81,16 @@ class PriceOrder(Order):
 
     def __init__(self,
                  asset,
-                 price,
-                 amount):
+                 amount,
+                 price):
         """
         :param asset: namedtuple(asset name) --- asset which is triggered by the name of pipeline
         :param price: float64
         :param amount: int
         """
         super(PriceOrder, self).__init__(asset=asset,
-                                         price=price,
-                                         amount=amount)
+                                         amount=amount,
+                                         price=price)
 
     @staticmethod
     def make_id():
@@ -117,11 +117,11 @@ class PriceOrder(Order):
         """
         String representation for this object.
         """
-        return "Order(%r)" % self.to_dict()
+        return "Price Order(%r)" % self.to_dict()
 
     def __getstate__(self):
         """ pickle -- __getstate__ , __setstate__"""
-        return self.__dict__
+        return self.__slots__
 
 
 class TickerOrder(object):
@@ -166,11 +166,11 @@ class TickerOrder(object):
         """
         String representation for this object.
         """
-        return "Order(%r)" % self.to_dict()
+        return "Ticker Order(%r)" % self.to_dict()
 
     def __getstate__(self):
         """ pickle -- __getstate__ , __setstate__"""
-        return self.__dict__
+        return self.__slots__
 
 
 def transfer_to_order(order, ticker=None, price=None):
@@ -196,3 +196,16 @@ __all__ = ['Order',
            'TickerOrder',
            'transfer_to_order']
 
+
+# if __name__ == '__main__':
+#
+#     iterables = [(2200.0, 8.08035087719301), (2300.0, 8.08035087719301), (2200.0, 8.08035087719301), (
+#                   2200.0, 8.08035087719301), (2300.0, 8.08035087719301)]
+#     from gateway.asset.assets import Equity
+#     equity = Equity('002049')
+#     print('bid', equity.bid_mechanism)
+#     if equity.bid_mechanism:
+#         orders = [TickerOrder(equity, *args) for args in iterables]
+#     else:
+#         orders = [PriceOrder(equity, *args) for args in iterables]
+#     print('test orders', orders)

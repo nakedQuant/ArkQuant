@@ -56,7 +56,7 @@ class CachedObject(object):
         """
         expires = self._expires
         if dts[0] < expires[0] or dts[-1] > expires[-1]:
-            raise Expired(self._expired)
+            raise Expired(expires)
         return self._value
 
     def _unsafe_get_value(self):
@@ -125,6 +125,9 @@ class ExpiredCache(object):
         """
         self._cache[key] = CachedObject(value, expiration_dt)
 
+    def remove(self, key):
+        del self._cache[key]
+
 
 class HistoryLoader(ABC):
 
@@ -189,7 +192,8 @@ class HistoryLoader(ABC):
                     asset_obj, session)
                 # print('cache_window', cache_window)
             except Expired:
-                del self._window_blocks[asset_obj]
+                # del self._window_blocks[asset_obj]
+                self._window_blocks.remove(asset_obj)
             except KeyError:
                 needed_assets.append(asset_obj)
             else:

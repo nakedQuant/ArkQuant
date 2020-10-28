@@ -56,9 +56,12 @@ class SimulationBlotter(object):
         asset = order.asset
         price = order.price
         direction = np.sign(order.amount)
-        minutes = portal.get_spot_value(dts, asset, 'minutes', ['close'])
+        minutes = portal.get_spot_value(dts, asset, 'minute', ['close'])
         if isinstance(order, PriceOrder):
+            print('blotter order', order)
             ticker = locate_pos(price, minutes, direction)
+            print('price', price, minutes)
+            print('ticker', ticker)
             new_order = transfer_to_order(order, ticker=ticker)
         elif isinstance(order, TickerOrder):
             ticker = order.created_dt

@@ -32,6 +32,58 @@ class Division(object):
             return base_amount
         return open_change, ensure_price, per_amount
 
+    # @staticmethod
+    # def _simulate_iterator(asset, zips):
+    #     """
+    #         针对于持仓卖出生成对应的订单 ， 一般不存在什么限制
+    #         a. 存在竞价机制 --- 通过时点设立ticker_order
+    #         b. 无竞价机制 --- 提前设立具体的固定价格订单 -- 最后收盘的将为成交订单撮合
+    #         c. size_array(默认将订单拆分同样大小) , np.tile([per_size],size)
+    #
+    #         A股主板，中小板首日涨幅最大为44%而后10%波动，针对不存在价格笼子（科创板，创业板后期对照科创板改革）
+    #         按照价格在10% 至 -10%范围内基于特定的统计分布模拟价格 --- 方向为开盘的涨跌幅 ，
+    #         不适用于科创板（竞价机制要求）---买入价格不能超过基准价格（卖一的102%，卖出价格不得低于买入价格98%，
+    #         申报最小200股，递增可以以1股为单位 ；设立市价委托必须设立最高价以及最低价 ；
+    #         而科创板前5个交易日不设立涨跌停而后20%波动但是30%，60%临时停盘10分钟，如果超过2.57(复盘)；
+    #         科创板盘后固定价格交易 --- 以后15:00收盘价格进行交易 --- 15:00 -- 15:30(按照时间优先原则，逐步撮合成交）
+    #         由于价格笼子，科创板可以参考基于时间的设置订单
+    #     """
+    #     zips = list(zips)
+    #     if asset.bid_mechanism:
+    #         orders = [TickerOrder(asset, *args) for args in zips]
+    #     else:
+    #         orders = [PriceOrder(asset, *args) for args in zips]
+    #     return orders
+
+    @staticmethod
+    def _simulate_iterator(asset, zips):
+        """
+            针对于持仓卖出生成对应的订单 ， 一般不存在什么限制
+            a. 存在竞价机制 --- 通过时点设立ticker_order
+            b. 无竞价机制 --- 提前设立具体的固定价格订单 -- 最后收盘的将为成交订单撮合
+            c. size_array(默认将订单拆分同样大小) , np.tile([per_size],size)
+
+            A股主板，中小板首日涨幅最大为44%而后10%波动，针对不存在价格笼子（科创板，创业板后期对照科创板改革）
+            按照价格在10% 至 -10%范围内基于特定的统计分布模拟价格 --- 方向为开盘的涨跌幅 ，
+            不适用于科创板（竞价机制要求）---买入价格不能超过基准价格（卖一的102%，卖出价格不得低于买入价格98%，
+            申报最小200股，递增可以以1股为单位 ；设立市价委托必须设立最高价以及最低价 ；
+            而科创板前5个交易日不设立涨跌停而后20%波动但是30%，60%临时停盘10分钟，如果超过2.57(复盘)；
+            科创板盘后固定价格交易 --- 以后15:00收盘价格进行交易 --- 15:00 -- 15:30(按照时间优先原则，逐步撮合成交）
+            由于价格笼子，科创板可以参考基于时间的设置订单
+        """
+        orders = []
+        print('_simulate_iterator', zips)
+        if asset.bid_mechanism:
+            for z in list(zips):
+                t_order = TickerOrder(asset, *z)
+                orders.append(t_order)
+        else:
+            for z in list(zips):
+                p_order = PriceOrder(asset, *z)
+                orders.append(p_order)
+        print('orders', orders)
+        return orders
+
     def divided_by_capital(self, asset, capital, portfolio, dts):
         """
             split order into plenty of tiny orders
@@ -60,9 +112,8 @@ class Division(object):
         assert amount > asset.tick_size, 'amount must be at least tick_size'
         control_amount = self.trade_controls.validate(asset, amount, portfolio, dts)
         print('control_amount', control_amount)
-        iterables = self.uncover_func.create_iterables(asset, control_amount, per_amount, dts)
-        print('iterables', list(iterables))
-        capital_orders = self._simulate_iterator(asset, iterables)
+        zip_iterables = self.uncover_func.create_iterables(asset, control_amount, per_amount, dts)
+        capital_orders = self._simulate_iterator(asset, zip_iterables)
         print('capital_orders', capital_orders)
         return capital_orders
 
@@ -74,29 +125,6 @@ class Division(object):
         iterables = self.uncover_func.create_iterables(asset, control_amount, per_amount, dts)
         position_orders = self._simulate_iterator(asset, iterables)
         return position_orders
-
-    @staticmethod
-    def _simulate_iterator(asset, iterators):
-        """
-            针对于持仓卖出生成对应的订单 ， 一般不存在什么限制
-            a. 存在竞价机制 --- 通过时点设立ticker_order
-            b. 无竞价机制 --- 提前设立具体的固定价格订单 -- 最后收盘的将为成交订单撮合
-            c. size_array(默认将订单拆分同样大小) , np.tile([per_size],size)
-
-            A股主板，中小板首日涨幅最大为44%而后10%波动，针对不存在价格笼子（科创板，创业板后期对照科创板改革）
-            按照价格在10% 至 -10%范围内基于特定的统计分布模拟价格 --- 方向为开盘的涨跌幅 ，
-            不适用于科创板（竞价机制要求）---买入价格不能超过基准价格（卖一的102%，卖出价格不得低于买入价格98%，
-            申报最小200股，递增可以以1股为单位 ；设立市价委托必须设立最高价以及最低价 ；
-            而科创板前5个交易日不设立涨跌停而后20%波动但是30%，60%临时停盘10分钟，如果超过2.57(复盘)；
-            科创板盘后固定价格交易 --- 以后15:00收盘价格进行交易 --- 15:00 -- 15:30(按照时间优先原则，逐步撮合成交）
-            由于价格笼子，科创板可以参考基于时间的设置订单
-        """
-        if asset.bid_mechanism:
-            orders = [TickerOrder(asset, *args) for args in iterators]
-
-        else:
-            orders = [PriceOrder(asset, *args) for args in iterators]
-        return orders
 
 
 __all__ = ['Division']

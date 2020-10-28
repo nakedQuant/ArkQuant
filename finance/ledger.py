@@ -126,6 +126,7 @@ class Ledger(object):
         # self.portfolio.daily_returns(session_ix)
         self._dirty_portfolio = False
         self.fuse_model.trigger(self._portfolio)
+        print('test ledger positions', self.positions)
 
     def get_transactions(self, dt):
         """

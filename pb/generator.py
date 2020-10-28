@@ -24,6 +24,7 @@ class Generator(object):
 
     def yield_capital(self, asset, capital, portfolio, dts):
         capital_orders = self.division_model.divided_by_capital(asset, capital, portfolio, dts)
+        print('generator capital_orders', capital_orders)
         capital_transactions = self.blotter.create_transaction(capital_orders, dts)
         return capital_transactions
 

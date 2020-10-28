@@ -50,13 +50,13 @@ class MarketOrder(ExecutionStyle):
     This is the default for orders placed with :func:`~zipline.api.order`.
     """
     def get_limit_ratio(self, asset, dts):
-        pre_close = self.get_pre_close(asset, dts)
-        limit_price = pre_close * (1 + asset.restricted(dts))
+        pre_close = super().get_pre_close(asset, dts)
+        limit_price = pre_close * (1 + asset.restricted_change(dts))
         return limit_price
 
     def get_stop_ratio(self, asset, dts):
-        pre_close = self.get_pre_close(asset, dts)
-        stop_price = pre_close * (1 - asset.restricted(dts))
+        pre_close = super().get_pre_close(asset, dts)
+        stop_price = pre_close * (1 - asset.restricted_change(dts))
         return stop_price
 
 
@@ -75,13 +75,13 @@ class LimitOrder(ExecutionStyle):
         self.limit = limit
 
     def get_limit_ratio(self, asset, dts):
-        pre_close = self.get_pre_close(asset, dts)
+        pre_close = super().get_pre_close(asset, dts)
         limit_price = pre_close * (1 + self.limit)
         return limit_price
 
     def get_stop_ratio(self, asset, dts):
-        pre_close = self.get_pre_close(asset, dts)
-        stop_price = pre_close * (1 - asset.restricted(dts))
+        pre_close = super().get_pre_close(asset, dts)
+        stop_price = pre_close * (1 - asset.restricted_change(dts))
         return stop_price
 
 
@@ -101,12 +101,12 @@ class StopOrder(ExecutionStyle):
         self.stop = stop
 
     def get_limit_ratio(self, asset, dts):
-        pre_close = self.get_pre_close(asset, dts)
-        limit_price = pre_close * (1 + asset.restricted(dts))
+        pre_close = super().get_pre_close(asset, dts)
+        limit_price = pre_close * (1 + asset.restricted_change(dts))
         return limit_price
 
     def get_stop_ratio(self, asset, dts):
-        pre_close = self.get_pre_close(asset, dts)
+        pre_close = super().get_pre_close(asset, dts)
         stop_price = pre_close * (1 - self.stop)
         return stop_price
 
@@ -131,12 +131,12 @@ class StopLimitOrder(ExecutionStyle):
         self.stop = kwargs.get('stop', 0.07)
 
     def get_limit_ratio(self, asset, dts):
-        pre_close = self.get_pre_close(asset, dts)
-        limit_price = pre_close * (1 + self.limit )
+        pre_close = super().get_pre_close(asset, dts)
+        limit_price = pre_close * (1 + self.limit)
         return limit_price
 
     def get_stop_ratio(self, asset, dts):
-        pre_close = self.get_pre_close(asset, dts)
+        pre_close = super().get_pre_close(asset, dts)
         stop_price = pre_close * (1 - self.stop)
         return stop_price
 
