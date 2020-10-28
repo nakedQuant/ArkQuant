@@ -52,7 +52,7 @@ class Signal(ABC):
         :return: bool
         """
         val = self._run_signal(metadata)
-        return val < 0
+        return val
 
 
 __all__ = ['Signal']

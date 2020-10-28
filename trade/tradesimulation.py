@@ -79,7 +79,6 @@ class AlgorithmSimulator(object):
             for session_label, action in self.clock:
                 print('session_label and action', session_label, action)
                 if action == BEFORE_TRADING_START:
-                    # metrics_tracker.handle_market_open(session_label)
                     metrics_tracker.handle_market_open(session_label, ledger)
                 elif action == SESSION_START:
                     once_a_day(session_label)

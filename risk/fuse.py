@@ -32,7 +32,7 @@ class Fuse(BaseFuse):
 
     def trigger(self, portfolio):
         net_value = portfolio.portfolio_daily_value
-        if net_value[-self.length:].mean() / net_value[0] <= self.fuse:
+        if net_value[-self.window:].mean() / net_value[0] <= self.fuse:
             super().protect()
 
 

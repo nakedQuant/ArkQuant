@@ -48,7 +48,7 @@ class Ledger(object):
 
     @property
     def portfolio(self):
-        assert self._dirty_portfolio, 'portfolio is not accurate'
+        assert not self._dirty_portfolio, 'portfolio is not accurate'
         return self._portfolio
 
     @property
@@ -66,7 +66,8 @@ class Ledger(object):
         left_cash = self.position_tracker.handle_splits(session_ix)
         self._cash_flow(left_cash)
         self._previous_total_returns = self._portfolio.returns
-        self._dirty_portfolio = True
+        self._portfolio.positions = self.positions
+        self._dirty_portfolio = False
         # self._dirty_positions = True
 
     def process_transaction(self, transactions):
@@ -112,16 +113,17 @@ class Ledger(object):
         # 更新持仓价值
         portfolio.positions_values = position_values
         # 更新组合持仓
-        self.portfolio.positions = self.positions
+        portfolio.positions = self.positions
         # 资金使用效率
         portfolio.utility = position_values / end_value
         self._dirty_portfolio = False
 
     def end_of_session(self):
+        self._dirty_portfolio = True
         session_ix = self.position_tracker.synchronize()
         # self._dirty_positions = False
         self._calculate_portfolio_stats()
-        self.portfolio.daily_returns(session_ix)
+        # self.portfolio.daily_returns(session_ix)
         self._dirty_portfolio = False
         self.fuse_model.trigger(self._portfolio)
 

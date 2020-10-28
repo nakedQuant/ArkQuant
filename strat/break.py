@@ -23,16 +23,17 @@ class Break(Signal):
     def _run_signal(self, feed):
         # default -- buy operation
         ema = self.ema.compute(feed, self.params)
-        print('break ema', ema)
+        # print('break ema', ema)
         ma = self.ma.compute(feed, self.params)
-        print('break ma', ma)
+        # print('break ma', ma)
         deviation = ema[-1] - ma.iloc[-1]
         return deviation
 
     def long_signal(self, data, mask) -> bool:
         out = super().long_signal(data, mask)
+        print('break out', out)
         return out
 
     def short_signal(self, feed) -> bool:
-        value = super().short_signal(feed)
-        return value < 0
+        value = super().short_signal(feed) < 0
+        return value

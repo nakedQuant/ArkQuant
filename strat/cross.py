@@ -20,17 +20,17 @@ class Cross(Signal):
     def _run_signal(self, feed):
         # default -- buy operation
         long = self.ma.compute(feed, {'window': max(self.params['window'])})
-        print('cross long', long)
+        # print('cross long', long)
         short = self.ma.compute(feed, {'window': min(self.params['window'])})
-        print('cross short', short)
+        # print('cross short', short)
         deviation = short.iloc[-1] - long.iloc[-1]
         return deviation
 
     def long_signal(self, data, mask) -> bool:
         out = super().long_signal(data, mask)
-        print('cross long signal', out)
+        print('cross signal', out)
         return out
 
     def short_signal(self, feed) -> bool:
-        signal = super().short_signal(feed)
+        signal = super().short_signal(feed) < 0
         return signal

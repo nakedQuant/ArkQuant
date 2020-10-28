@@ -38,6 +38,7 @@ class Broker(object):
         txn_mappings = dict()
         # controls
         allocation = self.capital_model.compute(assets, capital, dts)
+        print('allocation', allocation)
         for asset, available in allocation.items():
             txn_mappings[asset] = self.generator.yield_capital(asset, available, portfolio, dts)
         return txn_mappings
@@ -76,6 +77,7 @@ class Broker(object):
         capital = ledger.portfolio.start_cash
         # {pipeline_name : asset} , {pipeline_name : position} , (position, asset)
         positives, negatives, duals = self.engine.execute_algorithm(ledger, dts)
+        print('broker', positives, negatives, duals)
         portfolio = ledger.portfolio
         # 直接买入
         call_txns = self.implement_capital(positives, capital, portfolio, dts)

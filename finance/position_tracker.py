@@ -85,18 +85,20 @@ class PositionTracker(object):
             c. update last_sync_date
         """
         sync_date = set([p.last_sync_date for p in self.positions.values()])
-        assert len(sync_date) == 1, 'all positions must be sync on the same date'
-        get_price = partial(
-                            portal.get_spot_value,
-                            dt=sync_date[0],
-                            field='close',
-                            frequency='daily'
-                            )
-        for asset, p in self.positions.items():
-            p.last_sync_price = get_price(asset)
-            # update position_returns
-            p.calculate_returns()
-        return sync_date
+        print('sync_date', sync_date)
+        if sync_date:
+            assert len(sync_date) == 1, 'all positions must be sync on the same date'
+            get_price = partial(
+                                portal.get_spot_value,
+                                dt=sync_date[0],
+                                field='close',
+                                frequency='daily'
+                                )
+            for asset, p in self.positions.items():
+                p.last_sync_price = get_price(asset)
+                # update position_returns
+                p.calculate_returns()
+            return sync_date
 
     @staticmethod
     def retrieve_equity_rights(assets, dt):

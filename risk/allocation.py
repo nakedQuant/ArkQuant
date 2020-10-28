@@ -24,7 +24,7 @@ class CapitalUsage(ABC):
 class Equal(CapitalUsage):
 
     def compute(self, assets, capital, dts):
-        mappings = {{asset: capital / len(assets)} for asset in assets}
+        mappings = {asset: capital / len(assets) for asset in assets}
         return mappings
 
 

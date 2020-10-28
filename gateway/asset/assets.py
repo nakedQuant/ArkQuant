@@ -185,21 +185,33 @@ class Equity(Asset):
     def restricted_change(self, dt):
         """
             科创板股票上市后的前5个交易日不设涨跌幅限制，从第六个交易日开始设置20%涨跌幅限制
-            创业版上市首日不设立涨跌停限制， 以后20%
+            创业版2020-08-24开始实行的新规: 上市前五个交易日不设立涨跌停限制之后20% （原来首日44%， 10%）
         """
+        assert dt >= self.first_traded, 'dt must be after first_traded'
         end_dt = calendar.dt_window_size(dt, RestrictedWindow)
-
-        if self.first_traded == dt:
-            pct = np.inf if self.sid.startswith('688') or self.sid.startswith('3') else 0.44
-        elif self.first_traded <= end_dt:
-            pct = np.inf if self.sid.startswith('688') else (0.2 if self.sid.startswith('3') else 0.1)
+        if self.first_traded < '2020-08-24':
+            print('apply to old cyb regulation')
+            if self.first_traded == dt:
+                pct = np.inf if self.sid.startswith('688') else 0.44
+            elif self.first_traded >= end_dt:
+                pct = np.inf if self.sid.startswith('688') else 0.1
+            else:
+                pct = 0.2 if self.sid.startswith('688') else 0.1
         else:
-            pct = 0.2 if self.sid.startswith('688') or self.sid.startswith('3') else 0.1
+            print('new regualtion of cyb')
+            if self.first_traded == dt:
+                pct = np.inf if self.sid.startswith('688') else \
+                    np.inf if self.sid.startswith('3') else 0.44
+            elif self.first_traded >= end_dt:
+                pct = np.inf if self.sid.startswith('688') or self.sid.startswith('3') else \
+                    (0.2 if self.sid.startswith('3') else 0.1)
+            else:
+                pct = 0.2 if self.sid.startswith('688') or self.sid.startswith('3') else 0.1
         return pct
 
     @property
     def bid_mechanism(self):
-        bid_mechanism = True if self.sid.startwith('688') else False
+        bid_mechanism = True if self.sid.startswith('688') else False
         return bid_mechanism
 
     def is_specialized(self, dt):
@@ -282,16 +294,15 @@ __all__ = [
     'Fund'
 ]
 
-
 # if __name__ == '__main__':
 #
-#     asset = Equity('300570')
+#     asset = Equity('300806')
 #     asset = Convertible('123013')
 #     asset = Fund('515500')
 #     import pickle
 #     p = pickle.dumps(asset)
 #     print('p', p)
-#     limit = asset.restricted_change('2020-03-05')
-#     limit = asset.is_active('2020-03-05')
-#     limit = asset.suspend('2020-09-04')
+#     limit = asset.restricted_change('2019-11-26')
+#     limit = asset.is_active('2019-09-02')
+#     limit = asset.suspend('2019-09-02')
 #     print('limit', limit)

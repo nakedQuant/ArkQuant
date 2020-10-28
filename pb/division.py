@@ -24,7 +24,7 @@ class Division(object):
     def _calculate_division_data(self, asset, dts, amount_only=False):
         tick_size = asset.tick_size
         open_change, pre_close = portal.get_open_pct(asset, dts)
-        ensure_price = pre_close * (1 + asset.restricted)
+        ensure_price = pre_close * (1 + asset.restricted_change(dts))
         # ensure amount at least 1 , base_amount(单位股数）
         base_amount = max(tick_size, np.ceil(self.base_capital / ensure_price))
         per_amount = tick_size * np.floor(base_amount / tick_size) if asset.increment else base_amount
@@ -53,12 +53,17 @@ class Division(object):
 
         """
         open_pct, ensure_price, per_amount = self._calculate_division_data(asset, dts)
-        amount = asset.tick_size * np.floor(capital / ensure_price * asset.tick_size) \
+        print('division data', open_pct, ensure_price, per_amount)
+        amount = asset.tick_size * np.floor(capital / (ensure_price * asset.tick_size)) \
             if asset.increment else np.floor(capital / ensure_price)
-        assert amount < asset.tick_size, 'amount must be at least tick_size'
+        print('amount', amount)
+        assert amount > asset.tick_size, 'amount must be at least tick_size'
         control_amount = self.trade_controls.validate(asset, amount, portfolio, dts)
+        print('control_amount', control_amount)
         iterables = self.uncover_func.create_iterables(asset, control_amount, per_amount, dts)
+        print('iterables', list(iterables))
         capital_orders = self._simulate_iterator(asset, iterables)
+        print('capital_orders', capital_orders)
         return capital_orders
 
     def divided_by_position(self, position, portfolio, dts):

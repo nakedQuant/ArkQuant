@@ -146,7 +146,8 @@ class Engine(ABC):
         print('ump_pipes', ump_pipes)
         ump_positions = set(ump_pipes) | removed_positions
         print('ump_positions', ump_positions)
-        yield self.resolve_conflicts(pipes, ump_positions, ledger.positions)
+        # yield self.resolve_conflicts(pipes, ump_positions, ledger.positions)
+        return self.resolve_conflicts(pipes, ump_positions, ledger.positions)
 
     @staticmethod
     @abstractmethod
@@ -239,20 +240,24 @@ class SimplePipelineEngine(Engine):
 
     @staticmethod
     def resolve_conflicts(calls, puts, holdings):
-        # mappings {pipe_name:position}
+        # position name means pipeline_name ; asset tag name means pipeline_name
         call_proxy = {r.tag: r for r in calls}
-        put_proxy = {r.name: r for r in puts}
-        hold_proxy = {p.name: p for p in holdings}
-        # common pipe name
-        common_pipe = set(call_proxy) & set(put_proxy)
-        assert not common_pipe, 'call assets should not be put at meantime'
+        put_proxy = {r.name: r for r in puts} if puts else {}
+        hold_proxy = {p.name: p for p in holdings} if holdings else {}
+        # 判断买入标的的sid与卖出持仓的sid是否存在冲突
+        positive_sids = [r.sid for r in calls]
+        negatives_sids = [p.asset.sid for p in puts] if puts else []
+        union_sids = set(positive_sids) & set(negatives_sids)
+        assert not union_sids, 'call assets should not be put at meantime'
         # 基于capital执行直接买入标的的
         extra = set(call_proxy) - set(hold_proxy)
         if extra:
             direct_positives = keyfilter(lambda x: x in extra, call_proxy)
         else:
             direct_positives = dict()
-        # 直接卖出持仓，无买入标的
+        # 一个pipeline同时存在买入和卖出行为 --- 基于pipeline name
+        # common pipe name
+        common_pipe = set(call_proxy) & set(put_proxy)
         negatives = set(put_proxy) - set(common_pipe)
         direct_negatives = keyfilter(lambda x: x in negatives, put_proxy)
         # 卖出持仓买入对应标的 --- (position, asset)

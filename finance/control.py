@@ -232,10 +232,11 @@ class NoControl(TradingControl):
         """
         Fail if we would hold negative shares of asset after completing this order.
         """
-        super().validate(asset,
-                         amount,
-                         portfolio,
-                         algo_datetime)
+        amount = super().validate(asset,
+                                  amount,
+                                  portfolio,
+                                  algo_datetime)
+        return amount
 
 
 class UnionControl(TradingControl):

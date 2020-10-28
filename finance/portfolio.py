@@ -51,8 +51,11 @@ class Portfolio(object):
     def daily_value(self, session_ix):
         self.portfolio_daily_value[session_ix] = self.portfolio_value
 
+    # def __getattr__(self, item):
+    #     return self.__dict__[item]
+
     def __getattr__(self, item):
-        return self.__dict__[item]
+        return self.__slots__[item]
 
     def __repr__(self):
         return "Portfolio({0})".format(self.__dict__)
