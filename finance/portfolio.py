@@ -37,7 +37,7 @@ class Portfolio(object):
         self.positions = None
         self.positions_values = 0.0
         self.portfolio_value = capital_base
-        self.start_cash = capital_base - self._cash_flow
+        self.start_cash = capital_base
         self.portfolio_daily_value = pd.Series(capital_base, dtype='float64')
 
     @property
@@ -48,17 +48,21 @@ class Portfolio(object):
     def cash_flow(self, val):
         self._cash_flow = val
 
+    @property
+    def portfolio_cash(self):
+        return self.start_cash - self.cash_flow
+
     def daily_value(self, session_ix):
         self.portfolio_daily_value[session_ix] = self.portfolio_value
 
     # def __getattr__(self, item):
     #     return self.__dict__[item]
-
-    def __getattr__(self, item):
-        return self.__slots__[item]
+    #
+    # # def __getattr__(self, item):
+    # #     return self.__slots__[item]
 
     def __repr__(self):
-        return "Portfolio({0})".format(self.__dict__)
+        return "Portfolio({0})".format(self.__slots__)
 
     # If you are adding new attributes, don't update this set. This method
     # is deprecated to normal attribute access so we don't want to encourage

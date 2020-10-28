@@ -63,6 +63,7 @@ class UncoverAlgorithm(BaseUncover):
         print('uncover by price', size, asset, dts)
         # 模拟价格分布
         restricted_change = asset.restricted_change(dts)
+        print('restricted_change', restricted_change)
         open_pct, pre_close = portal.get_open_pct(asset, dts)
         # alpha = 1 if open_pct == 0.00 else 100 * open_pct
         # print('alpha', alpha, size)
@@ -73,9 +74,8 @@ class UncoverAlgorithm(BaseUncover):
         #     dist = dist + 1
         # else:
         #     dist = [1 + alpha / 100]
-        dist = 1 + np.random.normal(- 3 * open_pct, open_pct * 3, size) if size > 0 else 1 + open_pct
+        dist = 1 + np.random.uniform(- 3 * abs(open_pct), abs(open_pct) * 3, size) if size > 0 else 1 + open_pct
         print('dist', dist)
-        print('restricted_change', restricted_change)
         clip_pct = np.clip(dist, (1 - restricted_change), (1 + restricted_change))
         print('clip_pct', clip_pct)
         sim_prices = clip_pct * pre_close

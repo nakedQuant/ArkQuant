@@ -46,7 +46,8 @@ class PositionTracker(object):
         dividends = portal.get_dividends(set(self.positions), dts)
         for asset, position in self.positions.items():
             # update last_sync_date
-            position.last_sync_date = dts
+            print('p', position)
+            position.inner_position.last_sync_date = dts
             try:
                 dividend = dividends.loc[asset.sid, :]
             except KeyError:
@@ -63,6 +64,7 @@ class PositionTracker(object):
             position = self.positions[asset]
         except KeyError:
             position = self.positions[asset] = Position(asset)
+            print('position', position)
         cash_flow = position.update(transaction)
         if position.closed:
             dts = transaction.created_dt.strftime('%Y-%m-%d')
@@ -88,14 +90,12 @@ class PositionTracker(object):
         print('sync_date', sync_date)
         if sync_date:
             assert len(sync_date) == 1, 'all positions must be sync on the same date'
-            get_price = partial(
-                                portal.get_spot_value,
-                                dt=sync_date[0],
-                                field='close',
-                                frequency='daily'
-                                )
+            get_price = partial(portal.get_spot_value,
+                                dts=list(sync_date)[0],
+                                frequency='daily',
+                                field='close')
             for asset, p in self.positions.items():
-                p.last_sync_price = get_price(asset)
+                p.inner_position.last_sync_price = get_price(asset=asset)
                 # update position_returns
                 p.calculate_returns()
             return sync_date

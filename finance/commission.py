@@ -67,8 +67,10 @@ class Commission(CommissionModel):
         :param order: Order object
         :return: cost for order
         """
+        print('order', order)
         capital = order.amount * order.price
         cost = capital * self.calculate_rate_fee(order)
+        print('cost', cost)
         cost = cost if cost >= self.min_cost else self.min_cost
         return cost
 

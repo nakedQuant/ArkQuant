@@ -68,16 +68,30 @@ class InnerPosition(object):
 
 class Position(object):
     """
-    A protocol position which is not mutated ,but inner can be changed
-    """
-    __slots__ = ['_underlying_position']
+    A position held by an algorithm.
 
-    def __init__(self, inner):
-        self._underlying_position = MutableView(inner)
+    Attributes
+    ----------
+    asset : zipline.assets.Asset
+        The held asset.
+    amount : int
+        Number of shares held. Short positions are represented with negative
+        values.
+    cost_basis : float
+        Average price at which currently-held shares were acquired.
+    last_sale_price : float
+        Most recent price for the position.
+    last_sale_date : pd.Timestamp
+        Datetime at which ``last_sale_price`` was last updated.
+    """
+    __slots__ = ('_underlying_position',)
+
+    def __init__(self, underlying_position):
+        # object.__setattr__(self, '_underlying_position', underlying_position)
+        super(Position, self).__setattr__('_underlying_position', underlying_position)
 
     def __getattr__(self, attr):
-        # return self.__dict__[attr]
-        return self._underlying_position[attr]
+        return getattr(self._underlying_position, attr)
 
     def __setattr__(self, attr, value):
         raise AttributeError('cannot mutate Position objects')
@@ -89,8 +103,8 @@ class Position(object):
                 'asset',
                 'amount',
                 'cost_basis',
-                'last_sale_price',
-                'last_sale_date',
+                'last_sync_price',
+                'last_sync_date',
             )
         }
 
@@ -102,8 +116,8 @@ class Position(object):
             'sid',
             'amount',
             'cost_basis',
-            'last_sale_price',
-            'last_sale_date',
+            'last_sync_price',
+            'last_sync_date',
         },
     )
 

@@ -11473,3 +11473,62 @@ class finaldescriptor(final):
     """
     def __get__(self, instance, owner):
         return self._attr.__get__(instance, owner)
+
+
+# def locate_pos(price, minutes, direction):
+#     try:
+#         loc = list(minutes.index[minutes == price])
+#         if not loc:
+#             # 当卖出价格大于bid价格才会成交，买入价格低于bid价格才会成交
+#             loc = list(minutes.index[minutes <= price]) if direction == '1' else \
+#                 list(minutes.index[minutes >= price])
+#         return loc[0]
+#     except IndexError:
+#         print('price out of minutes')
+#         return None
+
+
+
+# class Position(object):
+#     """
+#     A protocol position which is not mutated ,but inner can be changed
+#     """
+#     # __slots__ = ['_underlying_position']
+#
+#     def __init__(self, inner):
+#         self._underlying_position = MutableView(inner)
+#         # self._underlying_position = inner
+#
+#     def __getattr__(self, attr):
+#         # return self.__dict__[attr]
+#         return self._underlying_position.__dict__[attr]
+#         # return getattr(self._underlying_position, attr)
+#
+#     # def __setattr__(self, attr, value):
+#     #     raise AttributeError('cannot mutate Position objects')
+#
+#     def __repr__(self):
+#         return 'Position(%r)' % {
+#             k: getattr(self, k)
+#             for k in (
+#                 'asset',
+#                 'amount',
+#                 'cost_basis',
+#                 'last_sync_price',
+#                 'last_sync_date',
+#             )
+#         }
+#
+#     # If you are adding new attributes, don't update this set. This method
+#     # is deprecated to normal attribute access so we don't want to encourage
+#     # new usages.
+#     __getitem__ = _deprecated_getitem_method(
+#         'position', {
+#             'sid',
+#             'amount',
+#             'cost_basis',
+#             'last_sale_price',
+#             'last_sale_date',
+#         },
+#     )
+

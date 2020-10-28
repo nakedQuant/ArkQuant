@@ -64,8 +64,10 @@ class Position(object):
         return left_cash
 
     def update(self, txn):
-        if self.asset == txn.event.asset:
+        if self.asset != txn.asset:
             raise Exception('transaction asset must same with position asset')
+        self.inner_position.last_sync_date = txn.created_dt.strftime('%Y-%m-%d')
+        # self.last_sync_date = txn.created_dt.strftime('%Y-%m-%d')
         # 持仓基本净值
         base_value = self.amount * self.cost_basis
         # 交易净值 以及成本
@@ -114,11 +116,21 @@ class Position(object):
         return {
             'asset': self.asset,
             'amount': self.amount,
-            'origin': self.asset_type.source,
             'cost_basis': self.cost_basis,
             'last_sale_price': self.last_sale_price,
-            'created_by': self.name
+            'last_sync_date': self.last_sync_date
             }
 
 
 __all__ = ['Position']
+
+if __name__ == '__main__':
+
+    from gateway.asset.assets import Equity
+    equity = Equity('600196')
+    p = Position(equity)
+    print('closed', p.closed)
+    print('freeze', p.is_freeze)
+    # print('protocol', p.protocol)
+    print(ProtocolPosition(p.inner_position))
+    p.inner_position.last_sync_price = '2020-10-28'

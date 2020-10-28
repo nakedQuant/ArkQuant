@@ -13,16 +13,14 @@ MAX_WEEK_RANGE = 5
 
 
 def locate_pos(price, minutes, direction):
+    # 当卖出价格大于bid价格才会成交，买入价格低于bid价格才会成交
+    loc = list(minutes[minutes <= price].index) if direction == '1' else \
+        list(minutes[minutes >= price].index)
     try:
-        loc = list(minutes.index[minutes == price])
-        if not loc:
-            # 当卖出价格大于bid价格才会成交，买入价格低于bid价格才会成交
-            loc = list(minutes.index[minutes <= price]) if direction == '1' else \
-                list(minutes.index[minutes >= price])
-        return loc[0]
+        pos = pd.Timestamp(datetime.datetime.utcfromtimestamp(loc[0]))
+        return pos
     except IndexError:
         print('price out of minutes')
-        return None
 
 
 def parse_date_str_series(format_str, tz, date_str_series):
@@ -109,7 +107,7 @@ def _build_offset(offset, kwargs, default):
     Builds the offset argument for event rules.
     """
     # Filter down to just kwargs that were actually passed.
-    kwargs = {k: v for k, v in six.iteritems(kwargs) if v is not None}
+    kwargs = {k: v for k, v in kwargs.items() if v is not None}
     if offset is None:
         if not kwargs:
             return default  # use the default.

@@ -40,7 +40,9 @@ class Broker(object):
         allocation = self.capital_model.compute(assets, capital, dts)
         print('allocation', allocation)
         for asset, available in allocation.items():
+            print('broker capital', asset, available)
             txn_mappings[asset] = self.generator.yield_capital(asset, available, portfolio, dts)
+        print('txn_mappings', txn_mappings)
         return txn_mappings
 
     def implement_position(self, negatives, portfolio, dts):
@@ -64,13 +66,20 @@ class Broker(object):
             txn_mappings[asset] = long
         return txn_mappings
 
+    # @staticmethod
+    # def multi_process(ledger, iterable):
+    #     def proc(dct):
+    #         for k, v in dct.items():
+    #             ledger.process_transaction(v)
+    #     with Pool(processes=3) as pool:
+    #         [pool.apply_async(proc, item) for item in iterable]
+
     @staticmethod
     def multi_process(ledger, iterable):
-        def proc(dct):
-            for k, v in dct.items():
+        for txn_mappings in iterable:
+            for k, v in txn_mappings.items():
+                print('v', v)
                 ledger.process_transaction(v)
-        with Pool(processes=3) as pool:
-            [pool.apply_async(proc, item) for item in iterable]
 
     def implement_broke(self, ledger, dts):
         """建立执行计划"""
@@ -81,6 +90,7 @@ class Broker(object):
         portfolio = ledger.portfolio
         # 直接买入
         call_txns = self.implement_capital(positives, capital, portfolio, dts)
+        print('call_txns', call_txns)
         # 直接卖出
         put_txns = self.implement_position(negatives, portfolio, dts)
         # 卖出 --- 买入

@@ -72,13 +72,18 @@ class SimulationBlotter(object):
             new_order = order
         else:
             raise ValueError
-        new_order = self._trigger_check(new_order, dts)
+        new_order = self._trigger_check(new_order, dts) if new_order else new_order
+        print('new_order', new_order)
         return new_order
 
-    def create_transaction(self, orders, dts):
-        trigger_orders = [order for order in orders if self._validate(order, dts)]
+    def create_bulk_transactions(self, orders, dts):
+        # trigger_orders = [order for order in orders if self._validate(order, dts)]
+        trigger_orders = [self._validate(order, dts) for order in orders]
+        trigger_orders = [order for order in trigger_orders if order]
+        print('trigger_orders', trigger_orders)
         # create txn
         transactions = [create_transaction(order_obj, self.commission) for order_obj in trigger_orders]
+        print('transactions', transactions)
         return transactions
 
 

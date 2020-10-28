@@ -117,7 +117,7 @@ class PriceOrder(Order):
         """
         String representation for this object.
         """
-        return "Price Order(%r)" % self.to_dict()
+        return "PriceOrder(%r)" % self.to_dict()
 
     def __getstate__(self):
         """ pickle -- __getstate__ , __setstate__"""
@@ -166,7 +166,7 @@ class TickerOrder(object):
         """
         String representation for this object.
         """
-        return "Ticker Order(%r)" % self.to_dict()
+        return "TickerOrder(%r)" % self.to_dict()
 
     def __getstate__(self):
         """ pickle -- __getstate__ , __setstate__"""
@@ -174,9 +174,7 @@ class TickerOrder(object):
 
 
 def transfer_to_order(order, ticker=None, price=None):
-    if isinstance(order, Order):
-        new_order = order
-    elif isinstance(order, PriceOrder) and ticker is not None:
+    if isinstance(order, PriceOrder) and ticker is not None:
         new_order = Order(asset=order.asset,
                           amount=order.amount,
                           price=order.price,
@@ -185,9 +183,9 @@ def transfer_to_order(order, ticker=None, price=None):
         new_order = Order(asset=order.asset,
                           amount=order.amount,
                           price=price,
-                          ticker=order.ticker)
+                          ticker=order.created_dt)
     else:
-        raise ValueError
+        new_order = None
     return new_order
 
 

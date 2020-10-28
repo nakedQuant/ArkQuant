@@ -37,7 +37,7 @@ class Ledger(object):
         self.fuse_model = fuse_model
         self._processed_transaction = []
         self._previous_total_returns = 0
-        self._dirty_positions = True
+        # self._dirty_positions = True
         self._dirty_portfolio = True
 
     @property
@@ -71,7 +71,9 @@ class Ledger(object):
         # self._dirty_positions = True
 
     def process_transaction(self, transactions):
+        print('ledger process_transaction')
         txn_capital = self.position_tracker.handle_transaction(transactions)
+        print('txn_capital', txn_capital)
         self._cash_flow(txn_capital)
         self._processed_transaction.append(transactions)
 
@@ -93,17 +95,23 @@ class Ledger(object):
         # 计算持仓组合净值
         position_values = sum([p.amount * p.last_sync_price
                                for p in self.positions.values()])
+        print('position_values', position_values)
         # 持仓组合
         portfolio = self._portfolio
         self._previous_total_returns = portfolio.returns
         # 组合净值（持仓净值 + 现金）
         start_value = portfolio.portfolio_value
+        print('start_value', start_value)
+        # portfolio.portfolio_value = end_value = \
+        #     position_values + portfolio.start_cash
         portfolio.portfolio_value = end_value = \
-            position_values + portfolio.start_cash
-
+            position_values + portfolio.portfolio_cash
+        print('portfolio_cash', portfolio.portfolio_cash)
         # 更新组合投资的收益，并计算组合的符合收益率
         pnl = end_value - start_value
+        print('pnl', pnl)
         returns = pnl / start_value
+        print('returns', returns)
         portfolio.pnl += pnl
         # 复合收益率
         portfolio.returns = (
@@ -116,6 +124,7 @@ class Ledger(object):
         portfolio.positions = self.positions
         # 资金使用效率
         portfolio.utility = position_values / end_value
+        print('porfolio utility', portfolio.utility)
         self._dirty_portfolio = False
 
     def end_of_session(self):
@@ -125,8 +134,9 @@ class Ledger(object):
         self._calculate_portfolio_stats()
         # self.portfolio.daily_returns(session_ix)
         self._dirty_portfolio = False
+        print('end session ledger portfolio', self.portfolio)
         self.fuse_model.trigger(self._portfolio)
-        print('test ledger positions', self.positions)
+        print('end session ledger positions', self.positions)
 
     def get_transactions(self, dt):
         """
@@ -145,9 +155,9 @@ class Ledger(object):
 
     def get_rights_positions(self, dts):
         # 获取当天为配股登记日的仓位 --- 卖出 因为需要停盘产生机会成本
-        assets = [p.asset for p in self.positions]
+        assets = set(self.positions)
         rights = self.position_tracker.retrieve_equity_rights(assets, dts)
-        p_mapping = {p.asset.sid: p for p in self.positions}
+        p_mapping = {p.sid: p for p in self.positions}
         right_positions = None if rights.empty else [p_mapping[s].protocol for s in rights.index]
         return right_positions
 
@@ -164,7 +174,7 @@ class Ledger(object):
             return acd is not None and acd == dt
         # Remove positions in any sids that have reached their auto_close date.
         positions_to_clear = \
-            [p for p in self.positions if past_close_date(p.asset)]
+            [p for p in self.positions if past_close_date(p)]
         return positions_to_clear
 
     def get_expired_positions(self, dts):

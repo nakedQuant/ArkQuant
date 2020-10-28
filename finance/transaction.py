@@ -10,9 +10,14 @@ from finance.order import Order
 
 class Transaction(object):
 
-    __slots__ = ['asset', 'amount', 'price', 'cost', 'created_dt']
+    __slots__ = ['asset', 'amount', 'price', 'created_dt', 'cost']
 
-    def __init__(self, asset, amount, price, dts, cost):
+    def __init__(self,
+                 asset=None,
+                 amount=None,
+                 price=None,
+                 dts=None,
+                 cost=None):
         self.asset = asset
         self.amount = amount
         self.price = price
@@ -21,20 +26,20 @@ class Transaction(object):
 
     def __repr__(self):
         template = (
-            "{cls}(asset={asset}, dt={dt},"
-            " amount={amount},created_by={created_by}, price={price}, dt={dt})"
+            "{cls}(asset={asset},amount={amount},"
+            "created_dt={created_dt},price={price},cost={cost})"
         )
         return template.format(
             cls=type(self).__name__,
             asset=self.asset,
             amount=self.amount,
-            created_by=self.asset.tag,
             price=self.price,
-            dt=self.created_dt,
+            created_dt=self.created_dt,
+            cost=self.cost
         )
 
     def __getitem__(self, attr):
-        return self.__dict__[attr]
+        return self.__slots__[attr]
 
     def __getstate__(self):
         """
@@ -53,6 +58,7 @@ def create_transaction(order, commission):
     if isinstance(order, Order):
         # calculate cost
         cost = commission.calculate(order)
+        print('cost', cost)
         # create txn
         transaction = Transaction(
             asset=order.asset,

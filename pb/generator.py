@@ -25,12 +25,13 @@ class Generator(object):
     def yield_capital(self, asset, capital, portfolio, dts):
         capital_orders = self.division_model.divided_by_capital(asset, capital, portfolio, dts)
         print('generator capital_orders', capital_orders)
-        capital_transactions = self.blotter.create_transaction(capital_orders, dts)
+        capital_transactions = self.blotter.create_bulk_transactions(capital_orders, dts)
+        print('capital_transactions', capital_transactions)
         return capital_transactions
 
     def yield_position(self, position, portfolio, dts):
         holding_orders = self.division_model.divided_by_position(position, portfolio, dts)
-        holding_transactions = self.blotter.create_transaction(holding_orders, dts)
+        holding_transactions = self.blotter.create_bulk_transactions(holding_orders, dts)
         return holding_transactions
 
     def yield_interactive(self, position, asset, portfolio, dts):
@@ -70,7 +71,7 @@ class Generator(object):
         ticker_amount = ratio * short_amount[:len(tickers)]
         # 生成对应的买入订单
         orders = [Order(asset, *args) for args in zip(ticker_prices, ticker_amount, tickers)]
-        long_transactions = self.blotter.create_transaction(orders, dts)
+        long_transactions = self.blotter.create_bulk_transactions(orders, dts)
         return short_transactions, long_transactions
 
 
