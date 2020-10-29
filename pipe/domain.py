@@ -73,13 +73,13 @@ def infer_domain(kwargs):
     return domain
 
 
-if __name__ == '__main__':
-
-    kw = {'window': (5, 10)}
-    domain_1 = Domain(['close'], 2)
-    domain_2 = Domain(['open'], 20)
-    # domain = domain_1 | domain_2
-    # print('domain', domain.domain_window, domain.domain_field)
-    # print('domain_1', domain_1.domain_window, domain_1.domain_field)
-    domain_1 | domain_2
-    print('domain_1', domain_1.domain_window, domain_1.domain_field)
+# if __name__ == '__main__':
+#
+#     kw = {'window': (5, 10)}
+#     domain_1 = Domain(['close'], 2)
+#     domain_2 = Domain(['open'], 20)
+#     # domain = domain_1 | domain_2
+#     # print('domain', domain.domain_window, domain.domain_field)
+#     # print('domain_1', domain_1.domain_window, domain_1.domain_field)
+#     domain_1 | domain_2
+#     print('domain_1', domain_1.domain_window, domain_1.domain_field)

@@ -26,7 +26,9 @@ class Division(object):
         open_change, pre_close = portal.get_open_pct(asset, dts)
         ensure_price = pre_close * (1 + asset.restricted_change(dts))
         # ensure amount at least 1 , base_amount(单位股数）
-        base_amount = max(tick_size, np.ceil(self.base_capital / ensure_price))
+        # base_amount = max(tick_size, np.ceil(self.base_capital / ensure_price))
+        base_amount = tick_size if tick_size * ensure_price >= self.base_capital else \
+            np.ceil(self.base_capital / (ensure_price * tick_size)) * tick_size
         per_amount = tick_size * np.floor(base_amount / tick_size) if asset.increment else base_amount
         if amount_only:
             return base_amount
@@ -122,6 +124,7 @@ class Division(object):
         asset = position.asset
         amount = - copy.copy(position.amount)
         per_amount = self._calculate_division_data(asset, dts, amount_only=True)
+        print('position per amount', per_amount)
         control_amount = self.trade_controls.validate(asset, amount, portfolio, dts)
         print('position control_amount', control_amount)
         iterables = self.uncover_func.create_iterables(asset, control_amount, per_amount, dts)

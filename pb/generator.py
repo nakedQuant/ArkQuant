@@ -62,7 +62,8 @@ class Generator(object):
         short_transactions = self.yield_position(position, portfolio, dts)
         print('dual short_transactions', short_transactions)
         short_prices = np.array([txn.price for txn in short_transactions])
-        short_amount = np.array([txn.amount for txn in short_transactions])
+        # 由于position transaction (amount 为负）
+        short_amount = np.array([abs(txn.amount) for txn in short_transactions])
         # 切换之间存在时间差，默认以minutes为单位
         tickers = [pd.Timedelta(minutes=int(self.delay)) + txn.created_dt for txn in short_transactions]
         tickers = [ticker for ticker in tickers if ticker.hour < 15]

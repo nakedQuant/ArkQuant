@@ -25,8 +25,8 @@ class PricingLoader(PipelineLoader):
         self.scale = multiplier
 
     def load_pipeline_arrays(self, dts, assets, data_frequency):
-        print('dts', dts)
-        print('assets', assets)
+        # print('dts', dts)
+        # print('assets', assets)
         fields = list(self.pipeline_domain.domain_field)
         print('loader fields', fields)
         window = - self.scale * abs(self.pipeline_domain.domain_window)
@@ -37,7 +37,7 @@ class PricingLoader(PipelineLoader):
                                                  fields,
                                                  data_frequency
                                                  )
-        print('adjust_kline', set(adjust_kline))
+        # print('adjust_kline', set(adjust_kline))
         return adjust_kline
 
 
@@ -81,37 +81,16 @@ __all__ = ['PricingLoader', 'EventLoader']
 
 # if __name__ == '__main__':
 #
-#     asset = [Equity('600000')]
-#     date = '2020-09-30'
-#     kw_p = {'window': (5, 10), 'fields': ['close']}
-#     cross_term_p = Term('cross', kw_p)
-#     kw_p_1 = {'window': 10, 'fast': 12, 'slow': 26, 'period': 9, 'fields': ['high', 'amount']}
-#     break_term_p = Term('break', kw_p_1, cross_term_p)
-#     terms = [break_term_p, cross_term_p]
-#     pricing = PricingLoader(terms)
-#     kline = pricing.load_pipeline_arrays(date, asset, 'daily')
-#     print('kline', kline)
-#     kw = {'window': (5, 10), 'fields': ['massive', 'release']}
+#     from gateway.asset.assets import Equity, Convertible, Fund
+#     from pipe.term import Term
+#     kw = {'window': (5, 10), 'fields': ['close']}
 #     cross_term = Term('cross', kw)
-#     kw = {'window': 10, 'fast': 12, 'slow': 26, 'period': 9, 'fields': ['ownership', 'holder']}
+#     # print('sma_term', cross_term)
+#     kw = {'fields': ['close'], 'window': 5, 'final': True}
 #     break_term = Term('break', kw, cross_term)
-#     terms = [break_term, cross_term]
-#     event = EventLoader(terms)
-#     event_kline = event.load_pipeline_arrays(date, asset)
-#     print('event_kline', event_kline)
-
-if __name__ == '__main__':
-
-    from gateway.asset.assets import Equity, Convertible, Fund
-    from pipe.term import Term
-    kw = {'window': (5, 10), 'fields': ['close']}
-    cross_term = Term('cross', kw)
-    # print('sma_term', cross_term)
-    kw = {'fields': ['close'], 'window': 5, 'final': True}
-    break_term = Term('break', kw, cross_term)
-    pricing = PricingLoader([break_term, cross_term])
-    asset = {Equity('000702'), Equity('000717'), Equity('000718'), Equity('000701'), Equity('000728'),
-             Equity('000712'), Equity('000713'), Equity('000689'), Equity('000727'), Equity('000721')}
-    kline = pricing.load_pipeline_arrays('2019-09-03', asset, 'daily')
-    print('kline', set(kline))
-    print('kline', kline)
+#     pricing = PricingLoader([break_term, cross_term])
+#     asset = {Equity('000702'), Equity('000717'), Equity('000718'), Equity('000701'), Equity('000728'),
+#              Equity('000712'), Equity('000713'), Equity('000689'), Equity('000727'), Equity('000721')}
+#     kline = pricing.load_pipeline_arrays('2019-09-03', asset, 'daily')
+#     print('kline', set(kline))
+#     print('kline', kline)

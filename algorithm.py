@@ -711,7 +711,7 @@ __all__ = ['TradingAlgorithm']
 if __name__ == '__main__':
 
     from trade.params import create_simulation_parameters
-    trading_params = create_simulation_parameters(start='2019-09-01', end='2020-10-20')
+    trading_params = create_simulation_parameters(start='2019-09-01', end='2019-09-20')
     print('trading_params', trading_params)
     # set pipeline term
     from pipe.term import Term

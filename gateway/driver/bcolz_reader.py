@@ -66,17 +66,17 @@ class BcolzReader(BarReader):
             (A volume of 0 signifies no trades for the given dt.)
         """
         table = self._read_bcolz_data(sid)
-        print('cparams', table.cparams)
+        # print('cparams', table.cparams)
         meta = table.attrs
         # apply functools
         # # test = init.eval('(ticker - 34200) / 86400')
         # 获取数据
         if self.data_frequency == 'minute':
             start = transfer_to_timestamp(sdate)
-            print('start', sdate, start)
+            # print('start', sdate, start)
             assert meta['end_session'] >= start, ('%r exceed metadata end_session' % start)
             end = transfer_to_timestamp(edate) + 15 * 60 * 60
-            print('end', edate, end)
+            # print('end', edate, end)
             condition = '({0} <= ticker) & (ticker <= {1})'.format(start, end)
         else:
             assert meta['end_session'] >= sdate, ('%r exceed metadata end_session' % sdate)

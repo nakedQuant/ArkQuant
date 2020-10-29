@@ -61,14 +61,16 @@ class Ledger(object):
             update the cash of portfolio
         """
         p = self._portfolio
-        p.cash_flow -= capital_amount
+        p.cash_flow += capital_amount
 
     def start_of_session(self, session_ix):
         left_cash = self.position_tracker.handle_splits(session_ix)
+        print('start handle split cash', left_cash)
         self._cash_flow(left_cash)
         self._previous_total_returns = self._portfolio.returns
         self._portfolio.positions = self.positions
         self._dirty_portfolio = False
+        print('start portfolio cash', self.portfolio.portfolio_cash)
         # self._dirty_positions = True
 
     def process_transaction(self, transactions):

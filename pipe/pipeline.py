@@ -76,7 +76,7 @@ class Pipeline(object):
         return self
 
     def _combine_term_dependence(self, term, default_mask):
-        print('dependence', term.dependencies)
+        # print('dependence', term.dependencies)
         if term.dependencies != [NotSpecific]:
             # 将节点的依赖筛选出来
             dependence_masks = keyfilter(lambda x: x in term.dependencies,
@@ -94,14 +94,13 @@ class Pipeline(object):
             internal method for decref_recursive
             decrease by layer
         """
-        print('decref graph', graph.nodes)
-        # return in_degree == 0 nodes
+        # print('decref graph', graph.nodes)
         decref_nodes = graph.decref_dependencies()
-        print('decref nodes', decref_nodes)
+        # print('decref nodes', decref_nodes)
         if decref_nodes:
             for node in decref_nodes:
                 node_mask = self._combine_term_dependence(node, mask)
-                print('node_mask', node_mask)
+                # print('node_mask', node_mask)
                 output = node.compute(metadata, list(node_mask))
                 self._workspace[node] = output
                 print('_workspace', self._workspace)

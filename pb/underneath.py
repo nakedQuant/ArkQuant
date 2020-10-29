@@ -74,7 +74,8 @@ class UncoverAlgorithm(BaseUncover):
         #     dist = dist + 1
         # else:
         #     dist = [1 + alpha / 100]
-        dist = 1 + np.random.uniform(- 2 * abs(open_pct), abs(open_pct) * 2, size) if size > 0 else 1 + open_pct
+        dist = 1 + np.random.uniform(- 2 * abs(open_pct), abs(open_pct) * 2, size) if size > 0 else \
+            np.array([1 + open_pct])
         print('dist', dist)
         clip_pct = np.clip(dist, (1 - restricted_change), (1 + restricted_change))
         # print('clip_pct', clip_pct)

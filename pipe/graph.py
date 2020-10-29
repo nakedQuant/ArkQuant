@@ -89,9 +89,9 @@ class TermGraph(object):
         terms which need to decref
         """
         refcounts = dict(self.graph.in_degree())
-        print('refcounts', refcounts)
+        # print('refcounts', refcounts)
         nodes = valfilter(lambda x: x == 0, refcounts)
-        print('refcounts == 0', nodes)
+        # print('refcounts == 0', nodes)
         for node in nodes:
             self.graph.remove_node(node)
         return nodes

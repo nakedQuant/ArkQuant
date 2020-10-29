@@ -86,7 +86,7 @@ class AlgorithmSimulator(object):
                     daily_perf_metrics = self._get_daily_message(metrics_tracker, session_label, ledger)
                     yield daily_perf_metrics
 
-            risk_message = metrics_tracker.handle_simulation_end()
+            risk_message = metrics_tracker.handle_simulation_end(ledger)
             yield risk_message
 
     @staticmethod
