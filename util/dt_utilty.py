@@ -16,7 +16,7 @@ def locate_pos(price, minutes, direction):
     # 当卖出价格大于bid价格才会成交，买入价格低于bid价格才会成交
     loc = list(minutes[minutes <= price].index) if direction == '1' else \
         list(minutes[minutes >= price].index)
-    print('present minutes', minutes[minutes <= price])
+    # print('present minutes', minutes[minutes <= price])
     try:
         pos = pd.Timestamp(datetime.datetime.utcfromtimestamp(loc[0]))
     except IndexError:

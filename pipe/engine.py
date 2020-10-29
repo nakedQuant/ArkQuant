@@ -22,9 +22,9 @@ class Engine(ABC):
     def _init_loader(pipelines):
         pipelines = pipelines if isinstance(pipelines, list) else [pipelines]
         inner_terms = list(chain(pipeline.terms for pipeline in pipelines))[0]
-        print('inner terms', inner_terms)
+        # print('inner terms', inner_terms)
         inner_pickers = list(chain(pipeline.ump_terms for pipeline in pipelines))[0]
-        print('inner_pickers', inner_pickers)
+        # print('inner_pickers', inner_pickers)
         engine_terms = set(inner_terms + inner_pickers)
         print('engine_terms', engine_terms)
         # get_loader
@@ -36,24 +36,23 @@ class Engine(ABC):
         asset_finder.synchronize()
         # equities = asset_finder.retrieve_type_assets('equity')
         equities = list(asset_finder.retrieve_type_assets('equity'))[:10]
-        print('num of equities', len(equities))
         default_mask = self.restricted_rules.is_restricted(equities, dts)
         return default_mask
 
     def _initialize_metadata(self, ledger, dts):
         # 判断ledger 是否update
         universe_mask = self._calculate_universe(dts)
-        print('universe_mask', universe_mask)
+        # print('universe_mask', universe_mask)
         # mask
-        print('positions mask', set(ledger.positions))
+        # print('positions mask', set(ledger.positions))
         mask = set(universe_mask) | set(ledger.positions)
         print('mask', mask)
         metadata = self._get_loader.load_pipeline_arrays(dts, mask, 'daily')
-        print('engine metadata sids', set(metadata))
+        # print('engine metadata sids', set(metadata))
         # 过滤没有数据的sid
         from toolz import valfilter
         metadata = valfilter(lambda x: not x.empty, metadata)
-        print('metadata symbols', set(metadata))
+        # print('metadata symbols', set(metadata))
         # mask = [m for m in mask if m.sid in set(metadata) and not metadata[m.sid].empty]
         engine_mask = [symbol for symbol in list(mask) if symbol.sid in set(metadata)]
         print('engine mask', engine_mask)
@@ -120,6 +119,7 @@ class Engine(ABC):
             out = _partial_func(pipeline)
             # print('out', out)
             results.append(out)
+        results = [r for r in results if r]
         return results
 
     @staticmethod
@@ -137,13 +137,13 @@ class Engine(ABC):
         """
         output = []
         if positions:
-            print('ump positions', positions)
+            # print('ump positions', positions)
             _ump_func = partial(self._run_ump, metadata=metadata)
             # proxy -- positions : pipeline
             proxy_position = {p.asset.tag: p for p in positions}
-            print('proxy_position', proxy_position)
+            # print('proxy_position', proxy_position)
             proxy_pipeline = {pipe.name: pipe for pipe in self.pipelines}
-            print('proxy_pipeline', proxy_pipeline)
+            # print('proxy_pipeline', proxy_pipeline)
             for proxy in proxy_position:
                 res = _ump_func(
                     proxy_pipeline[proxy],
@@ -152,6 +152,7 @@ class Engine(ABC):
                 output.append(res)
             # ump position
             output = [r for r in output if r]
+        print('run ump result', output)
         return output
 
     def execute_algorithm(self, ledger, dts):
@@ -167,7 +168,6 @@ class Engine(ABC):
         print('pipes step three', pipes)
         # 剔除righted positions, violate_positions, expired_positions
         ump_positions = self.run_ump(metadata, traded_positions)
-        print('ump_positions', ump_positions)
         ump_positions = set(ump_positions) | removed_positions
         print('ump_positions', ump_positions)
         # yield self.resolve_conflicts(pipes, ump_positions, ledger.positions)

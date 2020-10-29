@@ -60,7 +60,7 @@ class SimulationBlotter(object):
         price = order.price
         direction = np.sign(order.amount)
         minutes = portal.get_spot_value(dts, asset, 'minute', ['close'])
-        print('minutes price', minutes)
+        # print('minutes price', minutes)
         if isinstance(order, PriceOrder):
             print('blotter order', order)
             ticker = locate_pos(price, minutes, direction)

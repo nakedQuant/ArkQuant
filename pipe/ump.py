@@ -35,7 +35,6 @@ class UmpPickers(object):
 
     def _evaluate_for_position(self, position, metadata):
         # withdraw --- return bool
-        print('metadata', metadata)
         votes = [picker.withdraw(metadata[position.asset.sid])
                  for picker in self.pickers]
         if np.all(votes):

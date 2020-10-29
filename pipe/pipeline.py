@@ -131,16 +131,14 @@ class Pipeline(object):
         Compute pipeline to get eager asset
         """
         outputs = self._workspace.popitem(last=True)
-        print('pipeline outputs', outputs)
         # asset tag pipeline_name --- 可能存在相同的持仓但是由不同的pipeline产生
         outputs = [r.source_id(self.name) for r in outputs[1]]
-        print('tag outputs', outputs)
+        print('pipeline tag outputs', outputs)
         try:
             final_out = final.resolve_final(outputs)
         except IndexError:
             print('list index out of range means no pipeline out')
             final_out = None
-        # return {self.name: final_out}
         return final_out
 
     def to_execution_plan(self, metadata, mask, final):

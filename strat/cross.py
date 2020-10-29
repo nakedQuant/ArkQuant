@@ -19,7 +19,6 @@ class Cross(Signal):
 
     def _run_signal(self, feed):
         # default -- buy operation
-        print('cross feed', feed)
         long = self.ma.compute(feed, {'window': max(self.params['window'])})
         # print('cross long', long)
         short = self.ma.compute(feed, {'window': min(self.params['window'])})
