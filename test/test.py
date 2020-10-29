@@ -11568,3 +11568,49 @@ class finaldescriptor(final):
 #         counts of 0 do not need to be computed.
 #     """
 #     self._decref_recursive(metadata, mask)
+
+# @staticmethod
+# def multi_process(ledger, iterable):
+#     def proc(dct):
+#         for k, v in dct.items():
+#             ledger.process_transaction(v)
+#     with Pool(processes=3) as pool:
+#         [pool.apply_async(proc, item) for item in iterable]
+
+
+# from toolz import keyfilter
+#
+# def resolve_conflicts(calls, puts, holdings):
+#     # position name means pipeline_name ; asset tag name means pipeline_name
+#     call_proxy = {r.tag: r for r in calls} if calls else {}
+#     put_proxy = {r.name: r for r in puts} if puts else {}
+#     hold_proxy = {p.name: p for p in holdings} if holdings else {}
+#     # 判断买入标的的sid与卖出持仓的sid是否存在冲突
+#     positive_sids = [r.sid for r in calls] if calls else []
+#     negatives_sids = [p.asset.sid for p in puts] if puts else []
+#     union_sids = set(positive_sids) & set(negatives_sids)
+#     assert not union_sids, 'call assets should not be put at meantime'
+#     # 基于capital执行直接买入标的的
+#     extra = set(call_proxy) - set(hold_proxy)
+#     if extra:
+#         direct_positives = keyfilter(lambda x: x in extra, call_proxy)
+#     else:
+#         direct_positives = dict()
+#     # 一个pipeline同时存在买入和卖出行为 --- 基于pipeline name
+#     # common pipe name
+#     common_pipe = set(call_proxy) & set(put_proxy)
+#     negatives = set(put_proxy) - set(common_pipe)
+#     direct_negatives = keyfilter(lambda x: x in negatives, put_proxy)
+#     # 卖出持仓买入对应标的 --- (position, asset)
+#     if common_pipe:
+#         conflicts = [name for name in common_pipe if put_proxy[name].asset == call_proxy[name]]
+#         assert not conflicts, ValueError('name : %r have conflicts between ump and pipe ' % conflicts)
+#         dual = [(put_proxy[name], call_proxy[name]) for name in common_pipe]
+#     else:
+#         dual = set()
+#     return direct_positives, direct_negatives, dual
+#
+#
+# if __name__ == '__main__':
+#
+#     print(resolve_conflicts(None,(),()))

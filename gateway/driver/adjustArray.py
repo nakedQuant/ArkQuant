@@ -156,7 +156,7 @@ class SlidingWindow(object):
         :param field: str or list
         :return: arrays which is adjusted by divdends and rights
         """
-        adjustments, frame_dcts = self._compatible_adjustment.calculate_adjustments_in_sessions(sessions, assets)
+        adjustments, frame_mappings = self._compatible_adjustment.calculate_adjustments_in_sessions(sessions, assets)
         adjusted_fields = list(set(field) & AdjustFields)
         if adjusted_fields:
             # 计算调整数据
@@ -164,7 +164,7 @@ class SlidingWindow(object):
             for asset in assets:
                 sid = asset.sid
                 try:
-                    frame = frame_dcts[sid]
+                    frame = frame_mappings[sid]
                     qfq = adjustments[sid]
                     qfq = qfq.reindex(index=set(frame.index))
                     qfq.sort_index(inplace=True)
@@ -177,7 +177,7 @@ class SlidingWindow(object):
                 except KeyError:
                     adjust_arrays[sid] = pd.DataFrame()
         else:
-            adjust_arrays = frame_dcts
+            adjust_arrays = frame_mappings
 
         return adjust_arrays
 

@@ -40,17 +40,26 @@ class Engine(ABC):
         default_mask = self.restricted_rules.is_restricted(equities, dts)
         return default_mask
 
-    def _initialize_metadata(self, dts):
+    def _initialize_metadata(self, ledger, dts):
         # 判断ledger 是否update
-        mask = self._calculate_universe(dts)
+        universe_mask = self._calculate_universe(dts)
+        print('universe_mask', universe_mask)
+        # mask
+        print('positions mask', set(ledger.positions))
+        mask = set(universe_mask) | set(ledger.positions)
+        print('mask', mask)
         metadata = self._get_loader.load_pipeline_arrays(dts, mask, 'daily')
-        # print('engine metadata', metadata)
+        print('engine metadata sids', set(metadata))
         # 过滤没有数据的sid
-        mask = [m for m in mask if m.sid in set(metadata) and not metadata[m.sid].empty]
-        print('engine mask', mask)
-        return metadata, mask
+        from toolz import valfilter
+        metadata = valfilter(lambda x: not x.empty, metadata)
+        print('metadata symbols', set(metadata))
+        # mask = [m for m in mask if m.sid in set(metadata) and not metadata[m.sid].empty]
+        engine_mask = [symbol for symbol in list(mask) if symbol.sid in set(metadata)]
+        print('engine mask', engine_mask)
+        return metadata, engine_mask
 
-    def _category_positions(self, ledger, dts):
+    def _split_positions(self, ledger, dts):
         """
         Register a Pipeline default for pipe on every day.
         :param dts: initialize attach pipe and cache metadata for engine
@@ -109,15 +118,16 @@ class Engine(ABC):
         results = []
         for pipeline in self.pipelines:
             out = _partial_func(pipeline)
-            print('out', out)
+            # print('out', out)
             results.append(out)
         return results
 
     @staticmethod
     def _run_ump(pipeline, position, metadata):
         print('ump_picker', pipeline.ump_terms)
-        output = pipeline.to_withdraw_plan(position, metadata)
-        return output
+        # output --- bool or position
+        result = pipeline.to_withdraw_plan(position, metadata)
+        return result
 
     def run_ump(self, metadata, positions):
         """
@@ -125,34 +135,40 @@ class Engine(ABC):
                     to determine withdraw strategy
             return position list
         """
-        print('ump positions', positions)
-        _ump_func = partial(self._run_ump, metadata=metadata)
-        # proxy -- positions : pipeline
-        proxy_position = {p.asset.tag: p for p in positions}
-        print('proxy_position', proxy_position)
-        proxy_pipeline = {pipe.name: pipe for pipe in self.pipelines}
-        print('proxy_pipeline', proxy_pipeline)
         output = []
-        for proxy in proxy_position:
-            res = _ump_func(proxy_pipeline[proxy])
-            output.append(res)
+        if positions:
+            print('ump positions', positions)
+            _ump_func = partial(self._run_ump, metadata=metadata)
+            # proxy -- positions : pipeline
+            proxy_position = {p.asset.tag: p for p in positions}
+            print('proxy_position', proxy_position)
+            proxy_pipeline = {pipe.name: pipe for pipe in self.pipelines}
+            print('proxy_pipeline', proxy_pipeline)
+            for proxy in proxy_position:
+                res = _ump_func(
+                    proxy_pipeline[proxy],
+                    proxy_position[proxy]
+                )
+                output.append(res)
+            # ump position
+            output = [r for r in output if r]
         return output
 
     def execute_algorithm(self, ledger, dts):
         """
             calculate pipelines and ump
         """
-        metadata, default_mask = self._initialize_metadata(dts)
+        metadata, default_mask = self._initialize_metadata(ledger, dts)
         print('step one')
-        traded_positions, removed_positions = self._category_positions(ledger, dts)
+        traded_positions, removed_positions = self._split_positions(ledger, dts)
         print('step two')
         # 执行算法逻辑
         pipes = self.run_pipeline(metadata, default_mask)
         print('pipes step three', pipes)
         # 剔除righted positions, violate_positions, expired_positions
-        ump_pipes = self.run_ump(metadata, traded_positions)
-        print('ump_pipes', ump_pipes)
-        ump_positions = set(ump_pipes) | removed_positions
+        ump_positions = self.run_ump(metadata, traded_positions)
+        print('ump_positions', ump_positions)
+        ump_positions = set(ump_positions) | removed_positions
         print('ump_positions', ump_positions)
         # yield self.resolve_conflicts(pipes, ump_positions, ledger.positions)
         return self.resolve_conflicts(pipes, ump_positions, ledger.positions)
@@ -249,11 +265,11 @@ class SimplePipelineEngine(Engine):
     @staticmethod
     def resolve_conflicts(calls, puts, holdings):
         # position name means pipeline_name ; asset tag name means pipeline_name
-        call_proxy = {r.tag: r for r in calls}
+        call_proxy = {r.tag: r for r in calls} if calls else {}
         put_proxy = {r.name: r for r in puts} if puts else {}
-        hold_proxy = {p.name: p for p in holdings} if holdings else {}
+        hold_proxy = {p.name: p for p in holdings.values()} if holdings else {}
         # 判断买入标的的sid与卖出持仓的sid是否存在冲突
-        positive_sids = [r.sid for r in calls]
+        positive_sids = [r.sid for r in calls] if calls else []
         negatives_sids = [p.asset.sid for p in puts] if puts else []
         union_sids = set(positive_sids) & set(negatives_sids)
         assert not union_sids, 'call assets should not be put at meantime'

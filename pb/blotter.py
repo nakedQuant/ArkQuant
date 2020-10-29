@@ -37,19 +37,22 @@ class SimulationBlotter(object):
         """
             trigger orders checked by execution_style and slippage_style
         """
-        assert isinstance(order, Order), 'unsolved order type'
-        asset = order.asset
-        price = order.price
-        # 基于订单的设置的上下线过滤订单
-        upper = 1 + self.execution.get_limit_ratio(asset, dts)
-        bottom = 1 - self.execution.get_stop_ratio(asset, dts)
-        # avoid asset price reach price restriction
-        if bottom < price < upper:
-            # 计算滑价系数
-            slippage = self.slippage.calculate_slippage_factor(asset, dts)
-            order.price = price * (1+slippage)
-            return order
-        return False
+        if order:
+            assert isinstance(order, Order), 'unsolved order type'
+            asset = order.asset
+            price = order.price
+            # 基于订单的设置的上下线过滤订单
+            upper = 1 + self.execution.get_limit_ratio(asset, dts)
+            bottom = 1 - self.execution.get_stop_ratio(asset, dts)
+            # avoid asset price reach price restriction
+            if bottom < price < upper:
+                # 计算滑价系数
+                slippage = self.slippage.calculate_slippage_factor(asset, dts)
+                order.price = price * (1+slippage)
+                return order
+            return False
+        else:
+            return False
 
     def _validate(self, order, dts):
         # fulfill the missing attr of PriceOrder and TickerOrder
@@ -57,27 +60,28 @@ class SimulationBlotter(object):
         price = order.price
         direction = np.sign(order.amount)
         minutes = portal.get_spot_value(dts, asset, 'minute', ['close'])
+        print('minutes price', minutes)
         if isinstance(order, PriceOrder):
             print('blotter order', order)
             ticker = locate_pos(price, minutes, direction)
-            print('price', price, minutes)
             print('ticker', ticker)
             new_order = transfer_to_order(order, ticker=ticker)
         elif isinstance(order, TickerOrder):
             ticker = order.created_dt
+            print('TickerOrder, ticker', ticker)
             price = minutes['close'][ticker] if isinstance(ticker, int) \
                 else minutes['close'][int(ticker.timestamp())]
+            print('ticker price', price)
             new_order = transfer_to_order(order, price=price)
         elif isinstance(order, Order):
             new_order = order
         else:
             raise ValueError
-        new_order = self._trigger_check(new_order, dts) if new_order else new_order
-        print('new_order', new_order)
-        return new_order
+        trigger_order = self._trigger_check(new_order, dts)
+        print('trigger_order', trigger_order)
+        return trigger_order
 
     def create_bulk_transactions(self, orders, dts):
-        # trigger_orders = [order for order in orders if self._validate(order, dts)]
         trigger_orders = [self._validate(order, dts) for order in orders]
         trigger_orders = [order for order in trigger_orders if order]
         print('trigger_orders', trigger_orders)

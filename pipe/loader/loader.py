@@ -37,6 +37,7 @@ class PricingLoader(PipelineLoader):
                                                  fields,
                                                  data_frequency
                                                  )
+        print('adjust_kline', set(adjust_kline))
         return adjust_kline
 
 
@@ -99,3 +100,18 @@ __all__ = ['PricingLoader', 'EventLoader']
 #     event_kline = event.load_pipeline_arrays(date, asset)
 #     print('event_kline', event_kline)
 
+if __name__ == '__main__':
+
+    from gateway.asset.assets import Equity, Convertible, Fund
+    from pipe.term import Term
+    kw = {'window': (5, 10), 'fields': ['close']}
+    cross_term = Term('cross', kw)
+    # print('sma_term', cross_term)
+    kw = {'fields': ['close'], 'window': 5, 'final': True}
+    break_term = Term('break', kw, cross_term)
+    pricing = PricingLoader([break_term, cross_term])
+    asset = {Equity('000702'), Equity('000717'), Equity('000718'), Equity('000701'), Equity('000728'),
+             Equity('000712'), Equity('000713'), Equity('000689'), Equity('000727'), Equity('000721')}
+    kline = pricing.load_pipeline_arrays('2019-09-03', asset, 'daily')
+    print('kline', set(kline))
+    print('kline', kline)
