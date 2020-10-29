@@ -40,10 +40,10 @@ class Position(object):
     def __getattr__(self, item):
         return getattr(self.inner_position, item)
 
-    @property
-    # 当天买入仓位不能卖出 --- 需改整个运行逻辑
-    def is_freeze(self):
-        return False
+    # @property
+    # # 当天买入仓位不能卖出 --- 需改整个运行逻辑
+    # def is_freeze(self):
+    #     return False
 
     @property
     def protocol(self):
@@ -88,7 +88,7 @@ class Position(object):
                 self.inner_position.cost_basis = total_cost / total_amount
                 print('new cost basis', self.inner_position.cost_basis)
                 self.inner_position.amount = total_amount
-            except ZeroDivisionError :
+            except ZeroDivisionError:
                 """ 仓位结清 , 当持仓为0 --- 计算成本用于判断持仓最终是否盈利, _closed为True"""
                 self.inner_position.cost_basis = txn.price - self.cost_basis - txn_cost / txn.amount
                 self.inner_position.last_sync_price = txn.price
@@ -136,9 +136,10 @@ __all__ = ['Position']
 #     equity = Equity('600196')
 #     p = Position(equity)
 #     print('closed', p.closed)
-#     print('freeze', p.is_freeze)
+#     # print('freeze', p.is_freeze)
 #     print('protocol', p.protocol)
 #     print('position_returns', p.position_returns)
 #     print('asset', p.asset)
 #     print(ProtocolPosition(p.inner_position))
 #     p.inner_position.last_sync_price = '2020-10-28'
+#     print('before p closed', p.closed)

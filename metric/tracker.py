@@ -135,7 +135,6 @@ class MetricsTracker(object):
         self.end_of_simulation(
             packet,
             ledger,
-            self._benchmark,
             self._sessions,
         )
         return packet
@@ -321,8 +320,11 @@ class _ClassicRiskMetrics(object):
                           packet,
                           ledger,
                           benchmark_ret):
+        daily_value_series = ledger.portfolio.portfolio_daily_value
+        daily_returns_series = daily_value_series / daily_value_series.shift(1) - 1
+        print('daily_returns_series', daily_returns_series)
         packet.update(self.risk_report(
-            algorithm_returns=ledger.daily_returns_series,
+            algorithm_returns=daily_returns_series,
             benchmark_returns=benchmark_ret
         ))
         return packet

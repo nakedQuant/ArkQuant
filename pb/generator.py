@@ -60,7 +60,9 @@ class Generator(object):
         """
         # 卖出持仓
         short_transactions = self.yield_position(position, portfolio, dts)
-        print('dual short_transactions', short_transactions)
+        # 按照时间去排序
+        short_transactions = sorted(short_transactions, key=lambda x: x.created_dt)
+        print('dual sorted short_transactions', short_transactions)
         short_prices = np.array([txn.price for txn in short_transactions])
         # 由于position transaction (amount 为负）
         short_amount = np.array([abs(txn.amount) for txn in short_transactions])
@@ -72,8 +74,11 @@ class Generator(object):
         # print('minutes', minutes['close'])
         ticker_prices = np.array([minutes['close'][int(ticker.timestamp())] for ticker in tickers])
         # 模拟买入订单数量
+        tick_size = asset.tick_size
         ratio = short_prices[:len(tickers)] / ticker_prices
-        ticker_amount = ratio * short_amount[:len(tickers)]
+        ratio_amount = ratio * short_amount[:len(tickers)]
+        ticker_amount = [tick_size * np.floor(amount / tick_size) for amount in ratio_amount]
+        print('ticker_amount', ticker_amount)
         # 生成对应的买入订单
         orders = [Order(asset, *args) for args in zip(ticker_prices, ticker_amount, tickers)]
         print('dual orders', orders)

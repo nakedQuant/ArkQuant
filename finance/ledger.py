@@ -8,7 +8,7 @@ Created on Tue Mar 12 15:37:47 2019
 from toolz import keymap, keyfilter
 from finance.portfolio import Portfolio
 from finance.account import Account
-from finance._protocol import MutableView
+# from finance._protocol import MutableView
 from finance.position_tracker import PositionTracker
 from risk.alert import UnionRisk
 
@@ -43,7 +43,6 @@ class Ledger(object):
 
     @property
     def positions(self):
-        # asset : protocol
         # assert not self._dirty_positions, 'positions are not accurate'
         return self.position_tracker.get_positions()
 
@@ -140,6 +139,7 @@ class Ledger(object):
         print('end session ledger portfolio', self.portfolio)
         self.fuse_model.trigger(self._portfolio)
         print('end session ledger positions', self.positions)
+        print('end session closed positions', self.position_tracker.record_closed_position)
 
     def get_transactions(self, dt):
         """

@@ -322,16 +322,19 @@ class TradingAlgorithm(object):
     @staticmethod
     def _create_daily_stats(perfs):
         # create daily and cumulative stats frame
+        print('perfs', perfs)
         daily_perfs = []
         for perf in perfs:
             if 'daily_perf' in perf:
                 perf['daily_perf'].update(perf['cumulative_risk_metrics'])
                 daily_perfs.append(perf['daily_perf'])
 
-        daily_dts = pd.DatetimeIndex(
-            [p['period_close'] for p in daily_perfs], tz='UTC'
-        )
-        daily_stats = pd.DataFrame(daily_perfs, index=daily_dts)
+        # daily_dts = pd.DatetimeIndex(
+        #     [p['period_close'] for p in daily_perfs], tz='UTC'
+        # )
+        # daily_stats = pd.DataFrame(daily_perfs, index=daily_dts)
+        daily_stats = pd.DataFrame(daily_perfs)
+        print('daily_stats', daily_stats)
         return daily_stats
 
     def analyse(self, perf):

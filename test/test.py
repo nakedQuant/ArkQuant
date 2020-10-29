@@ -11985,3 +11985,9 @@ class finaldescriptor(final):
 #     violate_positions = [p.protocol for p in self.positions
 #                          if self.risk_alert.should_trigger(p)]
 #     return violate_positions
+
+# def __getattr__(self, item):
+#     return self.__dict__[item]
+#
+# # def __getattr__(self, item):
+# #     return self.__slots__[item]

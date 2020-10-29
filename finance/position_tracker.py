@@ -64,12 +64,15 @@ class PositionTracker(object):
             position = self.positions[asset]
         except KeyError:
             position = self.positions[asset] = Position(asset)
-            print('position', position)
         cash_flow = position.update(transaction)
+        print('position -------------------status', position.amount , position.closed)
         if position.closed:
+            # print('--------------------------------------------closed', position)
             dts = transaction.created_dt.strftime('%Y-%m-%d')
             self.record_closed_position[dts].append(position)
+            print('before positions ----------------------------------', self.positions)
             del self.positions[asset]
+            print('after positions -----------------------------------', self.positions)
         return cash_flow
 
     def handle_transactions(self, transactions):
@@ -87,7 +90,7 @@ class PositionTracker(object):
             c. update last_sync_date
         """
         sync_date = set([p.last_sync_date for p in self.positions.values()])
-        print('sync_date', sync_date)
+        # print('sync_date', sync_date)
         if sync_date:
             assert len(sync_date) == 1, 'all positions must be sync on the same date'
             get_price = partial(portal.get_spot_value,
