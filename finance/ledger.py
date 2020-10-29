@@ -5,6 +5,7 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
+from toolz import keymap, keyfilter
 from finance.portfolio import Portfolio
 from finance.account import Account
 from finance._protocol import MutableView
@@ -42,7 +43,7 @@ class Ledger(object):
 
     @property
     def positions(self):
-        # 获取position protocol
+        # asset : protocol
         # assert not self._dirty_positions, 'positions are not accurate'
         return self.position_tracker.get_positions()
 
@@ -147,19 +148,57 @@ class Ledger(object):
                    if txn.dt.strftime('%Y-%m-%d') == dt]
         return dt_txns
 
+    # def get_violate_risk_positions(self):
+    #     # 获取违反风控管理的仓位
+    #     violate_positions = [p.protocol for p in self.positions
+    #                          if self.risk_alert.should_trigger(p)]
+    #     return violate_positions
+
     def get_violate_risk_positions(self):
         # 获取违反风控管理的仓位
-        violate_positions = [p.protocol for p in self.positions
+        violate_positions = [p for p in self.positions.values()
                              if self.risk_alert.should_trigger(p)]
         return violate_positions
+
+    # def get_rights_positions(self, dts):
+    #     # 获取当天为配股登记日的仓位 --- 卖出 因为需要停盘产生机会成本
+    #     assets = set(self.positions)
+    #     rights = self.position_tracker.retrieve_equity_rights(assets, dts)
+    #     p_mapping = {p.sid: p for p in self.positions}
+    #     right_positions = None if rights.empty else [p_mapping[symbol].protocol for symbol in rights.index]
+    #     return right_positions
 
     def get_rights_positions(self, dts):
         # 获取当天为配股登记日的仓位 --- 卖出 因为需要停盘产生机会成本
         assets = set(self.positions)
+        print('ledger assets', assets)
         rights = self.position_tracker.retrieve_equity_rights(assets, dts)
-        p_mapping = {p.sid: p for p in self.positions}
-        right_positions = None if rights.empty else [p_mapping[s].protocol for s in rights.index]
+        print('ledger rights', rights)
+        mapping_protocol = keymap(lambda x: x.sid, self.positions)
+        print('ledger mapping_protocol', mapping_protocol)
+        union_assets = set(mapping_protocol) & set(rights.index)
+        print('ledger union_assets', union_assets)
+        union_positions = keyfilter(lambda x: x in union_assets, mapping_protocol) if union_assets else None
+        print('ledger union_positions', union_positions)
+        right_positions = list(union_positions.values()) if union_positions else []
+        print('right_positions', right_positions)
         return right_positions
+
+    # def _cleanup_expired_assets(self, dt):
+    #     """
+    #     Clear out any assets that have expired before starting a new sim day.
+    #
+    #     Finds all assets for which we have positions and generates
+    #     close_position events for any assets that have reached their
+    #     close_date.
+    #     """
+    #     def past_close_date(asset):
+    #         acd = asset.last_traded
+    #         return acd is not None and acd == dt
+    #     # Remove positions in any sids that have reached their auto_close date.
+    #     positions_to_clear = \
+    #         [p for p in self.positions if past_close_date(p)]
+    #     return positions_to_clear
 
     def _cleanup_expired_assets(self, dt):
         """
@@ -174,7 +213,7 @@ class Ledger(object):
             return acd is not None and acd == dt
         # Remove positions in any sids that have reached their auto_close date.
         positions_to_clear = \
-            [p for p in self.positions if past_close_date(p)]
+            [p for symbol, p in self.positions.items() if past_close_date(symbol)]
         return positions_to_clear
 
     def get_expired_positions(self, dts):

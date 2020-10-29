@@ -11532,3 +11532,39 @@ class finaldescriptor(final):
 #         },
 #     )
 
+# def _decref_recursive(self, metadata, mask):
+#     """
+#         internal method for decref_recursive
+#         decrease by layer
+#     """
+#     print('decref graph', self._graph.nodes)
+#     # return in_degree == 0 nodes
+#     decref_nodes = self._graph.decref_dependencies()
+#     print('decref nodes', decref_nodes)
+#     if decref_nodes:
+#         for node in decref_nodes:
+#             node_mask = self._combine_term_dependence(node, mask)
+#             print('node_mask', node_mask)
+#             output = node.compute(metadata, list(node_mask))
+#             self._workspace[node] = output
+#             print('_workspace', self._workspace)
+#         self._decref_recursive(metadata, mask)
+#
+# def _decref_dependence(self, metadata, mask):
+#     """
+#     Return a topologically-sorted list of the terms in ``self`` which
+#     need to be computed.
+#
+#     Filters out any terms that are already present in ``workspace``, as
+#     well as any terms with refcounts of 0.
+#
+#     Parameters
+#     ----------
+#     metadata : dict[Term, np.ndarray]
+#         Initial state of workspace for a pipe execution. May contain
+#         pre-computed values provided by ``populate_initial_workspace``.
+#     mask : asset list
+#         Reference counts for terms to be computed. Terms with reference
+#         counts of 0 do not need to be computed.
+#     """
+#     self._decref_recursive(metadata, mask)

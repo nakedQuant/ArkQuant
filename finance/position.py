@@ -131,6 +131,8 @@ if __name__ == '__main__':
     p = Position(equity)
     print('closed', p.closed)
     print('freeze', p.is_freeze)
-    # print('protocol', p.protocol)
+    print('protocol', p.protocol)
+    print('position_returns', p.position_returns)
+    print('asset', p.asset)
     print(ProtocolPosition(p.inner_position))
     p.inner_position.last_sync_price = '2020-10-28'

@@ -50,7 +50,7 @@ class Engine(ABC):
         print('engine mask', mask)
         return metadata, mask
 
-    def _divide_positions(self, ledger, dts):
+    def _category_positions(self, ledger, dts):
         """
         Register a Pipeline default for pipe on every day.
         :param dts: initialize attach pipe and cache metadata for engine
@@ -58,10 +58,13 @@ class Engine(ABC):
         """
         # violate risk management
         violate_positions = ledger.get_violate_risk_positions()
+        print('engine violate_positions', violate_positions)
         # 配股持仓
         righted_positions = ledger.get_rights_positions(dts)
+        print('engine righted_positions', righted_positions)
         # expires positions
         expired_positions = ledger.get_expired_positions(dts)
+        print('engine expired_positions', expired_positions)
         # 剔除的持仓
         if self.disallowed_righted and self.disallowed_violation:
             remove_positions = set(righted_positions) | set(violate_positions)
@@ -71,9 +74,13 @@ class Engine(ABC):
             remove_positions = righted_positions
         else:
             remove_positions = set()
+        print('engine removed position', remove_positions)
         # 剔除配股的持仓
         remove_positions = set(remove_positions) | set(expired_positions)
-        traded_positions = set(ledger.positions) - remove_positions
+        print('removed position', remove_positions)
+        # traded_positions = set(ledger.positions) - remove_positions
+        traded_positions = set(ledger.positions.values()) - remove_positions
+        print('traded_positions', traded_positions)
         return traded_positions, remove_positions
 
     def _run_pipeline(self, pipeline, metadata, mask):
@@ -108,6 +115,7 @@ class Engine(ABC):
 
     @staticmethod
     def _run_ump(pipeline, position, metadata):
+        print('ump_picker', pipeline.ump_terms)
         output = pipeline.to_withdraw_plan(position, metadata)
         return output
 
@@ -117,11 +125,13 @@ class Engine(ABC):
                     to determine withdraw strategy
             return position list
         """
+        print('ump positions', positions)
         _ump_func = partial(self._run_ump, metadata=metadata)
         # proxy -- positions : pipeline
-        proxy_position = {p.name: p for p in positions}
+        proxy_position = {p.asset.tag: p for p in positions}
+        print('proxy_position', proxy_position)
         proxy_pipeline = {pipe.name: pipe for pipe in self.pipelines}
-
+        print('proxy_pipeline', proxy_pipeline)
         output = []
         for proxy in proxy_position:
             res = _ump_func(proxy_pipeline[proxy])
@@ -134,9 +144,7 @@ class Engine(ABC):
         """
         metadata, default_mask = self._initialize_metadata(dts)
         print('step one')
-        traded_positions, removed_positions = self._divide_positions(ledger, dts)
-        print('traded_positions', traded_positions)
-        print('removed_positions', removed_positions)
+        traded_positions, removed_positions = self._category_positions(ledger, dts)
         print('step two')
         # 执行算法逻辑
         pipes = self.run_pipeline(metadata, default_mask)
