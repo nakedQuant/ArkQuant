@@ -31,7 +31,9 @@ class Generator(object):
 
     def yield_position(self, position, portfolio, dts):
         holding_orders = self.division_model.divided_by_position(position, portfolio, dts)
+        print('holding_orders', holding_orders)
         holding_transactions = self.blotter.create_bulk_transactions(holding_orders, dts)
+        print('holding_transactions', holding_transactions)
         return holding_transactions
 
     def yield_interactive(self, position, asset, portfolio, dts):
@@ -58,6 +60,7 @@ class Generator(object):
         """
         # 卖出持仓
         short_transactions = self.yield_position(position, portfolio, dts)
+        print('dual short_transactions', short_transactions)
         short_prices = np.array([txn.price for txn in short_transactions])
         short_amount = np.array([txn.amount for txn in short_transactions])
         # 切换之间存在时间差，默认以minutes为单位
@@ -65,14 +68,16 @@ class Generator(object):
         tickers = [ticker for ticker in tickers if ticker.hour < 15]
         # 根据ticker价格比值
         minutes = portal.get_spot_value(dts, asset, 'minute', ['close'])
-        print('minutes', minutes['close'])
+        # print('minutes', minutes['close'])
         ticker_prices = np.array([minutes['close'][int(ticker.timestamp())] for ticker in tickers])
         # 模拟买入订单数量
         ratio = short_prices[:len(tickers)] / ticker_prices
         ticker_amount = ratio * short_amount[:len(tickers)]
         # 生成对应的买入订单
         orders = [Order(asset, *args) for args in zip(ticker_prices, ticker_amount, tickers)]
+        print('dual orders', orders)
         long_transactions = self.blotter.create_bulk_transactions(orders, dts)
+        print('dual long_transactions', long_transactions)
         return short_transactions, long_transactions
 
 

@@ -64,32 +64,38 @@ class Position(object):
         return left_cash
 
     def update(self, txn):
+        print('update by transaction', txn)
         if self.asset != txn.asset:
             raise Exception('transaction asset must same with position asset')
         self.inner_position.last_sync_date = txn.created_dt.strftime('%Y-%m-%d')
-        # self.last_sync_date = txn.created_dt.strftime('%Y-%m-%d')
         # 持仓基本净值
         base_value = self.amount * self.cost_basis
+        print('position base_value', base_value)
         # 交易净值 以及成本
         txn_value = txn.amount * txn.price
+        print('transaction value', txn_value)
         txn_cost = txn.cost
+        print('transaction cost', txn_cost)
         # 根据交易对持仓进行更新
         total_amount = txn.amount + self.amount
+        print('total amount after updating transaction', total_amount)
         if total_amount < 0:
             raise Exception('put action is not allowed')
         else:
             total_cost = base_value + txn_value + txn_cost
+            print('update total cost', total_cost)
             try:
                 self.inner_position.cost_basis = total_cost / total_amount
+                print('new cost basis', self.inner_position.cost_basis)
                 self.inner_position.amount = total_amount
             except ZeroDivisionError :
                 """ 仓位结清 , 当持仓为0 --- 计算成本用于判断持仓最终是否盈利, _closed为True"""
-                self.inner_position.cost_basis = self.cost_basis + txn_cost / txn.amount
+                self.inner_position.cost_basis = txn.price - self.cost_basis - txn_cost / txn.amount
                 self.inner_position.last_sync_price = txn.price
                 self.inner_position.last_sync_date = txn.created_dt
                 self._closed = True
             # txn_capital = txn_value + np.copysign(txn_cost, txn_value)
-            txn_capital = txn_value - txn_cost
+            txn_capital = txn_value + txn_cost
         return txn_capital
 
     def calculate_returns(self):
@@ -124,15 +130,15 @@ class Position(object):
 
 __all__ = ['Position']
 
-if __name__ == '__main__':
-
-    from gateway.asset.assets import Equity
-    equity = Equity('600196')
-    p = Position(equity)
-    print('closed', p.closed)
-    print('freeze', p.is_freeze)
-    print('protocol', p.protocol)
-    print('position_returns', p.position_returns)
-    print('asset', p.asset)
-    print(ProtocolPosition(p.inner_position))
-    p.inner_position.last_sync_price = '2020-10-28'
+# if __name__ == '__main__':
+#
+#     from gateway.asset.assets import Equity
+#     equity = Equity('600196')
+#     p = Position(equity)
+#     print('closed', p.closed)
+#     print('freeze', p.is_freeze)
+#     print('protocol', p.protocol)
+#     print('position_returns', p.position_returns)
+#     print('asset', p.asset)
+#     print(ProtocolPosition(p.inner_position))
+#     p.inner_position.last_sync_price = '2020-10-28'

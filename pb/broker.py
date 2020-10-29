@@ -80,14 +80,16 @@ class Broker(object):
         print('initialize broker', positives, negatives, duals)
         portfolio = ledger.portfolio
         # 直接买入
-        call_txns = self.implement_capital(positives, capital, portfolio, dts)
-        print('call_txns', call_txns)
+        call_transactions = self.implement_capital(positives, capital, portfolio, dts)
+        print('call_transactions', call_transactions)
         # 直接卖出
-        put_txns = self.implement_position(negatives, portfolio, dts)
+        put_transactions = self.implement_position(negatives, portfolio, dts)
+        print('put_transactions', put_transactions)
         # 卖出 --- 买入
-        dual_txns = self.implement_duals(duals, portfolio, dts)
+        dual_transactions = self.implement_duals(duals, portfolio, dts)
+        print('dual_transactions', dual_transactions)
         # portfolio的资金使用效率评估引擎撮合的的效率 --- 并行执行成交
-        self.multi_broking(ledger, [call_txns, put_txns, dual_txns])
+        self.multi_broking(ledger, [call_transactions, put_transactions, dual_transactions])
 
 
 __all__ = ['Broker']

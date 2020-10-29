@@ -72,7 +72,7 @@ class PositionTracker(object):
             del self.positions[asset]
         return cash_flow
 
-    def handle_transaction(self, transactions):
+    def handle_transactions(self, transactions):
         """执行完交易cash变动"""
         aggregate_cash_flow = 0.0
         for txn in transactions:
@@ -98,7 +98,7 @@ class PositionTracker(object):
                 p.inner_position.last_sync_price = get_price(asset=asset)
                 # update position_returns
                 p.calculate_returns()
-            return sync_date
+            # return sync_date
 
     @staticmethod
     def retrieve_equity_rights(assets, dt):

@@ -60,7 +60,7 @@ class UncoverAlgorithm(BaseUncover):
 
     @staticmethod
     def _uncover_by_price(size, asset, dts):
-        print('uncover by price', size, asset, dts)
+        # print('uncover by price', size, asset, dts)
         # 模拟价格分布
         restricted_change = asset.restricted_change(dts)
         open_pct, pre_close = portal.get_open_pct(asset, dts)
@@ -77,7 +77,7 @@ class UncoverAlgorithm(BaseUncover):
         dist = 1 + np.random.uniform(- 2 * abs(open_pct), abs(open_pct) * 2, size) if size > 0 else 1 + open_pct
         print('dist', dist)
         clip_pct = np.clip(dist, (1 - restricted_change), (1 + restricted_change))
-        print('clip_pct', clip_pct)
+        # print('clip_pct', clip_pct)
         sim_prices = clip_pct * pre_close
         print('sim_prices', sim_prices)
         return sim_prices
@@ -99,13 +99,13 @@ class UncoverAlgorithm(BaseUncover):
         return tick_intervals
 
     def _underneath_size(self, asset, amount, base_amount, dts):
+        sign = np.sign(amount)
         tick_size = asset.tick_size
-        print('underneath tick_size', tick_size)
-        size = int(np.floor(amount / base_amount))
-        print('underneath size', size)
+        size = int(np.floor(abs(amount) / base_amount))
+        # print('underneath size', size)
         amount_array = np.tile([base_amount], size)
-        print('underneath amount_array', amount_array)
-        abundant = int(amount % base_amount)
+        print('underneath base_amount array', amount_array)
+        abundant = int(abs(amount) % base_amount)
         print('underneath abundant', abundant)
         if asset.increment:
             num = np.floor(abundant / tick_size)
@@ -120,7 +120,8 @@ class UncoverAlgorithm(BaseUncover):
             random_idx = np.random.randint(0, size, abundant)
             for r in random_idx:
                 amount_array[r] += 1
-        print('increment amount array', amount_array)
+        amount_array = amount_array * sign
+        print('_underneath amount array', amount_array)
         return amount_array, size
 
     def create_iterables(self, asset, amount, per_amount, dt):

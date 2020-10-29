@@ -342,22 +342,6 @@ class TradingAlgorithm(object):
                 self.benchmark_returns)
         return stats
 
-    # def run(self):
-    #     """Run the algorithm.
-    #     """
-    #     # Create px_trade and loop through simulated_trading.
-    #     # Each iteration returns a perf dictionary
-    #     try:
-    #         perfs = []
-    #         for perf in self.yield_simulation():
-    #             perfs.append(perf)
-    #         # convert perf dict to pandas frame
-    #         daily_stats = self._create_daily_stats(perfs)
-    #         analysis = self.analyse(daily_stats)
-    #         return analysis
-    #     except Exception as e:
-    #         print('error:', e)
-
     def run(self):
         """Run the algorithm.
         """

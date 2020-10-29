@@ -72,7 +72,7 @@ class Division(object):
             由于价格笼子，科创板可以参考基于时间的设置订单
         """
         orders = []
-        print('_simulate_iterator', zips)
+        # print('_simulate_iterator', zips)
         if asset.bid_mechanism:
             for z in list(zips):
                 t_order = TickerOrder(asset, *z)
@@ -111,19 +111,22 @@ class Division(object):
         print('amount', amount)
         assert amount > asset.tick_size, 'amount must be at least tick_size'
         control_amount = self.trade_controls.validate(asset, amount, portfolio, dts)
-        print('control_amount', control_amount)
+        print('capital control_amount', control_amount)
         zip_iterables = self.uncover_func.create_iterables(asset, control_amount, per_amount, dts)
         capital_orders = self._simulate_iterator(asset, zip_iterables)
         print('capital_orders', capital_orders)
         return capital_orders
 
     def divided_by_position(self, position, portfolio, dts):
+        # transaction amount 为 负
         asset = position.asset
-        amount = copy.copy(position.amount)
+        amount = - copy.copy(position.amount)
         per_amount = self._calculate_division_data(asset, dts, amount_only=True)
         control_amount = self.trade_controls.validate(asset, amount, portfolio, dts)
+        print('position control_amount', control_amount)
         iterables = self.uncover_func.create_iterables(asset, control_amount, per_amount, dts)
         position_orders = self._simulate_iterator(asset, iterables)
+        print('position_orders', position_orders)
         return position_orders
 
 

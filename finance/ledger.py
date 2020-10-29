@@ -61,7 +61,7 @@ class Ledger(object):
             update the cash of portfolio
         """
         p = self._portfolio
-        p.cash_flow += capital_amount
+        p.cash_flow -= capital_amount
 
     def start_of_session(self, session_ix):
         left_cash = self.position_tracker.handle_splits(session_ix)
@@ -73,7 +73,7 @@ class Ledger(object):
 
     def process_transaction(self, transactions):
         print('ledger process_transaction')
-        txn_capital = self.position_tracker.handle_transaction(transactions)
+        txn_capital = self.position_tracker.handle_transactions(transactions)
         print('txn_capital', txn_capital)
         self._cash_flow(txn_capital)
         self._processed_transaction.append(transactions)
@@ -130,10 +130,10 @@ class Ledger(object):
 
     def end_of_session(self):
         self._dirty_portfolio = True
-        session_ix = self.position_tracker.synchronize()
+        # session_ix = self.position_tracker.synchronize()
+        self.position_tracker.synchronize()
         # self._dirty_positions = False
         self._calculate_portfolio_stats()
-        # self.portfolio.daily_returns(session_ix)
         self._dirty_portfolio = False
         print('end session ledger portfolio', self.portfolio)
         self.fuse_model.trigger(self._portfolio)
@@ -144,29 +144,15 @@ class Ledger(object):
         :param dt: %Y-%m-%d
         :return: transactions on the dt
         """
-        dt_txns = [txn for txn in self._processed_transaction
-                   if txn.dt.strftime('%Y-%m-%d') == dt]
-        return dt_txns
-
-    # def get_violate_risk_positions(self):
-    #     # 获取违反风控管理的仓位
-    #     violate_positions = [p.protocol for p in self.positions
-    #                          if self.risk_alert.should_trigger(p)]
-    #     return violate_positions
+        transactions_on_dt = [txn for txn in self._processed_transaction
+                              if txn.dt.strftime('%Y-%m-%d') == dt]
+        return transactions_on_dt
 
     def get_violate_risk_positions(self):
         # 获取违反风控管理的仓位
         violate_positions = [p for p in self.positions.values()
                              if self.risk_alert.should_trigger(p)]
         return violate_positions
-
-    # def get_rights_positions(self, dts):
-    #     # 获取当天为配股登记日的仓位 --- 卖出 因为需要停盘产生机会成本
-    #     assets = set(self.positions)
-    #     rights = self.position_tracker.retrieve_equity_rights(assets, dts)
-    #     p_mapping = {p.sid: p for p in self.positions}
-    #     right_positions = None if rights.empty else [p_mapping[symbol].protocol for symbol in rights.index]
-    #     return right_positions
 
     def get_rights_positions(self, dts):
         # 获取当天为配股登记日的仓位 --- 卖出 因为需要停盘产生机会成本
@@ -183,22 +169,6 @@ class Ledger(object):
         right_positions = list(union_positions.values()) if union_positions else []
         print('right_positions', right_positions)
         return right_positions
-
-    # def _cleanup_expired_assets(self, dt):
-    #     """
-    #     Clear out any assets that have expired before starting a new sim day.
-    #
-    #     Finds all assets for which we have positions and generates
-    #     close_position events for any assets that have reached their
-    #     close_date.
-    #     """
-    #     def past_close_date(asset):
-    #         acd = asset.last_traded
-    #         return acd is not None and acd == dt
-    #     # Remove positions in any sids that have reached their auto_close date.
-    #     positions_to_clear = \
-    #         [p for p in self.positions if past_close_date(p)]
-    #     return positions_to_clear
 
     def _cleanup_expired_assets(self, dt):
         """
