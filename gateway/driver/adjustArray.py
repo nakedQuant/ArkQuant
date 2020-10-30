@@ -35,7 +35,7 @@ class HistoryCompatibleAdjustments(object):
         # print('adjustments', adjustments)
         if self.data_frequency == 'minute':
             def reformat(frame):
-                # minutes --- 14:29
+                # minutes --- 14:59
                 frame.index = [int(pd.Timestamp(i).timestamp() + 15 * 60 * 60 - 60) for i in frame.index]
                 return frame
             adjustments['dividends'] = valmap(lambda x: reformat(x), adjustments['dividends'])
@@ -49,7 +49,6 @@ class HistoryCompatibleAdjustments(object):
            前复权：复权后价格=(复权前价格-现金红利)/(1+流通股份变动比例)
            后复权：复权后价格=复权前价格×(1+流通股份变动比例)+现金红利
         """
-        # kline.index = [datetime.datetime.utcfromtimestamp(i).strftime('%Y-%m-%d %H:%M') for i in data['600000'].index]
         kline = data[sid]
         try:
             dividends = adjustment['dividends'][sid]
@@ -229,7 +228,7 @@ __all__ = [
 ]
 
 # if __name__ == '__main__':
-
+#
 #     from gateway.driver.bar_reader import AssetSessionReader
 #     from gateway.driver.bcolz_reader import BcolzMinuteReader
 #     from gateway.driver.adjustment_reader import SQLiteAdjustmentReader

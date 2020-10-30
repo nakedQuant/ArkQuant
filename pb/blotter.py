@@ -63,14 +63,16 @@ class SimulationBlotter(object):
         # print('minutes price', minutes)
         if isinstance(order, PriceOrder):
             print('blotter order', order)
-            ticker = locate_pos(price, minutes, direction)
+            ticker = locate_pos(price, minutes['close'], direction)
             print('ticker', ticker)
             new_order = transfer_to_order(order, ticker=ticker)
         elif isinstance(order, TickerOrder):
             ticker = order.created_dt
             print('TickerOrder, ticker', ticker)
-            price = minutes['close'][ticker] if isinstance(ticker, int) \
-                else minutes['close'][int(ticker.timestamp())]
+            # price = minutes['close'][ticker] if isinstance(ticker, int) \
+            #     else minutes['close'][int(ticker.timestamp())]
+            print('minutes', minutes['close'])
+            price = minutes['close'][ticker]
             print('ticker price', price)
             new_order = transfer_to_order(order, price=price)
         elif isinstance(order, Order):

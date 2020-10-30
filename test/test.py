@@ -11991,3 +11991,44 @@ class finaldescriptor(final):
 #
 # # def __getattr__(self, item):
 # #     return self.__slots__[item]
+
+# # distribution of price
+# alpha = 1 if open_pct == 0.00 else 100 * open_pct
+# print('alpha', alpha, size)
+# if size > 0:
+#     # dist = 1 + np.copysign(alpha, np.random.beta(abs(alpha), 100, size))/10
+#     dist = np.copysign(alpha, np.random.beta(abs(alpha), 100, size))/10
+#     print('beta', dist)
+#     dist = dist + 1
+# else:
+#     dist = [1 + alpha / 100]
+
+#
+# import pandas as pd
+# from itertools import chain
+#
+#
+# def _uncover_by_ticker(size, asset, dts):
+#     # ticker arranged on sequence
+#     dts = pd.Timestamp(dts) if isinstance(dts, str) else dts
+#     interval = 4 * 60 / size
+#     print('uncover_by_ticker', interval)
+#     # 按照固定时间去执行
+#     upper = pd.date_range(start=dts + pd.Timedelta(hours=9, minutes=30), end=dts + pd.Timedelta(hours=11, minutes=30),
+#                           freq='%dmin' % interval)
+#     print('uncover by ticker upper', upper)
+#     bottom = pd.date_range(start=dts + pd.Timedelta(hours=13, minutes=30), end=dts + pd.Timedelta(hours=14, minutes=57),
+#                            freq='%dmin' % interval)
+#     print('uncover by ticker bottom', bottom)
+#     # 确保首尾
+#     intervals = list(chain(*zip(upper, bottom)))
+#     intervals if len(intervals) == size else intervals.append(dts + pd.Timedelta(hours=14, minutes=57))
+#     print('tick_intervals', len(intervals), intervals)
+#     return intervals
+#
+#
+# if __name__ == '__main__':
+#
+#     _uncover_by_ticker(7, None, '2019-09-02')
+
+# kline.index = [datetime.datetime.utcfromtimestamp(i).strftime('%Y-%m-%d %H:%M') for i in data['600000'].index]

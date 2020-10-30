@@ -106,7 +106,7 @@ class Position(object):
         print('update by transaction', txn)
         if self.asset != txn.asset:
             raise Exception('transaction asset must same with position asset')
-        self.inner_position.last_sync_date = txn.created_dt.strftime('%Y-%m-%d')
+        self.inner_position.last_sync_date = pd.Timestamp(txn.created_dt).strftime('%Y-%m-%d')
         # 持仓基本净值
         base_value = self.amount * self.cost_basis
         print('position base_value', base_value)

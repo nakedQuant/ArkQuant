@@ -124,7 +124,7 @@ class PriceOrder(Order):
         return self.__slots__
 
 
-class TickerOrder(object):
+class TickerOrder(Order):
 
     __slots__ = ['asset', 'amount', 'created_dt']
 
@@ -197,13 +197,17 @@ __all__ = ['Order',
 
 # if __name__ == '__main__':
 #
-#     iterables = [(2200.0, 8.08035087719301), (2300.0, 8.08035087719301), (2200.0, 8.08035087719301), (
-#                   2200.0, 8.08035087719301), (2300.0, 8.08035087719301)]
+#     import pandas as pd
 #     from gateway.asset.assets import Equity
 #     equity = Equity('002049')
-#     print('bid', equity.bid_mechanism)
+#     iterables = [(2200.0, 8.08035087719301), (2300.0, 8.08035087719301), (2200.0, 8.08035087719301), (
+#                   2200.0, 8.08035087719301), (2300.0, 8.08035087719301)]
 #     if equity.bid_mechanism:
 #         orders = [TickerOrder(equity, *args) for args in iterables]
 #     else:
 #         orders = [PriceOrder(equity, *args) for args in iterables]
 #     print('test orders', orders)
+#     iterables = [(700.0, pd.Timestamp('2020-10-30 09:30:00', freq='60T')), (600.0, pd.Timestamp('2020-10-30 13:00:00', freq='60T')),
+#                  (700.0, pd.Timestamp('2020-10-30 10:30:00', freq='60T')), (600.0, pd.Timestamp('2020-06-17 14:57:00', freq='60T'))]
+#     orders = [TickerOrder(equity, *args) for args in iterables]
+#     print('ticker orders', orders)

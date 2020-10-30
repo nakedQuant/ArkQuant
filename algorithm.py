@@ -135,10 +135,8 @@ class TradingAlgorithm(object):
 
         assert sim_params.capital_base > 0, ZeroCapitalError()
         self.sim_params = sim_params
-        self.benchmark_returns = self._calculate_benchmark_returns()
-        # # data interface
-        # self.data_portal = portal
-        # self.asset_finder = init_finder()
+        # self.benchmark_returns = self._calculate_benchmark_returns()
+        self.benchmark_returns = None
         # set ledger
         risk_models = risk_models or NoRisk()
         risk_fuse = risk_fuse or Fuse()

@@ -139,9 +139,10 @@ class Ledger(object):
         # self._dirty_positions = False
         self._calculate_portfolio_stats()
         self._dirty_portfolio = False
-        print('end session ledger portfolio', self.portfolio)
         self.fuse_model.trigger(self._portfolio)
         print('end session ledger positions', self.positions)
+        print('end session ledger portfolio', self.portfolio)
+        # print('end session portfolio daily value', self.portfolio.portfolio_daily_value)
 
     def get_transactions(self, dt):
         """

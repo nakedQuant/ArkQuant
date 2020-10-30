@@ -60,20 +60,10 @@ class UncoverAlgorithm(BaseUncover):
 
     @staticmethod
     def _uncover_by_price(size, asset, dts):
-        # print('uncover by price', size, asset, dts)
         # 模拟价格分布
         restricted_change = asset.restricted_change(dts)
         open_pct, pre_close = portal.get_open_pct(asset, dts)
         print('open_pct, pre_close', open_pct, pre_close)
-        # alpha = 1 if open_pct == 0.00 else 100 * open_pct
-        # print('alpha', alpha, size)
-        # if size > 0:
-        #     # dist = 1 + np.copysign(alpha, np.random.beta(abs(alpha), 100, size))/10
-        #     dist = np.copysign(alpha, np.random.beta(abs(alpha), 100, size))/10
-        #     print('beta', dist)
-        #     dist = dist + 1
-        # else:
-        #     dist = [1 + alpha / 100]
         dist = 1 + np.random.uniform(- 2 * abs(open_pct), abs(open_pct) * 2, size) if size > 0 else \
             np.array([1 + open_pct])
         print('dist', dist)
@@ -85,19 +75,24 @@ class UncoverAlgorithm(BaseUncover):
 
     @staticmethod
     def _uncover_by_ticker(size, asset, dts):
-        # ticker arranged on sequence
+        dts = pd.Timestamp(dts) if isinstance(dts, str) else dts
         interval = 4 * 60 / size
         print('uncover_by_ticker', interval)
         # 按照固定时间去执行
-        upper = pd.date_range(start='09:30', end='11:30', freq='%dmin' % interval)
-        print('uncover by ticker', upper)
-        bottom = pd.date_range(start='13:00', end='14:57', freq='%dmin' % interval)
-        print('uncover by ticker', bottom)
+        upper = pd.date_range(start=dts + pd.Timedelta(hours=9, minutes=30),
+                              end=dts + pd.Timedelta(hours=11, minutes=30),
+                              freq='%dmin' % interval)
+        # print('uncover by ticker upper', upper)
+        bottom = pd.date_range(start=dts + pd.Timedelta(hours=13, minutes=30),
+                               end=dts + pd.Timedelta(hours=14, minutes=57),
+                               freq='%dmin' % interval)
+        # print('uncover by ticker bottom', bottom)
         # 确保首尾
-        tick_intervals = list(chain(*zip(upper, bottom)))[:size - 1]
-        print('tick_intervals', tick_intervals)
-        tick_intervals.append(pd.Timestamp('2020-06-17 14:57:00', freq='%dmin' % interval))
-        return tick_intervals
+        intervals = list(chain(*zip(upper, bottom)))
+        intervals if len(intervals) == size else intervals.append(dts + pd.Timedelta(hours=14, minutes=57))
+        print('tick_intervals', len(intervals), intervals)
+        ticker_intervals = [t.strftime('%Y-%m-%d %H:%M') for t in intervals]
+        return ticker_intervals
 
     def _underneath_size(self, asset, amount, base_amount, dts):
         sign = np.sign(amount)
@@ -125,12 +120,18 @@ class UncoverAlgorithm(BaseUncover):
         print('_underneath amount array', amount_array)
         return amount_array, size
 
+    # def create_iterables(self, asset, amount, per_amount, dt):
+    #     amount_arrays, size = self._underneath_size(asset, amount, per_amount, dt)
+    #     if asset.bid_mechanism:
+    #         dist_arrays = self._uncover_by_ticker(size, asset, dt)
+    #     else:
+    #         dist_arrays = self._uncover_by_price(size, asset, dt)
+    #     iterables = zip(amount_arrays, dist_arrays)
+    #     return iterables
+
     def create_iterables(self, asset, amount, per_amount, dt):
         amount_arrays, size = self._underneath_size(asset, amount, per_amount, dt)
-        if asset.bid_mechanism:
-            dist_arrays = self._uncover_by_ticker(size, asset, dt)
-        else:
-            dist_arrays = self._uncover_by_price(size, asset, dt)
+        dist_arrays = self._uncover_by_ticker(size, asset, dt)
         iterables = zip(amount_arrays, dist_arrays)
         return iterables
 

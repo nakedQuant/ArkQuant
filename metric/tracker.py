@@ -321,6 +321,7 @@ class _ClassicRiskMetrics(object):
                           ledger,
                           benchmark_ret):
         daily_value_series = ledger.portfolio.portfolio_daily_value
+        print('daily_value', daily_value_series)
         daily_returns_series = daily_value_series / daily_value_series.shift(1) - 1
         print('daily_returns_series', daily_returns_series)
         packet.update(self.risk_report(

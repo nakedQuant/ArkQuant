@@ -59,7 +59,6 @@ def create_transaction(order, commission):
         # calculate cost
         cost = commission.calculate(order)
         print('cost', cost)
-        # create txn
         transaction = Transaction(
             asset=order.asset,
             amount=order.amount,

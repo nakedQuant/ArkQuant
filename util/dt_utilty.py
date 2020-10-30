@@ -13,12 +13,14 @@ MAX_WEEK_RANGE = 5
 
 
 def locate_pos(price, minutes, direction):
+    print('minutes locate_pos', minutes)
     # 当卖出价格大于bid价格才会成交，买入价格低于bid价格才会成交
     loc = list(minutes[minutes <= price].index) if direction == '1' else \
         list(minutes[minutes >= price].index)
     # print('present minutes', minutes[minutes <= price])
     try:
-        pos = pd.Timestamp(datetime.datetime.utcfromtimestamp(loc[0]))
+        # pos = pd.Timestamp(datetime.datetime.utcfromtimestamp(loc[0]))
+        pos = loc[0]
     except IndexError:
         print('price out of minutes')
         pos = None

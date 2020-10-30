@@ -50,11 +50,11 @@ class Division(object):
     #         科创板盘后固定价格交易 --- 以后15:00收盘价格进行交易 --- 15:00 -- 15:30(按照时间优先原则，逐步撮合成交）
     #         由于价格笼子，科创板可以参考基于时间的设置订单
     #     """
-    #     zips = list(zips)
     #     if asset.bid_mechanism:
-    #         orders = [TickerOrder(asset, *args) for args in zips]
+    #         orders = [TickerOrder(asset, *z) for z in zips]
     #     else:
-    #         orders = [PriceOrder(asset, *args) for args in zips]
+    #         orders = [PriceOrder(asset, *z) for z in zips]
+    #     print('orders', orders)
     #     return orders
 
     @staticmethod
@@ -73,16 +73,7 @@ class Division(object):
             科创板盘后固定价格交易 --- 以后15:00收盘价格进行交易 --- 15:00 -- 15:30(按照时间优先原则，逐步撮合成交）
             由于价格笼子，科创板可以参考基于时间的设置订单
         """
-        orders = []
-        # print('_simulate_iterator', zips)
-        if asset.bid_mechanism:
-            for z in list(zips):
-                t_order = TickerOrder(asset, *z)
-                orders.append(t_order)
-        else:
-            for z in list(zips):
-                p_order = PriceOrder(asset, *z)
-                orders.append(p_order)
+        orders = [TickerOrder(asset, *z) for z in zips]
         print('orders', orders)
         return orders
 
