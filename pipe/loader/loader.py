@@ -9,8 +9,6 @@ from pipe.loader.base import PipelineLoader
 from _calendar.trading_calendar import calendar
 from pipe.loader import EVENT
 from gateway.driver.data_portal import portal
-from pipe.term import Term
-from gateway.asset.assets import Equity
 
 
 class PricingLoader(PipelineLoader):
@@ -28,9 +26,9 @@ class PricingLoader(PipelineLoader):
         # print('dts', dts)
         # print('assets', assets)
         fields = list(self.pipeline_domain.domain_field)
-        print('loader fields', fields)
+        # print('loader fields', fields)
         window = - self.scale * abs(self.pipeline_domain.domain_window)
-        print('loader window', window)
+        # print('loader window', window)
         adjust_kline = portal.get_history_window(assets,
                                                  dts,
                                                  window,

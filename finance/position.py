@@ -68,18 +68,18 @@ class Position(object):
             ZeroDivisionError异常和RuntimeWarning警告之间的区别 --- numpy.float64类型(RuntimeWarning)
             稳健方式基于0判断
         """
-        print('update by transaction', txn)
+        # print('update by transaction', txn)
         if self.asset != txn.asset:
             raise Exception('transaction asset must same with position asset')
         self.inner_position.last_sync_date = txn.created_dt.strftime('%Y-%m-%d')
         # 持仓基本净值
         base_value = self.amount * self.cost_basis
-        print('position base_value', base_value)
+        # print('position base_value', base_value)
         # 交易净值 以及成本
         txn_value = txn.amount * txn.price
-        print('transaction value', txn_value)
+        # print('transaction value', txn_value)
         txn_cost = txn.cost
-        print('transaction cost', txn_cost)
+        # print('transaction cost', txn_cost)
         # 根据交易对持仓进行更新
         total_amount = txn.amount + self.amount
         print('total amount after updating transaction', total_amount)

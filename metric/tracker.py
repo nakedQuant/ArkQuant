@@ -91,7 +91,7 @@ class MetricsTracker(object):
         # ledger = self._ledger
         # 账户初始化
         ledger.start_of_session(session_label)
-        print('handle_market_open ledger', ledger)
+        # print('handle_market_open ledger', ledger)
         self.start_of_session(ledger)
 
     def handle_market_close(self, completed_session, ledger):
@@ -118,7 +118,7 @@ class MetricsTracker(object):
             'cumulative_risk_metrics': {},
         }
         ledger.end_of_session()
-        print('handle_market_close ledger', ledger)
+        # print('handle_market_close ledger', ledger)
         self.end_of_session(
             packet,
             ledger,

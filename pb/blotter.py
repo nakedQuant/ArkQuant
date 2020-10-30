@@ -68,10 +68,9 @@ class SimulationBlotter(object):
             new_order = transfer_to_order(order, ticker=ticker)
         elif isinstance(order, TickerOrder):
             ticker = order.created_dt
-            print('TickerOrder, ticker', ticker)
-            print('minutes', minutes['close'])
+            # print('minutes', minutes['close'])
             price = minutes['close'][ticker]
-            print('ticker price', price)
+            print('ticker price', ticker, price)
             new_order = transfer_to_order(order, price=price)
         elif isinstance(order, Order):
             new_order = order
@@ -82,12 +81,15 @@ class SimulationBlotter(object):
         return trigger_order
 
     def create_bulk_transactions(self, orders, dts):
-        trigger_orders = [self._validate(order, dts) for order in orders]
-        trigger_orders = [order for order in trigger_orders if order]
-        print('trigger_orders', trigger_orders)
-        # create txn
-        transactions = [create_transaction(order_obj, self.commission) for order_obj in trigger_orders]
-        print('transactions', transactions)
+        try:
+            trigger_orders = [self._validate(order, dts) for order in orders]
+            trigger_orders = [order for order in trigger_orders if order]
+            print('trigger_orders', trigger_orders)
+            # create txn
+            transactions = [create_transaction(order_obj, self.commission) for order_obj in trigger_orders]
+        except IndexError:
+            print('orders either null or can not be triggered')
+            transactions = []
         return transactions
 
 

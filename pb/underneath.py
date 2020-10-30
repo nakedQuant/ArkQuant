@@ -77,7 +77,7 @@ class UncoverAlgorithm(BaseUncover):
     def _uncover_by_ticker(size, asset, dts):
         dts = pd.Timestamp(dts) if isinstance(dts, str) else dts
         interval = 4 * 60 / size
-        print('uncover_by_ticker', interval)
+        # print('uncover_by_ticker', interval)
         # 按照固定时间去执行
         upper = pd.date_range(start=dts + pd.Timedelta(hours=9, minutes=30),
                               end=dts + pd.Timedelta(hours=11, minutes=30),
@@ -89,7 +89,7 @@ class UncoverAlgorithm(BaseUncover):
         # print('uncover by ticker bottom', bottom)
         intervals = list(chain(*zip(upper, bottom)))
         intervals if len(intervals) == size else intervals.append(dts + pd.Timedelta(hours=14, minutes=57))
-        print('tick_intervals', len(intervals), intervals)
+        # print('tick_intervals', len(intervals), intervals)
         return intervals
 
     def _underneath_size(self, asset, amount, base_amount, dts):
@@ -128,9 +128,14 @@ class UncoverAlgorithm(BaseUncover):
     #     return iterables
 
     def create_iterables(self, asset, amount, per_amount, dt):
-        amount_arrays, size = self._underneath_size(asset, amount, per_amount, dt)
-        dist_arrays = self._uncover_by_ticker(size, asset, dt)
-        iterables = zip(amount_arrays, dist_arrays)
+        dt = pd.Timestamp(dt) if isinstance(dt, str) else dt
+        if amount > per_amount:
+            amount_arrays, size = self._underneath_size(asset, amount, per_amount, dt)
+            dist_arrays = self._uncover_by_ticker(size, asset, dt)
+            iterables = zip(amount_arrays, dist_arrays)
+        else:
+            dt = dt + pd.Timedelta(hours=9, minutes=30)
+            iterables = [[amount, dt]]
         return iterables
 
 

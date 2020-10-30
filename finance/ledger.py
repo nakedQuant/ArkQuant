@@ -60,7 +60,8 @@ class Ledger(object):
             update the cash of portfolio
         """
         p = self._portfolio
-        p.cash_flow += capital_amount
+        # p.cash_flow += capital_amount
+        p.portfolio_cash = capital_amount
 
     def start_of_session(self, session_ix):
         left_cash = self.position_tracker.handle_splits(session_ix)
@@ -162,17 +163,17 @@ class Ledger(object):
     def get_rights_positions(self, dts):
         # 获取当天为配股登记日的仓位 --- 卖出 因为需要停盘产生机会成本
         assets = set(self.positions)
-        print('ledger assets', assets)
+        # print('ledger assets', assets)
         rights = self.position_tracker.retrieve_equity_rights(assets, dts)
-        print('ledger rights', rights)
+        # print('ledger rights', rights)
         mapping_protocol = keymap(lambda x: x.sid, self.positions)
-        print('ledger mapping_protocol', mapping_protocol)
+        # print('ledger mapping_protocol', mapping_protocol)
         union_assets = set(mapping_protocol) & set(rights.index)
-        print('ledger union_assets', union_assets)
+        # print('ledger union_assets', union_assets)
         union_positions = keyfilter(lambda x: x in union_assets, mapping_protocol) if union_assets else None
-        print('ledger union_positions', union_positions)
+        # print('ledger union_positions', union_positions)
         right_positions = list(union_positions.values()) if union_positions else []
-        print('right_positions', right_positions)
+        # print('right_positions', right_positions)
         return right_positions
 
     def _cleanup_expired_assets(self, dt):

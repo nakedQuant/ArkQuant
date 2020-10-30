@@ -23,8 +23,8 @@ class Portfolio(object):
         Dict-like object containing information about currently-held positions.
 
     """
-    __slots__ = ['start_cash', 'loan', 'pnl', 'returns', '_cash_flow', 'utility', 'positions',
-                 'portfolio_value', 'positions_values', 'portfolio_daily_value']
+    __slots__ = ['start_cash', 'returns', 'utility', 'positions', '_portfolio_cash', 'pnl',
+                 'loan', 'portfolio_value', 'positions_values', 'portfolio_daily_value']
 
     def __init__(self, sim_params):
         capital_base = sim_params.capital_base
@@ -32,24 +32,21 @@ class Portfolio(object):
         self.pnl = 0.0
         self.returns = 0.0
         self.utility = 0.0
-        self._cash_flow = 0.0
+        # self._cash_flow = 0.0
+        self._portfolio_cash = capital_base
         self.positions = None
         self.positions_values = 0.0
         self.portfolio_value = capital_base
-        self.start_cash = capital_base
         self.portfolio_daily_value = pd.Series(index=sim_params.sessions, dtype='float64')
 
     @property
-    def cash_flow(self):
-        return self._cash_flow
-
-    @cash_flow.setter
-    def cash_flow(self, val):
-        self._cash_flow = val
-
-    @property
     def portfolio_cash(self):
-        return self.start_cash - self.cash_flow
+        return self._portfolio_cash
+
+    @portfolio_cash.setter
+    def portfolio_cash(self, flow):
+        self._portfolio_cash = self._portfolio_cash - flow
+        assert self._portfolio_cash >= 0, 'portfolio cash must be positive'
 
     def record_daily_value(self, session_ix):
         self.portfolio_daily_value[session_ix] = self.portfolio_value

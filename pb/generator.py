@@ -24,16 +24,16 @@ class Generator(object):
 
     def yield_capital(self, asset, capital, portfolio, dts):
         capital_orders = self.division_model.divided_by_capital(asset, capital, portfolio, dts)
-        print('generator capital_orders', capital_orders)
+        # print('generator capital_orders', capital_orders)
         capital_transactions = self.blotter.create_bulk_transactions(capital_orders, dts)
-        print('capital_transactions', capital_transactions)
+        # print('capital_transactions', capital_transactions)
         return capital_transactions
 
     def yield_position(self, position, portfolio, dts):
         holding_orders = self.division_model.divided_by_position(position, portfolio, dts)
-        print('holding_orders', holding_orders)
+        # print('holding_orders', holding_orders)
         holding_transactions = self.blotter.create_bulk_transactions(holding_orders, dts)
-        print('holding_transactions', holding_transactions)
+        # print('holding_transactions', holding_transactions)
         return holding_transactions
 
     def yield_interactive(self, position, asset, portfolio, dts):

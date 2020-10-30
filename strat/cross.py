@@ -28,7 +28,7 @@ class Cross(Signal):
 
     def long_signal(self, data, mask) -> bool:
         out = super().long_signal(data, mask)
-        print('cross signal', out)
+        # print('cross signal', out)
         return out
 
     def short_signal(self, feed) -> bool:

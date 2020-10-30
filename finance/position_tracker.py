@@ -76,9 +76,10 @@ class PositionTracker(object):
     def handle_transactions(self, transactions):
         """执行完交易cash变动"""
         aggregate_cash_flow = 0.0
-        for txn in transactions:
-            aggregate_cash_flow += self._handle_transaction(txn)
-        self._dirty_stats = False
+        if transactions:
+            for txn in transactions:
+                aggregate_cash_flow += self._handle_transaction(txn)
+            self._dirty_stats = False
         return aggregate_cash_flow
 
     def synchronize(self):

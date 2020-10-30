@@ -12032,3 +12032,11 @@ class finaldescriptor(final):
 #     _uncover_by_ticker(7, None, '2019-09-02')
 
 # kline.index = [datetime.datetime.utcfromtimestamp(i).strftime('%Y-%m-%d %H:%M') for i in data['600000'].index]
+
+    # @property
+    # def cash_flow(self):
+    #     return self._cash_flow
+    #
+    # @cash_flow.setter
+    # def cash_flow(self, val):
+    #     self._cash_flow = val

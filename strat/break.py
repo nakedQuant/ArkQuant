@@ -31,7 +31,7 @@ class Break(Signal):
 
     def long_signal(self, data, mask) -> bool:
         out = super().long_signal(data, mask)
-        print('break out', out)
+        # print('break out', out)
         return out
 
     def short_signal(self, feed) -> bool:

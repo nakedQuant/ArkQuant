@@ -40,9 +40,9 @@ class Broker(object):
         allocation = self.capital_model.compute(positives, capital, dts)
         print('allocation', allocation)
         for asset, available in allocation.items():
-            print('broker capital', asset, available)
+            # print('broker capital', asset, available)
             txn_mappings[asset] = self.generator.yield_capital(asset, available, portfolio, dts)
-        print('txn_mappings', txn_mappings)
+        # print('txn_mappings', txn_mappings)
         return txn_mappings
 
     def implement_position(self, negatives, portfolio, dts):
@@ -75,7 +75,7 @@ class Broker(object):
 
     def implement_broke(self, ledger, dts):
         """建立执行计划"""
-        capital = ledger.portfolio.start_cash
+        capital = ledger.portfolio.portfolio_cash
         positives, negatives, duals = self.engine.execute_algorithm(ledger, dts)
         print('broker : initialize engine output', positives, negatives, duals)
         portfolio = ledger.portfolio

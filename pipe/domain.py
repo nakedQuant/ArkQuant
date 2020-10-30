@@ -47,9 +47,9 @@ class Domain(object):
     def __or__(self, other):
         if isinstance(other, Domain):
             fields = set(self.domain_field) | set(other.domain_field)
-            print('fields', fields)
+            # print('fields', fields)
             max_window = max(self.domain_window, other.domain_window)
-            print('max_window', max_window)
+            # print('max_window', max_window)
             self.domain_field = fields
             self.domain_window = max_window
         else:

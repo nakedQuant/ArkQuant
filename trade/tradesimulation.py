@@ -71,13 +71,13 @@ class AlgorithmSimulator(object):
             """
             stack.callback(on_exit)
             stack.enter_context(AlgoAPI(self.algorithm))
-            print('ledger', ledger)
+            # print('ledger', ledger)
 
             metrics_tracker.handle_start_of_simulation(ledger)
 
             # 生成器yield方法 ，返回yield 生成的数据，next 执行yield 之后的方法
             for session_label, action in self.clock:
-                print('session_label and action', session_label, action)
+                print('session_label and action :', session_label, action)
                 if action == BEFORE_TRADING_START:
                     metrics_tracker.handle_market_open(session_label, ledger)
                 elif action == SESSION_START:

@@ -35,7 +35,7 @@ class Signal(ABC):
         signals = [self._run_signal(metadata[m.sid]) for m in mask]
         # print('signals', signals)
         zp = valfilter(lambda x: x > self.params.get('threshold', 0), dict(zip(mask, signals)))
-        print('signal mapping', zp)
+        # print('signal mapping', zp)
         if self.final:
             sorted_zp = sorted(zp.items(), key=lambda x: x[1], reverse=True)
             out = [i[0] for i in sorted_zp]

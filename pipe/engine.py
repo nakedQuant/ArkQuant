@@ -26,7 +26,7 @@ class Engine(ABC):
         inner_pickers = list(chain(pipeline.ump_terms for pipeline in pipelines))[0]
         # print('inner_pickers', inner_pickers)
         engine_terms = set(inner_terms + inner_pickers)
-        print('engine_terms', engine_terms)
+        # print('engine_terms', engine_terms)
         # get_loader
         _get_loader = PricingLoader(engine_terms)
         return pipelines, _get_loader
@@ -46,7 +46,7 @@ class Engine(ABC):
         # mask
         # print('positions mask', set(ledger.positions))
         mask = set(universe_mask) | set(ledger.positions)
-        print('mask', mask)
+        # print('mask', mask)
         metadata = self._get_loader.load_pipeline_arrays(dts, mask, 'daily')
         # print('engine metadata sids', set(metadata))
         # 过滤没有数据的sid
@@ -55,7 +55,7 @@ class Engine(ABC):
         # print('metadata symbols', set(metadata))
         # mask = [m for m in mask if m.sid in set(metadata) and not metadata[m.sid].empty]
         engine_mask = [symbol for symbol in list(mask) if symbol.sid in set(metadata)]
-        print('engine mask', engine_mask)
+        # print('engine mask', engine_mask)
         return metadata, engine_mask
 
     def _split_positions(self, ledger, dts):
@@ -66,13 +66,13 @@ class Engine(ABC):
         """
         # violate risk management
         violate_positions = ledger.get_violate_risk_positions()
-        print('engine violate_positions', violate_positions)
+        # print('engine violate_positions', violate_positions)
         # 配股持仓
         righted_positions = ledger.get_rights_positions(dts)
-        print('engine righted_positions', righted_positions)
+        # print('engine righted_positions', righted_positions)
         # expires positions
         expired_positions = ledger.get_expired_positions(dts)
-        print('engine expired_positions', expired_positions)
+        # print('engine expired_positions', expired_positions)
         # 剔除的持仓
         if self.disallowed_righted and self.disallowed_violation:
             remove_positions = set(righted_positions) | set(violate_positions)
@@ -82,13 +82,12 @@ class Engine(ABC):
             remove_positions = righted_positions
         else:
             remove_positions = set()
-        print('engine removed position', remove_positions)
+        # print('engine removed position', remove_positions)
         # 剔除配股的持仓
         remove_positions = set(remove_positions) | set(expired_positions)
-        print('removed position', remove_positions)
-        # traded_positions = set(ledger.positions) - remove_positions
+        # print('removed position', remove_positions)
         traded_positions = set(ledger.positions.values()) - remove_positions
-        print('traded_positions', traded_positions)
+        # print('traded_positions', traded_positions)
         return traded_positions, remove_positions
 
     def _run_pipeline(self, pipeline, metadata, mask):
@@ -120,11 +119,12 @@ class Engine(ABC):
             # print('out', out)
             results.append(out)
         results = [r for r in results if r]
+        print('run pipeline output', results)
         return results
 
     @staticmethod
     def _run_ump(pipeline, position, metadata):
-        print('ump_picker', pipeline.ump_terms)
+        # print('ump_picker', pipeline.ump_terms)
         # output --- bool or position
         result = pipeline.to_withdraw_plan(position, metadata)
         return result
@@ -160,16 +160,13 @@ class Engine(ABC):
             calculate pipelines and ump
         """
         metadata, default_mask = self._initialize_metadata(ledger, dts)
-        print('step one')
         traded_positions, removed_positions = self._split_positions(ledger, dts)
-        print('step two')
         # 执行算法逻辑
         pipes = self.run_pipeline(metadata, default_mask)
-        print('pipes step three', pipes)
         # 剔除righted positions, violate_positions, expired_positions
         ump_positions = self.run_ump(metadata, traded_positions)
         ump_positions = set(ump_positions) | removed_positions
-        print('ump_positions', ump_positions)
+        # print('ump_positions', ump_positions)
         # yield self.resolve_conflicts(pipes, ump_positions, ledger.positions)
         return self.resolve_conflicts(pipes, ump_positions, ledger.positions)
 
@@ -283,13 +280,13 @@ class SimplePipelineEngine(Engine):
         else:
             extra_mappings = dict()
         extra_positives = list(extra_mappings.values())
-        print('engine extra_positives', extra_positives)
+        # print('engine extra_positives', extra_positives)
         # pipeline --- 产生相同的asset对象（算法自动加仓）
         common = set(call_proxy) & set(hold_proxy)
         increment_positives = [call_proxy[c] for c in common if call_proxy[c] == hold_proxy[c].asset]
-        print('engine increment_positives', increment_positives)
+        # print('engine increment_positives', increment_positives)
         direct_positives = set(extra_positives) | set(increment_positives)
-        print('engine direct_positives', direct_positives)
+        # print('engine direct_positives', direct_positives)
         # 基于持仓卖出 --- 分为2种 ， 1.直接卖出 ， 2.卖出买入 ，基于pipeline name
         # 2种 --- 一个pipeline同时存在买入和卖出行为
         put_proxy = {r.name: r for r in puts} if puts else {}
@@ -301,12 +298,12 @@ class SimplePipelineEngine(Engine):
             dual = [(put_proxy[name], call_proxy[name]) for name in common_pipe]
         else:
             dual = set()
-        print('engine dual', dual)
+        # print('engine dual', dual)
         # 1种 --- 直接卖出
         negatives = set(put_proxy) - set(common_pipe)
         negative_puts = keyfilter(lambda x: x in negatives, put_proxy)
         direct_negatives = list(negative_puts.values())
-        print('engine direct_negatives', direct_negatives)
+        # print('engine direct_negatives', direct_negatives)
         # asset positions duals
         return direct_positives, direct_negatives, dual
 

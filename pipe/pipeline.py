@@ -81,7 +81,7 @@ class Pipeline(object):
             # 将节点的依赖筛选出来
             dependence_masks = keyfilter(lambda x: x in term.dependencies,
                                          self._workspace)
-            print('dependence_masks', dependence_masks)
+            # print('dependence_masks', dependence_masks)
             # 将依赖的交集作为节点的input
             input_mask = reduce(lambda x, y: set(x) & set(y),
                                 dependence_masks.values())
@@ -103,7 +103,7 @@ class Pipeline(object):
                 # print('node_mask', node_mask)
                 output = node.compute(metadata, list(node_mask))
                 self._workspace[node] = output
-                print('_workspace', self._workspace)
+                # print('_workspace', self._workspace)
             self._decref_recursive(graph, metadata, mask)
 
     def _decref_dependence(self, graph, metadata, mask):
@@ -132,7 +132,7 @@ class Pipeline(object):
         outputs = self._workspace.popitem(last=True)
         # asset tag pipeline_name --- 可能存在相同的持仓但是由不同的pipeline产生
         outputs = [r.source_id(self.name) for r in outputs[1]]
-        print('pipeline tag outputs', outputs)
+        # print('pipeline outputs', outputs)
         try:
             final_out = final.resolve_final(outputs)
         except IndexError:

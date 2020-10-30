@@ -63,7 +63,7 @@ class HistoryCompatibleAdjustments(object):
         kline = data[sid]
         try:
             dividends = adjustment['dividends'][sid]
-            print('dividends union', set(dividends.index) & set(kline.index))
+            # print('dividends union', set(dividends.index) & set(kline.index))
             ex_close = kline['close'].reindex(index=dividends.index)
             qfq = (1 - dividends['bonus']/(10 * ex_close)) / \
                   (1 + (dividends['sid_bonus'] + dividends['sid_transfer']) / 10)
@@ -79,9 +79,9 @@ class HistoryCompatibleAdjustments(object):
         kline = data[sid]
         try:
             rights = adjustment['rights'][sid]
-            print('rights', sid, rights)
+            # print('rights', sid, rights)
             ex_close = kline['close'].reindex(index=rights.index)
-            print('ex_close', ex_close)
+            # print('ex_close', ex_close)
             qfq = (ex_close + (rights['rights_price'] * rights['rights_bonus']) / 10) / \
                   (1 + rights['rights_bonus']/10)
         except KeyError:
