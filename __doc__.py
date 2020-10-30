@@ -259,7 +259,7 @@ mysql --- between and (include edge)
 
     OMS --- 订单处理系统
     slippage --- 针对回测用的，
-    nakedquant trading --- 将订单拆分小的订单 --- transaction
+    ArkQuant trading --- 将订单拆分小的订单 --- transaction
     open price （最高价-最低价）波动率 ，simlation 当天的概率分布，在收盘的时候将没有成交的订单通过集合竞价成交
     价格范围 0.9preclose  1.1preclose
     order_plan_amount 分为 per_order_amount ; order_num;

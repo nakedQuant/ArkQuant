@@ -3245,7 +3245,7 @@
 #                  restrictions, universe_func):
 #
 #         # ==============
-#         # nakedquant
+#         # ArkQuant
 #         # Param Setup
 #         # ==============
 #         self.sim_params = sim_params
@@ -3328,7 +3328,7 @@
 #         def on_exit():
 #             # Remove references to algo, data portal, et al to break cycles
 #             # and ensure deterministic cleanup of these objects when the
-#             # nakedquant finishes.
+#             # ArkQuant finishes.
 #             self.algo = None
 #             self.benchmark_source = self.data_portal = None
 #
@@ -3390,7 +3390,7 @@
 #     # Load data starting from the previous trading day...
 #     start_date_loc = sessions.get_loc(start_session)
 #
-#     # ...continuing until either the day before the nakedquant end, or
+#     # ...continuing until either the day before the ArkQuant end, or
 #     # until chunksize days of data have been loaded.
 #     sim_end_session = self.sim_params.end_session
 #
@@ -4769,7 +4769,7 @@ from six.moves.urllib_error import HTTPError
 #             Provider for bar pricing data.
 #
 #         simulation_dt_func: function
-#             Function which returns the current nakedquant time.
+#             Function which returns the current ArkQuant time.
 #             This is usually bound to a method of TradingSimulation.
 #
 #         data_frequency: string
@@ -5061,7 +5061,7 @@ from six.moves.urllib_error import HTTPError
 #             )
 #
 #         if benchmark_asset.start_date > self.sessions[0]:
-#             # the asset started trading after the first nakedquant day
+#             # the asset started trading after the first ArkQuant day
 #             raise BenchmarkAssetNotAvailableTooEarly(
 #                 sid=str(self.benchmark_asset),
 #                 dt=self.sessions[0],
@@ -5069,7 +5069,7 @@ from six.moves.urllib_error import HTTPError
 #             )
 #
 #         if benchmark_asset.end_date < self.sessions[-1]:
-#             # the asset stopped trading before the last nakedquant day
+#             # the asset stopped trading before the last ArkQuant day
 #             raise BenchmarkAssetNotAvailableTooLate(
 #                 sid=str(self.benchmark_asset),
 #                 dt=self.sessions[-1],
@@ -5102,7 +5102,7 @@ from six.moves.urllib_error import HTTPError
 #                                          data_portal):
 #         """
 #         Internal method that pre-calculates the benchmark return series for
-#         use in the nakedquant.
+#         use in the ArkQuant.
 #
 #         Parameters
 #         ----------
@@ -5116,15 +5116,15 @@ from six.moves.urllib_error import HTTPError
 #
 #         Notes
 #         -----
-#         If the benchmark asset started trading after the nakedquant start,
-#         or finished trading before the nakedquant end, exceptions are raised.
+#         If the benchmark asset started trading after the ArkQuant start,
+#         or finished trading before the ArkQuant end, exceptions are raised.
 #
-#         If the benchmark asset started trading the same day as the nakedquant
+#         If the benchmark asset started trading the same day as the ArkQuant
 #         start, the first available minute price on that day is used instead
 #         of the previous close.
 #
 #         We use history to get an adjusted price history for each day's close,
-#         as of the look-back date (the last day of the nakedquant).  Prices are
+#         as of the look-back date (the last day of the ArkQuant).  Prices are
 #         fully adjusted for dividends, splits, and mergers.
 #
 #         Returns
@@ -5160,8 +5160,8 @@ from six.moves.urllib_error import HTTPError
 #         start_date = asset.start_date
 #         if start_date < trading_days[0]:
 #             # get the window of close prices for benchmark_asset from the
-#             # last trading day of the nakedquant, going up to one day
-#             # before the nakedquant start day (so that we can get the %
+#             # last trading day of the ArkQuant, going up to one day
+#             # before the ArkQuant start day (so that we can get the %
 #             # change on day 1)
 #             benchmark_series = data_portal.get_history_window(
 #                 [asset],
@@ -5210,7 +5210,7 @@ from six.moves.urllib_error import HTTPError
 #         else:
 #             raise ValueError(
 #                 'cannot set benchmark to asset that does not exist during'
-#                 ' the nakedquant period (asset start date=%r)' % start_date
+#                 ' the ArkQuant period (asset start date=%r)' % start_date
 #             )
 # from numpy import iinfo, uint32
 # UINT32_MAX = iinfo(uint32).max
@@ -6997,7 +6997,7 @@ from six.moves.urllib_error import HTTPError
 #
 
 # namespace = dict()
-# with open('/Users/python/Library/Mobile Documents/com~apple~CloudDocs/nakedquant/test/test_driver.py','r') as f:
+# with open('/Users/python/Library/Mobile Documents/com~apple~CloudDocs/ArkQuant/test/test_driver.py','r') as f:
 #     exec(f.read(),namespace)
 #
 # print(namespace.keys())
@@ -7009,7 +7009,7 @@ from six.moves.urllib_error import HTTPError
 # # print(namespace['signature'])
 #
 # import glob
-# res = glob.glob('/Users/python/Library/Mobile Documents/com~apple~CloudDocs/nakedquant/pipe/strategy/*.py')
+# res = glob.glob('/Users/python/Library/Mobile Documents/com~apple~CloudDocs/ArkQuant/pipe/strategy/*.py')
 # print(list(res))
 #
 # print(__file__)
@@ -7060,7 +7060,7 @@ from six.moves.urllib_error import HTTPError
 #     def get_current_ticker(self,asset,fields):
 #         """
 #         Returns the "current" value of the given fields for the given asset
-#         at the current nakedquant time.
+#         at the current ArkQuant time.
 #         :param asset: asset_type
 #         :param fields: OHLCTV
 #         :return: dict asset -> ticker
@@ -7078,7 +7078,7 @@ from six.moves.urllib_error import HTTPError
 #         the given asset, fields, and frequency.
 #
 #         Returned data is adjusted for splits, dividends, and mergers as of the
-#         current nakedquant time.
+#         current ArkQuant time.
 #
 #         The semantics for missing data are identical to the ones described in
 #         the notes for :meth:`current`.
@@ -8364,7 +8364,7 @@ from itertools import product
 #                  restrictions, universe_func):
 #
 #         # ==============
-#         # nakedquant
+#         # ArkQuant
 #         # Param Setup
 #         # ==============
 #         self.sim_params = sim_params
@@ -8499,7 +8499,7 @@ from itertools import product
 #         def on_exit():
 #             # Remove references to algo, data portal, et al to break cycles
 #             # and ensure deterministic cleanup of these objects when the
-#             # nakedquant finishes.
+#             # ArkQuant finishes.
 #             self.algo = None
 #             self.benchmark_source = self.current_data = self.data_portal = None
 #
@@ -8949,7 +8949,7 @@ from dateutil.relativedelta import relativedelta
 # def history(self, asset, field, dts, window):
 #     """
 #     A window of pricing data with adjustments applied assuming that the
-#     end of the window is the day before the current nakedquant time.
+#     end of the window is the day before the current ArkQuant time.
 #     default fields --- OHLCV
 #
 #     Parameters
@@ -9418,7 +9418,7 @@ from dateutil.relativedelta import relativedelta
 #     return csv_data_source
 
 # import glob
-# res = glob.glob('/Users/python/Library/Mobile Documents/com~apple~CloudDocs/nakedquant/pipe/strategy/*.py')
+# res = glob.glob('/Users/python/Library/Mobile Documents/com~apple~CloudDocs/ArkQuant/pipe/strategy/*.py')
 # print(list(res))
 #
 # print(__file__)
@@ -9484,7 +9484,7 @@ from dateutil.relativedelta import relativedelta
     trading_calendar: zipline.util._calendar.exchange_calendar.TradingCalendar
         The _calendar instance used to provide minute->session information.
     first_trading_day : pd.Timestamp
-        The first trading day for the nakedquant.
+        The first trading day for the ArkQuant.
     equity_daily_reader : BcolzDailyBarReader, optional
         The daily bar reader for equities. This will be used to service
         daily data backtests or daily history calls in a minute backetest.
@@ -9529,7 +9529,7 @@ from dateutil.relativedelta import relativedelta
 #     chunks : int or iterator, optional
 #         The number of days to compute Pipeline results for. Increasing
 #         this number will make it longer to get the first results but
-#         may improve the total runtime of the nakedquant. If an iterator
+#         may improve the total runtime of the ArkQuant. If an iterator
 #         is passed, we will run in chunks based on values of the iterator.
 #         Default is True.
 #     eager : bool, optional
@@ -9649,7 +9649,7 @@ import logging
 # @expect_types(tz=optional(tzinfo))
 # def get_datetime(self, tz=None):
 #     """
-#     Returns the current nakedquant datetime.
+#     Returns the current ArkQuant datetime.
 #
 #     Parameters
 #     ----------
@@ -9659,7 +9659,7 @@ import logging
 #     Returns
 #     -------
 #     dt : datetime
-#         The current nakedquant datetime converted to ``tz``.
+#         The current ArkQuant datetime converted to ``tz``.
 #     """
 #     dt = self.datetime
 #     assert dt.tzinfo == pytz.utc, "algorithm should have a utc datetime"
@@ -10542,7 +10542,7 @@ from numpy.lib.stride_tricks import as_strided
 #     self._before_trading_start = before_trading_start
 #     self._analyze = analyze
 namespace = dict()
-with open('/Users/python/Library/Mobile Documents/com~apple~CloudDocs/nakedquant/test/test_driver.py','r') as f:
+with open('/Users/python/Library/Mobile Documents/com~apple~CloudDocs/ArkQuant/test/test_driver.py','r') as f:
     exec(f.read(), namespace)
 
 print(namespace.keys())
@@ -10564,7 +10564,7 @@ print(test)
 # status = tsclient.to_ts_stats()
 # print('status', status['list_date'].dtype)
 #
-# path = '/Users/python/Library/Mobile Documents/com~apple~CloudDocs/nakedquant/gateway/spider/equity_basics.csv'
+# path = '/Users/python/Library/Mobile Documents/com~apple~CloudDocs/ArkQuant/gateway/spider/equity_basics.csv'
 #
 # frame = pd.read_csv(path, dtype={'代码': np.str, '发行价格': np.float, 'list_date': np.str})
 # frame['发行价格'].fillna('0.00', inplace=True)
@@ -10858,7 +10858,7 @@ def _fit_statsmodel(x, y):
 
 # @api_method
 # def set_cancel_policy(self, cancel_policy):
-#     """Sets the order cancellation policy for the nakedquant.
+#     """Sets the order cancellation policy for the ArkQuant.
 #
 #     Parameters
 #     ----------
@@ -10925,7 +10925,7 @@ def _fit_statsmodel(x, y):
     *args, **kwargs
         Forwarded to ``initialize`` unless listed below.
     initialize : callable[context -> None], optional
-        Function that is called at the start of the nakedquant to
+        Function that is called at the start of the ArkQuant to
         setup the initial context.
     handle_data : callable[(context, data) -> None], optional
         Function called on every bar. This is where most logic should be
@@ -10967,8 +10967,8 @@ def _fit_statsmodel(x, y):
     history_container_class : type, optional
         The type of history container to use. default: HistoryContainer
     platform : str, optional
-        The platform the nakedquant is running on. This can be queried for
-        in the nakedquant with ``get_environment``. This allows algorithms
+        The platform the ArkQuant is running on. This can be queried for
+        in the ArkQuant with ``get_environment``. This allows algorithms
         to conditionally execute code based on platform it is running on.
         default: 'zipline'
 
@@ -10979,7 +10979,7 @@ def _fit_statsmodel(x, y):
         d.风险管理（最优资本配置 ， 最优赌注或者凯利准则 ， 海龟仓位管理）
 """
 
-# base_dir = '/Users/python/Library/Mobile Documents/com~apple~CloudDocs/nakedquant/strat'
+# base_dir = '/Users/python/Library/Mobile Documents/com~apple~CloudDocs/ArkQuant/strat'
 
 # @staticmethod
 # def resolve_pipeline_final(outputs):
@@ -11868,7 +11868,7 @@ class finaldescriptor(final):
 #     def history(self, assets, field, dts, window):
 #         """
 #         A window of pricing data with adjustments applied assuming that the
-#         end of the window is the day before the current nakedquant time.
+#         end of the window is the day before the current ArkQuant time.
 #         default fields --- OHLCV
 #
 #         Parameters
@@ -12033,10 +12033,10 @@ class finaldescriptor(final):
 
 # kline.index = [datetime.datetime.utcfromtimestamp(i).strftime('%Y-%m-%d %H:%M') for i in data['600000'].index]
 
-    # @property
-    # def cash_flow(self):
-    #     return self._cash_flow
-    #
-    # @cash_flow.setter
-    # def cash_flow(self, val):
-    #     self._cash_flow = val
+# @property
+# def cash_flow(self):
+#     return self._cash_flow
+#
+# @cash_flow.setter
+# def cash_flow(self, val):
+#     self._cash_flow = val

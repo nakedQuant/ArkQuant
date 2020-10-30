@@ -85,8 +85,8 @@ class TradingAlgorithm(object):
         This function will be passed the data for the bar and should
         return the actual context manager that will be entered.
     platform : str, optional
-        The platform the nakedquant is running on. This can be queried for
-        in the nakedquant with ``get_environment``. This allows algorithms
+        The platform the ArkQuant is running on. This can be queried for
+        in the ArkQuant with ``get_environment``. This allows algorithms
         to conditionally execute code based on platform it is running on.
         default: 'zipline'
 
@@ -366,18 +366,18 @@ class TradingAlgorithm(object):
                  'start', 'end', 'capital_base', 'platform', '*'}
             The field to query. The options have the following meanings:
               arena : str
-                  The arena from the nakedquant parameters. This will normally
+                  The arena from the ArkQuant parameters. This will normally
                   be ``'backtest'`` but some systems may use this distinguish
                   live trading from backtesting.
               data_frequency : {'daily', 'minute'}
                   data_frequency tells the algorithm if it is running with
                   daily data or minute data.
               start : datetime
-                  The start date for the nakedquant.
+                  The start date for the ArkQuant.
               end : datetime
-                  The end date for the nakedquant.
+                  The end date for the ArkQuant.
               capital_base : float
-                  The starting capital for the nakedquant.
+                  The starting capital for the ArkQuant.
               platform : str
                   The platform that the code is running on. By default this
                   will be the string 'zipline'. This can allow algorithms to
@@ -495,7 +495,7 @@ class TradingAlgorithm(object):
     @api_method
     def set_slippage(self, slippage_class):
         """
-        Set the slippage models for the nakedquant.
+        Set the slippage models for the ArkQuant.
 
         Parameters
         ----------

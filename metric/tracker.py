@@ -41,13 +41,13 @@ class MetricsTracker(object):
 
     def __init__(self,
                  sim_params,
-                 benchmark_rets,
+                 benchmark_returns,
                  metrics_sets,
                  emission_rate='daily'
                  ):
         self._sessions = sim_params.sessions
         self._capital_base = sim_params.capital_base
-        self._benchmark_returns = benchmark_rets
+        self._benchmark_returns = benchmark_returns
         self._emission_rate = emission_rate
         self._metrics_set = metrics_sets
 
@@ -57,10 +57,6 @@ class MetricsTracker(object):
             for metric in metrics_sets:
                 if hasattr(metric, hook):
                     registered.append(metric)
-                # try:
-                #     registered.append(getattr(metric, hook))
-                # except AttributeError:
-                #     pass
 
             def closing_over_loop_variables_is_hard(*args, **kwargs):
 
@@ -88,10 +84,8 @@ class MetricsTracker(object):
             The label of the session that is about to begin.
         ledger : ledger object
         """
-        # ledger = self._ledger
         # 账户初始化
         ledger.start_of_session(session_label)
-        # print('handle_market_open ledger', ledger)
         self.start_of_session(ledger)
 
     def handle_market_close(self, completed_session, ledger):
@@ -100,7 +94,7 @@ class MetricsTracker(object):
         Parameters
         ----------
         completed_session : Timestamp
-            The most recently completed nakedquant datetime.
+            The most recently completed ArkQuant datetime.
         data_portal : DataPortal
             The current data portal.
 
@@ -118,7 +112,6 @@ class MetricsTracker(object):
             'cumulative_risk_metrics': {},
         }
         ledger.end_of_session()
-        # print('handle_market_close ledger', ledger)
         self.end_of_session(
             packet,
             ledger,
@@ -128,7 +121,7 @@ class MetricsTracker(object):
 
     def handle_simulation_end(self, ledger):
         """
-        When the nakedquant is complete, run the full period risk report
+        When the ArkQuant is complete, run the full period risk report
         and send it out on the results socket.
         """
         packet = {}

@@ -198,7 +198,7 @@ cpdef calculate_position_tracker_stats(positions, PositionStats stats):
 
         # NOTE: this loop does a lot of stuff!
         # we call this function every time the portfolio value is needed,
-        # which is at least once per nakedquant day, so let's not iterate
+        # which is at least once per ArkQuant day, so let's not iterate
         # through every single position multiple times.
         exposure = position.amount * position.last_sale_price
 

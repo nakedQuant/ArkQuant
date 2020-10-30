@@ -149,7 +149,7 @@ cdef class BarData:
     data_portal : DataPortal
         Provider for bar pricing data.
     simulation_dt_func : callable
-        Function which returns the current nakedquant time.
+        Function which returns the current ArkQuant time.
         This is usually bound to a method of TradingSimulation.
     data_frequency : {'minute', 'daily'}
         The frequency of the bar data; i.e. whether the data is
@@ -231,7 +231,7 @@ cdef class BarData:
 
     cdef _get_current_minute(self):
         """
-        Internal utility method to get the current nakedquant time.
+        Internal utility method to get the current ArkQuant time.
 
         Possible answers are:
         - whatever the algorithm's get_datetime() method returns (this is what
@@ -259,7 +259,7 @@ cdef class BarData:
     def current(self, assets, fields):
         """
         Returns the "current" value of the given fields for the given asset
-        at the current nakedquant time.
+        at the current ArkQuant time.
 
         Parameters
         ----------
@@ -301,7 +301,7 @@ cdef class BarData:
           has never traded, or because it has delisted) NaN is returned. If a
           value is found, and we had to cross an adjustment boundary (split,
           dividend, etc) to get it, the value is adjusted to the current
-          nakedquant time before being returned.
+          ArkQuant time before being returned.
 
         - Requesting "open", "high", "low", or "close" produces the open, high,
           low, or close for the current minute. If no trades occurred this
@@ -314,7 +314,7 @@ cdef class BarData:
           which the asset traded, even if the asset has stopped trading. If
           there is no last known value, ``pd.NaT`` is returned.
 
-        If the current nakedquant time is not a valid market time for an asset,
+        If the current ArkQuant time is not a valid market time for an asset,
         we use the most recent market close instead.
         """
         multiple_assets = _is_iterable(assets)
@@ -448,11 +448,11 @@ cdef class BarData:
         For the given asset or iterable of asset, returns True if all of the
         following are true:
 
-        1. The asset is alive for the session of the current nakedquant time
-           (if current nakedquant time is not a market minute, we use the next
+        1. The asset is alive for the session of the current ArkQuant time
+           (if current ArkQuant time is not a market minute, we use the next
            session).
-        2. The asset's exchange is open at the current nakedquant time or at
-           the nakedquant _calendar's next market minute.
+        2. The asset's exchange is open at the current ArkQuant time or at
+           the ArkQuant _calendar's next market minute.
         3. There is a known last price for the asset.
 
         Parameters
@@ -464,10 +464,10 @@ cdef class BarData:
         -----
         The second condition above warrants some further explanation:
 
-        - If the asset's exchange _calendar is identical to the nakedquant
+        - If the asset's exchange _calendar is identical to the ArkQuant
           _calendar, then this condition always returns True.
-        - If there are market minutes in the nakedquant _calendar outside of
-          this asset's exchange's trading hours (for example, if the nakedquant
+        - If there are market minutes in the ArkQuant _calendar outside of
+          this asset's exchange's trading hours (for example, if the ArkQuant
           is running on the CMES _calendar but the asset is MSFT, which trades
           on the NYSE), during those minutes, this condition will return False
           (for example, 3:15 am Eastern on a weekday, during which the CMES is
@@ -540,11 +540,11 @@ cdef class BarData:
     def is_stale(self, assets):
         """
         For the given asset or iterable of asset, returns True if the asset
-        is alive and there is no trade data for the current nakedquant time.
+        is alive and there is no trade data for the current ArkQuant time.
 
         If the asset has never traded, returns False.
 
-        If the current nakedquant time is not a valid market time, we use the
+        If the current ArkQuant time is not a valid market time, we use the
         current time to check if the asset is alive, but we use the last
         market minute/day for the trade data check.
 
@@ -612,7 +612,7 @@ cdef class BarData:
         the given asset, fields, and frequency.
 
         Returned data is adjusted for splits, dividends, and mergers as of the
-        current nakedquant time.
+        current ArkQuant time.
 
         The semantics for missing data are identical to the ones described in
         the notes for :meth:`current`.
@@ -663,7 +663,7 @@ cdef class BarData:
           - ``panel.major_axis`` : :class:`pd.DatetimeIndex` of length ``bar_count``
           - ``panel.minor_axis`` : ``asset``
 
-        If the current nakedquant time is not a valid market time, we use the
+        If the current ArkQuant time is not a valid market time, we use the
         last market close instead.
         """
         if isinstance(fields, string_types):
@@ -874,7 +874,7 @@ cdef class SidView:
             Provider for bar pricing data.
 
         simulation_dt_func: function
-            Function which returns the current nakedquant time.
+            Function which returns the current ArkQuant time.
             This is usually bound to a method of TradingSimulation.
 
         data_frequency: string

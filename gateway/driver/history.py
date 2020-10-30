@@ -83,7 +83,7 @@ class HistoryLoader(object):
     def history(self, assets, field, dts, window):
         """
         A window of pricing data with adjustments applied assuming that the
-        end of the window is the day before the current nakedquant time.
+        end of the window is the day before the current ArkQuant time.
         default fields --- OHLCV
 
         Parameters
