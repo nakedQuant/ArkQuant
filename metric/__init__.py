@@ -7,21 +7,13 @@ Created on Sun Feb 17 16:11:34 2019
 """
 from metric.tracker import _ClassicRiskMetrics
 from metric.metrics import (
+    NumTradingDays,
     SessionField,
     DailyLedgerField,
     PNL,
-    CashFlow,
     Returns,
-    Profits,
-    Weights,
-    Utility,
-    Cushion,
-    Proportion,
     HitRate,
-    Positions,
     Transactions,
-    PeriodLabel,
-    NumTradingDays,
     BenchmarkReturnsAndVolatility,
     AlphaBeta,
     ReturnsStatistic,
@@ -38,37 +30,30 @@ from metric.analyzers import (
 def default_metrics():
     return {
         SessionField(),
+        NumTradingDays(),
+        _ConstantCumulativeRiskMetric('project', 'ArkQuant'),
+        _ConstantCumulativeRiskMetric('treasury_period_return', '0.0'),
         DailyLedgerField('portfolio.portfolio_value'),
-        DailyLedgerField('portfolio.position_values'),
-        DailyLedgerField('portfolio.start_cash', 'cash'),
-        DailyLedgerField('portfolio.utility', 'capital_utility'),
-        DailyLedgerField('portfolio.positions', 'ending_exposure'),
-        DailyLedgerField('portfolio.current_portfolio_weights', 'portfolio_weights'),
+        DailyLedgerField('portfolio.positions_values'),
+        DailyLedgerField('portfolio.portfolio_cash'),
+        DailyLedgerField('portfolio.utility'),
+        DailyLedgerField('portfolio.positions'),
+        DailyLedgerField('portfolio.current_portfolio_weights'),
+        DailyLedgerField('positions'),
         PNL(),
-        CashFlow(),
-        Transactions(),
         Returns(),
-        Profits(),
-        Weights(),
-        Utility(),
-        Cushion(),
-        Proportion(),
+        Transactions(),
         HitRate(),
-        Positions(),
         BenchmarkReturnsAndVolatility(),
         AlphaBeta(),
-        ReturnsStatistic(sharpe_ratio, 'sharpe'),
-        ReturnsStatistic(sortino_ratio, 'sortino'),
-        ReturnsStatistic(max_drawdown, 'max_down'),
-        ReturnsStatistic(annual_volatility, 'algorithm_volatility'),
-        NumTradingDays(),
-        PeriodLabel(),
-        _ConstantCumulativeRiskMetric('base_capital', 0.0),
-        _ConstantCumulativeRiskMetric('treasury_period_return', 0.0),
+        # ReturnsStatistic(sharpe_ratio, 'sharpe'),
+        # ReturnsStatistic(sortino_ratio, 'sortino'),
+        # ReturnsStatistic(max_drawdown, 'max_down'),
+        # ReturnsStatistic(annual_volatility, 'algorithm_volatility'),
     }
 
 
 def classic_metrics():
-    metrics = default_metrics()
-    metrics.add(_ClassicRiskMetrics())
+    metrics_set = default_metrics()
+    metrics_set.add(_ClassicRiskMetrics())
     return metrics

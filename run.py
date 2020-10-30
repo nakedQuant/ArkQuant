@@ -275,17 +275,28 @@ def _run(handle_data,
     # return perf
 
 
+
+
+
 if __name__ == '__main__':
 
-    def handler(signum, frame):
-        print(signum, frame)
-        print('unexpected action')
+    from trade.params import create_simulation_parameters
 
-    # signal.signal(signal.SIGALRM, handler)
-    # signal.alarm(1)
-
-    signal.signal(signal.SIGINT, handler)
-    signal.pause()
-    print('End of Signal Demo')
-
-
+    trading_params = create_simulation_parameters(start='2019-09-01', end='2019-09-10')
+    print('trading_params', trading_params)
+    # set pipeline term
+    from pipe.term import Term
+    kw = {'window': (5, 10), 'fields': ['close']}
+    cross_term = Term('cross', kw)
+    # print('sma_term', cross_term)
+    kw = {'fields': ['close'], 'window': 5, 'final': True}
+    break_term = Term('break', kw, cross_term)
+    # print(break_term.dependencies)
+    # set pipeline
+    # pipeline = Pipeline([cross_term])
+    pipeline = Pipeline([break_term])
+    # pipeline = Pipeline([break_term, cross_term])
+    # initialize trading algo
+    trading = TradingAlgorithm(trading_params, pipeline)
+    # run algorithm
+    trading.run()

@@ -51,28 +51,55 @@ class MetricsTracker(object):
         self._emission_rate = emission_rate
         self._metrics_set = metrics_sets
 
-        # bind all of the hooks from the passed metric objects.
+        # # bind all of the hooks from the passed metric objects.
+        # for hook in self._hooks:
+        #     registered = []
+        #     for metric in metrics_sets:
+        #         if hasattr(metric, hook):
+        #             registered.append(metric)
+        #
+        #     def closing_over_loop_variables_is_hard(registered=registered):
+        #
+        #         def hook_implementation(**kwargs):
+        #             for impl in registered:
+        #                 getattr(impl, hook)(**kwargs)
+        #         return hook_implementation
+        #
+        #     hook_implementation = closing_over_loop_variables_is_hard()
+        #     hook_implementation.__name__ = hook
+        #
+        #     # 属性 --- 方法
+        #     # setattr(self, hook, closing_over_loop_variables_is_hard())
+        #     setattr(self, hook, hook_implementation)
+        #
+        # bind all of the hooks from the passed metrics objects.
         for hook in self._hooks:
             registered = []
             for metric in metrics_sets:
-                if hasattr(metric, hook):
-                    registered.append(metric)
+                try:
+                    registered.append(getattr(metric, hook))
+                except AttributeError:
+                    pass
 
-            def closing_over_loop_variables_is_hard(*args, **kwargs):
+            def closing_over_loop_variables_is_hard(registered=registered):
 
-                def hook_implementation():
+                def hook_implementation(*args, **kwargs):
                     for impl in registered:
-                        getattr(impl, hook)(*args, **kwargs)
+                        impl(*args, **kwargs)
+
                 return hook_implementation
-            # 属性 --- 方法
-            setattr(self, hook, closing_over_loop_variables_is_hard)
+
+            hook_implementation = closing_over_loop_variables_is_hard()
+
+            hook_implementation.__name__ = hook
+            # 设置函数属性
+            setattr(self, hook, hook_implementation)
 
     def handle_start_of_simulation(self, ledger):
         self.start_of_simulation(
-            # self._ledger,
-            ledger,
-            self._benchmark_returns,
-            self._sessions
+            ledger=ledger,
+            benchmark_returns=self._benchmark_returns,
+            sessions=self._sessions
         )
 
     def handle_market_open(self, session_label, ledger):
@@ -86,7 +113,7 @@ class MetricsTracker(object):
         """
         # 账户初始化
         ledger.start_of_session(session_label)
-        self.start_of_session(ledger)
+        self.start_of_session(ledger=ledger)
 
     def handle_market_close(self, completed_session, ledger):
         """Handles the close of the given day.
@@ -95,12 +122,33 @@ class MetricsTracker(object):
         ----------
         completed_session : Timestamp
             The most recently completed ArkQuant datetime.
-        data_portal : DataPortal
-            The current data portal.
+        ledger : Ledger
 
         Returns
         -------
         A daily perf packet.
+        """
+        ledger.end_of_session()
+
+        packet = {
+            'period_start': self._sessions[0],
+            'period_end': self._sessions[-1],
+            'capital_base': self._capital_base,
+            'emission_rate': self._emission_rate,
+            'daily_perf': {},
+            'cumulative_perf': {},
+            'cumulative_risk_metrics': {},
+        }
+        self.end_of_session(packet=packet,
+                            ledger=ledger,
+                            session_ix=completed_session)
+
+        return packet
+
+    def handle_simulation_end(self, ledger):
+        """
+        When the ArkQuant is complete, run the full period risk report
+        and send it out on the results socket.
         """
         packet = {
             'period_start': self._sessions[0],
@@ -111,20 +159,6 @@ class MetricsTracker(object):
             'cumulative_perf': {},
             'cumulative_risk_metrics': {},
         }
-        ledger.end_of_session()
-        self.end_of_session(
-            packet,
-            ledger,
-            completed_session,
-        )
-        return packet
-
-    def handle_simulation_end(self, ledger):
-        """
-        When the ArkQuant is complete, run the full period risk report
-        and send it out on the results socket.
-        """
-        packet = {}
         self.end_of_simulation(
             packet,
             ledger,

@@ -84,7 +84,7 @@ class Portfolio(object):
         """
         if self.positions:
             # due to asset varies from tag name --- different pipelines has the same sid
-            p_values = valmap(lambda x:  x.last_sale_price * x.amount, self.positions)
+            p_values = valmap(lambda x:  x.last_sync_price * x.amount, self.positions)
             p_values = keymap(lambda x: x.sid, p_values)
             aggregate = merge_with(sum, p_values)
             weights = pd.Series(aggregate) / self.portfolio_value

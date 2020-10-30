@@ -32,7 +32,6 @@ class AlgorithmSimulator(object):
         simulation_end:
                         a. plot and generate pdf
     """
-
     EMISSION_TO_PERF_KEY_MAP = {
         'minute': 'minute_perf',
         'daily': 'daily_perf'
@@ -83,18 +82,19 @@ class AlgorithmSimulator(object):
                 elif action == SESSION_START:
                     once_a_day(session_label)
                 elif action == SESSION_END:
-                    daily_perf_metrics = self._get_daily_message(metrics_tracker, session_label, ledger)
-                    yield daily_perf_metrics
+                    # daily_perf_metrics = self._get_daily_message(metrics_tracker, session_label, ledger)
+                    # yield daily_perf_metrics
+                    # Get a perf message for the given datetime.
+                    yield metrics_tracker.handle_market_close(session_label, ledger)
 
-            risk_message = metrics_tracker.handle_simulation_end(ledger)
-            yield risk_message
+            yield metrics_tracker.handle_simulation_end(ledger)
 
-    @staticmethod
-    def _get_daily_message(tracker, session_label, ledger):
-        """
-        Get a perf message for the given datetime.
-        """
-        if isinstance(session_label, pd.Timestamp):
-            session_label = session_label.strftime('%Y%m%d')
-        perf_message = tracker.handle_market_close(session_label, ledger)
-        return perf_message
+    # @staticmethod
+    # def _get_daily_message(tracker, session_label, ledger):
+    #     """
+    #     Get a perf message for the given datetime.
+    #     """
+    #     if isinstance(session_label, pd.Timestamp):
+    #         session_label = session_label.strftime('%Y%m%d')
+    #     perf_message = tracker.handle_market_close(session_label, ledger)
+    #     return perf_message

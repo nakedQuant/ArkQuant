@@ -12040,3 +12040,89 @@ class finaldescriptor(final):
 # @cash_flow.setter
 # def cash_flow(self, val):
 #     self._cash_flow = val
+
+
+# if __name__ == '__main__':
+#
+#     import signal
+#
+#     def handler(signum, frame):
+#         print(signum, frame)
+#         print('unexpected action')
+#
+#     # signal.signal(signal.SIGALRM, handler)
+#     # signal.alarm(1)
+#     signal.signal(signal.SIGINT, handler)
+#     signal.pause()
+#     print('End of Signal Demo')
+
+# class Profits(object):
+#     """
+#         track the daily profit of the algorithm
+#         dict --- asset : profit
+#     """
+#     def end_of_session(self,
+#                        packet,
+#                        ledger,
+#                        session_ix):
+#         packet['daily_perf']['profit'] = ledger.daily_position_stats(session_ix)
+
+# class Weights(object):
+#
+#     def end_of_session(self,
+#                         packet,
+#                         ledger,
+#                         session_ix):
+#         # print('ledger', ledger)
+#         weights = ledger.portolio.current_portfolio_weights
+#         packet['cumulative_risk_metrics']['portfolio_weights'] = weights
+
+# class CashFlow(object):
+#     """Tracks daily and cumulative cash flow.
+#     Notes
+#     -----
+#     For historical reasons, this field is named 'capital_used' in the packets.
+#     """
+#
+#     def __init__(self):
+#         self._previous_cash_flow = 0.0
+#
+#     def start_of_simulation(self,
+#                             ledger,
+#                             benchmark_returns,
+#                             sessions):
+#         self._previous_cash_flow = 0.0
+#
+#     def start_of_session(self, ledger):
+#         self._previous_cash_flow = ledger.portfolio.cash_flow
+#
+#     def end_of_session(self,
+#                        packet,
+#                        ledger,
+#                        session_ix):
+#         cash_flow = ledger.portfolio.cash_flow
+#         packet['daily_perf']['capital_used'] = (
+#                 cash_flow - self._previous_cash_flow
+#         )
+#         packet['cumulative_perf']['capital_used'] = cash_flow
+#         self._previous_cash_flow = cash_flow
+
+# class Proportion(object):
+#     """
+#         计算持仓按照资产类别计算比例
+#     """
+#     def end_of_session(self,
+#                        packet,
+#                        ledger,
+#                        session_ix):
+#         # 按照资产类别计算持仓
+#         portfolio = ledger.portfolio
+#         portfolio_position_values = portfolio.portfolio_value - portfolio.start_cash
+#         # 持仓分类
+#         protocols = ledger.get_positions()
+#         mappings = groupby(lambda x: x.asset.asset_type, protocols)
+#         # 计算大类权重
+#         from toolz import valmap
+#         mappings_value = valmap(lambda x: sum([p.amount * p.last_sync_price for p in x]), mappings)
+#         ratio = valmap(lambda x : x / portfolio_position_values, mappings_value)
+#         packet['cumulative_risk_metrics']['proportion'] = ratio

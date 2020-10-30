@@ -80,7 +80,7 @@ class Ledger(object):
         txn_capital = self.position_tracker.handle_transactions(transactions)
         print('txn_capital', txn_capital)
         self._cash_flow(txn_capital)
-        self._processed_transaction.append(transactions)
+        self._processed_transaction.extend(transactions)
 
     def daily_position_stats(self, dts):
         """
@@ -119,10 +119,8 @@ class Ledger(object):
         print('daily returns', returns)
         portfolio.pnl += pnl
         # 复合收益率
-        portfolio.returns = (
-            (1+portfolio.returns) *
-            (1+returns) - 1
-        )
+        portfolio.returns = \
+            (1+portfolio.returns) * (1+returns) - 1
         print('cum returns', portfolio.returns)
         # 更新持仓价值
         portfolio.positions_values = position_values
@@ -151,7 +149,7 @@ class Ledger(object):
         :return: transactions on the dt
         """
         transactions_on_dt = [txn for txn in self._processed_transaction
-                              if txn.dt.strftime('%Y-%m-%d') == dt]
+                              if txn.created_dt.strftime('%Y-%m-%d') == dt]
         return transactions_on_dt
 
     def get_violate_risk_positions(self):

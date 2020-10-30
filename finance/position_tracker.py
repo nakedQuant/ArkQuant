@@ -65,7 +65,7 @@ class PositionTracker(object):
         except KeyError:
             position = self.positions[asset] = Position(asset)
         cash_flow = position.update(transaction)
-        print('position -------------------status', position.amount, position.closed)
+        # print('position -------------------status', position.amount, position.closed)
         if position.closed:
             dts = transaction.created_dt.strftime('%Y-%m-%d')
             self.record_closed_position[dts].append(position)

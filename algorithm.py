@@ -135,8 +135,7 @@ class TradingAlgorithm(object):
 
         assert sim_params.capital_base > 0, ZeroCapitalError()
         self.sim_params = sim_params
-        # self.benchmark_returns = self._calculate_benchmark_returns()
-        self.benchmark_returns = None
+        self.benchmark_returns = self._calculate_benchmark_returns()
         # set ledger
         risk_models = risk_models or NoRisk()
         risk_fuse = risk_fuse or Fuse()
@@ -205,6 +204,15 @@ class TradingAlgorithm(object):
         self._before_trading_start = before_trading_start or noop
         self._initialize = initialize or noop
 
+    def _calculate_benchmark_returns(self):
+        """
+            benchmark returns
+        """
+        source = BenchmarkSource(self.sim_params.sessions)
+        benchmark = self.sim_params.benchmark
+        returns = source.calculate_returns(benchmark)
+        return returns
+
     def _create_generator(self):
         """
         :param dist: distribution module (simulate_dist , simulate_ticker)
@@ -263,17 +271,16 @@ class TradingAlgorithm(object):
         """
         return MinuteSimulationClock(self.sim_params)
 
-    def before_trading_start(self, data):
-
-        self._before_trading_start(data)
-
-    def initialize(self, *args, **kwargs):
+    def _create_metrics_tracker(self):
         """
-        Call self._initialize with `self` made available to Zipline API
-        functions.
+            measure metrics of ledger
         """
-        with AlgoAPI(self):
-            self._initialize(self, *args, **kwargs)
+        return MetricsTracker(
+            # ledger=self.ledger,
+            sim_params=self.sim_params,
+            benchmark_returns=self.benchmark_returns,
+            metrics_sets=self._metrics_set
+        )
 
     def _create_simulation(self):
         """
@@ -297,30 +304,35 @@ class TradingAlgorithm(object):
         """
         return self._create_simulation()
 
-    def _create_metrics_tracker(self):
-        """
-            measure metrics of ledger
-        """
-        return MetricsTracker(
-            # ledger=self.ledger,
-            sim_params=self.sim_params,
-            benchmark_rets=self.benchmark_returns,
-            metrics_sets=self._metrics_set
-        )
+    def before_trading_start(self, data):
 
-    def _calculate_benchmark_returns(self):
+        self._before_trading_start(data)
+
+    def initialize(self, *args, **kwargs):
         """
-            benchmark returns
+        Call self._initialize with `self` made available to Zipline API
+        functions.
         """
-        source = BenchmarkSource(self.sim_params.sessions)
-        benchmark = self.sim_params.benchmark
-        returns = source.calculate_returns(benchmark)
-        return returns
+        with AlgoAPI(self):
+            self._initialize(self, *args, **kwargs)
+
+    def run(self):
+        """Run the algorithm.
+        """
+        # Create px_trade and loop through simulated_trading.
+        # Each iteration returns a perf dictionary
+        perfs = []
+        for perf in self.yield_simulation():
+            print('perf', perf)
+            perfs.append(perf)
+        # convert perf dict to pandas frame
+        daily_stats = self._create_daily_stats(perfs)
+        analysis = self.analyse(daily_stats)
+        return analysis
 
     @staticmethod
     def _create_daily_stats(perfs):
         # create daily and cumulative stats frame
-        print('perfs', perfs)
         daily_perfs = []
         for perf in perfs:
             if 'daily_perf' in perf:
@@ -342,19 +354,6 @@ class TradingAlgorithm(object):
                 self.ledger,
                 self.benchmark_returns)
         return stats
-
-    def run(self):
-        """Run the algorithm.
-        """
-        # Create px_trade and loop through simulated_trading.
-        # Each iteration returns a perf dictionary
-        perfs = []
-        for perf in self.yield_simulation():
-            perfs.append(perf)
-        # convert perf dict to pandas frame
-        daily_stats = self._create_daily_stats(perfs)
-        analysis = self.analyse(daily_stats)
-        return analysis
 
     @api_method
     def get_environment(self, field='platform'):
@@ -712,7 +711,7 @@ __all__ = ['TradingAlgorithm']
 if __name__ == '__main__':
 
     from trade.params import create_simulation_parameters
-    trading_params = create_simulation_parameters(start='2019-09-01', end='2019-09-20')
+    trading_params = create_simulation_parameters(start='2019-09-01', end='2019-09-03')
     print('trading_params', trading_params)
     # set pipeline term
     from pipe.term import Term
@@ -730,4 +729,3 @@ if __name__ == '__main__':
     trading = TradingAlgorithm(trading_params, pipeline)
     # run algorithm
     trading.run()
-
