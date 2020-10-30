@@ -33,12 +33,11 @@ class Portfolio(object):
         self.returns = 0.0
         self.utility = 0.0
         self._cash_flow = 0.0
-        # positions --- mappings
         self.positions = None
         self.positions_values = 0.0
         self.portfolio_value = capital_base
         self.start_cash = capital_base
-        self.portfolio_daily_value = pd.Series(capital_base, dtype='float64')
+        self.portfolio_daily_value = pd.Series(index=sim_params.sessions, dtype='float64')
 
     @property
     def cash_flow(self):
@@ -52,7 +51,7 @@ class Portfolio(object):
     def portfolio_cash(self):
         return self.start_cash - self.cash_flow
 
-    def daily_value(self, session_ix):
+    def record_daily_value(self, session_ix):
         self.portfolio_daily_value[session_ix] = self.portfolio_value
 
     def __repr__(self):

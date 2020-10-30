@@ -68,6 +68,8 @@ class Ledger(object):
         self._cash_flow(left_cash)
         self._previous_total_returns = self._portfolio.returns
         self._portfolio.positions = self.positions
+        # update portfolio daily value
+        self._portfolio.record_daily_value(session_ix)
         self._dirty_portfolio = False
         print('start portfolio cash', self.portfolio.portfolio_cash)
         # self._dirty_positions = True
@@ -113,20 +115,21 @@ class Ledger(object):
         pnl = end_value - start_value
         print('pnl', pnl)
         returns = pnl / start_value
-        print('returns', returns)
+        print('daily returns', returns)
         portfolio.pnl += pnl
         # 复合收益率
         portfolio.returns = (
             (1+portfolio.returns) *
             (1+returns) - 1
         )
+        print('cum returns', portfolio.returns)
         # 更新持仓价值
         portfolio.positions_values = position_values
         # 更新组合持仓
         portfolio.positions = self.positions
         # 资金使用效率
         portfolio.utility = position_values / end_value
-        print('porfolio utility', portfolio.utility)
+        print('portfolio utility', portfolio.utility)
         self._dirty_portfolio = False
 
     def end_of_session(self):
@@ -139,7 +142,6 @@ class Ledger(object):
         print('end session ledger portfolio', self.portfolio)
         self.fuse_model.trigger(self._portfolio)
         print('end session ledger positions', self.positions)
-        print('end session closed positions', self.position_tracker.record_closed_position)
 
     def get_transactions(self, dt):
         """

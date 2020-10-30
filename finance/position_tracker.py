@@ -69,9 +69,8 @@ class PositionTracker(object):
         if position.closed:
             dts = transaction.created_dt.strftime('%Y-%m-%d')
             self.record_closed_position[dts].append(position)
-            print('before positions ----------------------------------', self.positions)
+            print('end session closed positions', self.record_closed_position)
             del self.positions[asset]
-            print('after positions -----------------------------------', self.positions)
         return cash_flow
 
     def handle_transactions(self, transactions):

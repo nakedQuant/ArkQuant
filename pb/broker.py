@@ -5,7 +5,6 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-from multiprocessing import Pool
 
 
 class Broker(object):
@@ -34,10 +33,11 @@ class Broker(object):
 
     def implement_capital(self, positives, capital, portfolio, dts):
         """基于资金买入对应仓位"""
-        assets = list(positives.values())
+        # assets = list(positives.values())
         txn_mappings = dict()
         # controls
-        allocation = self.capital_model.compute(assets, capital, dts)
+        # allocation = self.capital_model.compute(assets, capital, dts)
+        allocation = self.capital_model.compute(positives, capital, dts)
         print('allocation', allocation)
         for asset, available in allocation.items():
             print('broker capital', asset, available)
@@ -48,7 +48,8 @@ class Broker(object):
     def implement_position(self, negatives, portfolio, dts):
         """单独的卖出仓位"""
         txn_mappings = dict()
-        for p in negatives.values():
+        # for p in negatives.values():
+        for p in negatives:
             txn_mappings[p.asset] = self.generator.yield_position(p, portfolio, dts)
         return txn_mappings
 
@@ -75,9 +76,8 @@ class Broker(object):
     def implement_broke(self, ledger, dts):
         """建立执行计划"""
         capital = ledger.portfolio.start_cash
-        # {pipeline_name : asset} , {pipeline_name : position} , (position, asset)
         positives, negatives, duals = self.engine.execute_algorithm(ledger, dts)
-        print('initialize broker', positives, negatives, duals)
+        print('broker : initialize engine output', positives, negatives, duals)
         portfolio = ledger.portfolio
         # 直接买入
         call_transactions = self.implement_capital(positives, capital, portfolio, dts)

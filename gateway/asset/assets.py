@@ -190,7 +190,7 @@ class Equity(Asset):
         assert dt >= self.first_traded, 'dt must be after first_traded'
         end_dt = calendar.dt_window_size(dt, RestrictedWindow)
         if self.first_traded < '2020-08-24':
-            print('apply to old cyb regulation')
+            # print('apply to old cyb regulation')
             if self.first_traded == dt:
                 pct = np.inf if self.sid.startswith('688') else 0.44
             elif self.first_traded >= end_dt:
@@ -198,7 +198,7 @@ class Equity(Asset):
             else:
                 pct = 0.2 if self.sid.startswith('688') else 0.1
         else:
-            print('new regualtion of cyb')
+            # print('new regulation of cyb')
             if self.first_traded == dt:
                 pct = np.inf if self.sid.startswith('688') else \
                     np.inf if self.sid.startswith('3') else 0.44

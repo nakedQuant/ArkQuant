@@ -140,11 +140,11 @@ class Position(object):
         self.position_returns[self.last_sync_date] = self.last_sync_price / self.cost_basis - 1.0
 
     def __repr__(self):
-        template = "asset={asset}," \
+        template = "Position(asset={asset}," \
                    "amount={amount}," \
                    "cost_basis={cost_basis}," \
                    "last_sync_price={last_sync_price}," \
-                   "last_sync_date={last_sync_date}"
+                   "last_sync_date={last_sync_date})"
         return template.format(
             asset=self.asset,
             amount=self.amount,
