@@ -69,8 +69,6 @@ class SimulationBlotter(object):
         elif isinstance(order, TickerOrder):
             ticker = order.created_dt
             print('TickerOrder, ticker', ticker)
-            # price = minutes['close'][ticker] if isinstance(ticker, int) \
-            #     else minutes['close'][int(ticker.timestamp())]
             print('minutes', minutes['close'])
             price = minutes['close'][ticker]
             print('ticker price', price)

@@ -87,12 +87,10 @@ class UncoverAlgorithm(BaseUncover):
                                end=dts + pd.Timedelta(hours=14, minutes=57),
                                freq='%dmin' % interval)
         # print('uncover by ticker bottom', bottom)
-        # 确保首尾
         intervals = list(chain(*zip(upper, bottom)))
         intervals if len(intervals) == size else intervals.append(dts + pd.Timedelta(hours=14, minutes=57))
         print('tick_intervals', len(intervals), intervals)
-        ticker_intervals = [t.strftime('%Y-%m-%d %H:%M') for t in intervals]
-        return ticker_intervals
+        return intervals
 
     def _underneath_size(self, asset, amount, base_amount, dts):
         sign = np.sign(amount)

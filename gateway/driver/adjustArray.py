@@ -31,12 +31,23 @@ class HistoryCompatibleAdjustments(object):
     def data_frequency(self):
         return self._reader.data_frequency
 
-    def _adapt_by_frequency(self, adjustments):
+    # def _frequency_adjust(self, adjustments):
+    #     # print('adjustments', adjustments)
+    #     if self.data_frequency == 'minute':
+    #         def reformat(frame):
+    #             # minutes --- 14:59
+    #             frame.index = [int(pd.Timestamp(i).timestamp() + 15 * 60 * 60 - 60) for i in frame.index]
+    #             return frame
+    #         adjustments['dividends'] = valmap(lambda x: reformat(x), adjustments['dividends'])
+    #         adjustments['rights'] = valmap(lambda x: reformat(x), adjustments['rights'])
+    #     return adjustments
+
+    def _frequency_adjust(self, adjustments):
         # print('adjustments', adjustments)
         if self.data_frequency == 'minute':
             def reformat(frame):
                 # minutes --- 14:59
-                frame.index = [int(pd.Timestamp(i).timestamp() + 15 * 60 * 60 - 60) for i in frame.index]
+                frame.index = [pd.Timestamp(i) + pd.Timedelta(hours=14, minutes=59) for i in frame.index]
                 return frame
             adjustments['dividends'] = valmap(lambda x: reformat(x), adjustments['dividends'])
             adjustments['rights'] = valmap(lambda x: reformat(x), adjustments['rights'])
@@ -52,7 +63,7 @@ class HistoryCompatibleAdjustments(object):
         kline = data[sid]
         try:
             dividends = adjustment['dividends'][sid]
-            # print('dividends union', set(dividends.index) & set(kline.index))
+            print('dividends union', set(dividends.index) & set(kline.index))
             ex_close = kline['close'].reindex(index=dividends.index)
             qfq = (1 - dividends['bonus']/(10 * ex_close)) / \
                   (1 + (dividends['sid_bonus'] + dividends['sid_transfer']) / 10)
@@ -102,7 +113,7 @@ class HistoryCompatibleAdjustments(object):
         # 获取全部的分红除权配股数据
         adjustments = self._adjustments_reader.load_pricing_adjustments(sessions)
         # 基于data_frequency --- 调整adjustments
-        adapted_adjustments = self._adapt_by_frequency(adjustments)
+        adapted_adjustments = self._frequency_adjust(adjustments)
         # 获取对应的收盘价数据
         data = self.reader.load_raw_arrays(sessions, assets, ['open', 'high', 'low', 'close', 'volume', 'amount'])
         # 计算前复权系数
@@ -237,19 +248,14 @@ __all__ = [
 #     minute_reader = BcolzMinuteReader()
 #     session_reader = AssetSessionReader()
 #     adjust_reader = SQLiteAdjustmentReader()
-#
 #     asset = Equity('600000')
 #     sessions = ['2005-01-10', '2010-01-11']
 #     fields = ['open', 'close']
+#
 #     his_daily = HistoryCompatibleAdjustments(session_reader, adjust_reader)
 #     adjs, data = his_daily.calculate_adjustments_in_sessions(sessions, [asset])
 #     print('adj daily coef', adjs)
 #     print('daily data', data)
-#
-#     his_minute = HistoryCompatibleAdjustments(minute_reader, adjust_reader)
-#     adjs, data = his_minute.calculate_adjustments_in_sessions(sessions, [asset])
-#     print('adj minute coef', adjs)
-#     print('minute data', data)
 #
 #     daily_sliding_window = AdjustedDailyWindow(session_reader, adjust_reader)
 #     daily_spot_value = daily_sliding_window.get_spot_value('2020-09-03', asset, fields)
@@ -258,6 +264,11 @@ __all__ = [
 #     print('daily_sliding ', daily_sliding)
 #     daily_array = daily_sliding_window.array(sessions, [asset], fields)
 #     print('daily array', daily_array)
+#
+#     his_minute = HistoryCompatibleAdjustments(minute_reader, adjust_reader)
+#     adjs, data = his_minute.calculate_adjustments_in_sessions(sessions, [asset])
+#     print('adj minute coef', adjs)
+#     print('minute data', data)
 #
 #     minute_sliding_window = AdjustedMinuteWindow(minute_reader, adjust_reader)
 #     minute_spot = minute_sliding_window.get_spot_value('2005-09-07', asset, fields)

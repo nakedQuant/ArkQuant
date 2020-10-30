@@ -67,12 +67,11 @@ class Generator(object):
         # 由于position transaction (amount 为负）
         short_amount = np.array([abs(txn.amount) for txn in short_transactions])
         # 切换之间存在时间差，默认以minutes为单位
-        tickers = [pd.Timedelta(minutes=int(self.delay)) + pd.Timestamp(txn.created_dt) for txn in short_transactions]
+        tickers = [pd.Timedelta(minutes=int(self.delay)) + txn.created_dt for txn in short_transactions]
         tickers = [ticker for ticker in tickers if ticker.hour < 15]
         # 根据ticker价格比值
         minutes = portal.get_spot_value(dts, asset, 'minute', ['close'])
-        # print('minutes', minutes['close'])
-        ticker_prices = np.array([minutes['close'][int(ticker.timestamp())] for ticker in tickers])
+        ticker_prices = np.array([minutes['close'][ticker] for ticker in tickers])
         # 模拟买入订单数量
         tick_size = asset.tick_size
         ratio = short_prices[:len(tickers)] / ticker_prices

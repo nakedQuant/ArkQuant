@@ -85,7 +85,7 @@ class BcolzReader(BarReader):
             # print('original frame', frame)
             frame.loc[:, ['open', 'high', 'low', 'close']] = frame.loc[:, ['open', 'high', 'low', 'close']] * inverse_ratio
             # transform timestamp to structtime based on the utc (UTC只是比北京时间提前了8个小时)
-            frame.index = [datetime.datetime.utcfromtimestamp(i).strftime('%Y-%m-%d %H:%M') for i in frame.index] \
+            frame.index = [pd.Timestamp(datetime.datetime.utcfromtimestamp(i).strftime('%Y-%m-%d %H:%M')) for i in frame.index] \
                 if frame.index.name == 'ticker' else frame.index
         return frame
 
@@ -147,6 +147,10 @@ class BcolzMinuteReader(BcolzReader):
         minutes = self.get_value(asset.sid, start_dts, end_dts)
         return minutes.loc[:, fields]
 
+    def load_raw_arrays(self, sessions, assets, columns):
+        arrays = super().load_raw_arrays(sessions, assets, columns)
+        return arrays
+
 
 class BcolzDailyReader(BcolzReader):
     """
@@ -179,27 +183,31 @@ class BcolzDailyReader(BcolzReader):
         kline = self.get_value(asset.sid, dt, dt)
         return kline.loc[:, fields]
 
+    def load_raw_arrays(self, sessions, assets, columns):
+        arrays = super().load_raw_arrays(sessions, assets, columns)
+        return arrays
+
 
 __all__ = [
     'BcolzDailyReader',
     'BcolzMinuteReader'
 ]
 
-if __name__ == '__main__':
-
-    from gateway.asset.assets import Equity
-
-    session = ['2005-01-01', '2015-09-03']
-    equity = Equity('000066')
-    fields = ['close']
-    minute_reader = BcolzMinuteReader()
-    spot_value = minute_reader.get_spot_value('2019-09-02', equity, fields)
-    # spot_value.index = [datetime.datetime.utcfromtimestamp(i).strftime('%Y-%m-%d %H:%M') for i in spot_value.index]
-    print('spot_value', spot_value['close'])
-    spot = spot_value['close']
-    print(spot[spot <= 10.903746564863983].index)
-    # t = spot_value['close'] * spot_value['volume'] / spot_value['volume'].sum()
-    # print('t', t.sum())
-    raw = minute_reader.load_raw_arrays(session, [equity], fields)
-    raw = minute_reader.load_raw_arrays(['2005-09-05', '2005-09-07'], [equity], fields)
-    print('raw', raw)
+# if __name__ == '__main__':
+#
+#     from gateway.asset.assets import Equity
+#
+#     session = ['2005-01-01', '2015-09-03']
+#     equity = Equity('000066')
+#     fields = ['close']
+#     minute_reader = BcolzMinuteReader()
+#     spot_value = minute_reader.get_spot_value('2019-09-02', equity, fields)
+#     # spot_value.index = [datetime.datetime.utcfromtimestamp(i).strftime('%Y-%m-%d %H:%M') for i in spot_value.index]
+#     print('spot_value', spot_value['close'])
+#     spot = spot_value['close']
+#     print(type(spot[spot <= 10.903746564863983].index[0]))
+#     # t = spot_value['close'] * spot_value['volume'] / spot_value['volume'].sum()
+#     # print('t', t.sum())
+#     raw = minute_reader.load_raw_arrays(session, [equity], fields)
+#     raw = minute_reader.load_raw_arrays(['2005-09-05', '2005-09-07'], [equity], fields)
+#     print('raw', raw)

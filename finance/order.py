@@ -207,7 +207,3 @@ __all__ = ['Order',
 #     else:
 #         orders = [PriceOrder(equity, *args) for args in iterables]
 #     print('test orders', orders)
-#     iterables = [(700.0, pd.Timestamp('2020-10-30 09:30:00', freq='60T')), (600.0, pd.Timestamp('2020-10-30 13:00:00', freq='60T')),
-#                  (700.0, pd.Timestamp('2020-10-30 10:30:00', freq='60T')), (600.0, pd.Timestamp('2020-06-17 14:57:00', freq='60T'))]
-#     orders = [TickerOrder(equity, *args) for args in iterables]
-#     print('ticker orders', orders)
