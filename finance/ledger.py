@@ -64,6 +64,7 @@ class Ledger(object):
         p.portfolio_cash = capital_amount
 
     def start_of_session(self, session_ix):
+        # handle splits and  update last_sync_date
         left_cash = self.position_tracker.handle_splits(session_ix)
         print('start handle split cash', left_cash)
         self._cash_flow(left_cash)
@@ -81,20 +82,6 @@ class Ledger(object):
         print('txn_capital', txn_capital)
         self._cash_flow(txn_capital)
         self._processed_transaction.extend(transactions)
-
-    def daily_position_stats(self, dts):
-        """
-            param dts: %Y-%m-%d --- 包括已有持仓以及当天关闭持仓的收益率
-        """
-        assert not self._dirty_portfolio, 'stats is accurate after end_session'
-        stats_returns = dict()
-        for asset, p in self.positions.items():
-            stats_returns[asset] = p.amount * (p.last_sync_price - p.cost_basis)
-
-        closed_position = self.position_tracker.record_closed_position[dts]
-        for p in closed_position:
-            stats_returns[p.asset] = p.amount * (p.last_sync_price - p.cost_basis)
-        return stats_returns
 
     def _calculate_portfolio_stats(self):
         # 计算持仓组合净值
@@ -131,9 +118,23 @@ class Ledger(object):
         # print('portfolio utility', portfolio.utility)
         self._dirty_portfolio = False
 
+    def daily_position_stats(self, dts):
+        """
+            param dts: %Y-%m-%d --- 包括已有持仓以及当天关闭持仓的收益率
+        """
+        assert not self._dirty_portfolio, 'stats is accurate after end_session'
+        stats_returns = dict()
+        for asset, p in self.positions.items():
+            stats_returns[asset] = p.amount * (p.last_sync_price - p.cost_basis)
+
+        closed_position = self.position_tracker.record_closed_position[dts]
+        for p in closed_position:
+            stats_returns[p.asset] = p.amount * (p.last_sync_price - p.cost_basis)
+        return stats_returns
+
     def end_of_session(self):
         self._dirty_portfolio = True
-        # session_ix = self.position_tracker.synchronize()
+        # synchronize() -- update position attr and calculate position returns
         self.position_tracker.synchronize()
         # self._dirty_positions = False
         self._calculate_portfolio_stats()

@@ -37,20 +37,23 @@ class MutableView(object):
 
 class InnerPosition(object):
 
-    __slots__ = ['asset', 'name', 'amount', 'cost_basis', 'last_sync_price', 'last_sync_date']
+    __slots__ = ['asset', 'name', 'amount', 'cost_basis', 'last_sync_price',
+                 'last_sync_date', 'position_returns']
 
     def __init__(self,
                  asset,
                  amount=0,
                  cost_basis=0.0,
                  last_sync_price=0.0,
-                 last_sync_date=None):
+                 last_sync_date=None,
+                 position_returns=None):
         self.asset = asset
         self.amount = amount
         self.name = asset.tag
         self.cost_basis = cost_basis  # per share
         self.last_sync_price = last_sync_price
         self.last_sync_date = last_sync_date
+        self.position_returns = position_returns
 
     def __repr__(self):
         return (

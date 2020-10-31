@@ -48,6 +48,7 @@ class SimulationBlotter(object):
             if bottom < price < upper:
                 # 计算滑价系数
                 slippage = self.slippage.calculate_slippage_factor(asset, dts)
+                print('order slippage', slippage)
                 order.price = price * (1+slippage)
                 return order
             return False

@@ -46,7 +46,6 @@ class PositionTracker(object):
         dividends = portal.get_dividends(set(self.positions), dts)
         for asset, position in self.positions.items():
             # update last_sync_date
-            print('p', position)
             position.inner_position.last_sync_date = dts
             try:
                 dividend = dividends.loc[asset.sid, :]
@@ -100,7 +99,6 @@ class PositionTracker(object):
                 p.inner_position.last_sync_price = get_price(asset=asset)
                 # update position_returns
                 p.calculate_returns()
-            # return sync_date
 
     @staticmethod
     def retrieve_equity_rights(assets, dt):

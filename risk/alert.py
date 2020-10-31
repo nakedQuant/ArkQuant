@@ -6,7 +6,7 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 from abc import ABC, abstractmethod
-import numpy as np, copy
+import numpy as np
 
 
 class Risk(ABC):
@@ -46,7 +46,7 @@ class PositionDrawRisk(Risk):
         self._thres = withdraw
 
     def should_trigger(self, position):
-        returns = copy.copy(position.position_returns)
+        returns = position.position_returns
         top = max(np.cumprod(returns.values()))
         trigger = (returns[-1] - top) / top > self._thres
         return trigger

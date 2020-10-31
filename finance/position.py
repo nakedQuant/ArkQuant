@@ -12,7 +12,7 @@ from _calendar.trading_calendar import calendar
 
 class Position(object):
 
-    __slots__ = ['inner_position', 'position_returns', '_closed']
+    __slots__ = ['inner_position', '_position_daily_returns', '_closed']
 
     def __init__(self,
                  asset,
@@ -28,9 +28,9 @@ class Position(object):
                 cost_basis=cost_basis,
                 last_sync_price=last_sync_price,
                 last_sync_date=last_sync_date,
+                position_returns=pd.Series(dtype='float64')
         )
         self.inner_position = inner
-        self.position_returns = pd.Series(index=calendar.all_sessions, dtype='float64')
         self._closed = False
 
     @property
@@ -102,7 +102,8 @@ class Position(object):
         return txn_capital
 
     def calculate_returns(self):
-        self.position_returns[self.last_sync_date] = self.last_sync_price / self.cost_basis - 1.0
+        self.inner_position.position_returns.loc[self.last_sync_date] = \
+            self.last_sync_price / self.cost_basis - 1.0
 
     def __repr__(self):
         template = "Position(asset={asset}," \
@@ -146,3 +147,4 @@ __all__ = ['Position']
 #     print(ProtocolPosition(p.inner_position))
 #     p.inner_position.last_sync_price = '2020-10-28'
 #     print('before p closed', p.closed)
+#     print('position returns', p.position_returns)

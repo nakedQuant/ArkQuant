@@ -58,7 +58,7 @@ def create_transaction(order, commission):
     if isinstance(order, Order):
         # calculate cost
         cost = commission.calculate(order)
-        # print('cost', cost)
+        print('transaction cost', cost)
         transaction = Transaction(
             asset=order.asset,
             amount=order.amount,
