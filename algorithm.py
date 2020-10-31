@@ -43,8 +43,8 @@ from pipe.engine import SimplePipelineEngine
 from trade.clock import MinuteSimulationClock
 from trade.tradesimulation import AlgorithmSimulator
 # risk management
-from risk.allocation import Equal
-from risk.alert import UnionRisk, NoRisk, PositionLossRisk
+from risk.allocation import Equal, Delta
+from risk.alert import NoRisk, PositionLossRisk
 from risk.fuse import Fuse
 # metric module
 from metric import default_metrics
@@ -108,7 +108,7 @@ class TradingAlgorithm(object):
                  trading_controls=None,
                  account_controls=None,
                  # pd
-                 uncover_algo=None,
+                 uncover_algorithm=None,
                  divison_model=None,
                  # pipe API
                  scripts=None,
@@ -139,7 +139,7 @@ class TradingAlgorithm(object):
         # set ledger
         risk_models = risk_models or NoRisk()
         risk_fuse = risk_fuse or Fuse()
-        self.ledger = Ledger(sim_params, risk_models, risk_fuse)
+        self.ledger = Ledger(self.sim_params, risk_models, risk_fuse)
         # init blotter module : transform order to txn via slippage commission execution
         self.slippage = slippage or NoSlippage()
         self.commission = commission or NoCommission()
@@ -148,18 +148,17 @@ class TradingAlgorithm(object):
                                          self.slippage,
                                          self.execution_style)
         # init generator
-        self.uncover_algo = uncover_algo or UncoverAlgorithm()
-        self.trading_controls = trading_controls or NoControl()
+        self.underneath_module = uncover_algorithm or UncoverAlgorithm()
+        self.trading_controls = trading_controls or [NoControl()]
         self.division_model = divison_model or Division(
-                                            self.uncover_algo,
+                                            self.underneath_module,
                                             self.trading_controls,
                                             sim_params.per_capital)
         self.generator = self._create_generator()
         # Initialize pipe_engine API
         self.final = final or Final()
         # restrictions
-        restrictions = restrictions or NoRestrictions()
-        self.restrictions = restrictions
+        self.restrictions = restrictions or NoRestrictions()
         self.pipelines = self.validate_pipeline(pipelines)
         self.pipeline_engine = self._construct_pipeline_engine(
                                                     disallow_righted,
@@ -169,7 +168,7 @@ class TradingAlgorithm(object):
         # init broker
         self.broker = self._initialize_broker()
         # set account controls
-        self.account_controls= account_controls
+        self.account_controls = account_controls or []
         # metric tracker
         if metrics_set is not None:
             self._metrics_set = metrics_set
@@ -462,9 +461,9 @@ class TradingAlgorithm(object):
     # Pipeline API
     ##############
 
-    def set_pipeline(self,
-                     righted=True,
-                     violated=True):
+    def set_pipeline_attr(self,
+                          righted=True,
+                          violated=True):
         if self.initialized:
             raise AttributeError
         self.pipeline_engine = self._construct_pipeline_engine(righted, violated)
@@ -501,7 +500,7 @@ class TradingAlgorithm(object):
     ####################
 
     @api_method
-    def set_slippage(self, slippage_class):
+    def set_slippage_style(self, slippage_class):
         """
         Set the slippage models for the ArkQuant.
 
@@ -524,7 +523,7 @@ class TradingAlgorithm(object):
         self.slippage = slippage_class
 
     @api_method
-    def set_commission(self, commission_class):
+    def set_commission_style(self, commission_class):
         """Sets the commission models for the trading
 
         Parameters
@@ -555,12 +554,12 @@ class TradingAlgorithm(object):
             raise AttributeError
         self.execution_style = execution_model
 
-    def set_restrictions(self, restricted_list):
+    def set_restriction_style(self, restricted_models):
         """Set a restriction on which asset can be ordered.
 
         Parameters
         ----------
-        restricted_list : list of Restrictions
+        restricted_models : list of Restrictions model
             An object providing information about restricted asset.
 
         See Also
@@ -569,31 +568,45 @@ class TradingAlgorithm(object):
         """
         if self.initialized:
             raise SetCancelPolicyPostInit()
-        self.restrictions = restricted_list
+        self.restrictions = restricted_models
 
     ####################
     # Pb Controls #
     ####################
 
-    def set_uncover_policy(self, uncover_model):
+    def set_allocation_style(self, allocation_model):
         if self.initialized:
             raise InterruptedError
-        self.uncover_algo = uncover_model
+        self.risk_allocation = allocation_model
 
-    def set_allocation_policy(self, allocation_model):
+    def set_uncover_style(self, uncover_model):
         if self.initialized:
-            raise AttributeError
-        self.broker.capital_model = allocation_model
+            raise InterruptedError
+        self.underneath_module = uncover_model
 
     ####################
     # Risk Controls #
     ####################
 
-    def set_risk_allocation(self, allocation_model):
-        self.risk_allocation = allocation_model
+    # def set_allocation_style(self, allocation_model):
+    #     if self.initialized:
+    #         raise AttributeError
+    #     self.risk_allocation = allocation_model
+    #
+    # def set_alert_style(self, risk_control_models):
+    #     self.ledger.risk_alert = risk_control_models)
 
-    def set_risk_models(self, risk_control_models):
-        self.ledger.risk_alert = UnionRisk(risk_control_models)
+    def set_risk_style(self,
+                       alert_model,
+                       fuse_model):
+        """
+        :param alert_model: risk module --- alert.py
+        :param fuse_model: risk module --- fuse.py
+        :return: to construct new ledger object
+        """
+        self.ledger = Ledger(self.sim_params,
+                             alert_model,
+                             fuse_model)
 
     ####################
     # Trading Controls #
@@ -632,8 +645,8 @@ class TradingAlgorithm(object):
 
     @api_method
     def set_max_order_size(self,
-                           window,
-                           max_notional):
+                           max_notional,
+                           window):
         """Set a limit on the number of shares and/or dollar value of any single
         order placed for sid.  Limits are treated as absolute values and are
         enforced at the time that the algo attempts to place an order for sid.
@@ -680,6 +693,7 @@ class TradingAlgorithm(object):
         net_leverage : float
             The net leverage for the algorithm. If not provided there will
             be 1.0
+        leverage = total_value / loan
         """
         control = NetLeverage(base_leverage=net_leverage)
         self.register_account_control(control)
@@ -730,8 +744,8 @@ __all__ = ['TradingAlgorithm']
 if __name__ == '__main__':
 
     from trade.params import create_simulation_parameters
-    trading_params = create_simulation_parameters(start='2019-09-01', end='2019-10-30')
-    # print('trading_params', trading_params)
+    trading_params = create_simulation_parameters(start='2019-09-01', end='2019-09-20')
+    print('trading_params', trading_params)
     # set pipeline term
     from pipe.term import Term
     kw = {'window': (5, 10), 'fields': ['close']}
@@ -746,31 +760,35 @@ if __name__ == '__main__':
     # pipeline = Pipeline([break_term, cross_term])
     # initialize trading algorithm
     trading = TradingAlgorithm(trading_params, pipeline)
-    # set pipeline api
-    # pipe API
-    # scripts = None,
+    # set pipeline api scripts = None,
     # final = None,
-    # disallow_righted = False,
-    # disallowed_violation = True,
-    trading.set_pipeline()
-    trading.set_pipeline_final()
-    trading.attach_pipeline()
+    # trading.set_pipeline_attr()
+    # trading.set_pipeline_final()
+    # trading.attach_pipeline()
     # set finance models
-    trading.set_slippage()
-    trading.set_commission()
-    trading.set_execution_style()
-    trading.set_restrictions()
+    slippage = FixedBasisPointSlippage()
+    commission = Commission()
+    order_style = LimitOrder()
+    restrictions_list = [StatusRestrictions(), DataBoundsRestrictions()]
+    trading.set_slippage_style(slippage)
+    trading.set_commission_style(commission)
+    trading.set_execution_style(order_style)
+    trading.set_restriction_style(restrictions_list)
+    print('successfully set trading finance module')
     # set pb models
-    trading.set_uncover_policy()
-    trading.set_allocation_policy()
+    # trading.set_uncover_style()
     # set risk models
-    trading.set_risk_allocation()
-    trading.set_risk_models()
-    # set trading models
-    trading.set_max_position_size()
-    trading.set_max_order_size()
+    delta = Delta(5)
+    trading.set_allocation_style(delta)
+    trading.set_risk_style(PositionLossRisk(0.1), Fuse())
+    print('successfully set risk models')
+    # set trading control models
+    trading.set_max_position_size(0.8)
+    trading.set_max_order_size(0.1, window=5)
     trading.set_long_only()
+    print('successfully set control models')
     # set account models
-    trading.set_net_leverage()
+    trading.set_net_leverage(1.3)
+    print('successfully set leverage models')
     # run algorithm
     trading.run()

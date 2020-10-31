@@ -12142,3 +12142,80 @@ class finaldescriptor(final):
 #     daily_stats = pd.DataFrame(daily_perfs)
 #     print('daily_stats', daily_stats)
 #     return daily_stats
+
+
+# def divided_by_capital(self, asset, capital, portfolio, dts):
+#     """
+#         split order into plenty of tiny orders
+#         a. calculate amount to determine size
+#         b. create ticker_array depend on size
+#         c. simulate order according to ticker_price , ticker_size , ticker_price
+#             --- 存在竞价机制的情况将订单分散在不同时刻，符合最大成交原则
+#             --- 无竞价机制的情况下，模拟的价格分布，将异常的价格集中以收盘价价格进行成交
+#         d. principle:
+#             a. pipe 买入策略信号会滞后 ， dt对象与dt + 1对象可能相同的 --- 分段加仓
+#             b. 针对于卖出标的 -- 遵循最大程度卖出（当天）
+#             c. 执行买入算法的需要涉及比如最大持仓比例，持仓量等限制
+#         order amount --- negative
+#
+#         针对于买入操作
+#         a. 计算满足最低capital(基于手续费逻辑），同时计算size
+#         b. 存在竞价机制 --- 基于size设立时点order
+#         c. 不存在竞价机制 --- 模拟价格分布提前确定价格单，14:57集中撮合
+#
+#     """
+#     open_pct, ensure_price, per_amount = self._calculate_division_data(asset, dts)
+#     print('division data', open_pct, ensure_price, per_amount)
+#     amount = asset.tick_size * np.floor(capital / (ensure_price * asset.tick_size)) \
+#         if asset.increment else np.floor(capital / ensure_price)
+#     print('ensure amount', amount)
+#     assert amount >= asset.tick_size, 'amount must be at least tick_size'
+#     control_amount = self.trade_controls.validate(asset, amount, portfolio, dts)
+#     print('capital control_amount', control_amount)
+#     zip_iterables = self.uncover_func.create_iterables(asset, control_amount, per_amount, dts)
+#     capital_orders = self._simulate_iterator(asset, zip_iterables)
+#     print('capital_orders', capital_orders)
+#     return capital_orders
+
+# def create_iterables(self, asset, amount, per_amount, dt):
+#     amount_arrays, size = self._underneath_size(asset, amount, per_amount, dt)
+#     if asset.bid_mechanism:
+#         dist_arrays = self._uncover_by_ticker(size, asset, dt)
+#     else:
+#         dist_arrays = self._uncover_by_price(size, asset, dt)
+#     iterables = zip(amount_arrays, dist_arrays)
+#     return iterables
+
+
+# def validate(self,
+#              asset,
+#              amount,
+#              portfolio,
+#              algo_datetime):
+#     """
+#     Fail if the given order would cause the magnitude of our position to be
+#     greater in shares than self.max_shares or greater in dollar value than
+#     self.max_notional.
+#     """
+#     # 基于sid 不是asset(由于不同的pipeline作为asset属性)
+#     weights = portfolio.current_portfolio_weights
+#
+#     if amount < 0:
+#         return amount
+#     elif weights[asset.sid] >= self.max_notional:
+#         self.handle_violation(asset, amount, algo_datetime)
+#         amount = 0
+#     else:
+#         try:
+#             p = portfolio.positions[asset]
+#             current_share = p.amount
+#             sync_price = p.last_sync_price
+#         except KeyError:
+#             current_share = 0
+#             pctchange, pre_close = portal.get_open_pct(asset, algo_datetime)
+#             sync_price = pre_close * (1 + asset.restricted(algo_datetime))
+#         # calculate amount
+#         max_capital = portfolio.portfolio_value * self.max_notional
+#         max_amount = int(max_capital / sync_price)
+#         amount = max_amount - current_share
+#     return amount

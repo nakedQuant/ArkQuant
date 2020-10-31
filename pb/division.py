@@ -17,7 +17,7 @@ class Division(object):
                  uncover_model,
                  trading_controls,
                  base_capital=20000):
-        self.uncover_func = uncover_model
+        self.underneath_func = uncover_model
         self.trade_controls = UnionControl(trading_controls)
         self.base_capital = base_capital
 
@@ -58,39 +58,6 @@ class Division(object):
         orders = [TickerOrder(asset, *z) for z in zips]
         return orders
 
-    # def divided_by_capital(self, asset, capital, portfolio, dts):
-    #     """
-    #         split order into plenty of tiny orders
-    #         a. calculate amount to determine size
-    #         b. create ticker_array depend on size
-    #         c. simulate order according to ticker_price , ticker_size , ticker_price
-    #             --- 存在竞价机制的情况将订单分散在不同时刻，符合最大成交原则
-    #             --- 无竞价机制的情况下，模拟的价格分布，将异常的价格集中以收盘价价格进行成交
-    #         d. principle:
-    #             a. pipe 买入策略信号会滞后 ， dt对象与dt + 1对象可能相同的 --- 分段加仓
-    #             b. 针对于卖出标的 -- 遵循最大程度卖出（当天）
-    #             c. 执行买入算法的需要涉及比如最大持仓比例，持仓量等限制
-    #         order amount --- negative
-    #
-    #         针对于买入操作
-    #         a. 计算满足最低capital(基于手续费逻辑），同时计算size
-    #         b. 存在竞价机制 --- 基于size设立时点order
-    #         c. 不存在竞价机制 --- 模拟价格分布提前确定价格单，14:57集中撮合
-    #
-    #     """
-    #     open_pct, ensure_price, per_amount = self._calculate_division_data(asset, dts)
-    #     print('division data', open_pct, ensure_price, per_amount)
-    #     amount = asset.tick_size * np.floor(capital / (ensure_price * asset.tick_size)) \
-    #         if asset.increment else np.floor(capital / ensure_price)
-    #     print('ensure amount', amount)
-    #     assert amount >= asset.tick_size, 'amount must be at least tick_size'
-    #     control_amount = self.trade_controls.validate(asset, amount, portfolio, dts)
-    #     print('capital control_amount', control_amount)
-    #     zip_iterables = self.uncover_func.create_iterables(asset, control_amount, per_amount, dts)
-    #     capital_orders = self._simulate_iterator(asset, zip_iterables)
-    #     print('capital_orders', capital_orders)
-    #     return capital_orders
-
     def divided_by_capital(self, asset, capital, portfolio, dts):
         """
             split order into plenty of tiny orders
@@ -121,7 +88,7 @@ class Division(object):
             assert amount >= asset.tick_size, 'amount must be at least tick_size'
             control_amount = self.trade_controls.validate(asset, amount, portfolio, dts)
             print('capital control_amount', control_amount)
-            zip_iterables = self.uncover_func.create_iterables(asset, control_amount, per_amount, dts)
+            zip_iterables = self.underneath_func.create_iterables(asset, control_amount, per_amount, dts)
             capital_orders = self._simulate_iterator(asset, zip_iterables)
             print('capital_orders', capital_orders)
         else:
@@ -136,7 +103,7 @@ class Division(object):
         print('position per amount', per_amount)
         control_amount = self.trade_controls.validate(asset, amount, portfolio, dts)
         print('position control_amount', control_amount)
-        iterables = self.uncover_func.create_iterables(asset, control_amount, per_amount, dts)
+        iterables = self.underneath_func.create_iterables(asset, control_amount, per_amount, dts)
         position_orders = self._simulate_iterator(asset, iterables)
         print('position_orders', position_orders)
         return position_orders

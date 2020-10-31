@@ -22,7 +22,7 @@ class Ledger(object):
         优化:
         # event manager 用于处理ledger(righted violated expired postion) trigger -- callback pattern
     """
-    __slots__ = ['_portfolio', 'position_tracker', 'fuse_model','risk_alert',
+    __slots__ = ['_portfolio', 'position_tracker', 'fuse_risk','risk_alert',
                  '_processed_transaction', '_previous_total_returns',
                  '_dirty_portfolio', '_dirty_positions', 'daily_returns_series']
 
@@ -35,7 +35,7 @@ class Ledger(object):
         self._portfolio = Portfolio(sim_params)
         self.position_tracker = PositionTracker()
         self.risk_alert = UnionRisk(risk_models)
-        self.fuse_model = fuse_model
+        self.fuse_risk = fuse_model
         self._processed_transaction = []
         self._previous_total_returns = 0
         # self._dirty_positions = True
@@ -138,7 +138,7 @@ class Ledger(object):
         # self._dirty_positions = False
         self._calculate_portfolio_stats()
         self._dirty_portfolio = False
-        self.fuse_model.trigger(self._portfolio)
+        self.fuse_risk.trigger(self._portfolio)
         print('end session ledger positions', self.positions)
         # print('end session portfolio daily value', self.portfolio.portfolio_daily_value)
 

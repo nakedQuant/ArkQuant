@@ -75,10 +75,10 @@ class UncoverAlgorithm(BaseUncover):
 
     @staticmethod
     def _uncover_by_ticker(size, asset, dts):
+        # 按照固定时间区间去拆分
         dts = pd.Timestamp(dts) if isinstance(dts, str) else dts
         interval = 4 * 60 / size
         # print('uncover_by_ticker', interval)
-        # 按照固定时间去执行
         upper = pd.date_range(start=dts + pd.Timedelta(hours=9, minutes=30),
                               end=dts + pd.Timedelta(hours=11, minutes=30),
                               freq='%dmin' % interval)
@@ -117,15 +117,6 @@ class UncoverAlgorithm(BaseUncover):
         amount_array = amount_array * sign
         print('_underneath amount array', amount_array)
         return amount_array, size
-
-    # def create_iterables(self, asset, amount, per_amount, dt):
-    #     amount_arrays, size = self._underneath_size(asset, amount, per_amount, dt)
-    #     if asset.bid_mechanism:
-    #         dist_arrays = self._uncover_by_ticker(size, asset, dt)
-    #     else:
-    #         dist_arrays = self._uncover_by_price(size, asset, dt)
-    #     iterables = zip(amount_arrays, dist_arrays)
-    #     return iterables
 
     def create_iterables(self, asset, amount, per_amount, dt):
         dt = pd.Timestamp(dt) if isinstance(dt, str) else dt

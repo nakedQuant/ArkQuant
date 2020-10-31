@@ -116,12 +116,16 @@ class MaxOrderSize(TradingControl):
         Fail if the magnitude of the given order exceeds either self.max_shares
         or self.max_notional.
         """
-        sliding_window = portal.get_window([asset], algo_datetime, - abs(self.window), ['volume'])
-        threshold = sliding_window[asset.sid].mean() * self.max_notional
+        sliding_window = portal.get_window([asset], algo_datetime, - abs(self.window), ['volume'], 'daily')
+        threshold = sliding_window[asset.sid]['volume'].mean() * self.max_notional
+        print('threshold', threshold)
         if amount > threshold:
             self.handle_violation(asset, amount, algo_datetime)
-            amount = threshold
-        return amount
+            control_amount = threshold
+        else:
+            control_amount = amount
+        print('control_amount', amount)
+        return control_amount
 
 
 class MaxPositionSize(TradingControl):
@@ -152,27 +156,20 @@ class MaxPositionSize(TradingControl):
         greater in shares than self.max_shares or greater in dollar value than
         self.max_notional.
         """
+        max_capital = portfolio.portfolio_value * self.max_notional
         # 基于sid 不是asset(由于不同的pipeline作为asset属性)
         weights = portfolio.current_portfolio_weights
-
-        if amount < 0:
-            return amount
-        elif weights[asset.sid] >= self.max_notional:
+        try:
+            holding = weights[asset.sid] * portfolio.portfolio_value
+        except KeyError:
+            holding = 0
+        max_capital = max_capital - holding
+        spot_value = portal.get_spot_value(algo_datetime, asset, 'daily', ['close'])
+        capital = amount * spot_value.iloc[-1] + holding
+        # calculate amount
+        if max_capital < capital:
             self.handle_violation(asset, amount, algo_datetime)
-            amount = 0
-        else:
-            try:
-                p = portfolio.positions[asset]
-                current_share = p.amount
-                sync_price = p.last_sync_price
-            except KeyError:
-                current_share = 0
-                pctchange, pre_close = portal.get_open_pct(asset, algo_datetime)
-                sync_price = pre_close * (1 + asset.restricted(algo_datetime))
-            # calculate amount
-            max_capital = portfolio.portfolio_value * self.max_notional
-            max_amount = int(max_capital / sync_price)
-            amount = max_amount - current_share
+            amount = int(amount * max_capital / capital)
         return amount
 
 
@@ -200,21 +197,7 @@ class LongOnly(TradingControl):
             current_share = 0
         if current_share + amount < 0:
             self.handle_violation(asset, amount, algo_datetime)
-
-
-class MaxHolding(TradingControl):
-
-    def __init__(self):
-        super(MaxHolding, self).__init__()
-
-    def validate(self,
-                 asset,
-                 amount,
-                 portfolio,
-                 algo_datetime):
-        """
-            the num of pipelines means the num of holdings
-        """
+        return amount
 
 
 class NoControl(TradingControl):

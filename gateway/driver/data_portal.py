@@ -254,6 +254,18 @@ portal = DataPortal()
 
 __all__ = ['portal']
 
+
+# if __name__ == '__main__':
+#
+#     from gateway.asset.assets import Equity
+#     data_portal = DataPortal()
+#     asset = Equity('000595')
+#     fields = ['volume']
+#     sliding_window = portal.get_window([asset], '2019-09-02', - abs(5), ['volume'], 'daily')
+#     print('sliding_window', sliding_window)
+#     threshold = sliding_window[asset.sid]['volume'].mean() * 0.1
+#     print('threshold', threshold)
+
 # if __name__ == '__main__':
 #
 #     from gateway.asset.assets import Equity
