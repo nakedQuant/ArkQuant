@@ -344,7 +344,7 @@ class TradingAlgorithm(object):
         # )
         # daily_stats = pd.DataFrame(daily_perfs, index=daily_dts)
         daily_stats = pd.DataFrame(daily_perfs)
-        print('daily_stats', daily_stats)
+        # print('daily_stats', daily_stats)
         return daily_stats
 
     def analyse(self, perf):
@@ -725,7 +725,7 @@ if __name__ == '__main__':
     # pipeline = Pipeline([cross_term])
     pipeline = Pipeline([break_term])
     # pipeline = Pipeline([break_term, cross_term])
-    # initialize trading algo
+    # initialize trading algorithm
     trading = TradingAlgorithm(trading_params, pipeline)
     # run algorithm
     trading.run()

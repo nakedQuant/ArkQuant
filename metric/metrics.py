@@ -123,15 +123,14 @@ class PNL(object):
     """Tracks daily and cumulative PNL --- profit
     """
     def __init__(self):
-        self._previous_pnl = 0.0
-
-    def start_of_session(self, ledger):
-        self._previous_pnl = ledger.portfolio.pnl
+        self._initial_pnl = 0.0
 
     def _end_of_period(self, field, packet, ledger):
+        # pnl --- daily pnl
         pnl = ledger.portfolio.pnl
-        packet['cumulative_perf']['pnl'] = pnl
-        packet[field]['pnl'] = pnl - self._previous_pnl
+        self._initial_pnl = self._initial_pnl + pnl
+        packet['cumulative_perf']['pnl'] = self._initial_pnl
+        packet[field]['pnl'] = pnl
 
     def end_of_session(self, packet, ledger, session_ix):
         self._end_of_period('daily_perf', packet, ledger)
@@ -166,6 +165,7 @@ class HitRate(object):
                           sessions):
         # mappings dt : closed_position
         closed = ledger.position_tracker.record_closed_position
+        # print('closed', closed)
         closed_positions = groupby(lambda x: x.name, closed.values())
         win_rate = valmap(lambda x: sum([ele for ele in x if x.cost_basis > 0]) / len(x), closed_positions)
         # win_rate --- pipeline_name : hit_rate
@@ -188,11 +188,11 @@ class BenchmarkReturnsAndVolatility(object):
         self.return_series = benchmark_returns[sessions]
 
     def end_of_session(self,
-                        packet,
-                        ledger,
-                        session_ix):
-        return_series = self.returns_series
-        daily_returns_series = return_series[return_series.index <= session_ix]
+                       packet,
+                       ledger,
+                       session_ix):
+        return_series = self.return_series
+        daily_returns_series = return_series[return_series.index <= session_ix.strftime('%Y-%m-%d')]
         # Series.expanding(self, min_periods=1, center=False, axis=0)
         cumulative_annual_volatility = (
             daily_returns_series.expanding(2).std(ddof=1) * np.sqrt(252)
@@ -304,6 +304,7 @@ class ReturnsStatistic(object):
             self.risk_free,
             self.required_return
         )
+        # print('ReturnsStatistic', self._field_name, res)
         if not np.isfinite(res):
             res = None
         packet['cumulative_risk_metrics'][self._field_name] = res

@@ -10,8 +10,8 @@ from scipy import stats
 from metric.utility import _adjust_returns
 
 
-def cum_returns(
-                returns,
+def cum_returns(returns,
+                benchmark_returns,
                 risk_free=0.0,
                 required_return=0.0
                 ):
@@ -54,10 +54,11 @@ def cum_returns(
 
 
 def cum_returns_final(
-                    returns,
-                    risk_free=0.0,
-                    required_return=0.0
-                    ):
+                     returns,
+                     benchmark_returns,
+                     risk_free=0.0,
+                     required_return=0.0
+                     ):
     """
     Compute total returns from simple returns.
 
@@ -88,6 +89,7 @@ def cum_returns_final(
 
 def max_drawdown(
                 returns,
+                benchmark_returns,
                 risk_free=0.0,
                 required_return=0.0
                 ):
@@ -102,39 +104,85 @@ def max_drawdown(
 
     Returns
     -------
-    drawdown, drawdown_max, duration
-    Note
-    -----
-    See https://en.wikipedia.org/wiki/Drawdown_(economics) for more details.
+        max_down
     """
     if len(returns) < 1:
         return np.nan
     out = np.empty(returns.shape[1:])
     returns_array = np.asanyarray(returns)
-    cumulative = cum_returns(returns_array)
+    cumulative = cum_returns(returns_array, benchmark_returns)
     max_return = np.fmax.accumulate(cumulative, axis=0)
     np.nanmin((cumulative - max_return) / max_return, axis=0, out=out)
-    # 久期 duration --- 1.整个下跌的时间 ， 2.连续性
-    #计算阴跌的最长期限
-    mask = pd.Series(np.where(out == 0 , 0, 1))
+    return out
+
+
+def max_duration(
+                 returns,
+                 benchmark_returns,
+                 risk_free=0.0,
+                 required_return=0.0
+                 ):
+    """
+    Determines the maximum duration which under loss condition of a strategy
+
+    Parameters
+    ----------
+    returns : pd.Series or np.ndarray
+        Daily returns of the strategy, noncumulative.
+        - See full explanation in :func:`~empyrical.stats.cum_returns`.
+
+    Returns
+    -------
+    duration
+    """
+    if len(returns) < 1:
+        return np.nan
+    out = np.empty(returns.shape[1:])
+    returns_array = np.asanyarray(returns)
+    cumulative = cum_returns(returns_array, benchmark_returns)
+    max_return = np.fmax.accumulate(cumulative, axis=0)
+    #  久期 duration --- 整个下跌的时间
+    mask = np.where(cumulative == max_return, 0, 1)
     duration = np.sum(mask)
+    return duration
+
+
+def max_succession(
+                  returns,
+                  benchmark_returns,
+                  risk_free=0.0,
+                  required_return=0.0):
+    if len(returns) < 1:
+        return np.nan
+    out = np.empty(returns.shape[1:])
+    returns_array = np.asanyarray(returns)
+    cumulative = cum_returns(returns_array, benchmark_returns)
+    max_return = np.fmax.accumulate(cumulative, axis=0)
+    #  久期 duration --- 计算阴跌的最长期限(抽象找一个序列相同的连续对象的个数）
+    mask = pd.Series(np.where(cumulative == max_return, 0, 1))
+    print('mask', mask)
     # 返回1对应的idx
     mask_diff = list(np.diff(mask[mask == 1].index))
     # 追加0  --- length
-    mask_diff.insert(0,0)
+    mask_diff.insert(0, 0)
     mask_diff.append(len(mask_diff))
     # 替换 非1
-    sub_mask = pd.Series(np.where(mask_diff != 1,0,1))
-    sub_mask_loc = list(sub_mask[sub_mask == 0].index)
-    succession = max(np.diff(sub_mask_loc))
-    return out ,duration , succession
+    sub_mask = pd.Series(np.where(mask_diff != 1, 0, 1))
+    sub_mask_loc = np.array(sub_mask[sub_mask == 0].index)
+    try:
+        succession = max(np.diff(sub_mask_loc))
+    except ValueError:
+        print('sub_mask_loc is empty')
+        succession = np.inf
+    return succession
 
 
 def annual_return(
-                returns,
-                risk_free=0.0,
-                required_return=0.0
-                ):
+                 returns,
+                 benchmark_returns,
+                 risk_free=0.0,
+                 required_return=0.0
+                 ):
     """
     Determines the mean annual growth rate of returns. This is equivilent
     to the compound annual growth rate.
@@ -174,10 +222,11 @@ def annual_return(
 
 
 def annual_volatility(
-                    returns,
-                    risk_free=0.0,
-                    required_return=0.0
-                    ):
+                     returns,
+                     benchmark_returns,
+                     risk_free=0.0,
+                     required_return=0.0
+                     ):
     """
     Determines the annual volatility of a strategy.
 
@@ -196,7 +245,7 @@ def annual_volatility(
     annual_volatility : float
     """
     if len(returns) < 2:
-        return  np.nan
+        return np.nan
     out = np.empty(returns.shape[1:])
     np.nanstd(returns, ddof=1, axis=0, out=out)
     out = np.multiply(out, 252 ** (1.0 / 2), out=out)
@@ -204,10 +253,11 @@ def annual_volatility(
 
 
 def cagr(
-        returns,
-        risk_free=0.0,
-        required_return=0.0
-        ):
+         returns,
+         benchmark_returns,
+         risk_free=0.0,
+         required_return=0.0
+         ):
     """
     Compute compound annual growth rate. Alias function for
     :func:`~empyrical.stats.annual_return`
@@ -246,6 +296,7 @@ def cagr(
 
 def calmar_ratio(
                 returns,
+                benchmark_returns,
                 risk_free=0.0,
                 required_return=0.0
                 ):
@@ -283,7 +334,7 @@ def calmar_ratio(
     See https://en.wikipedia.org/wiki/Calmar_ratio for more details.
     """
 
-    max_dd , duration , succession = max_drawdown(returns=returns)
+    max_dd, duration, succession = max_drawdown(returns=returns)
     if max_dd < 0:
         temp = annual_return(returns=returns) / abs(max_dd)
     else:
@@ -295,6 +346,7 @@ def calmar_ratio(
 
 def omega_ratio(
                 returns,
+                benchmark_returns,
                 risk_free=0.0,
                 required_return=0.0
                 ):
@@ -348,6 +400,7 @@ def omega_ratio(
 
 def sharpe_ratio(
                 returns,
+                benchmark_returns,
                 risk_free=0.0,
                 required_return=0.0
                 ):
@@ -408,9 +461,10 @@ def sharpe_ratio(
 
 
 def excess_sharpe(
-                excess_returns,
-                risk_free=0.0,
-                required_return=0.0
+                 returns,
+                 benchmark_returns,
+                 risk_free=0.0,
+                 required_return=0.0
                 ):
     """
     Determines the Excess Sharpe of a strategy.
@@ -434,10 +488,12 @@ def excess_sharpe(
     The excess Sharpe is a simplified Information Ratio that uses
     tracking error rather than "active risk" as the denominator.
     """
-    # if len(returns) < 2:
-    #     return np.nan
+    if len(returns) < 2:
+        return np.nan
     # out = np.empty(returns.shape[1:])
     # active_return = _adjust_returns(returns, factor_returns)
+    excess_returns = _adjust_returns(returns, benchmark_returns)
+
     if len(excess_returns) < 2:
         return np.nan
     out = np.empty(excess_returns.shape[1:])
@@ -453,11 +509,11 @@ def excess_sharpe(
 
 
 def sortino_ratio(
-                returns,
-                _downside_risk,
-                risk_free=0.0,
-                required_return=0.0
-                ):
+                 returns,
+                 benchmark_returns,
+                 risk_free=0.0,
+                 required_return=0.0
+                 ):
     """
     Determines the Sortino ratio of a strategy.
 
@@ -508,10 +564,12 @@ def sortino_ratio(
 
     out = np.empty(returns.shape[1:])
 
-    adj_returns = np.asanyarray(_adjust_returns(returns, required_return))
+    # adj_returns = np.asanyarray(_adjust_returns(returns, required_return))
+    adj_returns = np.asanyarray(_adjust_returns(returns, benchmark_returns))
     # period=DAILY
     average_annual_return = np.nanmean(adj_returns, axis=0) * 252
-    annualized_downside_risk = downside_risk(returns, required_return)
+    # annualized_downside_risk = downside_risk(returns, required_return)
+    annualized_downside_risk = downside_risk(returns, benchmark_returns)
 
     np.divide(average_annual_return, annualized_downside_risk, out=out)
     if isinstance(returns, pd.DataFrame):
@@ -521,10 +579,11 @@ def sortino_ratio(
 
 
 def downside_risk(
-                returns,
-                risk_free=0.0,
-                required_return=0
-                ):
+                 returns,
+                 benchmark_returns,
+                 risk_free=0.0,
+                 required_return=0
+                 ):
     """
     Determines the downside deviation below a threshold
 
@@ -590,6 +649,7 @@ def downside_risk(
 
 def sqn(
         returns,
+        benchmark_returns,
         risk_free=0.0,
         required_return=0.0
         ):
@@ -622,10 +682,11 @@ def sqn(
 
 
 def stability_of_timeseries(
-                            returns,
-                            risk_free=0.0,
-                            required_return=0.0
-                            ):
+                           returns,
+                           benchmark_returns,
+                           risk_free=0.0,
+                           required_return=0.0
+                           ):
     """Determines R-squared of a linear fit to the cumulative
     log returns. Computes an ordinary least squares linear fit,
     and returns R-squared.
@@ -656,10 +717,11 @@ def stability_of_timeseries(
 
 
 def tail_ratio(
-                returns,
-                risk_free=0.0,
-                required_return=0.0
-                ):
+              returns,
+              benchmark_returns,
+              risk_free=0.0,
+              required_return=0.0
+              ):
     """Determines the ratio between the right (95%) and left tail (5%).
 
     For example, a ratio of 0.25 means that losses are four times
@@ -691,6 +753,7 @@ def tail_ratio(
 
 def value_at_risk(
                 returns,
+                benchmark_returns,
                 risk_free=0.0,
                 required_return=0.0,
                 cutoff=0.05
@@ -716,6 +779,7 @@ def value_at_risk(
 
 def conditional_value_at_risk(
                             returns,
+                            benchmark_returns,
                             risk_free=0.0,
                             required_return=0.0,
                             cutoff=0.05

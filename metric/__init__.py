@@ -24,6 +24,8 @@ from metric.analyzers import (
                         sharpe_ratio,
                         annual_volatility,
                         max_drawdown,
+                        max_duration,
+                        max_succession
                         )
 
 
@@ -33,23 +35,24 @@ def default_metrics():
         NumTradingDays(),
         _ConstantCumulativeRiskMetric('project', 'ArkQuant'),
         _ConstantCumulativeRiskMetric('treasury_period_return', '0.0'),
+        DailyLedgerField('positions'),
+        DailyLedgerField('portfolio.utility'),
+        DailyLedgerField('portfolio.portfolio_cash'),
         DailyLedgerField('portfolio.portfolio_value'),
         DailyLedgerField('portfolio.positions_values'),
-        DailyLedgerField('portfolio.portfolio_cash'),
-        DailyLedgerField('portfolio.utility'),
-        DailyLedgerField('portfolio.positions'),
         DailyLedgerField('portfolio.current_portfolio_weights'),
-        DailyLedgerField('positions'),
         PNL(),
         Returns(),
         Transactions(),
         HitRate(),
         BenchmarkReturnsAndVolatility(),
         AlphaBeta(),
-        # ReturnsStatistic(sharpe_ratio, 'sharpe'),
-        # ReturnsStatistic(sortino_ratio, 'sortino'),
-        # ReturnsStatistic(max_drawdown, 'max_down'),
-        # ReturnsStatistic(annual_volatility, 'algorithm_volatility'),
+        ReturnsStatistic(sharpe_ratio, 'sharpe'),
+        ReturnsStatistic(sortino_ratio, 'sortino'),
+        ReturnsStatistic(max_drawdown, 'max_drawdown'),
+        ReturnsStatistic(max_duration, 'max_duration'),
+        ReturnsStatistic(max_succession, 'max_succession'),
+        ReturnsStatistic(annual_volatility, 'algorithm_volatility'),
     }
 
 

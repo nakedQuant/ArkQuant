@@ -100,35 +100,35 @@ class Ledger(object):
         # 计算持仓组合净值
         position_values = sum([p.amount * p.last_sync_price
                                for p in self.positions.values()])
-        print('position_values', position_values)
+        # print('position_values', position_values)
         # 持仓组合
         portfolio = self._portfolio
         self._previous_total_returns = portfolio.returns
         # 组合净值（持仓净值 + 现金）
         start_value = portfolio.portfolio_value
-        print('start_value', start_value)
+        # print('start_value', start_value)
         # portfolio.portfolio_value = end_value = \
         #     position_values + portfolio.start_cash
         portfolio.portfolio_value = end_value = \
             position_values + portfolio.portfolio_cash
-        print('portfolio_cash', portfolio.portfolio_cash)
+        # print('portfolio_cash', portfolio.portfolio_cash)
         # 更新组合投资的收益，并计算组合的符合收益率
         pnl = end_value - start_value
-        print('pnl', pnl)
+        # print('pnl', pnl)
         returns = pnl / start_value
-        print('daily returns', returns)
+        # print('daily returns', returns)
         portfolio.pnl += pnl
         # 复合收益率
         portfolio.returns = \
             (1+portfolio.returns) * (1+returns) - 1
-        print('cum returns', portfolio.returns)
+        # print('cum returns', portfolio.returns)
         # 更新持仓价值
         portfolio.positions_values = position_values
         # 更新组合持仓
         portfolio.positions = self.positions
         # 资金使用效率
         portfolio.utility = position_values / end_value
-        print('portfolio utility', portfolio.utility)
+        # print('portfolio utility', portfolio.utility)
         self._dirty_portfolio = False
 
     def end_of_session(self):
@@ -149,7 +149,7 @@ class Ledger(object):
         :return: transactions on the dt
         """
         transactions_on_dt = [txn for txn in self._processed_transaction
-                              if txn.created_dt.strftime('%Y-%m-%d') == dt]
+                              if txn.created_dt.strftime('%Y-%m-%d') == dt.strftime('%Y-%m-%d')]
         return transactions_on_dt
 
     def get_violate_risk_positions(self):
