@@ -316,6 +316,14 @@ class TradingAlgorithm(object):
         with AlgoAPI(self):
             self._initialize(self, *args, **kwargs)
 
+    # def analyse(self, perf):
+    #     with AlgoAPI(self):
+    #         stats = self._analyze.end_of_simulation(
+    #             perf,
+    #             self.ledger,
+    #             self.benchmark_returns)
+    #     return stats
+
     def run(self):
         """Run the algorithm.
         """
@@ -326,34 +334,38 @@ class TradingAlgorithm(object):
             print('perf', perf)
             perfs.append(perf)
         # convert perf dict to pandas frame
-        daily_stats = self._create_daily_stats(perfs)
-        analysis = self.analyse(daily_stats)
-        return analysis
+        overall_analysis = self._create_daily_stats(perfs)
+        # analysis = self.analyse(daily_stats)
+        # return analysis
+        return overall_analysis
 
     @staticmethod
     def _create_daily_stats(perfs):
         # create daily and cumulative stats frame
-        daily_perfs = []
-        for perf in perfs:
-            if 'daily_perf' in perf:
-                perf['daily_perf'].update(perf['cumulative_risk_metrics'])
-                daily_perfs.append(perf['daily_perf'])
-
-        # daily_dts = pd.DatetimeIndex(
-        #     [p['period_close'] for p in daily_perfs], tz='UTC'
-        # )
-        # daily_stats = pd.DataFrame(daily_perfs, index=daily_dts)
-        daily_stats = pd.DataFrame(daily_perfs)
-        # print('daily_stats', daily_stats)
-        return daily_stats
-
-    def analyse(self, perf):
-        with AlgoAPI(self):
-            stats = self._analyze.end_of_simulation(
-                perf,
-                self.ledger,
-                self.benchmark_returns)
-        return stats
+        risk_perf = []
+        daily_perf = []
+        cumulative_perf = []
+        for perf in perfs[:-1]:
+            daily_perf.append(perf['daily_perf'])
+            cumulative_perf.append(perf['cumulative_perf'])
+            risk_perf.append(perf['cumulative_risk_metrics'])
+        daily_dts = pd.DatetimeIndex(
+            [p['period_close'] for p in daily_perf], tz='UTC'
+        )
+        # aggregate
+        frame_stats = dict()
+        risk_stats = pd.DataFrame(risk_perf, index=daily_dts)
+        print('risk_stats', risk_stats.T)
+        frame_stats['cumulative_risk_metrics'] = risk_stats.T
+        daily_stats = pd.DataFrame(daily_perf, index=daily_dts)
+        frame_stats['daily_perf'] = daily_stats.T
+        print('daily_stats', daily_stats.T)
+        cumulative_stats = pd.DataFrame(cumulative_perf, index=daily_dts)
+        frame_stats['cumulative_risk_metrics'] = cumulative_stats.T
+        print('cumulative_stats', cumulative_stats.T)
+        frame_stats['overall'] = perfs[-1]
+        print('config', perfs[-1])
+        return frame_stats
 
     @api_method
     def get_environment(self, field='platform'):
@@ -711,8 +723,8 @@ __all__ = ['TradingAlgorithm']
 if __name__ == '__main__':
 
     from trade.params import create_simulation_parameters
-    trading_params = create_simulation_parameters(start='2019-09-01', end='2019-09-03')
-    print('trading_params', trading_params)
+    trading_params = create_simulation_parameters(start='2019-09-01', end='2019-09-10')
+    # print('trading_params', trading_params)
     # set pipeline term
     from pipe.term import Term
     kw = {'window': (5, 10), 'fields': ['close']}

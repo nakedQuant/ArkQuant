@@ -21,6 +21,7 @@ ANNUALIZATION_FACTORS = {
                         'daily': 252,
                         }
 
+
 def _flatten(arr):
     return arr if not isinstance(arr, pd.Series) else arr.values
 

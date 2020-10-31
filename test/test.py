@@ -12126,3 +12126,19 @@ class finaldescriptor(final):
 #         mappings_value = valmap(lambda x: sum([p.amount * p.last_sync_price for p in x]), mappings)
 #         ratio = valmap(lambda x : x / portfolio_position_values, mappings_value)
 #         packet['cumulative_risk_metrics']['proportion'] = ratio
+
+# @staticmethod
+# def _create_daily_stats(perfs):
+#     # create daily and cumulative stats frame
+#     daily_perfs = []
+#     for perf in perfs:
+#         if 'daily_perf' in perf:
+#             perf['daily_perf'].update(perf['cumulative_risk_metrics'])
+#             daily_perfs.append(perf['daily_perf'])
+#     daily_dts = pd.DatetimeIndex(
+#         [p['period_close'] for p in daily_perfs], tz='UTC'
+#     )
+#     daily_stats = pd.DataFrame(daily_perfs, index=daily_dts)
+#     daily_stats = pd.DataFrame(daily_perfs)
+#     print('daily_stats', daily_stats)
+#     return daily_stats

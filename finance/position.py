@@ -55,7 +55,7 @@ class Position(object):
             零股转为现金 ,重新计算成本,
             散股 -- 转为现金
         """
-        adjust_share_count = self.amount(1 + amount_ratio)
+        adjust_share_count = self.amount * (1 + amount_ratio)
         adjust_cost_basics = round(self.cost_basis / amount_ratio, 2)
         scatter_cash = (adjust_share_count - np.floor(adjust_share_count)) * adjust_cost_basics
         left_cash = self.amount * cash_ratio + scatter_cash

@@ -51,7 +51,9 @@ class NumTradingDays(object):
                           packet,
                           ledger,
                           sessions):
-        packet['cumulative_risk_metrics']['trading_days'] = \
+        # packet['cumulative_risk_metrics']['trading_days'] = \
+        #     self._num_trading_days
+        packet['trading_days'] = \
             self._num_trading_days
 
 
@@ -68,17 +70,19 @@ class _ConstantCumulativeRiskMetric(object):
         self._field = field
         self._constant = constant
 
-    def end_of_session(self,
-                       packet,
-                       ledger,
-                       session_ix):
-        packet['cumulative_risk_metrics'][self._field] = self._constant
+    # def end_of_session(self,
+    #                    packet,
+    #                    ledger,
+    #                    session_ix):
+    #     # packet['cumulative_risk_metrics'][self._field] = self._constant
+    #     packet[self._field] = self._constant
 
     def end_of_simulation(self,
                           packet,
                           ledger,
                           sessions):
-        packet['cumulative_risk_metrics'][self._field] = self._constant
+        # packet['cumulative_risk_metrics'][self._field] = self._constant
+        packet[self._field] = self._constant
 
 
 class DailyLedgerField(object):
@@ -169,7 +173,8 @@ class HitRate(object):
         closed_positions = groupby(lambda x: x.name, closed.values())
         win_rate = valmap(lambda x: sum([ele for ele in x if x.cost_basis > 0]) / len(x), closed_positions)
         # win_rate --- pipeline_name : hit_rate
-        packet['cumulative_risk_metrics']['hitRate'] = win_rate
+        # packet['cumulative_risk_metrics']['hitRate'] = win_rate
+        packet['hitRate'] = win_rate
 
 
 class BenchmarkReturnsAndVolatility(object):
@@ -197,7 +202,7 @@ class BenchmarkReturnsAndVolatility(object):
         cumulative_annual_volatility = (
             daily_returns_series.expanding(2).std(ddof=1) * np.sqrt(252)
         ).values[-1]
-        cumulative_return = np.cumprod(np.array(1 + daily_returns_series)) - 1
+        cumulative_return = np.prod(np.array(1 + daily_returns_series)) - 1
         packet['daily_perf']['benchmark_return'] = daily_returns_series[-1]
         packet['cumulative_perf']['benchmark_return'] = cumulative_return
         packet['cumulative_perf']['benchmark_annual_volatility'] = cumulative_annual_volatility
@@ -219,7 +224,8 @@ class AlphaBeta(object):
                           packet,
                           ledger,
                           sessions):
-        risk = packet['cumulative_risk_metrics']
+        # risk = packet['cumulative_risk_metrics']
+        risk = packet
         benchmark_returns = self.return_series
         daily_value = ledger.portfolio.portfolio_daily_value
         daily_return_series = daily_value / daily_value.shift(1) - 1

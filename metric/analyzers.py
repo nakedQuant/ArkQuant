@@ -160,7 +160,7 @@ def max_succession(
     max_return = np.fmax.accumulate(cumulative, axis=0)
     #  久期 duration --- 计算阴跌的最长期限(抽象找一个序列相同的连续对象的个数）
     mask = pd.Series(np.where(cumulative == max_return, 0, 1))
-    print('mask', mask)
+    # print('mask', mask)
     # 返回1对应的idx
     mask_diff = list(np.diff(mask[mask == 1].index))
     # 追加0  --- length
@@ -572,8 +572,8 @@ def sortino_ratio(
     annualized_downside_risk = downside_risk(returns, benchmark_returns)
 
     np.divide(average_annual_return, annualized_downside_risk, out=out)
-    if isinstance(returns, pd.DataFrame):
-        out = pd.Series(out)
+    # if isinstance(returns, pd.DataFrame):
+    #     out = pd.Series(out)
 
     return out
 
@@ -642,8 +642,8 @@ def downside_risk(
     np.sqrt(out, out=out)
     # period = 'daily'
     np.multiply(out, np.sqrt(252), out=out)
-    if isinstance(returns, pd.DataFrame):
-        out = pd.Series(out, index=returns.columns)
+    # if isinstance(returns, pd.DataFrame):
+    #     out = pd.Series(out, index=returns.columns)
     return out
 
 

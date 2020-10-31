@@ -131,10 +131,10 @@ class MetricsTracker(object):
         ledger.end_of_session()
 
         packet = {
-            'period_start': self._sessions[0],
-            'period_end': self._sessions[-1],
-            'capital_base': self._capital_base,
-            'emission_rate': self._emission_rate,
+            # 'period_start': self._sessions[0],
+            # 'period_end': self._sessions[-1],
+            # 'capital_base': self._capital_base,
+            # 'emission_rate': self._emission_rate,
             'daily_perf': {},
             'cumulative_perf': {},
             'cumulative_risk_metrics': {},
@@ -155,9 +155,9 @@ class MetricsTracker(object):
             'period_end': self._sessions[-1],
             'capital_base': self._capital_base,
             'emission_rate': self._emission_rate,
-            'daily_perf': {},
-            'cumulative_perf': {},
-            'cumulative_risk_metrics': {},
+            # 'daily_perf': {},
+            # 'cumulative_perf': {},
+            # 'cumulative_risk_metrics': {},
         }
         self.end_of_simulation(
             packet,
@@ -348,9 +348,9 @@ class _ClassicRiskMetrics(object):
                           ledger,
                           benchmark_ret):
         daily_value_series = ledger.portfolio.portfolio_daily_value
-        print('daily_value', daily_value_series)
+        # print('daily_value', daily_value_series)
         daily_returns_series = daily_value_series / daily_value_series.shift(1) - 1
-        print('daily_returns_series', daily_returns_series)
+        # print('daily_returns_series', daily_returns_series)
         packet.update(self.risk_report(
             algorithm_returns=daily_returns_series,
             benchmark_returns=benchmark_ret
