@@ -95,7 +95,7 @@ class Position(object):
             """ 仓位结清 , 当持仓为0 --- 计算成本用于判断持仓最终是否盈利, _closed为True"""
             self.inner_position.cost_basis = txn.price - self.cost_basis - txn_cost / txn.amount
             self.inner_position.last_sync_price = txn.price
-            self.inner_position.last_sync_date = txn.created_dt
+            self.inner_position.last_sync_date = txn.created_dt.strftime('%Y-%m-%d')
             self.inner_position.amount = total_amount
             self._closed = True
         txn_capital = txn_value + txn_cost

@@ -86,17 +86,23 @@ class PositionTracker(object):
             a. sync last_sale_price of position (close price)
             b. update position return series
             c. update last_sync_date
+        including : positions and closed position
         """
-        sync_date = set([p.last_sync_date for p in self.positions.values()])
+        sync_date_set = list(set([p.last_sync_date for p in self.positions.values()]))
         # print('sync_date', sync_date)
-        if sync_date:
-            assert len(sync_date) == 1, 'all positions must be sync on the same date'
+        if sync_date_set:
+            assert len(sync_date_set) == 1, 'all positions must be sync on the same date'
+            sync_date = sync_date_set[0]
             get_price = partial(portal.get_spot_value,
-                                dts=list(sync_date)[0],
+                                dts=sync_date,
                                 frequency='daily',
                                 field='close')
-            for asset, p in self.positions.items():
-                p.inner_position.last_sync_price = get_price(asset=asset)
+            closed_positions = self.record_closed_position[sync_date]
+            print('synchronize closed_position', closed_positions)
+            update_positions = set(closed_positions) | set(self.positions.values())
+            print('synchronize update_positions', update_positions)
+            for p in update_positions:
+                p.inner_position.last_sync_price = get_price(asset=p.asset)
                 # update position_returns
                 p.calculate_returns()
 

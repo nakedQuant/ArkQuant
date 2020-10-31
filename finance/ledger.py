@@ -5,7 +5,7 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-from toolz import keymap, keyfilter
+from toolz import keymap, keyfilter, merge_with
 from finance.portfolio import Portfolio
 from finance.account import Account
 # from finance._protocol import MutableView
@@ -118,19 +118,22 @@ class Ledger(object):
         # print('portfolio utility', portfolio.utility)
         self._dirty_portfolio = False
 
-    def daily_position_stats(self, dts):
+    def daily_sid_pnl(self, dts):
         """
             param dts: %Y-%m-%d --- 包括已有持仓以及当天关闭持仓的收益率
         """
         assert not self._dirty_portfolio, 'stats is accurate after end_session'
-        stats_returns = dict()
+        symbol_pnl = dict()
         for asset, p in self.positions.items():
-            stats_returns[asset] = p.amount * (p.last_sync_price - p.cost_basis)
-
+            symbol_pnl[asset.sid] = p.amount * (p.last_sync_price - p.cost_basis)
+        # 计算closed position
+        dts = dts if isinstance(dts, str) else dts.strftime('%Y-%m-%d')
         closed_position = self.position_tracker.record_closed_position[dts]
         for p in closed_position:
-            stats_returns[p.asset] = p.amount * (p.last_sync_price - p.cost_basis)
-        return stats_returns
+            symbol_pnl[p.asset.sid] = p.amount * (p.last_sync_price - p.cost_basis)
+        # merge same sid
+        symbol_pnl = merge_with(sum, symbol_pnl)
+        return symbol_pnl
 
     def end_of_session(self):
         self._dirty_portfolio = True

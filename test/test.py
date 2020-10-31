@@ -12219,3 +12219,22 @@ class finaldescriptor(final):
 #         max_amount = int(max_capital / sync_price)
 #         amount = max_amount - current_share
 #     return amount
+
+# def synchronize(self):
+#     """
+#         a. sync last_sale_price of position (close price)
+#         b. update position return series
+#         c. update last_sync_date
+#     """
+#     sync_date = set([p.last_sync_date for p in self.positions.values()])
+#     # print('sync_date', sync_date)
+#     if sync_date:
+#         assert len(sync_date) == 1, 'all positions must be sync on the same date'
+#         get_price = partial(portal.get_spot_value,
+#                             dts=list(sync_date)[0],
+#                             frequency='daily',
+#                             field='close')
+#         for asset, p in self.positions.items():
+#             p.inner_position.last_sync_price = get_price(asset=asset)
+#             # update position_returns
+#             p.calculate_returns()

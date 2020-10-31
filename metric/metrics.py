@@ -141,6 +141,13 @@ class PNL(object):
         self._end_of_period('daily_perf', packet, ledger)
 
 
+class SymbolPNL(object):
+    """Tracks daily symbol PNL --- asset.sid daily pnl
+    """
+    def end_of_session(self, packet, ledger, session_ix):
+        packet['daily_perf']['position_pnl'] = ledger.daily_sid_pnl(session_ix)
+
+
 class Returns(object):
     """Tracks the daily and cumulative returns of the algorithm.
     """
@@ -168,11 +175,10 @@ class HitRate(object):
                           packet,
                           ledger,
                           sessions):
-        # mappings dt : closed_position
         closed = ledger.position_tracker.record_closed_position
         closed_positions = groupby(lambda x: x.name, list(chain(*closed.values())))
         print('closed_positions', closed_positions)
-        win_rate = valmap(lambda x: sum([ele for ele in x if ele.cost_basis > 0]) / len(x), closed_positions)
+        win_rate = valmap(lambda x: len([ele for ele in x if ele.cost_basis > 0]) / len(x), closed_positions)
         # packet['cumulative_risk_metrics']['hitRate'] = win_rate
         packet['hitRate'] = win_rate
 
