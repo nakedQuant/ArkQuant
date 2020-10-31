@@ -18,10 +18,10 @@ from error.errors import (
 )
 # finance module
 from finance.ledger import Ledger
-from finance.slippage import NoSlippage
-from finance.execution import MarketOrder
-from finance.commission import NoCommission
-from finance.restrictions import NoRestrictions
+from finance.slippage import NoSlippage, FixedBasisPointSlippage
+from finance.execution import MarketOrder, LimitOrder
+from finance.commission import NoCommission, Commission
+from finance.restrictions import NoRestrictions, StatusRestrictions, DataBoundsRestrictions
 from finance.control import (
     MaxPositionSize,
     MaxOrderSize,
@@ -44,7 +44,7 @@ from trade.clock import MinuteSimulationClock
 from trade.tradesimulation import AlgorithmSimulator
 # risk management
 from risk.allocation import Equal
-from risk.alert import UnionRisk, NoRisk
+from risk.alert import UnionRisk, NoRisk, PositionLossRisk
 from risk.fuse import Fuse
 # metric module
 from metric import default_metrics
@@ -165,9 +165,9 @@ class TradingAlgorithm(object):
                                                     disallow_righted,
                                                     disallowed_violation)
         # set allocation policy
-        risk_allocation = risk_allocation or Equal()
+        self.risk_allocation = risk_allocation or Equal()
         # init broker
-        self.broker = self._initialize_broker(risk_allocation)
+        self.broker = self._initialize_broker()
         # set account controls
         self.account_controls= account_controls
         # metric tracker
@@ -255,14 +255,14 @@ class TradingAlgorithm(object):
         except Exception as e:
             raise ValueError('initialization error %s' % e)
 
-    def _initialize_broker(self, allocation_model):
+    def _initialize_broker(self):
         """
         allocation_model : allocate capitals among assets
         broker : combine pipe_engine and generator
         """
         broker_class = Broker(self.pipeline_engine,
                               self.generator,
-                              allocation_model)
+                              self.risk_allocation)
         return broker_class
 
     def _create_clock(self):
@@ -469,8 +469,8 @@ class TradingAlgorithm(object):
             raise AttributeError
         self.pipeline_engine = self._construct_pipeline_engine(righted, violated)
 
-    def set_pipeline_final(self, final):
-        self.final = final
+    def set_pipeline_final(self, final_model):
+        self.final = final_model
 
     def attach_pipeline(self, terms, ump_pickers=None):
         """Register a pipeline to be computed at the start of each day.
@@ -493,15 +493,12 @@ class TradingAlgorithm(object):
         """
         # Return the pipeline to allow expressions like
         # p = attach_pipeline(Pipeline(), 'name')
-        pipeline = Pipeline(terms, ump_pickers)
-        self.pipelines.append(pipeline)
+        new_pipeline = Pipeline(terms, ump_pickers)
+        self.pipelines.append(new_pipeline)
 
     ####################
     # Finance Controls #
     ####################
-
-    def set_risk_models(self, risk_models):
-        self.ledger.risk_alert = UnionRisk(risk_models)
 
     @api_method
     def set_slippage(self, slippage_class):
@@ -587,6 +584,16 @@ class TradingAlgorithm(object):
         if self.initialized:
             raise AttributeError
         self.broker.capital_model = allocation_model
+
+    ####################
+    # Risk Controls #
+    ####################
+
+    def set_risk_allocation(self, allocation_model):
+        self.risk_allocation = allocation_model
+
+    def set_risk_models(self, risk_control_models):
+        self.ledger.risk_alert = UnionRisk(risk_control_models)
 
     ####################
     # Trading Controls #
@@ -723,7 +730,7 @@ __all__ = ['TradingAlgorithm']
 if __name__ == '__main__':
 
     from trade.params import create_simulation_parameters
-    trading_params = create_simulation_parameters(start='2019-09-01', end='2019-09-10')
+    trading_params = create_simulation_parameters(start='2019-09-01', end='2019-10-30')
     # print('trading_params', trading_params)
     # set pipeline term
     from pipe.term import Term
@@ -739,5 +746,31 @@ if __name__ == '__main__':
     # pipeline = Pipeline([break_term, cross_term])
     # initialize trading algorithm
     trading = TradingAlgorithm(trading_params, pipeline)
+    # set pipeline api
+    # pipe API
+    # scripts = None,
+    # final = None,
+    # disallow_righted = False,
+    # disallowed_violation = True,
+    trading.set_pipeline()
+    trading.set_pipeline_final()
+    trading.attach_pipeline()
+    # set finance models
+    trading.set_slippage()
+    trading.set_commission()
+    trading.set_execution_style()
+    trading.set_restrictions()
+    # set pb models
+    trading.set_uncover_policy()
+    trading.set_allocation_policy()
+    # set risk models
+    trading.set_risk_allocation()
+    trading.set_risk_models()
+    # set trading models
+    trading.set_max_position_size()
+    trading.set_max_order_size()
+    trading.set_long_only()
+    # set account models
+    trading.set_net_leverage()
     # run algorithm
     trading.run()

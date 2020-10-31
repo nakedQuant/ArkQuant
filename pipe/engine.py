@@ -21,9 +21,9 @@ class Engine(ABC):
     @staticmethod
     def _init_loader(pipelines):
         pipelines = pipelines if isinstance(pipelines, list) else [pipelines]
-        inner_terms = list(chain(pipeline.terms for pipeline in pipelines))[0]
+        inner_terms = list(chain(*[pipeline.terms for pipeline in pipelines]))
         # print('inner terms', inner_terms)
-        inner_pickers = list(chain(pipeline.ump_terms for pipeline in pipelines))[0]
+        inner_pickers = list(chain(*[pipeline.ump_terms for pipeline in pipelines]))
         # print('inner_pickers', inner_pickers)
         engine_terms = set(inner_terms + inner_pickers)
         # print('engine_terms', engine_terms)

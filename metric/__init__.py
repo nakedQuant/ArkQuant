@@ -52,7 +52,7 @@ def default_metrics():
         ReturnsStatistic(max_drawdown, 'max_drawdown'),
         ReturnsStatistic(max_duration, 'max_duration'),
         ReturnsStatistic(max_succession, 'max_succession'),
-        ReturnsStatistic(annual_volatility, 'algorithm_volatility'),
+        ReturnsStatistic(annual_volatility, 'annual_volatility'),
     }
 
 

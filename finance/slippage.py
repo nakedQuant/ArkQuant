@@ -29,7 +29,7 @@ class FixedBasisPointSlippage(SlippageModel):
         basics_points * 0.0001
     """
 
-    def __init__(self, basis_points=0.005):
+    def __init__(self, basis_points=0.01):
         super(FixedBasisPointSlippage, self).__init__()
         self.basis_points = basis_points
 

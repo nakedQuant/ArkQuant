@@ -7,6 +7,7 @@ Created on Sun Feb 17 16:11:34 2019
 """
 import numpy as np, operator as op
 from toolz import groupby, valmap
+from itertools import chain
 from metric.exposure import alpha_beta_aligned
 
 
@@ -169,10 +170,9 @@ class HitRate(object):
                           sessions):
         # mappings dt : closed_position
         closed = ledger.position_tracker.record_closed_position
-        # print('closed', closed)
-        closed_positions = groupby(lambda x: x.name, closed.values())
-        win_rate = valmap(lambda x: sum([ele for ele in x if x.cost_basis > 0]) / len(x), closed_positions)
-        # win_rate --- pipeline_name : hit_rate
+        closed_positions = groupby(lambda x: x.name, list(chain(*closed.values())))
+        print('closed_positions', closed_positions)
+        win_rate = valmap(lambda x: sum([ele for ele in x if ele.cost_basis > 0]) / len(x), closed_positions)
         # packet['cumulative_risk_metrics']['hitRate'] = win_rate
         packet['hitRate'] = win_rate
 
@@ -189,7 +189,6 @@ class BenchmarkReturnsAndVolatility(object):
                             benchmark_returns,
                             sessions):
         # 计算基准收益率
-        print('benchmark_returns', benchmark_returns)
         self.return_series = benchmark_returns[sessions]
 
     def end_of_session(self,

@@ -172,7 +172,7 @@ def max_succession(
     try:
         succession = max(np.diff(sub_mask_loc))
     except ValueError:
-        print('sub_mask_loc is empty')
+        # print('sub_mask_loc is empty')
         succession = np.inf
     return succession
 

@@ -5,20 +5,23 @@ Created on Sun Feb 17 16:11:34 2019
 
 @author: python
 """
-import subprocess, signal, time, os
-
+import os
 from .algorithm import TradingAlgorithm
-from trade.params import SimulationParameters
+from trade.params import create_simulation_parameters
 
 
 def run_algorithm(start,
                   end,
-                  initialize,
+                  delay,
                   capital_base,
+                  loan_base,
+                  per_capital,
+                  data_frequency,
+                  benchmark,
+                  initialize,
                   handle_data=None,
                   before_trading_start=None,
                   analyze=None,
-                  data_frequency='daily',
                   trading_calendar=None,
                   metrics_set='default',
                   benchmark_returns=None,
@@ -28,7 +31,7 @@ def run_algorithm(start,
                   environ=os.environ,
                   blotter='default'):
     """
-    Run a trading algorithm.
+    Run a backtest for the given algorithm.This is shared between the cli and :func:`zipline.run_algo`.
 
     Parameters
     ----------
@@ -96,207 +99,123 @@ def run_algorithm(start,
     zipline.data.bundles.bundles : The available data bundles.
     """
     # load_extensions(default_extension, extensions, strict_extensions, environ)
+    sim_params = create_simulation_parameters(
+                                            start=start,
+                                            end=end,
+                                            delay=delay,
+                                            capital_base=capital_base,
+                                            loan_base=loan_base,
+                                            per_capital=per_capital,
+                                            data_frequency=data_frequency,
+                                            benchmark=benchmark)
 
-    return _run(
-        handle_data=handle_data,
-        initialize=initialize,
-        before_trading_start=before_trading_start,
-        analyze=analyze,
-        algofile=None,
-        data_frequency=data_frequency,
-        capital_base=capital_base,
-        start=start,
-        end=end,
-        output=os.devnull,
+    # set module which needed
+    if benchmark_returns is None:
+        benchmark_returns, _ = load_market_data(environ=environ)
+
+    if algotext is not None:
+        if local_namespace:
+            ip = get_ipython()  # noqa
+            namespace = ip.user_ns
+        else:
+            namespace = {}
+
+        for assign in defines:
+            try:
+                name, value = assign.split('=', 2)
+            except ValueError:
+                raise ValueError(
+                    'invalid define %r, should be of the form name=value' %
+                    assign,
+                )
+            try:
+                # evaluate in the same namespace so names may refer to
+                # eachother
+                namespace[name] = eval(value, namespace)
+            except Exception as e:
+                raise ValueError(
+                    'failed to execute definition for name %r: %s' % (name, e),
+                )
+    elif defines:
+        raise _RunAlgoError(
+            'cannot pass define without `algotext`',
+            "cannot pass '-D' / '--define' without '-t' / '--algotext'",
+        )
+    else:
+        namespace = {}
+        if algofile is not None:
+            algotext = algofile.read()
+
+    if print_algo:
+        if PYGMENTS:
+            highlight(
+                algotext,
+                PythonLexer(),
+                TerminalFormatter(),
+                outfile=sys.stdout,
+            )
+        else:
+            click.echo(algotext)
+
+    if trading_calendar is None:
+        trading_calendar = get_calendar('XNYS')
+
+    # date parameter validation
+    if trading_calendar.session_distance(start, end) < 1:
+        raise _RunAlgoError(
+            'There are no trading days between %s and %s' % (
+                start.date(),
+                end.date(),
+            ),
+        )
+
+    def choose_loader(column):
+        if column in USEquityPricing.columns:
+            return pipeline_loader
+        raise ValueError(
+            "No pipe registered for column %s." % column
+        )
+
+    if isinstance(metrics_set, six.string_types):
+        try:
+            metrics_set = metric.load(metrics_set)
+        except ValueError as e:
+            raise _RunAlgoError(str(e))
+
+    if isinstance(blotter, six.string_types):
+        try:
+            blotter = load(Blotter, blotter)
+        except ValueError as e:
+            raise _RunAlgoError(str(e))
+
+    perf = TradingAlgorithm(
+        namespace=namespace,
+        data_portal=data,
+        get_pipeline_loader=choose_loader,
         trading_calendar=trading_calendar,
+        sim_params=SimulationParameters(
+            start_session=start,
+            end_session=end,
+            trading_calendar=trading_calendar,
+            capital_base=capital_base,
+            data_frequency=data_frequency,
+        ),
         metrics_set=metrics_set,
-        local_namespace=False,
-        environ=environ,
         blotter=blotter,
         benchmark_returns=benchmark_returns,
-    )
+        **{
+            'initialize': initialize,
+            'handle_data': handle_data,
+            'before_trading_start': before_trading_start,
+            'analyze': analyze,
+        } if algotext is None else {
+            'algo_filename': getattr(algofile, 'name', '<algorithm>'),
+            'script': algotext,
+        }
+    ).run()
 
-
-def _run(handle_data,
-         initialize,
-         before_trading_start,
-         analyze,
-         algotext,
-         algofile,
-         defines,
-         data_frequency,
-         capital_base,
-         start,
-         end,
-         output,
-         trading_calendar,
-         metrics_set,
-         local_namespace,
-         environ,
-         blotter,
-         benchmark_returns):
-    """Run a backtest for the given algorithm.
-
-    This is shared between the cli and :func:`zipline.run_algo`.
-    """
-    # set module which needed
-    # if benchmark_returns is None:
-    #     benchmark_returns, _ = load_market_data(environ=environ)
-    #
-    # if algotext is not None:
-    #     if local_namespace:
-    #         ip = get_ipython()  # noqa
-    #         namespace = ip.user_ns
-    #     else:
-    #         namespace = {}
-    #
-    #     for assign in defines:
-    #         try:
-    #             name, value = assign.split('=', 2)
-    #         except ValueError:
-    #             raise ValueError(
-    #                 'invalid define %r, should be of the form name=value' %
-    #                 assign,
-    #             )
-    #         try:
-    #             # evaluate in the same namespace so names may refer to
-    #             # eachother
-    #             namespace[name] = eval(value, namespace)
-    #         except Exception as e:
-    #             raise ValueError(
-    #                 'failed to execute definition for name %r: %s' % (name, e),
-    #             )
-    # elif defines:
-    #     raise _RunAlgoError(
-    #         'cannot pass define without `algotext`',
-    #         "cannot pass '-D' / '--define' without '-t' / '--algotext'",
-    #     )
-    # else:
-    #     namespace = {}
-    #     if algofile is not None:
-    #         algotext = algofile.read()
-    #
-    # if print_algo:
-    #     if PYGMENTS:
-    #         highlight(
-    #             algotext,
-    #             PythonLexer(),
-    #             TerminalFormatter(),
-    #             outfile=sys.stdout,
-    #         )
-    #     else:
-    #         click.echo(algotext)
-    #
-    # if trading_calendar is None:
-    #     trading_calendar = get_calendar('XNYS')
-    #
-    # # date parameter validation
-    # if trading_calendar.session_distance(start, end) < 1:
-    #     raise _RunAlgoError(
-    #         'There are no trading days between %s and %s' % (
-    #             start.date(),
-    #             end.date(),
-    #         ),
-    #     )
-    #
-    # bundle_data = bundles.load(
-    #     bundle,
-    #     environ,
-    #     bundle_timestamp,
-    # )
-    #
-    # first_trading_day = \
-    #     bundle_data.equity_minute_bar_reader.first_trading_day
-    #
-    # data = DataPortal(
-    #     bundle_data.asset_finder,
-    #     trading_calendar=trading_calendar,
-    #     first_trading_day=first_trading_day,
-    #     equity_minute_reader=bundle_data.equity_minute_bar_reader,
-    #     equity_daily_reader=bundle_data.equity_daily_bar_reader,
-    #     adjustment_reader=bundle_data.adjustment_reader,
-    # )
-    #
-    # pipeline_loader = USEquityPricingLoader(
-    #     bundle_data.equity_daily_bar_reader,
-    #     bundle_data.adjustment_reader,
-    # )
-    #
-    # def choose_loader(column):
-    #     if column in USEquityPricing.columns:
-    #         return pipeline_loader
-    #     raise ValueError(
-    #         "No pipe registered for column %s." % column
-    #     )
-    #
-    # if isinstance(metrics_set, six.string_types):
-    #     try:
-    #         metrics_set = metric.load(metrics_set)
-    #     except ValueError as e:
-    #         raise _RunAlgoError(str(e))
-    #
-    # if isinstance(blotter, six.string_types):
-    #     try:
-    #         blotter = load(Blotter, blotter)
-    #     except ValueError as e:
-    #         raise _RunAlgoError(str(e))
-
-    # perf = TradingAlgorithm(
-    #     namespace=namespace,
-    #     data_portal=data,
-    #     get_pipeline_loader=choose_loader,
-    #     trading_calendar=trading_calendar,
-    #     sim_params=SimulationParameters(
-    #         start_session=start,
-    #         end_session=end,
-    #         trading_calendar=trading_calendar,
-    #         capital_base=capital_base,
-    #         data_frequency=data_frequency,
-    #     ),
-    #     metrics_set=metrics_set,
-    #     blotter=blotter,
-    #     benchmark_returns=benchmark_returns,
-    #     **{
-    #         'initialize': initialize,
-    #         'handle_data': handle_data,
-    #         'before_trading_start': before_trading_start,
-    #         'analyze': analyze,
-    #     } if algotext is None else {
-    #         'algo_filename': getattr(algofile, 'name', '<algorithm>'),
-    #         'script': algotext,
-    #     }
-    # ).run()
-    #
-    # if output == '-':
-    #     click.echo(str(perf))
-    # elif output != os.devnull:  # make the zipline magic not write any data
-    #     perf.to_pickle(output)
-    #
-    # return perf
-
-
-
-
-
-if __name__ == '__main__':
-
-    from trade.params import create_simulation_parameters
-
-    trading_params = create_simulation_parameters(start='2019-09-01', end='2019-09-10')
-    print('trading_params', trading_params)
-    # set pipeline term
-    from pipe.term import Term
-    kw = {'window': (5, 10), 'fields': ['close']}
-    cross_term = Term('cross', kw)
-    # print('sma_term', cross_term)
-    kw = {'fields': ['close'], 'window': 5, 'final': True}
-    break_term = Term('break', kw, cross_term)
-    # print(break_term.dependencies)
-    # set pipeline
-    # pipeline = Pipeline([cross_term])
-    pipeline = Pipeline([break_term])
-    # pipeline = Pipeline([break_term, cross_term])
-    # initialize trading algo
-    trading = TradingAlgorithm(trading_params, pipeline)
-    # run algorithm
-    trading.run()
+    if output == '-':
+        click.echo(str(perf))
+    elif output != os.devnull:  # make the zipline magic not write any data
+        perf.to_pickle(output)
+    return perf
