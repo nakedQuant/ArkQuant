@@ -6,8 +6,6 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 from abc import ABC, abstractmethod
-from multiprocessing import Pool
-import numpy as np
 from gateway.driver.data_portal import portal
 from util.math_utils import measure_volatity
 
@@ -28,7 +26,7 @@ class Equal(CapitalUsage):
         return mappings
 
 
-class Delta(CapitalUsage):
+class Turtle(CapitalUsage):
     """
         基于波动率测算持仓比例 --- 基于策略形成的净值的波动性分配比例 --- 类似于海龟算法
     """
@@ -46,25 +44,29 @@ class Delta(CapitalUsage):
         his = portal.get_history_window(
                                assets,
                                dt,
-                               self.window,
+                               -abs(self.window),
                                ['open', 'high', 'low', 'close', 'volume'],
                                'daily')
         return his
 
     def compute(self, assets, capital, dts):
         """
-            基于数据的波动性以及均值
-            e.g. [5,4,8,3,6]  --- [5,6,3,8,4]
+            类比于海龟交易 --- 基于数据的波动性划分仓位 最小波动率对应最大仓位
+            由于相同的sid但是不一定相同的asset需要进行处理
         """
-        window = self.handle_data(assets, dts)
-        with Pool(processes=len(assets)) as pool:
-            result = [pool.apply_async(self._func, window[asset])
-                      for asset in assets]
-            assets, values = list(zip(result))
-            reverse_idx = len(values) - np.argsort(values) - 1
-            reverse_values = values[reverse_idx]
-            capital = list(zip(assets, reverse_values))
-            return capital
+        if len(assets) > 1:
+            his_window = self.handle_data(assets, dts)
+            # print('window', his_window)
+            from toolz import valmap, groupby
+            results = valmap(lambda x: self._func(x), his_window)
+            aggregate = sum(results.values())
+            # print('results', results)
+            allocation = valmap(lambda x: capital * (1 - x / aggregate), results)
+            group_sid = groupby(lambda x: x.sid, assets)
+            output = {symbol: allocation[symbol.sid] / len(group_sid[symbol.sid]) for symbol in assets}
+        else:
+            output = {assets[0]: capital}
+        return output
 
 
 class Kelly(CapitalUsage):
@@ -76,7 +78,16 @@ class Kelly(CapitalUsage):
 
 __all__ = [
     'Equal',
-    'Delta',
+    'Turtle',
     'Kelly',
 ]
 
+
+if __name__ == '__main__':
+
+    from gateway.asset.assets import Equity
+    # assets = [Equity('600438'), Equity('600000')]
+    assets = [Equity('600438')]
+    delta = Turtle(5)
+    allocation = delta.compute(assets, 100000, '2019-09-02')
+    print('allocation', allocation)

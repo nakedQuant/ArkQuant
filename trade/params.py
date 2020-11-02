@@ -13,6 +13,9 @@ from trade import (
     DEFAULT_CAPITAL_BASE,
     DEFAULT_PER_CAPITAL_BASE
 )
+from error.errors import (
+    ZeroCapitalError
+)
 
 
 class SimulationParameters(object):
@@ -33,6 +36,7 @@ class SimulationParameters(object):
                  data_frequency,
                  benchmark):
 
+        assert capital_base > 0, ZeroCapitalError()
         self._delay = delay
         self._loan = loan_base
         # per_capital used to calculate and split capital or position

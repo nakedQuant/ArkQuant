@@ -56,7 +56,7 @@ class BaseUncover(ABC):
         return iterables
 
 
-class UncoverAlgorithm(BaseUncover):
+class SimpleUncover(BaseUncover):
 
     @staticmethod
     def _uncover_by_price(size, asset, dts):
@@ -130,4 +130,4 @@ class UncoverAlgorithm(BaseUncover):
         return iterables
 
 
-__all__ = ['UncoverAlgorithm']
+__all__ = ['SimpleUncover']

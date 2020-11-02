@@ -14,7 +14,6 @@ from error.errors import (
     SetCancelPolicyPostInit,
     SetCommissionPostInit,
     SetSlippagePostInit,
-    ZeroCapitalError
 )
 # finance module
 from finance.ledger import Ledger
@@ -34,7 +33,7 @@ from pb.broker import Broker
 from pb.division import Division
 from pb.generator import Generator
 from pb.blotter import SimulationBlotter
-from pb.underneath import UncoverAlgorithm
+from pb.underneath import SimpleUncover
 # pipe engine
 from pipe.final import Final
 from pipe.pipeline import Pipeline
@@ -43,8 +42,8 @@ from pipe.engine import SimplePipelineEngine
 from trade.clock import MinuteSimulationClock
 from trade.tradesimulation import AlgorithmSimulator
 # risk management
-from risk.allocation import Equal, Delta
-from risk.alert import NoRisk, PositionLossRisk
+from risk.allocation import Equal, Turtle
+from risk.alert import Risk, NoRisk, PositionLossRisk
 from risk.fuse import Fuse
 # metric module
 from metric import default_metrics
@@ -98,23 +97,24 @@ class TradingAlgorithm(object):
     """
     def __init__(self,
                  sim_params,
-                 pipelines,
                  on_error='log',
                  # finance module
-                 slippage=None,
-                 commission=None,
+                 slippage_model=None,
+                 commission_model=None,
                  restrictions=None,
                  execution_style=None,
                  trading_controls=None,
                  account_controls=None,
+                 ledger=None,
                  # pd
-                 uncover_algorithm=None,
-                 divison_model=None,
+                 underneath_model=None,
+                 broker=None,
                  # pipe API
-                 scripts=None,
+                 pipelines=None,
                  final=None,
-                 disallow_righted=False,
+                 disallow_righted=True,
                  disallowed_violation=True,
+                 engine=None,
                  # risk
                  risk_models=None,
                  risk_fuse=None,
@@ -133,43 +133,31 @@ class TradingAlgorithm(object):
                  create_event_context=None,
                  **initialize_kwargs):
 
-        assert sim_params.capital_base > 0, ZeroCapitalError()
         self.sim_params = sim_params
         self.benchmark_returns = self._calculate_benchmark_returns()
-        # set ledger
-        risk_models = risk_models or NoRisk()
-        risk_fuse = risk_fuse or Fuse()
-        self.ledger = Ledger(self.sim_params, risk_models, risk_fuse)
-        # init blotter module : transform order to txn via slippage commission execution
-        self.slippage = slippage or NoSlippage()
-        self.commission = commission or NoCommission()
+        # set finance module
+        self.slippage = slippage_model or NoSlippage()
+        self.commission = commission_model or NoCommission()
         self.execution_style = execution_style or MarketOrder()
-        self.blotter = SimulationBlotter(self.commission,
-                                         self.slippage,
-                                         self.execution_style)
-        # init generator
-        self.underneath_module = uncover_algorithm or UncoverAlgorithm()
-        self.trading_controls = trading_controls or [NoControl()]
-        self.division_model = divison_model or Division(
-                                            self.underneath_module,
-                                            self.trading_controls,
-                                            sim_params.per_capital)
-        self.generator = self._create_generator()
-        # Initialize pipe_engine API
-        self.final = final or Final()
-        # restrictions
         self.restrictions = restrictions or NoRestrictions()
-        self.pipelines = self.validate_pipeline(pipelines)
-        self.pipeline_engine = self._construct_pipeline_engine(
-                                                    disallow_righted,
-                                                    disallowed_violation)
-        # set allocation policy
-        self.risk_allocation = risk_allocation or Equal()
-        # init broker
-        self.broker = self._initialize_broker()
-        # set account controls
         self.account_controls = account_controls or []
-        # metric tracker
+        self.trading_controls = trading_controls or [NoControl()]
+        self.ledger = ledger
+        # set engine module
+        self.violated = disallowed_violation
+        self.righted = disallow_righted
+        self.final = final or Final()
+        self.pipelines = pipelines or []
+        self.pipeline_engine = engine
+        # set risk module
+        self.risk_allocation = risk_allocation or Equal()
+        self.risk_models = risk_models or NoRisk()
+        self.risk_fuse = risk_fuse or Fuse()
+        # set pd module
+        self.underneath_module = underneath_model or SimpleUncover()
+        self.broker = broker
+
+        # set metrics module
         if metrics_set is not None:
             self._metrics_set = metrics_set
         else:
@@ -196,12 +184,11 @@ class TradingAlgorithm(object):
         self._recorded_vars = {}
         self.namespace = namespace or {}
 
-        # set default func
         def noop(*args, **kwargs):
             pass
 
-        self._before_trading_start = before_trading_start or noop
         self._initialize = initialize or noop
+        self._before_trading_start = before_trading_start or noop
 
     def _calculate_benchmark_returns(self):
         """
@@ -212,74 +199,56 @@ class TradingAlgorithm(object):
         returns = source.calculate_returns(benchmark)
         return returns
 
-    def _create_generator(self):
+    def _create_broker(self):
         """
-        :param dist: distribution module (simulate_dist , simulate_ticker)
-                    to generate price timeseries or ticker timeseries
-        generator --- compute capital or position to transactions
+            broker : combine pipe_engine and generator
         """
-        # generator
-        delay = self.sim_params.delay
-        generator_class = Generator(delay,
-                                    self.blotter,
-                                    self.division_model)
-        return generator_class
+        division_model = Division(self.underneath_module,
+                                  self.trading_controls,
+                                  self.sim_params.capital_base)
+        blotter = SimulationBlotter(self.commission,
+                                    self.slippage,
+                                    self.execution_style)
+        # generator --- compute capital or position to transactions
+        generator = Generator(self.sim_params.delay,
+                              blotter,
+                              division_model)
+        self.broker = Broker(self.pipeline_engine,
+                             generator,
+                             self.risk_allocation)
 
-    @staticmethod
-    def validate_pipeline(pipelines):
-        # pipelines = []
-        # for script_file in scripts:
-        #     name = script_file.rsplit('.')[-2]
-        #     with open(script_file, 'r') as f:
-        #         exec(f.read(), self.namespace)
-        #         pipelines.append(self.namespace[name])
-        assert pipelines is not None, 'pipelines must validate and composed by terms '
-        pipes = [pipelines if isinstance(pipelines, Pipeline) else pipelines]
-        return pipes
-
-    def _construct_pipeline_engine(self,
-                                   righted,
-                                   violation):
+    def before_trading_start(self):
         """
-        Construct and store a PipelineEngine from loader.
-        If get_loader is None, constructs an ExplodingPipelineEngine
+            initialize all the needed module
         """
         try:
-            engine = SimplePipelineEngine(self.pipelines,
-                                          self.final,
-                                          self.restrictions,
-                                          righted,
-                                          violation)
-            return engine
+            #  Construct and store a PipelineEngine from loader.
+            self.pipeline_engine = SimplePipelineEngine(self.pipelines,
+                                                        self.final,
+                                                        self.restrictions,
+                                                        self.righted,
+                                                        self.violated)
+            self.ledger = Ledger(self.sim_params, self.risk_models, self.risk_fuse)
+            self._create_broker()
         except Exception as e:
             raise ValueError('initialization error %s' % e)
-
-    def _initialize_broker(self):
-        """
-        allocation_model : allocate capitals among assets
-        broker : combine pipe_engine and generator
-        """
-        broker_class = Broker(self.pipeline_engine,
-                              self.generator,
-                              self.risk_allocation)
-        return broker_class
-
-    def _create_clock(self):
-        """
-        If the clock property is not set, then create one based on frequency.
-        """
-        return MinuteSimulationClock(self.sim_params)
+        self._before_trading_start()
 
     def _create_metrics_tracker(self):
         """
             measure metrics of ledger
         """
         return MetricsTracker(
-            # ledger=self.ledger,
             sim_params=self.sim_params,
             benchmark_returns=self.benchmark_returns,
             metrics_sets=self._metrics_set
         )
+
+    def _create_clock(self):
+        """
+        If the clock property is not set, then create one based on frequency.
+        """
+        return MinuteSimulationClock(self.sim_params)
 
     def _create_simulation(self):
         """
@@ -291,7 +260,6 @@ class TradingAlgorithm(object):
             self.initialize(**self.initialize_kwargs)
             self.initialized = True
         clock = self._create_clock()
-        # universe_func=self._calculate_universe
         self.trading_client = AlgorithmSimulator(self, clock)
         return self.trading_client.transform()
 
@@ -302,10 +270,6 @@ class TradingAlgorithm(object):
         method to get a standard construction generator.
         """
         return self._create_simulation()
-
-    def before_trading_start(self, data):
-
-        self._before_trading_start(data)
 
     def initialize(self, *args, **kwargs):
         """
@@ -326,6 +290,7 @@ class TradingAlgorithm(object):
     def run(self):
         """Run the algorithm.
         """
+        self.before_trading_start()
         # Create px_trade and loop through simulated_trading.
         # Each iteration returns a perf dictionary
         perfs = []
@@ -461,25 +426,26 @@ class TradingAlgorithm(object):
     # Pipeline API
     ##############
 
-    def set_pipeline_attr(self,
-                          righted=True,
-                          violated=True):
-        if self.initialized:
-            raise AttributeError
-        self.pipeline_engine = self._construct_pipeline_engine(righted, violated)
-
-    def set_pipeline_final(self, final_model):
+    def set_final_style(self, final_model):
+        """
+        :param final_model:  Final model used in pipeline to resolve the output of pipeline
+        :return:
+        """
         self.final = final_model
 
-    def attach_pipeline(self, terms, ump_pickers=None):
+    @staticmethod
+    def validate_pipeline(pipe_model):
+        assert pipeline is not None and isinstance(pipeline, Pipeline), \
+            'pipelines must validate and subclass of Pipeline'
+        return pipe_model
+
+    def attach_pipeline(self, pipeline_model):
+
         """Register a pipeline to be computed at the start of each day.
 
         Parameters
         ----------
-        terms : components of Pipeline
-            The pipeline to have computed.
-
-        ump_pickers :  ump_pickers intended for short operation
+        pipeline_model : Pipeline objects The pipeline to have computed.
 
         Returns
         -------
@@ -491,22 +457,46 @@ class TradingAlgorithm(object):
         :func:`zipline.api.pipeline_output`
         """
         # Return the pipeline to allow expressions like
-        # p = attach_pipeline(Pipeline(), 'name')
-        new_pipeline = Pipeline(terms, ump_pickers)
+        if self.initialized:
+            raise AttributeError
+        new_pipeline = self.validate_pipeline(pipeline_model)
         self.pipelines.append(new_pipeline)
+
+    def create_pipeline(self, terms, ump_pickers=None):
+        # for script_file in scripts:
+        #     name = script_file.rsplit('.')[-2]
+        #     with open(script_file, 'r') as f:
+        #         exec(f.read(), self.namespace)
+        #         pipelines.append(self.namespace[name])
+        try:
+            pipeline = Pipeline(terms, ump_pickers)
+        except Exception as e:
+            print('can not create pipeline')
+        else:
+            self.attach_pipeline(pipeline)
+
+    def set_engine_restriction(self,
+                               righted=True,
+                               violated=True):
+        """
+        :param righted: bool remove righted position
+        :param violated: bool remove violated position
+        """
+        self.righted = righted
+        self.violated = violated
 
     ####################
     # Finance Controls #
     ####################
 
     @api_method
-    def set_slippage_style(self, slippage_class):
+    def set_slippage_style(self, slippage_intance):
         """
         Set the slippage models for the ArkQuant.
 
         Parameters
         ----------
-        slippage_class : EquitySlippageModel
+        slippage_intance : EquitySlippageModel
             The slippage model to use for trading US equities.
 
         Notes
@@ -520,15 +510,15 @@ class TradingAlgorithm(object):
         """
         if self.initialized:
             raise SetSlippagePostInit()
-        self.slippage = slippage_class
+        self.slippage = slippage_intance
 
     @api_method
-    def set_commission_style(self, commission_class):
+    def set_commission_style(self, commission_instance):
         """Sets the commission models for the trading
 
         Parameters
         ----------
-        commission_class : CommissionModel instance
+        commission_instance : CommissionModel instance
             The commission model to use for trading US equities.
 
         Notes
@@ -544,7 +534,7 @@ class TradingAlgorithm(object):
         """
         if self.initialized:
             raise SetCommissionPostInit()
-        self.commission = commission_class
+        self.commission = commission_instance
 
     def set_execution_style(self, execution_model):
         """Sets the execution_style models for the trading
@@ -588,25 +578,19 @@ class TradingAlgorithm(object):
     # Risk Controls #
     ####################
 
-    # def set_allocation_style(self, allocation_model):
-    #     if self.initialized:
-    #         raise AttributeError
-    #     self.risk_allocation = allocation_model
-    #
-    # def set_alert_style(self, risk_control_models):
-    #     self.ledger.risk_alert = risk_control_models)
-
-    def set_risk_style(self,
-                       alert_model,
-                       fuse_model):
+    def set_alert_style(self, alert_model):
         """
         :param alert_model: risk module --- alert.py
-        :param fuse_model: risk module --- fuse.py
-        :return: to construct new ledger object
         """
-        self.ledger = Ledger(self.sim_params,
-                             alert_model,
-                             fuse_model)
+        assert isinstance(alert_model, Risk), 'must be subclass of Risk'
+        self.risk_models = alert_model
+
+    def set_fuse_style(self, fuse_model):
+        """
+            :param fuse_model: risk module --- fuse.py
+        """
+        assert isinstance(fuse_model, Fuse), 'must be subclass of fuse'
+        self.risk_fuse = fuse_model
 
     ####################
     # Trading Controls #
@@ -746,49 +730,48 @@ if __name__ == '__main__':
     from trade.params import create_simulation_parameters
     trading_params = create_simulation_parameters(start='2019-09-01', end='2019-09-20')
     print('trading_params', trading_params)
-    # set pipeline term
-    from pipe.term import Term
-    kw = {'window': (5, 10), 'fields': ['close']}
-    cross_term = Term('cross', kw)
-    # print('sma_term', cross_term)
-    kw = {'fields': ['close'], 'window': 5, 'final': True}
-    break_term = Term('break', kw, cross_term)
-    # print(break_term.dependencies)
-    # set pipeline
-    # pipeline = Pipeline([cross_term])
-    pipeline = Pipeline([break_term])
-    # pipeline = Pipeline([break_term, cross_term])
     # initialize trading algorithm
-    trading = TradingAlgorithm(trading_params, pipeline)
-    # set pipeline api scripts = None,
-    # final = None,
-    # trading.set_pipeline_attr()
-    # trading.set_pipeline_final()
-    # trading.attach_pipeline()
+    trading = TradingAlgorithm(trading_params)
     # set finance models
     slippage = FixedBasisPointSlippage()
     commission = Commission()
     order_style = LimitOrder()
     restrictions_list = [StatusRestrictions(), DataBoundsRestrictions()]
     trading.set_slippage_style(slippage)
+    # print('slippage', trading.slippage)
     trading.set_commission_style(commission)
+    # print('commission', trading.commission)
     trading.set_execution_style(order_style)
+    # print('execution', trading.execution)
     trading.set_restriction_style(restrictions_list)
-    print('successfully set trading finance module')
+    # set pipeline api scripts = None,
+    from pipe.term import Term
+    kw = {'window': (5, 10), 'fields': ['close']}
+    cross_term = Term('cross', kw)
+    kw = {'fields': ['close'], 'window': 5, 'final': True}
+    break_term = Term('break', kw, cross_term)
+    pipeline = Pipeline([break_term, cross_term])
+    trading.attach_pipeline(pipeline)
+    # trading.set_pipeline_final()
+    # print('successfully set trading finance module', trading.pipeline_engine.restricted_rules)
     # set pb models
-    # trading.set_uncover_style()
+    # trading.set_uncover_style(SimpleUncover)
     # set risk models
-    delta = Delta(5)
-    trading.set_allocation_style(delta)
-    trading.set_risk_style(PositionLossRisk(0.1), Fuse())
-    print('successfully set risk models')
+    turtle = Turtle(5)
+    trading.set_allocation_style(turtle)
+    # print('allocation', trading.broker.capital_model)
+    trading.set_alert_style(PositionLossRisk(0.1))
+    trading.set_fuse_style(Fuse())
+    # print('successfully set risk models', trading.ledger.risk_alert, trading.ledger.fuse_risk)
     # set trading control models
     trading.set_max_position_size(0.8)
+    # print('max_position_size', trading.trade_controls)
     trading.set_max_order_size(0.1, window=5)
+    # print('max_order_size', trading.division_model.trade_controls)
     trading.set_long_only()
-    print('successfully set control models')
+    # print('successfully set control models', trading.division_model.trade_controls)
     # set account models
-    trading.set_net_leverage(1.3)
-    print('successfully set leverage models')
+    # trading.set_net_leverage(1.3)
+    # print('successfully set leverage models', trading.division_model.trade_controls)
     # run algorithm
     trading.run()

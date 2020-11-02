@@ -12238,3 +12238,84 @@ class finaldescriptor(final):
 #             p.inner_position.last_sync_price = get_price(asset=asset)
 #             # update position_returns
 #             p.calculate_returns()
+
+# np.add(returns, 1, out=out)
+# out.cumprod(axis=0, out=out)
+# # cum_returns_s = np.exp(np.log(1 + returns_s).cumsum())
+# np.subtract(out, 1, out=out)
+#
+# out = np.cumprod(returns.values())
+
+# # np.multiply(out, starting_value, out=out)
+# if returns.ndim == 1 and isinstance(returns, pd.Series):
+#     out = pd.Series(out, index=returns.index)
+# elif isinstance(returns, pd.DataFrame):
+#     out = pd.DataFrame(
+#         out, index=returns.index, columns=returns.columns,
+#         )
+# return out
+
+#
+# def cum_returns_final(
+#                      returns,
+#                      benchmark_returns,
+#                      risk_free=0.0,
+#                      required_return=0.0
+#                      ):
+#     """
+#     Compute total returns from simple returns.
+#
+#     Parameters
+#     ----------
+#     returns : pd.DataFrame, pd.Series, or np.ndarray
+#        Noncumulative simple returns of one or more timeseries.
+#     starting_value : float, optional
+#        The starting returns.
+#
+#     Returns
+#     -------
+#     total_returns : pd.Series, np.ndarray, or float
+#         If input is 1-dimensional (a Series or 1D numpy array), the result is a
+#         scalar.
+#
+#         If input is 2-dimensional (a DataFrame or 2D numpy array), the result
+#         is a 1D array containing cumulative returns for each column of input.
+#     """
+#     if len(returns) == 0:
+#         return np.nan
+#     if isinstance(returns, pd.DataFrame):
+#         result = (returns + 1).prod()
+#     else:
+#         result = np.nanprod(returns + 1, axis=0)
+#     return result
+#
+
+# def _create_generator(self):
+#     """
+#     :param dist: distribution module (simulate_dist , simulate_ticker)
+#                 to generate price timeseries or ticker timeseries
+#     generator --- compute capital or position to transactions
+#     """
+#     # generator
+#     generator_class = Generator(self.sim_params.delay,
+#                                 self.blotter,
+#                                 self.division_model)
+#     return generator_class
+
+# universe_func=self._calculate_universe
+
+# initialize necessary module
+# self.pipeline_engine = self._construct_pipeline_engine(
+#                                             disallow_righted,
+#                                             disallowed_violation)
+# self.ledger = Ledger(self.sim_params, risk_models, risk_fuse)
+# self.underneath_module = uncover_algorithm or UncoverAlgorithm()
+# self.division_model = Division(self.underneath_module,
+#                                self.trading_controls,
+#                                self.sim_params.capital_base)
+# self.blotter = SimulationBlotter(self.commission,
+#                                  self.slippage,
+#                                  self.execution_style)
+#
+# self.generator = self._create_generator()
+# self.broker = self._initialize_broker()

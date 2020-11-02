@@ -8,6 +8,7 @@ Created on Sun Feb 17 16:11:34 2019
 import pandas as pd, numpy as np
 from scipy import stats
 from metric.utility import _adjust_returns
+# returns , benchmark_returns ---- series
 
 
 def cum_returns(returns,
@@ -28,63 +29,14 @@ def cum_returns(returns,
     cumulative_returns : array-like
         Series of cumulative returns.
     """
-
     if len(returns) < 1:
         return returns.copy()
 
-    out = np.empty_like(returns)
-
-    nanmask = np.isnan(returns)
-    if np.any(nanmask):
-        returns = returns.copy()
-        returns[nanmask] = 0
-
-    np.add(returns, 1, out=out)
-    out.cumprod(axis=0, out=out)
-    # cum_returns_s = np.exp(np.log(1 + returns_s).cumsum())
-    np.subtract(out, 1, out=out)
-    # np.multiply(out, starting_value, out=out)
-    if returns.ndim == 1 and isinstance(returns, pd.Series):
-        out = pd.Series(out, index=returns.index)
-    elif isinstance(returns, pd.DataFrame):
-        out = pd.DataFrame(
-            out, index=returns.index, columns=returns.columns,
-            )
+    arrays = np.asanyarray(returns)
+    arrays[np.isnan(arrays)] = 0
+    out = np.cumprod(np.add(arrays, 1.0))
+    out = np.subtract(out, 1)
     return out
-
-
-def cum_returns_final(
-                     returns,
-                     benchmark_returns,
-                     risk_free=0.0,
-                     required_return=0.0
-                     ):
-    """
-    Compute total returns from simple returns.
-
-    Parameters
-    ----------
-    returns : pd.DataFrame, pd.Series, or np.ndarray
-       Noncumulative simple returns of one or more timeseries.
-    starting_value : float, optional
-       The starting returns.
-
-    Returns
-    -------
-    total_returns : pd.Series, np.ndarray, or float
-        If input is 1-dimensional (a Series or 1D numpy array), the result is a
-        scalar.
-
-        If input is 2-dimensional (a DataFrame or 2D numpy array), the result
-        is a 1D array containing cumulative returns for each column of input.
-    """
-    if len(returns) == 0:
-        return np.nan
-    if isinstance(returns, pd.DataFrame):
-        result = (returns + 1).prod()
-    else:
-        result = np.nanprod(returns + 1, axis=0)
-    return result
 
 
 def max_drawdown(
@@ -108,11 +60,12 @@ def max_drawdown(
     """
     if len(returns) < 1:
         return np.nan
-    out = np.empty(returns.shape[1:])
+    # out = np.empty(returns.shape[1:])
     returns_array = np.asanyarray(returns)
-    cumulative = cum_returns(returns_array, benchmark_returns)
+    cumulative_returns = cum_returns(returns_array, benchmark_returns)
+    cumulative = cumulative_returns + 1
     max_return = np.fmax.accumulate(cumulative, axis=0)
-    np.nanmin((cumulative - max_return) / max_return, axis=0, out=out)
+    out = np.nanmin((cumulative - max_return) / max_return)
     return out
 
 
@@ -130,21 +83,20 @@ def max_duration(
     returns : pd.Series or np.ndarray
         Daily returns of the strategy, noncumulative.
         - See full explanation in :func:`~empyrical.stats.cum_returns`.
-
     Returns
     -------
     duration
     """
     if len(returns) < 1:
         return np.nan
-    out = np.empty(returns.shape[1:])
+    # out = np.empty(returns.shape[1:])
     returns_array = np.asanyarray(returns)
-    cumulative = cum_returns(returns_array, benchmark_returns)
+    cumulative_returns = cum_returns(returns_array, benchmark_returns)
+    cumulative = cumulative_returns + 1
     max_return = np.fmax.accumulate(cumulative, axis=0)
     #  久期 duration --- 整个下跌的时间
-    mask = np.where(cumulative == max_return, 0, 1)
-    duration = np.sum(mask)
-    return duration
+    mask = np.where(cumulative < max_return, 1, 0)
+    return np.sum(mask)
 
 
 def max_succession(
@@ -154,13 +106,13 @@ def max_succession(
                   required_return=0.0):
     if len(returns) < 1:
         return np.nan
-    out = np.empty(returns.shape[1:])
+    # out = np.empty(returns.shape[1:])
     returns_array = np.asanyarray(returns)
-    cumulative = cum_returns(returns_array, benchmark_returns)
+    cumulative_returns = cum_returns(returns_array, benchmark_returns)
+    cumulative = cumulative_returns + 1
     max_return = np.fmax.accumulate(cumulative, axis=0)
     #  久期 duration --- 计算阴跌的最长期限(抽象找一个序列相同的连续对象的个数）
-    mask = pd.Series(np.where(cumulative == max_return, 0, 1))
-    # print('mask', mask)
+    mask = pd.Series(np.where(cumulative < max_return, 1, 0))
     # 返回1对应的idx
     mask_diff = list(np.diff(mask[mask == 1].index))
     # 追加0  --- length
@@ -217,7 +169,7 @@ def annual_return(
 
     num_years = len(returns) / 252
     # Pass array to ensure index -1 looks up successfully.
-    ending_value = cum_returns_final(returns)
+    ending_value = np.prod(returns.values())
     return ending_value ** (1 / num_years) - 1
 
 
@@ -818,7 +770,6 @@ def conditional_value_at_risk(
 
 
 __all__ = [
-    'cum_returns_final',
     'annual_return',
     'annual_volatility',
     'sharpe_ratio',

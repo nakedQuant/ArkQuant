@@ -16,10 +16,7 @@ from email.mime.base import MIMEBase
 from email.mime.image import MIMEImage
 from email.utils import parseaddr,formataddr
 
-
-
-
-#配置
+# 配置
 from_addr='13776668123@163.com'
 password='lhx990229'
 smtp_server='smtp.163.com'

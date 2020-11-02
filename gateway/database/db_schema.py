@@ -8,25 +8,6 @@ Created on Tue Mar 12 15:37:47 2019
 import sqlalchemy as sa
 from gateway.database import metadata, engine
 
-__all__ = [
-           'm_cap',
-           'holder',
-           'unfreeze',
-           'massive',
-           'ownership',
-           'fund_price',
-           'version_info',
-           'asset_router',
-           'equity_status',
-           'equity_basics',
-           'equity_price',
-           'equity_splits',
-           'equity_rights',
-           'convertible_basics',
-           'convertible_price',
-           'asset_db_table_names'
-]
-
 
 asset_router = sa.Table(
     'asset_router',
@@ -633,3 +614,23 @@ asset_db_table_names = frozenset([
 ])
 
 metadata.create_all(bind=engine)
+
+__all__ = [
+           'm_cap',
+           'holder',
+           'unfreeze',
+           'massive',
+           'ownership',
+           'fund_price',
+           'version_info',
+           'asset_router',
+           'equity_status',
+           'equity_basics',
+           'equity_price',
+           'equity_splits',
+           'equity_rights',
+           'convertible_basics',
+           'convertible_price',
+           'asset_db_table_names'
+]
+

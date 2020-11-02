@@ -36,6 +36,7 @@ class Engine(ABC):
         asset_finder.synchronize()
         # equities = asset_finder.retrieve_type_assets('equity')
         equities = list(asset_finder.retrieve_type_assets('equity'))[:10]
+        print('pipeline restricted_rules', self.restricted_rules.sub_restrictions)
         default_mask = self.restricted_rules.is_restricted(equities, dts)
         return default_mask
 
@@ -285,7 +286,8 @@ class SimplePipelineEngine(Engine):
         common = set(call_proxy) & set(hold_proxy)
         increment_positives = [call_proxy[c] for c in common if call_proxy[c] == hold_proxy[c].asset]
         # print('engine increment_positives', increment_positives)
-        direct_positives = set(extra_positives) | set(increment_positives)
+        # direct_positives = set(extra_positives) | set(increment_positives)
+        direct_positives = list(set(extra_positives) | set(increment_positives))
         # print('engine direct_positives', direct_positives)
         # 基于持仓卖出 --- 分为2种 ， 1.直接卖出 ， 2.卖出买入 ，基于pipeline name
         # 2种 --- 一个pipeline同时存在买入和卖出行为
