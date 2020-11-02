@@ -12,7 +12,7 @@ from itertools import product
 
 
 class ParameterGrid(object):
-    '''
+    """
       scipy.optimize.min(fun, x0, args=(), method=None, jac=None, hess=None, hessp=None, bounds=None,
                          constraints=(), tol=None, callback=None, options=None)
       method: str or callable, optional, Nelder - Mead, (see here)
@@ -21,7 +21,8 @@ class ParameterGrid(object):
       maxiter: int.Maximum number of iterations to perform. disp: bool Constraints definition(only for COBYLA and SLSQP)
       type: eq for equality, ineq for inequality.fun: callable.jac: optional(only for SLSQP)
       args: sequence, optional
-    '''
+    """
+
     def __init__(self, param_grid):
         if isinstance(param_grid, Mapping):
             param_grid = [param_grid]

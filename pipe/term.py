@@ -41,8 +41,8 @@ class Term(object):
     _term_cache = WeakValueDictionary()
     namespace = dict()
     # base_dir = os.path.join(os.path.split(os.getcwd())[0], 'strat')
-    # base_dir = '/Users/python/Library/Mobile Documents/com~apple~CloudDocs/ArkQuant/strat'
-    base_dir = os.path.join(os.path.split(os.path.abspath('__file__'))[0], 'strat')
+    base_dir = '/Users/python/Library/Mobile Documents/com~apple~CloudDocs/ArkQuant/strat'
+    # base_dir = os.path.join(os.path.split(os.path.abspath('__file__'))[0], 'strat')
 
     def __new__(cls,
                 script,

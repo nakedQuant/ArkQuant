@@ -230,7 +230,7 @@ class DataPortal(object):
     @staticmethod
     def get_current_minutes(sid):
         """
-            return current live tickers data
+            return current reality tickers data
         """
         _url = 'http://push2.eastmoney.com/api/qt/stock/trends2/get?fields1=f1&' \
                'fields2=f51,f52,f53,f54,f55,f56,f57,f58&iscr=0&secid={}'

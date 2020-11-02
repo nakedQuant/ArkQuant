@@ -15,7 +15,7 @@ class PricingLoader(PipelineLoader):
 
     def __init__(self, terms, multiplier=3):
         """
-            A pipe for loading daily adjusted qfq live OHLCV data.
+            A pipe for loading daily adjusted qfq reality OHLCV data.
             terms --- pipe terms and ump terms
         """
         domains = [term.domain for term in terms]

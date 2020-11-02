@@ -340,4 +340,4 @@ __all__ = ['asset_finder']
 #     alive_assets = finder.lifetimes(['2020-01-25', '2020-09-30'])
 #     print('alive_assets', alive_assets)
 #     live_assets = finder.lifetimes(['2018-09-30', '2018-10-30'], 'equity')
-#     print('live assets', live_assets)
+#     print('reality assets', live_assets)

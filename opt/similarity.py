@@ -7,7 +7,6 @@ Created on Sun Feb 17 16:11:34 2019
 """
 from contextlib import contextmanager
 from enum import Enum
-import pandas as pd
 
 
 class TradeSimilarity(object):
@@ -16,8 +15,6 @@ class TradeSimilarity(object):
         包装交易订单构成的pd.DataFrame对象，外部debug因子的交易结果，寻找交易策略的问题使用，
         支持两个orders_pd的并集，交集，差集，类似set的操作，同时支持相等，不等，大于，小于
         的比较操作，eg如下：
-
-            orders_pd1 = AbuOrderPdProxy(orders_pd1)
             with orders_pd1.proxy_work(orders_pd2) as (order1, order2):
                 a = order1 | order2 # 两个交易结果的并集
                 b = order1 & order2 # 两个交易结果的交集
@@ -28,7 +25,7 @@ class TradeSimilarity(object):
                 lt = order1 < order2 # order1唯一的交易数量是否小于order2
     """
 
-    def __init__(self, orders_pd, same_rule=EOrderSameRule.ORDER_SAME_BSPD):
+    def __init__(self, orders_pd, same_rule):
         """
         初始化函数需要pd.DataFrame对象，暂时未做类型检测
         :param orders_pd: 回测结果生成的交易订单构成的pd.DataFrame对象
@@ -49,52 +46,30 @@ class TradeSimilarity(object):
         对op_result进行统一分析
         :param orders_pd: 回测结果生成的交易订单构成的pd.DataFrame对象
         :return:
-        """
-        # 运算集结果重置
-        self.op_result = None
-        # 实例化比较的ABuOrderPdProxy对象
-        other = AbuOrderPdProxy(orders_pd)
-        try:
-            yield self, other
-        finally:
-            if isinstance(self.op_result, pd.DataFrame):
-                # 如果有并集, 交集, 差集运算结果存储，
-                from ..MetricsBu.ABuMetricsBase import AbuMetricsBase
-                metrics = AbuMetricsBase(self.op_result, None, None, None)
-                metrics.fit_metrics_order()
-
                 self.last_op_metrics['win_rate'] = metrics.win_rate
                 self.last_op_metrics['gains_mean'] = metrics.gains_mean
                 self.last_op_metrics['losses_mean'] = metrics.losses_mean
                 self.last_op_metrics['sum_profit'] = self.op_result['profit'].sum()
                 self.last_op_metrics['sum_profit_cg'] = self.op_result['profit_cg'].sum()
+        """
+        # 运算集结果重置
 
     def __and__(self, other):
         """ & 操作符的重载，计算两个交易集的交集"""
         # self.op = 'intersection(order1 & order2)'
-        self.op_result = intersection_in_2orders(self.orders_pd, other.orders_pd, same_rule=self.same_rule)
-        return self.op_result
 
     def __or__(self, other):
         """ | 操作符的重载，计算两个交易集的并集"""
         # self.op = 'union(order1 | order2)'
-        self.op_result = union_in_2orders(self.orders_pd, other.orders_pd)
-        return self.op_result
 
     def __sub__(self, other):
         """ - 操作符的重载，计算两个交易集的差集"""
-        self.op_result = difference_in_2orders(self.orders_pd, other.orders_pd, same_rule=self.same_rule)
-        return self.op_result
 
     def __eq__(self, other):
         """ == 操作符的重载，计算两个交易集的是否相同"""
-        return (self - other).empty and (other - self).empty
 
     def __gt__(self, other):
         """ > 操作符的重载，计算两个交易集的大小, 类被total_ordering装饰，可以支持lt等操作符"""
-        unique_cnt = find_unique_group_symbol(self.orders_pd).shape[0]
-        other_unique_cnt = find_unique_group_symbol(other.orders_pd).shape[0]
-        return unique_cnt > other_unique_cnt
 
 
 class EOrderSameRule(Enum):

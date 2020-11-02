@@ -33,24 +33,21 @@ class Broker(object):
 
     def implement_capital(self, positives, capital, portfolio, dts):
         """基于资金买入对应仓位"""
-        # assets = list(positives.values())
         txn_mappings = dict()
-        # controls
-        # allocation = self.capital_model.compute(assets, capital, dts)
-        allocation = self.capital_model.compute(positives, capital, dts)
-        print('allocation', allocation)
-        for asset, available in allocation.items():
-            # print('broker capital', asset, available)
-            txn_mappings[asset] = self.generator.yield_capital(asset, available, portfolio, dts)
-        # print('txn_mappings', txn_mappings)
+        if positives:
+            allocation = self.capital_model.compute(positives, capital, dts)
+            print('allocation', allocation)
+            for asset, available in allocation.items():
+                txn_mappings[asset] = self.generator.yield_capital(asset, available, portfolio, dts)
+                # print('txn_mappings', txn_mappings)
         return txn_mappings
 
     def implement_position(self, negatives, portfolio, dts):
         """单独的卖出仓位"""
         txn_mappings = dict()
-        # for p in negatives.values():
-        for p in negatives:
-            txn_mappings[p.asset] = self.generator.yield_position(p, portfolio, dts)
+        if negatives:
+            for p in negatives:
+                txn_mappings[p.asset] = self.generator.yield_position(p, portfolio, dts)
         return txn_mappings
 
     def implement_duals(self, duals, portfolio, dts):
@@ -59,19 +56,21 @@ class Broker(object):
             防止策略冲突 当pipeline的结果与ump的结果出现重叠 --- 说明存在问题，正常情况退出策略与买入策略应该不存交集
         """
         txn_mappings = dict()
-        for dual in duals:
-            p, asset = dual
-            # p.asset 与 asset 不一样
-            short, long = self.generator.yield_interactive(p, asset, portfolio, dts)
-            txn_mappings[p.asset] = short
-            txn_mappings[asset] = long
+        if duals:
+            for dual in duals:
+                p, asset = dual
+                # p.asset 与 asset 不一样
+                short, long = self.generator.yield_interactive(p, asset, portfolio, dts)
+                txn_mappings[p.asset] = short
+                txn_mappings[asset] = long
         return txn_mappings
 
     @staticmethod
     def multi_broking(ledger, iterable):
         for txn_mappings in iterable:
-            for k, v in txn_mappings.items():
-                ledger.process_transaction(v)
+            if txn_mappings:
+                for k, v in txn_mappings.items():
+                    ledger.process_transaction(v)
 
     def implement_broke(self, ledger, dts):
         """建立执行计划"""

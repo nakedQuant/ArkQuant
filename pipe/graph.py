@@ -110,17 +110,17 @@ class TermGraph(object):
 __all__ = ['TermGraph']
 
 
-# if __name__ == '__main__':
-#
-#     kw = {'window': (5, 10)}
-#     cross_term = Term('cross', kw)
-#     print('sma_term', cross_term)
-#     kw = {'window': 10, 'fast': 12, 'slow': 26, 'period': 9}
-#     break_term = Term('break', kw, cross_term)
-#     terms = [cross_term, break_term]
-#     graph = TermGraph(terms)
-#     print('ordered graph', list(graph.ordered()))
-#     print('nodes', graph.nodes)
-#     print('length', len(graph))
-#     graph.decref_dependencies()
-#     graph.draw()
+if __name__ == '__main__':
+
+    kw = {'window': (5, 10)}
+    cross_term = Term('cross', kw)
+    print('sma_term', cross_term)
+    kw = {'window': 10, 'fast': 12, 'slow': 26, 'period': 9}
+    break_term = Term('break', kw, cross_term)
+    terms = [cross_term, break_term]
+    graph = TermGraph(terms)
+    print('ordered graph', list(graph.ordered()))
+    print('nodes', graph.nodes)
+    print('length', len(graph))
+    # graph.decref_dependencies()
+    graph.draw()

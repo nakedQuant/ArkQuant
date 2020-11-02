@@ -343,7 +343,7 @@ class TradingAlgorithm(object):
               arena : str
                   The arena from the ArkQuant parameters. This will normally
                   be ``'backtest'`` but some systems may use this distinguish
-                  live trading from backtesting.
+                  reality trading from backtesting.
               data_frequency : {'daily', 'minute'}
                   data_frequency tells the algorithm if it is running with
                   daily data or minute data.

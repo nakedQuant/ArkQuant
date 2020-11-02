@@ -4386,7 +4386,7 @@ def _dt_to_epoch_ns(dt_series):
 #         maxsplit=1,
 #     )
 #
-#     # Break the list up in to its two components, the company symbol and the
+#     # Break the list up in to its two extension, the company symbol and the
 #     # share class symbol
 #     company_symbol = split_list[0]
 #     if len(split_list) > 1:
@@ -10849,7 +10849,7 @@ def _fit_statsmodel(x, y):
 # List of account controls to be checked on each bar.
 # self.account_controls = []
 
-# broker --- combine pipe_engine and blotter ; when live trading broker ---- xtp
+# broker --- combine pipe_engine and blotter ; when reality trading broker ---- xtp
 # set manual risk management --- manual close positions
 # risk_manual = risk_manual or PortfolioRisk
 # self.manual_controls = Manual(risk_manual)

@@ -24,7 +24,7 @@ from abc import ABC, abstractmethod
 class AbstractStatistics(ABC):
     """
     Statistics is an abstract class providing an interface for
-    all inherited statistic classes (live, historic, custom, etc).
+    all inherited statistic classes (reality, historic, custom, etc).
 
     The goal of a Statistics object is to keep a record of useful
     information about one or many trading strategy as the strategy
