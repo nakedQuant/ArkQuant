@@ -6,6 +6,8 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 
+__all__ = ['UserAgent', 'ProxyIp']
+
 
 UserAgent = ['Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/605.1.15 '
              '(KHTML, like Gecko) Version/13.1.2 Safari/605.1.15',
@@ -26,6 +28,5 @@ ProxyIp = ['http://0925fq11t1m990:0925fq11t1m990@117.40.5.82:65000',
            'http://0925fq11t1m990:0925fq11t1m990@117.40.7.9:65000',
            'http://0925fq11t1m990:0925fq11t1m990@117.40.7.100:65000',
            'http://0925fq11t1m990:0925fq11t1m990@117.40.7.200:65000',
-           'http://0925fq11t1m990:0925fq11t1m990@117.40.7.165:65000', None]
-
-__all__ = ['UserAgent', 'ProxyIp']
+           'http://0925fq11t1m990:0925fq11t1m990@117.40.7.165:65000',
+           None]

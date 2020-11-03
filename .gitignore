@@ -32,5 +32,5 @@ Temporary Items
 #/gateway/spider/__init__.py
 #!/gateway/spider/__init__.py
 # spider config
-/gateway/spider/xml.py
+/test/xml.py
 /gateway/spider/spider_xml.py
