@@ -26,8 +26,10 @@ Icon
 Network Trash Folder
 Temporary Items
 .apdisk
-.xml.py
+
 
 将删除 .idea/
 #/gateway/spider/__init__.py
 #!/gateway/spider/__init__.py
+# spider config
+/gateway/spider/xml.py
