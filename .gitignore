@@ -28,11 +28,9 @@ Temporary Items
 .apdisk
 
 
-将删除 .idea/
+.idea/
 #/gateway/spider/__init__.py
 #!/gateway/spider/__init__.py
 # spider config
 /gateway/spider/xml.py
-/gateway/spider/xml.py
 
-.idea/
