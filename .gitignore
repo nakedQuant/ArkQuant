@@ -33,4 +33,6 @@ Temporary Items
 #!/gateway/spider/__init__.py
 # spider config
 /gateway/spider/xml.py
-/gateway/spider/spider_xml.py
+/gateway/spider/xml.py
+
+.idea/
