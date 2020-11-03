@@ -17,16 +17,17 @@
 组件：
     Gateway --- (数据接口 module)
         1. assets (标的对象）
-            1.1	Assets ：equity , etf , convertible，attribute : sid, exchange, first_traded , 		last_traded  and is_alive , can_be_traded (method) and so on 
-            1.2 	_finder(asset_finder module) ： finder assets according to specific condition 		(ex: by district , by sector , by exchange , by broker and so on 
+            1.1	Assets ：equity , etf , convertible，attribute : sid, exchange, first_traded , last_traded  and is_alive , can_be_traded (method) 
+            1.2 _finder(asset_finder module) ： finder assets according to specific condition (ex: by district , by sector , by exchange , by broker and so on 
         2.database (数据库） 
             2.1	Migration : to transfer database via alembic module
             2.2 	db_schema , db_writer via orm 
         3.driver (api）
             3.1  bar_reader : daily and minute bar  ---- minute_bar retrieve from bcolz
             4.spider(爬虫）
-            4.1 基础数据 行情，股权结构，分红配股，除权 市场数据 大宗交易 解禁数		据 股权变动
+            4.1 基础数据 行情，股权结构，分红配股，除权 市场数据 大宗交易 解禁数据 股权变动
             4.2 爬取基础数据，市场数据 基于多线程并发（或者asynico）
+	    
     Pipeline --- (交易算法 module)
         策略目的从全市场获取特定标的或者标的集合，ArkQuant采用拓扑结构的思想对策略进行抽象将其拆分为N个子可计算节点，并按照特定方式进行组合。
     具体的实现方式：子节点包含（计算逻辑，依赖，数据类型）其中依赖的含义节点输入是另一个节点的输出，数据类型为节点的domain，不同的节点通过依赖的方式方式组成整个策略。底层的实现方式主要通过networkx的graph 的in_degree ，out_degree概念进行实施。
@@ -43,6 +44,7 @@
             warpper by( gateway的api)去获取整个pipeline所需数据
         6.Engine 
             6.1 算法引擎将整个pipeline流程组合算法引擎
+	    
     Finance --- (交易流程 module）
         1.Order ---- 订单对象
             1.1  price_order (asset , price , amount )
@@ -75,6 +77,7 @@
             11.2  portfolio_value , portfolio_cash, portfolio_position, position_weights 
         12.Account ---- 账户对象
             12.1  to cast portfolio on account
+	    
     Risk --- (风险控制 module)
         1.	 Alert --- 警告对象
             1.1  针对单个持仓的caution , e.g. 持仓最大跌幅,持仓最大回撤
@@ -82,6 +85,7 @@
             2.1  资金分配算法 e.g.  equal or delta(类似于海龟交易法则，基于波动性分配仓位)
         3.  Fuse  --- 保险丝对象
             3.1  当组合净值低于一定阈值 ，是否强行平仓 ，作为一种保护措施
+	    
     Pb --- (撮合交易 module)
         1.	Underneath ---- 隐藏算法
             将amount基于算法按照时间或者价格分割N个tiny amount
@@ -99,6 +103,7 @@
             4.1 	combine division and blotter together to create transactions
         5. 	Broker --- 经纪对象
             5.1  由算法、交易生产器、资金分配算法组成的broker 
+	    
     Metrics --- (评价分析 module)
         1. metrics 分析指标 
             1.1  daily  每天的计算指标或者特定账户信息
@@ -106,16 +111,19 @@
         2. Metric_tracker 
             2.1  基于时间节点分析指标, e.g. start_of_simulation , start_of_session,end_of_session, end_of_simulation 
         3. Tear_sheet / pdf  回测指标输出特定的格式 
+	
     Trading --- (交易执行 module)
         1.sim_params 参数模块 e.g. sessions , capital , loan , benchmark 
         2.Clock 时间触发器 
             2.1  每天按照特定时间节点去执行对应的逻辑, e.g:  before._trading_start, Session_start, session_end 
         3.trading_simulation 回测执行入口(迭代器)
+	
     Opt --- (参数优化 module)
         1.Grid 网络搜索
         2.Spread 参数泛化(有效的策略不能针对特定的参数值，但参数变化时分析对应的净值曲线变化评价参数)
         3.借鉴机器学习理论对pipeline进行优化(主要针对计算节点组合方式以及节点的重要性分配)
         4.Similarity 分析不同的策略的关联性
+	
     Reality ---- 实盘交易
         1  xtp(中泰证券快速交易系统) --- 基于cython调用底层接口
         1  scanner(掘金的扫单系统）---- 把策略生成的委托信号以 SQLite DB文件作为中转，不需要接口，直接接入掘金做仿真和实盘交易。
