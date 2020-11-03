@@ -143,7 +143,8 @@
     10.ArkQuant将XTP(中泰证券的快速交易系统)的底层python接口纳入了系统
     11.Extension : smtp , parallel, schedule等功能 
     
-QuickStart:
+QuickStart: 
+
     默认参数: start 2005-03-01，end 2005-06-01，delay=1,  capital = 100000, per_capital =20000
     算法参数: slippage=FixedBasisPointSlippage(),
              commission=Commission(),
@@ -155,6 +156,7 @@ QuickStart:
 	     risk_alert_policy=PositionLossRisk(0.1),
 	     risk_fuse_policy=Fuse(0.85),
 	     metrics_set=None
+	     # 撮合引擎默认的，按照时间或者价格对比ticker数据(分钟)得出撮合价格  
     # 执行回测引擎
      run_algorithm()
     # results : pickle or pdf (每天metric_perf组成）
