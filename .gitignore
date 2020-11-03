@@ -125,3 +125,4 @@ dmypy.json
 .pyre/
 
 /gateway/spider/xml.py
+/gateway/spider/test.py
