@@ -141,7 +141,7 @@
     8.回测引擎通过yield方式返回daily的perf(分析结果)，内部实现机制封装在trade模块里面避免了对外暴露。
     9.Pipeline ---- ArkQuant策略机制实现的抽象框架，策略定义：通过一系列的算法对市场进行过滤筛选最终对出特定标的或者标的集合，也就是说策略由不同的逻辑算法通过算法之间的相互作用最终生产的集合。Term(计算节点)作为逻辑算法，Term与Term之间链接方式就是Pipeline. Ark quant 采用了拓扑结构的有向图的实现方式，Term节点之间通过依赖方式链接。
     10.ArkQuant将XTP(中泰证券的快速交易系统)的底层python接口纳入了系统
-    11.Extension : smtp , parallel, schedule等功能
+    11.Extension : smtp , parallel, schedule等功能 
 
 
 
