@@ -1,8 +1,8 @@
 
-    		ArkQuant is a event_diver algorithm which concentrates on China Stock. It adopts the form of reality trading to simulate 
+    	    ArkQuant is a event_diver algorithm which concentrates on China Stock. It adopts the form of reality trading to simulate 
 	backtest engine and bridge the tunnel between backtest and live trading.
 
-    		ArkQuant是基于事件驱动引擎开发的针对国内市场A股、ETF的仿真回测交易平台。它借鉴了Zipline的设计理念并吸收合并了
+    	    ArkQuant是基于事件驱动引擎开发的针对国内市场A股、ETF的仿真回测交易平台。它借鉴了Zipline的设计理念并吸收合并了
 	国内主流的VNPY，BackTrader等框架等优势,通过将市场交易机制嵌入到回测引擎保证了分析结果的有效性同时降低了与真实交易环境的偏差。
     	ArkQuant参照自动化交易系统以算法为参数入口（包括：策略算法，风险控制算法（仓位控制，资金分配算法，平仓算法），
 	交易控制算法（比如滑价算法，交易成本算法，订单类型，订单拆分算法，限制条件算法)，订单撮合成交算法，评价算法(metrics_tracker) ,
