@@ -5,11 +5,7 @@ Created on Sat Feb 16 13:56:19 2019
 
 @author: python
 """
-import json
-import socket
-import ssl
-import sys
-import traceback
+import json, socket, ssl, sys, traceback
 from datetime import datetime
 from threading import Lock, Thread
 from time import sleep
