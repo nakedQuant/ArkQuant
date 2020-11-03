@@ -1,14 +1,15 @@
 
-    	ArkQuant is a event_diver algorithm which concentrates on China Stock. It adopts the form of reality trading to simulate 
+    		ArkQuant is a event_diver algorithm which concentrates on China Stock. It adopts the form of reality trading to simulate 
 	backtest engine and bridge the tunnel between backtest and live trading.
 
-    	ArkQuant是基于事件驱动引擎开发的针对国内市场A股、ETF的仿真回测交易平台。它借鉴了Zipline的设计理念并吸收合并了
+    		ArkQuant是基于事件驱动引擎开发的针对国内市场A股、ETF的仿真回测交易平台。它借鉴了Zipline的设计理念并吸收合并了
 	国内主流的VNPY，BackTrader等框架等优势,通过将市场交易机制嵌入到回测引擎保证了分析结果的有效性同时降低了与真实交易环境的偏差。
-    ArkQuant参照自动化交易系统以算法为参数入口（包括：策略算法，风险控制算法（仓位控制，资金分配算法，平仓算法），
+    	ArkQuant参照自动化交易系统以算法为参数入口（包括：策略算法，风险控制算法（仓位控制，资金分配算法，平仓算法），
 	交易控制算法（比如滑价算法，交易成本算法，订单类型，订单拆分算法，限制条件算法)，订单撮合成交算法，评价算法(metrics_tracker) ,
 	优化算法), 以市场交易机制为驱动引擎，实现了回测、实盘、自动化交易的无缝衔接，其中将不同模块做到最大程度的结耦而且抽象成算法进行自由组合。
 	所以ArKQuant具备高度扩展行性、可塑性，同时能根据市场机制的变化进行实时调整保证分析结果的准备性。
-    国内主流的量化回测平台存在以下问题:  1、侧重于提供全面的数据接口与友好的界面交互;  2、回测体系精度很差与真实情况相差太大; 
+	
+    		国内主流的量化回测平台存在以下问题:  1、侧重于提供全面的数据接口与友好的界面交互;  2、回测体系精度很差与真实情况相差太大; 
 	3、在滑价，交易成本等参数设定具有随意性与实际情况脱节;  4、由算法发出指令 --- 订单 --- 交易环节上完全封闭默认直接成交忽略真实交易的情况; 
 	5、回测平台没有将市场的交易制度嵌入到回测系统由此导致回测的结果都是不可靠的，一旦市场制度调整原有的框架失效;  6、无法有效嫁接回测系统与实盘接口；
 	7、对自动化(半自动化)交易系统的框架体系鲜有涉及;  8、对于量化策略缺乏深入的拆解以及抽象。
