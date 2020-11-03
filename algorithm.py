@@ -5,7 +5,7 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-import pandas as pd, json
+import pandas as pd
 # error module
 from error.errors import (
     RegisterTradingControlPostInit,
@@ -44,7 +44,7 @@ from trade.tradesimulation import AlgorithmSimulator
 # risk management
 from risk.allocation import Equal, Turtle
 from risk.alert import Risk, NoRisk, PositionLossRisk
-from risk.fuse import Fuse
+from risk.fuse import BaseFuse, NoFuse
 # metric module
 from metric import default_metrics
 from metric.tracker import MetricsTracker, _ClassicRiskMetrics
@@ -52,9 +52,7 @@ from metric.tracker import MetricsTracker, _ClassicRiskMetrics
 from util.wrapper import api_method
 from util.api_support import AlgoAPI
 from util.events import EventManager, Event, Always
-# gateway api
-# from gateway.asset.finder import init_finder
-# from gateway.driver.data_portal import portal
+# benchmark source
 from gateway.driver.benchmark_source import BenchmarkSource
 
 
@@ -87,7 +85,10 @@ class TradingAlgorithm(object):
         The platform the ArkQuant is running on. This can be queried for
         in the ArkQuant with ``get_environment``. This allows algorithms
         to conditionally execute code based on platform it is running on.
-        default: 'zipline'
+    analyze : callable[(context, pd.DataFrame) -> None], optional
+        The analyze function to use for the algorithm. This function is called
+        once at the end of the backtest and is passed the context and the
+        performance data.
 
     量化交易系统:
         a.策略识别（搜索策略 ， 挖掘优势 ， 交易频率）
@@ -116,8 +117,8 @@ class TradingAlgorithm(object):
                  disallowed_violation=True,
                  engine=None,
                  # risk
-                 risk_models=None,
                  risk_fuse=None,
+                 risk_models=None,
                  risk_allocation=None,
                  # metric
                  _analyze=None,
@@ -131,6 +132,7 @@ class TradingAlgorithm(object):
                  logger=None,
                  before_trading_start=None,
                  create_event_context=None,
+                 analyse=None,
                  **initialize_kwargs):
 
         self.sim_params = sim_params
@@ -152,7 +154,7 @@ class TradingAlgorithm(object):
         # set risk module
         self.risk_allocation = risk_allocation or Equal()
         self.risk_models = risk_models or NoRisk()
-        self.risk_fuse = risk_fuse or Fuse()
+        self.risk_fuse = risk_fuse or NoFuse()
         # set pd module
         self.underneath_module = underneath_model or SimpleUncover()
         self.broker = broker
@@ -219,7 +221,8 @@ class TradingAlgorithm(object):
 
     def before_trading_start(self):
         """
-            initialize all the needed module
+            This is called once at the very begining of the backtest and should be used to set up
+            any state needed by the algorithm.
         """
         try:
             #  Construct and store a PipelineEngine from loader.
@@ -228,6 +231,7 @@ class TradingAlgorithm(object):
                                                         self.restrictions,
                                                         self.righted,
                                                         self.violated)
+
             self.ledger = Ledger(self.sim_params, self.risk_models, self.risk_fuse)
             self._create_broker()
         except Exception as e:
@@ -457,7 +461,7 @@ class TradingAlgorithm(object):
 
     @staticmethod
     def validate_pipeline(pipe_model):
-        assert pipeline is not None and isinstance(pipeline, Pipeline), \
+        assert pipe_model is not None and isinstance(pipe_model, Pipeline), \
             'pipelines must validate and subclass of Pipeline'
         return pipe_model
 
@@ -611,7 +615,7 @@ class TradingAlgorithm(object):
         """
             :param fuse_model: risk module --- fuse.py
         """
-        assert isinstance(fuse_model, Fuse), 'must be subclass of fuse'
+        assert isinstance(fuse_model, BaseFuse), 'must be subclass of fuse'
         self.risk_fuse = fuse_model
 
     ####################
@@ -652,7 +656,7 @@ class TradingAlgorithm(object):
     @api_method
     def set_max_order_size(self,
                            max_notional,
-                           window):
+                           window=1):
         """Set a limit on the number of shares and/or dollar value of any single
         order placed for sid.  Limits are treated as absolute values and are
         enforced at the time that the algo attempts to place an order for sid.
@@ -747,50 +751,50 @@ class TradingAlgorithm(object):
 __all__ = ['TradingAlgorithm']
 
 
-if __name__ == '__main__':
-
-    from trade.params import create_simulation_parameters
-    trading_params = create_simulation_parameters(start='2020-09-01', end='2020-09-20')
-    print('trading_params', trading_params)
-    # initialize trading algorithm
-    trading = TradingAlgorithm(trading_params)
-    # set finance models
-    slippage = FixedBasisPointSlippage()
-    commission = Commission()
-    order_style = LimitOrder()
-    restrictions_list = [StatusRestrictions(), DataBoundsRestrictions()]
-    trading.set_slippage_style(slippage)
-    # print('slippage', trading.slippage)
-    trading.set_commission_style(commission)
-    # print('commission', trading.commission)
-    trading.set_execution_style(order_style)
-    # print('execution', trading.execution)
-    trading.set_restriction_style(restrictions_list)
-    # set pipeline api scripts = None
-    # trading.set_pipeline_final()
-    from pipe.term import Term
-    kw = {'window': (5, 10), 'fields': ['close']}
-    cross_term = Term('cross', kw)
-    kw = {'fields': ['close'], 'window': 5, 'final': True}
-    break_term = Term('break', kw, cross_term)
-    pipeline = Pipeline([break_term, cross_term])
-    trading.attach_pipeline(pipeline)
-    # set pb models
-    # trading.set_uncover_style(SimpleUncover)
-    # set risk models
-    turtle = Turtle(5)
-    trading.set_allocation_style(turtle)
-    # print('allocation', trading.broker.capital_model)
-    trading.set_alert_style(PositionLossRisk(0.1))
-    trading.set_fuse_style(Fuse())
-    # set trading control models
-    trading.set_max_position_size(0.8)
-    trading.set_max_order_size(0.1, window=5)
-    trading.set_long_only()
-    # set account models
-    # trading.set_net_leverage(1.3)
-    # run algorithm
-    analysis = trading.run()
-    # analysis_path = '/Users/python/Library/Mobile Documents/com~apple~CloudDocs/ArkQuant/metric/temp.json'
-    # with open(analysis_path, 'w+') as f:
-    #     json.dump(analysis, f)
+# if __name__ == '__main__':
+#
+#     from trade.params import create_simulation_parameters
+#     trading_params = create_simulation_parameters(start='2020-09-01', end='2020-09-20')
+#     print('trading_params', trading_params)
+#     # initialize trading algorithm
+#     trading = TradingAlgorithm(trading_params)
+#     # set finance models
+#     slippage = FixedBasisPointSlippage()
+#     commission = Commission()
+#     order_style = LimitOrder(0.08)
+#     restrictions_list = [StatusRestrictions(), DataBoundsRestrictions()]
+#     trading.set_slippage_style(slippage)
+#     # print('slippage', trading.slippage)
+#     trading.set_commission_style(commission)
+#     # print('commission', trading.commission)
+#     trading.set_execution_style(order_style)
+#     # print('execution', trading.execution)
+#     trading.set_restriction_style(restrictions_list)
+#     # set pipeline api scripts = None
+#     # trading.set_pipeline_final()
+#     from pipe.term import Term
+#     kw = {'window': (5, 10), 'fields': ['close']}
+#     cross_term = Term('cross', kw)
+#     kw = {'fields': ['close'], 'window': 5, 'final': True}
+#     break_term = Term('break', kw, cross_term)
+#     pipeline = Pipeline([break_term, cross_term])
+#     trading.attach_pipeline(pipeline)
+#     # set pb models
+#     # trading.set_uncover_style(SimpleUncover)
+#     # set risk models
+#     turtle = Turtle(5)
+#     trading.set_allocation_style(turtle)
+#     # print('allocation', trading.broker.capital_model)
+#     trading.set_alert_style(PositionLossRisk(0.1))
+#     trading.set_fuse_style(Fuse(0.85))
+#     # set trading control models
+#     trading.set_max_position_size(0.8)
+#     trading.set_max_order_size(0.1, window=5)
+#     trading.set_long_only()
+#     # set account models
+#     # trading.set_net_leverage(1.3)
+#     # run algorithm
+#     analysis = trading.run()
+#     # analysis_path = '/Users/python/Library/Mobile Documents/com~apple~CloudDocs/ArkQuant/metric/temp.json'
+#     # with open(analysis_path, 'w+') as f:
+#     #     json.dump(analysis, f)

@@ -36,7 +36,7 @@ class Engine(ABC):
         asset_finder.synchronize()
         # equities = asset_finder.retrieve_type_assets('equity')
         equities = list(asset_finder.retrieve_type_assets('equity'))[:10]
-        print('pipeline restricted_rules', self.restricted_rules.sub_restrictions)
+        # print('pipeline restricted_rules', self.restricted_rules.sub_restrictions)
         default_mask = self.restricted_rules.is_restricted(equities, dts)
         return default_mask
 

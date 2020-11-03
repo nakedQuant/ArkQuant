@@ -98,7 +98,7 @@ class MaxOrderSize(TradingControl):
     """
     def __init__(self,
                  max_notional,
-                 sliding_window=1,
+                 sliding_window,
                  on_error='log',
                  _fail_args='order capital exceed'):
         super(MaxOrderSize, self).__init__(on_error=on_error,

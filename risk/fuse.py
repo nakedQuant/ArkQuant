@@ -25,7 +25,7 @@ class Fuse(BaseFuse):
         当持仓组合在一定时间均值低于threshold --- 继续执行还是退出
     """
     def __init__(self,
-                 fuse=0.85,
+                 fuse,
                  window=5):
         self.fuse = fuse
         self.window = window
@@ -36,4 +36,13 @@ class Fuse(BaseFuse):
             super().protect()
 
 
-__all__ = ['Fuse']
+class NoFuse(BaseFuse):
+    """
+        当持仓组合在一定时间均值低于threshold --- 继续执行还是退出
+    """
+
+    def trigger(self, portfolio):
+        pass
+
+
+__all__ = ['BaseFuse', 'Fuse', 'NoFuse']

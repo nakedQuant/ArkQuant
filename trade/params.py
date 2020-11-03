@@ -109,14 +109,14 @@ class SimulationParameters(object):
            data_frequency=self.data_frequency)
 
 
-def create_simulation_parameters(start=None,
-                                 end=None,
-                                 delay=DEFAULT_DELAY_BASE,
-                                 per_capital=DEFAULT_PER_CAPITAL_BASE,
-                                 capital_base=DEFAULT_CAPITAL_BASE,
-                                 loan_base=0.0,
-                                 data_frequency='daily',
-                                 benchmark='000001'):
+def create_simulation_parameters(start,
+                                 end,
+                                 loan_base,
+                                 delay,
+                                 per_capital,
+                                 capital_base,
+                                 data_frequency,
+                                 benchmark):
 
     if start is None:
         start = "{0}-01-01".format(2004)
@@ -131,6 +131,12 @@ def create_simulation_parameters(start=None,
         end = end
     else:
         end = end.strftime('%Y-%m-%d')
+
+    loan_base = loan_base or 0.0
+    delay = delay or DEFAULT_DELAY_BASE
+    per_capital = per_capital or DEFAULT_PER_CAPITAL_BASE
+    capital_base = capital_base or DEFAULT_CAPITAL_BASE
+    benchmark = benchmark or '000001'
 
     sim_params = SimulationParameters(
         start_session=start,

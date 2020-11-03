@@ -71,7 +71,7 @@ class LimitOrder(ExecutionStyle):
         Maximum price for buys, or minimum price for sells, at which the order
         should be filled.
     """
-    def __init__(self, limit=0.08):
+    def __init__(self, limit):
         self.limit = limit
 
     def get_limit_ratio(self, asset, dts):

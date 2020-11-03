@@ -12319,3 +12319,89 @@ class finaldescriptor(final):
 #
 # self.generator = self._create_generator()
 # self.broker = self._initialize_broker()
+
+# # set module which needed
+# if benchmark_returns is None:
+#     benchmark_returns, _ = load_market_data(environ=environ)
+#
+# if algotext is not None:
+#     if local_namespace:
+#         ip = get_ipython()  # noqa
+#         namespace = ip.user_ns
+#     else:
+#         namespace = {}
+#
+#     for assign in defines:
+#         try:
+#             name, value = assign.split('=', 2)
+#         except ValueError:
+#             raise ValueError(
+#                 'invalid define %r, should be of the form name=value' %
+#                 assign,
+#             )
+#         try:
+#             # evaluate in the same namespace so names may refer to
+#             # eachother
+#             namespace[name] = eval(value, namespace)
+#         except Exception as e:
+#             raise ValueError(
+#                 'failed to execute definition for name %r: %s' % (name, e),
+#             )
+# elif defines:
+#     raise _RunAlgoError(
+#         'cannot pass define without `algotext`',
+#         "cannot pass '-D' / '--define' without '-t' / '--algotext'",
+#     )
+# else:
+#     namespace = {}
+#     if algofile is not None:
+#         algotext = algofile.read()
+#
+# if print_algo:
+#     if PYGMENTS:
+#         highlight(
+#             algotext,
+#             PythonLexer(),
+#             TerminalFormatter(),
+#             outfile=sys.stdout,
+#         )
+#     else:
+#         click.echo(algotext)
+#
+# if trading_calendar is None:
+#     trading_calendar = get_calendar('XNYS')
+#
+# # date parameter validation
+# if trading_calendar.session_distance(start, end) < 1:
+#     raise _RunAlgoError(
+#         'There are no trading days between %s and %s' % (
+#             start.date(),
+#             end.date(),
+#         ),
+#     )
+#
+# def choose_loader(column):
+#     if column in USEquityPricing.columns:
+#         return pipeline_loader
+#     raise ValueError(
+#         "No pipe registered for column %s." % column
+#     )
+#
+# if isinstance(metrics_set, six.string_types):
+#     try:
+#         metrics_set = metric.load(metrics_set)
+#     except ValueError as e:
+#         raise _RunAlgoError(str(e))
+#
+# if isinstance(blotter, six.string_types):
+#     try:
+#         blotter = load(Blotter, blotter)
+#     except ValueError as e:
+#         raise _RunAlgoError(str(e))
+#
+# if output == '-':
+#     click.echo(str(perf))
+# elif output != os.devnull:  # make the zipline magic not write any data
+#     perf.to_pickle(output)
+# return perf
+
