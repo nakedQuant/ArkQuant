@@ -9,7 +9,7 @@ import pandas as pd, numpy as np, re, requests, time
 from bs4 import BeautifulSoup
 from collections import defaultdict
 from toolz import valmap
-from test.xml import UserAgent, ProxyIp
+from gateway.spider.xml import UserAgent, ProxyIp
 
 
 def _parse_url(url, encoding='gbk', bs=True):
