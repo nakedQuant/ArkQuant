@@ -28,11 +28,12 @@ Temporary Items
 .apdisk
 
 # idea
-.idea/SearchImage.iml
-/.idea/misc.xml
-/.idea/workspace.xml
-/.idea/vcs.xml
+#.idea/SearchImage.iml
+#/.idea/misc.xml
+#/.idea/workspace.xml
+#/.idea/vcs.xml
 /.idea/
+
 #/gateway/spider/__init__.py
 #!/gateway/spider/__init__.py
 # spider config
