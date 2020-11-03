@@ -6,7 +6,6 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 import pandas as pd
-from functools import partial
 from contextlib import ExitStack
 from util.api_support import AlgoAPI
 from trade import (

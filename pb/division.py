@@ -79,18 +79,18 @@ class Division(object):
 
         """
         open_pct, ensure_price, per_amount = self._calculate_division_data(asset, dts)
-        print('division data', open_pct, ensure_price, per_amount)
+        # print('division data', open_pct, ensure_price, per_amount)
         multiplier = capital / (ensure_price * asset.tick_size)
         if multiplier >= 1.0:
             amount = asset.tick_size * np.floor(multiplier) \
                 if asset.increment else np.floor(capital / ensure_price)
-            print('ensure amount', amount)
+            # print('ensure amount', amount)
             assert amount >= asset.tick_size, 'amount must be at least tick_size'
             control_amount = self.trade_controls.validate(asset, amount, portfolio, dts)
-            print('capital control_amount', control_amount)
+            # print('capital control_amount', control_amount)
             zip_iterables = self.underneath_func.create_iterables(asset, control_amount, per_amount, dts)
             capital_orders = self._simulate_iterator(asset, zip_iterables)
-            print('capital_orders', capital_orders)
+            # print('capital_orders', capital_orders)
         else:
             capital_orders = []
         return capital_orders

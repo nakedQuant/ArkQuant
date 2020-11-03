@@ -76,7 +76,7 @@ class Broker(object):
         """建立执行计划"""
         capital = ledger.portfolio.portfolio_cash
         positives, negatives, duals = self.engine.execute_algorithm(ledger, dts)
-        print('broker : initialize engine output', positives, negatives, duals)
+        print('engine output positives, negatives, dual :', positives, negatives, duals)
         portfolio = ledger.portfolio
         # 直接买入
         call_transactions = self.implement_capital(positives, capital, portfolio, dts)

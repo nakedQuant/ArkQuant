@@ -98,9 +98,9 @@ class SimpleUncover(BaseUncover):
         size = int(np.floor(abs(amount) / base_amount))
         # print('underneath size', size)
         amount_array = np.tile([base_amount], size)
-        print('underneath base_amount array', amount_array)
+        # print('underneath base_amount array', amount_array)
         abundant = int(abs(amount) % base_amount)
-        print('underneath abundant', abundant)
+        # print('underneath abundant', abundant)
         if asset.increment:
             num = np.floor(abundant / tick_size)
             random_idx = np.random.randint(0, size, int(num))

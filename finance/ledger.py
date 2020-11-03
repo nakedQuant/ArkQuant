@@ -118,7 +118,7 @@ class Ledger(object):
         # print('portfolio utility', portfolio.utility)
         self._dirty_portfolio = False
 
-    def daily_sid_pnl(self, dts):
+    def daily_position_pnl(self, dts):
         """
             param dts: %Y-%m-%d --- 包括已有持仓以及当天关闭持仓的收益率
         """

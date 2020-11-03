@@ -48,9 +48,8 @@ class SimulationBlotter(object):
             if bottom < price < upper:
                 # 计算滑价系数
                 slippage = self.slippage.calculate_slippage_factor(asset, dts)
-                print('slippage', self.slippage.basis_points)
-                print('commission', self.commission.base_cost)
-                print('order slippage', slippage)
+                # print('slippage', self.slippage.basis_points)
+                # print('commission', self.commission.base_cost)
                 order.price = price * (1+slippage)
                 return order
             return False
@@ -65,22 +64,22 @@ class SimulationBlotter(object):
         minutes = portal.get_spot_value(dts, asset, 'minute', ['close'])
         # print('minutes price', minutes)
         if isinstance(order, PriceOrder):
-            print('blotter order', order)
+            # print('blotter order', order)
             ticker = locate_pos(price, minutes['close'], direction)
-            print('ticker', ticker)
+            # print('ticker', ticker)
             new_order = transfer_to_order(order, ticker=ticker)
         elif isinstance(order, TickerOrder):
             ticker = order.created_dt
             # print('minutes', minutes['close'])
             price = minutes['close'][ticker]
-            print('ticker price', ticker, price)
+            # print('ticker price', ticker, price)
             new_order = transfer_to_order(order, price=price)
         elif isinstance(order, Order):
             new_order = order
         else:
             raise ValueError
         trigger_order = self._trigger_check(new_order, dts)
-        print('trigger_order', trigger_order)
+        # print('trigger_order', trigger_order)
         return trigger_order
 
     def create_bulk_transactions(self, orders, dts):

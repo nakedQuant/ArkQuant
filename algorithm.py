@@ -5,7 +5,7 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-import pandas as pd
+import pandas as pd, json
 # error module
 from error.errors import (
     RegisterTradingControlPostInit,
@@ -205,7 +205,7 @@ class TradingAlgorithm(object):
         """
         division_model = Division(self.underneath_module,
                                   self.trading_controls,
-                                  self.sim_params.capital_base)
+                                  self.sim_params.per_capital)
         blotter = SimulationBlotter(self.commission,
                                     self.slippage,
                                     self.execution_style)
@@ -279,29 +279,34 @@ class TradingAlgorithm(object):
         with AlgoAPI(self):
             self._initialize(self, *args, **kwargs)
 
-    # def analyse(self, perf):
-    #     with AlgoAPI(self):
-    #         stats = self._analyze.end_of_simulation(
-    #             perf,
-    #             self.ledger,
-    #             self.benchmark_returns)
-    #     return stats
-
-    def run(self):
-        """Run the algorithm.
-        """
-        self.before_trading_start()
-        # Create px_trade and loop through simulated_trading.
-        # Each iteration returns a perf dictionary
-        perfs = []
-        for perf in self.yield_simulation():
-            print('perf', perf)
-            perfs.append(perf)
-        # convert perf dict to pandas frame
-        overall_analysis = self._create_daily_stats(perfs)
-        # analysis = self.analyse(daily_stats)
-        # return analysis
-        return overall_analysis
+    # @staticmethod
+    # def _create_daily_stats(perfs):
+    #     # create daily and cumulative stats frame
+    #     risk_perf = []
+    #     daily_perf = []
+    #     cumulative_perf = []
+    #     for perf in perfs[:-1]:
+    #         daily_perf.append(perf['daily_perf'])
+    #         cumulative_perf.append(perf['cumulative_perf'])
+    #         risk_perf.append(perf['cumulative_risk_metrics'])
+    #     daily_dts = pd.DatetimeIndex(
+    #         [p['period_close'] for p in daily_perf], tz='UTC'
+    #     )
+    #     # aggregate
+    #     aggregate_stats = dict()
+    #     risk_stats = pd.DataFrame(risk_perf, index=daily_dts)
+    #     # print('risk_stats', risk_stats.T)
+    #     aggregate_stats['cumulative_risk_metrics'] = risk_stats.T
+    #     daily_stats = pd.DataFrame(daily_perf, index=daily_dts)
+    #     aggregate_stats['daily_perf'] = daily_stats.T
+    #     # print('daily_stats', daily_stats.T)
+    #     cumulative_stats = pd.DataFrame(cumulative_perf, index=daily_dts)
+    #     aggregate_stats['cumulative_risk_metrics'] = cumulative_stats.T
+    #     # print('cumulative_stats', cumulative_stats.T)
+    #     aggregate_stats['title'] = perfs[-1]
+    #     # print('title', perfs[-1])
+    #     print('stats', aggregate_stats)
+    #     return aggregate_stats
 
     @staticmethod
     def _create_daily_stats(perfs):
@@ -317,19 +322,36 @@ class TradingAlgorithm(object):
             [p['period_close'] for p in daily_perf], tz='UTC'
         )
         # aggregate
-        frame_stats = dict()
-        risk_stats = pd.DataFrame(risk_perf, index=daily_dts)
-        print('risk_stats', risk_stats.T)
-        frame_stats['cumulative_risk_metrics'] = risk_stats.T
-        daily_stats = pd.DataFrame(daily_perf, index=daily_dts)
-        frame_stats['daily_perf'] = daily_stats.T
-        print('daily_stats', daily_stats.T)
-        cumulative_stats = pd.DataFrame(cumulative_perf, index=daily_dts)
-        frame_stats['cumulative_risk_metrics'] = cumulative_stats.T
-        print('cumulative_stats', cumulative_stats.T)
-        frame_stats['overall'] = perfs[-1]
-        print('config', perfs[-1])
-        return frame_stats
+        aggregate_stats = dict()
+        aggregate_stats['cumulative_risk_metrics'] = risk_perf
+        aggregate_stats['daily_perf'] = daily_perf
+        aggregate_stats['cumulative_risk_metrics'] = cumulative_perf
+        aggregate_stats['title'] = perfs[-1]
+        print('aggregate_stats', aggregate_stats)
+        return aggregate_stats
+
+    def run(self):
+        """Run the algorithm.
+        """
+        self.before_trading_start()
+        # Create px_trade and loop through simulated_trading.
+        # Each iteration returns a perf dictionary
+        perfs = []
+        for perf in self.yield_simulation():
+            print('perf', perf)
+            perfs.append(perf)
+        # convert perf dict to pandas frame
+        analysis = self._create_daily_stats(perfs)
+        # analysis = self.analyse(daily_stats)
+        return analysis
+
+    # def analyse(self, perf):
+    #     with AlgoAPI(self):
+    #         stats = self._analyze.end_of_simulation(
+    #             perf,
+    #             self.ledger,
+    #             self.benchmark_returns)
+    #     return stats
 
     @api_method
     def get_environment(self, field='platform'):
@@ -471,7 +493,7 @@ class TradingAlgorithm(object):
         try:
             pipeline = Pipeline(terms, ump_pickers)
         except Exception as e:
-            print('can not create pipeline')
+            print('can not create pipeline due to %s' % e)
         else:
             self.attach_pipeline(pipeline)
 
@@ -728,7 +750,7 @@ __all__ = ['TradingAlgorithm']
 if __name__ == '__main__':
 
     from trade.params import create_simulation_parameters
-    trading_params = create_simulation_parameters(start='2019-09-01', end='2019-09-20')
+    trading_params = create_simulation_parameters(start='2020-09-01', end='2020-09-20')
     print('trading_params', trading_params)
     # initialize trading algorithm
     trading = TradingAlgorithm(trading_params)
@@ -744,7 +766,8 @@ if __name__ == '__main__':
     trading.set_execution_style(order_style)
     # print('execution', trading.execution)
     trading.set_restriction_style(restrictions_list)
-    # set pipeline api scripts = None,
+    # set pipeline api scripts = None
+    # trading.set_pipeline_final()
     from pipe.term import Term
     kw = {'window': (5, 10), 'fields': ['close']}
     cross_term = Term('cross', kw)
@@ -752,8 +775,6 @@ if __name__ == '__main__':
     break_term = Term('break', kw, cross_term)
     pipeline = Pipeline([break_term, cross_term])
     trading.attach_pipeline(pipeline)
-    # trading.set_pipeline_final()
-    # print('successfully set trading finance module', trading.pipeline_engine.restricted_rules)
     # set pb models
     # trading.set_uncover_style(SimpleUncover)
     # set risk models
@@ -762,16 +783,14 @@ if __name__ == '__main__':
     # print('allocation', trading.broker.capital_model)
     trading.set_alert_style(PositionLossRisk(0.1))
     trading.set_fuse_style(Fuse())
-    # print('successfully set risk models', trading.ledger.risk_alert, trading.ledger.fuse_risk)
     # set trading control models
     trading.set_max_position_size(0.8)
-    # print('max_position_size', trading.trade_controls)
     trading.set_max_order_size(0.1, window=5)
-    # print('max_order_size', trading.division_model.trade_controls)
     trading.set_long_only()
-    # print('successfully set control models', trading.division_model.trade_controls)
     # set account models
     # trading.set_net_leverage(1.3)
-    # print('successfully set leverage models', trading.division_model.trade_controls)
     # run algorithm
-    trading.run()
+    analysis = trading.run()
+    # analysis_path = '/Users/python/Library/Mobile Documents/com~apple~CloudDocs/ArkQuant/metric/temp.json'
+    # with open(analysis_path, 'w+') as f:
+    #     json.dump(analysis, f)

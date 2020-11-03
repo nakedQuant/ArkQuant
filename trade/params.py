@@ -40,7 +40,7 @@ class SimulationParameters(object):
         self._delay = delay
         self._loan = loan_base
         # per_capital used to calculate and split capital or position
-        self.per_capital = per_capital
+        self._per_capital = per_capital
         self._capital_base = capital_base
 
         self._data_frequency = data_frequency
@@ -50,6 +50,10 @@ class SimulationParameters(object):
     @property
     def capital_base(self):
         return self._capital_base
+
+    @property
+    def per_capital(self):
+        return self._per_capital
 
     @property
     def loan(self):

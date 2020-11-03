@@ -778,6 +778,8 @@ __all__ = [
     'calmar_ratio',
     'stability_of_timeseries',
     'max_drawdown',
+    'max_duration',
+    'max_succession',
     'omega_ratio',
     'sortino_ratio',
     'downside_risk',

@@ -27,7 +27,7 @@ class Pipeline(object):
         self._terms_store = [terms] if isinstance(terms, Term) else terms
         self._workspace = OrderedDict()
         self._ump = UmpPickers(ump_picker) if ump_picker else UmpPickers(terms)
-        self._name = uuid.uuid4()
+        self._name = str(uuid.uuid4())
 
     @property
     def name(self):

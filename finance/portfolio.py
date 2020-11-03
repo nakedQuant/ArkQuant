@@ -90,7 +90,7 @@ class Portfolio(object):
             weights = pd.Series(aggregate) / self.portfolio_value
         else:
             weights = pd.Series(dtype='float')
-        return weights
+        return weights.to_dict()
 
     def to_dict(self):
         return self.__dict__

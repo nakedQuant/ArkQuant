@@ -27,7 +27,7 @@ class SessionField(object):
                        packet,
                        ledger,
                        session_ix):
-        packet['daily_perf']['period_close'] = session_ix
+        packet['daily_perf']['period_close'] = session_ix.strftime('%Y-%m-%d')
 
 
 class NumTradingDays(object):
@@ -141,11 +141,11 @@ class PNL(object):
         self._end_of_period('daily_perf', packet, ledger)
 
 
-class SymbolPNL(object):
+class PositionPNL(object):
     """Tracks daily symbol PNL --- asset.sid daily pnl
     """
     def end_of_session(self, packet, ledger, session_ix):
-        packet['daily_perf']['position_pnl'] = ledger.daily_sid_pnl(session_ix)
+        packet['daily_perf']['position_pnl'] = ledger.daily_position_pnl(session_ix)
 
 
 class Returns(object):

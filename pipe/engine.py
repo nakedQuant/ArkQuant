@@ -120,7 +120,7 @@ class Engine(ABC):
             # print('out', out)
             results.append(out)
         results = [r for r in results if r]
-        print('run pipeline output', results)
+        # print('run pipeline output', results)
         return results
 
     @staticmethod
@@ -153,7 +153,7 @@ class Engine(ABC):
                 output.append(res)
             # ump position
             output = [r for r in output if r]
-        print('run ump result', output)
+        # print('run ump result', output)
         return output
 
     def execute_algorithm(self, ledger, dts):

@@ -118,13 +118,13 @@ class MaxOrderSize(TradingControl):
         """
         sliding_window = portal.get_window([asset], algo_datetime, - abs(self.window), ['volume'], 'daily')
         threshold = sliding_window[asset.sid]['volume'].mean() * self.max_notional
-        print('threshold', threshold)
+        # print('threshold', threshold)
         if amount > threshold:
             self.handle_violation(asset, amount, algo_datetime)
             control_amount = threshold
         else:
             control_amount = amount
-        print('control_amount', amount)
+        # print('control_amount', amount)
         return control_amount
 
 
