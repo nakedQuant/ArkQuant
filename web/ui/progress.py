@@ -283,7 +283,7 @@ except ImportError:
 
 
 # XXX: This class is currently untested, because we don't require ipywidgets as
-#      a test dependency. Be careful if you make changes to this.
+#      a c_test dependency. Be careful if you make changes to this.
 class IPythonWidgetProgressPublisher(object):
     """A progress publisher that publishes to an IPython/Jupyter widget.
     """

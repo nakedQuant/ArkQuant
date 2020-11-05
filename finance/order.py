@@ -206,4 +206,4 @@ __all__ = ['Order',
 #         orders = [TickerOrder(equity, *args) for args in iterables]
 #     else:
 #         orders = [PriceOrder(equity, *args) for args in iterables]
-#     print('test orders', orders)
+#     print('c_test orders', orders)

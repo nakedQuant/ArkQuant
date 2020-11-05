@@ -63,7 +63,7 @@ class BcolzReader(BarReader):
         # print('cparams', table.cparams)
         meta = table.attrs
         # apply functools
-        # # test = init.eval('(ticker - 34200) / 86400')
+        # # c_test = init.eval('(ticker - 34200) / 86400')
         # 获取数据
         if self.data_frequency == 'minute':
             start = transfer_to_timestamp(sdate)

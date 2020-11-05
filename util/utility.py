@@ -250,7 +250,7 @@ def check_indexes_all_same(indexes, message="Indexes are not equal."):
             )
 
 
-g_project_log_dir = 'test'
+g_project_log_dir = 'c_test'
 
 
 def init_logging(g_project_log_info):

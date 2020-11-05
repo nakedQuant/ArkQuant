@@ -8,9 +8,9 @@
 # #
 # # class Child(Parent):
 # #     def __init__(self,c_name = 'Child'):
-# #         super().__init__(p_name = 'test',type='test')
+# #         super().__init__(p_name = 'c_test',type='c_test')
 # #         self._type = c_name
-# #         #self.p_name = 'test'
+# #         #self.p_name = 'c_test'
 # #
 # #     def private(self):
 # #         super().run()
@@ -31,18 +31,18 @@
 # #     for r in res:
 # #         print(r.get())
 # #
-# #     test = dict()
-# #     test[Child] = 3
-# #     print(test.keys())
-# #     print(type(test.values()))
+# #     c_test = dict()
+# #     c_test[Child] = 3
+# #     print(c_test.keys())
+# #     print(type(c_test.values()))
 #
 # #生成器：基于yield方法将函数转化为迭代器，next方法，每次执行到yield停止；而iter（迭代器将非可迭代对象强制转化为对象）
-# # def test(n):
+# # def c_test(n):
 # #     for id_ in range(n):
 # #         yield id_
 # #         print('----------yield:',id_)
 # #
-# # iter = test(5)
+# # iter = c_test(5)
 # # #print(iter)
 # # # for i in iter:
 # # #     pass
@@ -65,12 +65,12 @@
 # # from interface import Interface,Implements
 # # class A(Interface):
 # #
-# #     def test(self,a,b):
+# #     def c_test(self,a,b):
 # #         print(a,b)
 # #
 # # class B(implements(A)):
 # #
-# #     def test(self,a,c):
+# #     def c_test(self,a,c):
 # #         b = a+c
 # #         print(b)
 #
@@ -89,12 +89,12 @@
 # #
 # # class A:
 # #
-# #     '''test A '''
+# #     '''c_test A '''
 # #
 # #     def __init__(self,a):
 # #         self.__name__ = 'passthrough'
 # #
-# #     def test(self,c):
+# #     def c_test(self,c):
 # #         print(c)
 # #
 # #     def __call__(self,b):
@@ -102,7 +102,7 @@
 # #
 # # print(A.__doc__)
 # # print(A.__name__)
-# # A().test('a')
+# # A().c_test('a')
 # # print(callable(A))
 # #
 # # a = A(3)
@@ -1085,13 +1085,13 @@
 # #     result = frozen(5,3)
 # #     print(result)
 #
-# # test = "192.0.0.1?!289.0.0.1!0.0.0.0!192.163.10.28?192.0.0.1"
-# # test_replace = test.replace('?','!')
+# # c_test = "192.0.0.1?!289.0.0.1!0.0.0.0!192.163.10.28?192.0.0.1"
+# # test_replace = c_test.replace('?','!')
 # # test_tuple = test_replace.split('!')
 # # test_sorted = sorted(test_tuple,key = lambda x : x.split('.')[-1])[1:]
 # # print(test_sorted)
 # #
-# # a=' '.join(sorted(test.replace('?','!').split('!'),key=lambda x:x.split('.')[-1])).split()
+# # a=' '.join(sorted(c_test.replace('?','!').split('!'),key=lambda x:x.split('.')[-1])).split()
 # # print(a)
 # #numpy memmap
 # #判断是否有非法字符
@@ -1339,9 +1339,9 @@
 # #         spamwriter.writerow(r)
 # #         spamwriter.writerow('\n')
 #
-# # test = '{page:test,data:["test":3]}'
+# # c_test = '{page:c_test,data:["c_test":3]}'
 # # import re
-# # match = re.search('\[(.*.)\]',test)
+# # match = re.search('\[(.*.)\]',c_test)
 # # print(match.group())
 # # https://pypi.tuna.tsinghua.edu.cn/simple
 # #apply --- dataframe -行或者一列
@@ -1489,9 +1489,9 @@
 # # SERIALIZABLE
 # # AUTOCOMMIT
 # # """
-# # engine = create_engine('mysql+pymysql://root:macpython@localhost:3306/test',
+# # engine = create_engine('mysql+pymysql://root:macpython@localhost:3306/c_test',
 # #                        isolation_level="READ UNCOMMITTED")
-# # engine = create_engine('mysql+pymysql://root:macpython@localhost:3306/test',
+# # engine = create_engine('mysql+pymysql://root:macpython@localhost:3306/c_test',
 # #                        pool_size=50, max_overflow=100, pool_timeout=-1)
 # # db = 'db'
 # # with engine.connect() as conn:
@@ -2625,7 +2625,7 @@
 #     return out
 
 
-# class test(object):
+# class c_test(object):
 
 # def initialize(self):
 #     pass
@@ -6997,13 +6997,13 @@ from six.moves.urllib_error import HTTPError
 #
 
 # namespace = dict()
-# with open('/Users/python/Library/Mobile Documents/com~apple~CloudDocs/ArkQuant/test/test_driver.py','r') as f:
+# with open('/Users/python/Library/Mobile Documents/com~apple~CloudDocs/ArkQuant/c_test/test_driver.py','r') as f:
 #     exec(f.read(),namespace)
 #
 # print(namespace.keys())
-# test = namespace['UnionEngine']
-# print(test)
-# # ins = test()
+# c_test = namespace['UnionEngine']
+# print(c_test)
+# # ins = c_test()
 # # print(ins)
 # # print(namespace['__builtins__'])
 # # print(namespace['signature'])
@@ -8718,7 +8718,7 @@ from dateutil.relativedelta import relativedelta
 # )
 # print('months',months.size)
 # print(type(months),months)
-# months.iloc[-1] = 'test'
+# months.iloc[-1] = 'c_test'
 # period = months[0].to_period(freq='%dM' % 3)
 # print(months[::3])
 # print('period',period.end_date)
@@ -8860,7 +8860,7 @@ from dateutil.relativedelta import relativedelta
 #     """
 #         所有以test_开头的方法都会自动运行
 #         assertEqual,assertNotEqual,assertTrue,assertFalse,assertIn,assertNotIn
-#         setUp -- called before test method ; setUpClass --A  class method called before tests in an individual class are run
+#         setUp -- called before c_test method ; setUpClass --A  class method called before tests in an individual class are run
 #     """
 #     @classmethod
 #     def setUpClass(cls) -> None:
@@ -10508,7 +10508,7 @@ from numpy.lib.stride_tricks import as_strided
 #         :return:
 #         """
 #         raise NotImplementedError()
-# ins = test()
+# ins = c_test()
 # print(ins)
 # print(namespace['__builtins__'])
 # print(namespace['signature'])
@@ -10542,7 +10542,7 @@ from numpy.lib.stride_tricks import as_strided
 #     self._before_trading_start = before_trading_start
 #     self._analyze = analyze
 namespace = dict()
-with open('/Users/python/Library/Mobile Documents/com~apple~CloudDocs/ArkQuant/test/test_driver.py','r') as f:
+with open('/Users/python/Library/Mobile Documents/com~apple~CloudDocs/ArkQuant/c_test/test_driver.py','r') as f:
     exec(f.read(), namespace)
 
 print(namespace.keys())
@@ -10719,8 +10719,8 @@ print(test)
 # print('base', base)
 # p_dir = os.getcwd()
 # print('now directory', p_dir)
-# test = os.path.split(os.getcwd())
-# print('test', test)
+# c_test = os.path.split(os.getcwd())
+# print('c_test', c_test)
 # target = os.path.join(os.path.split(os.getcwd())[0], 'strat')
 # print('target', target)
 # files = os.path.join(target, '*')
@@ -11072,7 +11072,7 @@ def _fit_statsmodel(x, y):
 #     signal.signal(signal.SIGALRM, handler)
 #     signal.alarm(1)
 #     while True:
-#         print('test')
+#         print('c_test')
 #
 # def protect(cls):
 #     # Define signal handler function

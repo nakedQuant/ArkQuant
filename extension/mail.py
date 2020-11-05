@@ -35,11 +35,11 @@ msg=MIMEText('<html><body><h1>hello</h1>'+\
 msg=MIMEMultipart()
 msg.attach(MIMEText('send with file...', 'plain', 'utf-8'))
 # 添加附件就是加上一个MIMEBase，从本地读取一个图片:
-with open('/Users/michael/Downloads/test.png', 'rb') as f:
+with open('/Users/michael/Downloads/c_test.png', 'rb') as f:
     # 设置附件的MIME和文件名，这里是png类型:
-    mime = MIMEImage(f.read(), 'png', filename='test.png')
+    mime = MIMEImage(f.read(), 'png', filename='c_test.png')
     # 加上必要的头信息:
-    mime.add_header('Content-Disposition', 'attachment', filename='test.png')
+    mime.add_header('Content-Disposition', 'attachment', filename='c_test.png')
     mime.add_header('Content-ID', '<0>')
     mime.add_header('X-Attachment-Id', '0')
     # 把附件的内容读进来:

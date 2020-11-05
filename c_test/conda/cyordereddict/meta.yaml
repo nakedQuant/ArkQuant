@@ -53,7 +53,7 @@ about:
     \    ``cyorderedddict.OrderedDict`` is an extension type (similar to the\n    built-in ``dict``) instead of a Python class. This is necessary for speed,\n    but means that in a few pathological cases\
     \ its behavior will differ from\n    ``collections.OrderedDict``:\n\n    * The ``inspect`` module does not work on ``cyorderedddict.OrderedDict``\n      methods.\n    * Extension types use slots instead\
     \ of dictionaries, so you cannot add\n      custom attributes without making a subclass (e.g.,\n      ``OrderedDict.foo = 'bar'`` will fail).\n\n    You can do anything else you might do with an OrderedDict,\
-    \ including\n    subclassing: everything else passes the ``collections.OrderedDict`` test\n    suite. We based the Cython code directly on the Python standard library,\n    and thus use separate code\
+    \ including\n    subclassing: everything else passes the ``collections.OrderedDict`` c_test\n    suite. We based the Cython code directly on the Python standard library,\n    and thus use separate code\
     \ bases for Python 2 and 3, specifically to\n    reduce the potential for introducing new bugs or performance regressions.\n\nLicense:\n    MIT. Based on the Python standard library, which is under\
     \ the Python\n    Software Foundation License."
   doc_url: ''

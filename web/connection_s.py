@@ -72,7 +72,7 @@ def func(x, y):
 QManager.register('add', func)
 QManager.register('fifo', callable=lambda:  queue)
 
-m = QManager(address=('192.168.0.103', 10000), authkey=b'test')
+m = QManager(address=('192.168.0.103', 10000), authkey=b'c_test')
 test = m.get_server()
 test.serve_forever()
 
@@ -86,7 +86,7 @@ CManager.register('add')
 
 
 # if __name__ == '__main__':
-#     m = CManager(address=('192.168.0.103', 50000), authkey=b'test')
+#     m = CManager(address=('192.168.0.103', 50000), authkey=b'c_test')
 #     m.connect()
 #     res = m.add(4, 5)
 #     q = m.fifo()

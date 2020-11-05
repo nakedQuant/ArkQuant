@@ -25,7 +25,7 @@ class PipelineLoader(ABC):
         The default implementation is a no-op.
         """
         pipeline_domain = copy.deepcopy(domains[0])
-        # print('copy test', domains[0], pipeline_domain)
+        # print('copy c_test', domains[0], pipeline_domain)
         for domain in domains[1:]:
             pipeline_domain | domain
         # print('before domains', domains[0].domain_window)

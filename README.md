@@ -160,6 +160,20 @@ QuickStart:
     # 执行回测引擎
      run_algorithm()
     # results : pickle or pdf (每天metric_perf组成）
+    
+优化策略:
+    
+    1.cython 对主要逻辑改写
+    2.构建mysql --- reddis 减轻数据库压力同时提高性能
+    3.alembic 对数据库迁移
+    4.asyncio模块对内部的事件驱动逻辑进行重构
+    5.celery 对pipeline优化实现
+    
+    
+目前的工作进度
+
+    1.cython 改写
+    2.研究XTP接口
 
 
 

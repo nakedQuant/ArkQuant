@@ -278,7 +278,7 @@ class BcolzMinuteBarWriter(BcolzWriter):
             table.flush()
         print(table.len)
         print('metadata', table.attrs)
-        # test
+        # c_test
         # df = table.todataframe()
         # print('df', df)
 

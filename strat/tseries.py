@@ -16,7 +16,7 @@ class ADF(BaseFeature):
         there is no unit root. If the pvalue is above a critical size, then we cannot reject that there is a unit root.
 
         model args :
-            Maximum lag which is included in test, default 12*(nobs/100)^{1/4}
+            Maximum lag which is included in c_test, default 12*(nobs/100)^{1/4}
             regression{‘c’,’ct’,’ctt’,’nc’}
             ‘c’ : constant only (default)
             ‘ct’ : constant and trend
@@ -26,7 +26,7 @@ class ADF(BaseFeature):
             if None, then maxlag lags are used
             if ‘AIC’ (default) or ‘BIC’, then the number of lags is chosen to minimize the corresponding information criterion
             ‘t-stat’ based choice of maxlag. Starts with maxlag and drops a lag until the t-statistic on the last lag length
-            is significant using a 5%-sized test
+            is significant using a 5%-sized c_test
 
         序列的稳定性:
             1、价格序列
@@ -151,9 +151,9 @@ class Coint(BaseFeature):
             2、判断序列是否平稳 --- 数据差分进行处理
             3、协整模块
         Coint 返回值三个如下:
-            coint_t: float t - statistic of unit - root test on residuals
+            coint_t: float t - statistic of unit - root c_test on residuals
             pvalue: float MacKinnon's approximate p-value based on MacKinnon (1994)
-            crit_value: dict Critical  values for the test statistic at the 1 %, 5 %, and 10 % levels.
+            crit_value: dict Critical  values for the c_test statistic at the 1 %, 5 %, and 10 % levels.
         Coint 参数：
             statsmodels.tsa.stattools.coint(y0，y1，trend ='c'，method ='aeg'，maxlag = None，autolag ='aic'，
     """

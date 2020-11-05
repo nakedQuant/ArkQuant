@@ -314,7 +314,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def send_test_email(self) -> None:
         """
-        Sending a test email.
+        Sending a c_test email.
         """
         self.main_engine.send_email("VN Trader", "testing")
 

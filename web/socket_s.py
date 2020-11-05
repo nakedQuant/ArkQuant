@@ -271,7 +271,7 @@ DocXMLRPCServer.set_server_documentation（server_documentation ）
 
 ###########################################################
 # Examples of Client
-# simple test program (from the XML-RPC specification)
+# simple c_test program (from the XML-RPC specification)
 # from xmlrpc.client import ServerProxy, Error
 #
 # # server = ServerProxy("http://localhost:8000") # local server
