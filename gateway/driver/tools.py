@@ -23,7 +23,7 @@ def _parse_url(url, encoding='gbk', bs=True):
     header = {'User-Agent': UserAgent[np.random.randint(0, len(UserAgent)-1)]}
     proxy = {'http': ProxyIp[np.random.randint(0, len(ProxyIp) - 1)]}
     # delay in case of httpError
-    time.sleep(np.random.randint(1, 3))
+    # time.sleep(np.random.randint(1, 2))
     if proxy:
         req = requests.get(url, headers=header, proxies=proxy, timeout=3)
     else:

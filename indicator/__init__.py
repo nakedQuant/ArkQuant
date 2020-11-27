@@ -110,7 +110,8 @@ class ExponentialMovingAverage(BaseFeature):
     def _calculate_weights(frame, kwargs):
         raise NotImplementedError()
 
-    def _reformat_wgt(self, weights):
+    @staticmethod
+    def _shift_weight(weights):
         p = weights.copy()
         p = 1 - p
         p = list(p)
@@ -121,22 +122,10 @@ class ExponentialMovingAverage(BaseFeature):
         decay_rates = np.array(prod_p) * weights
         return decay_rates
 
-    # def _format_wgt(self, frame, length):
-    #     weights = self._calculate_weights(frame, length)
-    #     p = weights.copy()
-    #     p = 1 - p
-    #     p = list(p)
-    #     p.reverse()
-    #     p.insert(0, 1)
-    #     prod_p = list(np.cumprod(p)[:-1])
-    #     prod_p.reverse()
-    #     decay_rates = np.array(prod_p) * weights
-    #     return decay_rates
-
     def _calc_feature(self, frame, kwargs):
         recursion = kwargs.get('recursion', 1)
         ema_weights = self._calculate_weights(frame, kwargs)
-        exponential_weights = self._reformat_wgt(ema_weights)
+        exponential_weights = self._shift_weight(ema_weights)
         # print('exponential_weights', exponential_weights)
         window = kwargs['window']
         out = frame

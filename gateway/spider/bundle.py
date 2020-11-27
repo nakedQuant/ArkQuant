@@ -5,17 +5,17 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
-import json, pandas as pd, datetime, threading
+import json, pandas as pd, datetime
 from toolz import valmap
 from collections import defaultdict
-from threading import Thread, Lock
+from threading import Thread, Semaphore
 from functools import partial
 from gateway.database.db_writer import db
 from gateway.spider import Crawler
 from gateway.spider.url import ASSETS_BUNDLES_URL
 from gateway.driver.tools import _parse_url
 
-sema = threading.Semaphore(100)
+sema = Semaphore(500)
 
 
 class BundlesWriter(Crawler):
@@ -51,86 +51,68 @@ class BundlesWriter(Crawler):
             try:
                 deadline = self._cache_deadlines[tbl][sid]
             except Exception as e:
-                print('error :%s raise from sid come to market today' % e)
+                # print('error :%s raise from sid come to market today' % e)
                 deadline = None
             # frame = frame[frame['trade_dt'] > self._cache_deadlines[tbl][sid]]
             frame = frame[frame['trade_dt'] > deadline] if deadline else frame
             db.writer(tbl, frame)
 
     def request_equity_kline(self, sid):
-        with sema:
-            sid_id = '1.' + sid if sid.startswith('6') else '0.' + sid
-            try:
-                self._crawler({'request_sid': sid_id, 'sid': sid}, 'equity_price', pct=True)
-            except Exception as e:
-                print('spider %s  equity kline failure due to %r' % (sid, e))
-                self.missed['equity'].add(sid)
-            else:
-                self.missed['equity'].discard(sid)
+        sid_id = '1.' + sid if sid.startswith('6') else '0.' + sid
+        try:
+            self._crawler({'request_sid': sid_id, 'sid': sid}, 'equity_price', pct=True)
+        except Exception as e:
+            print('spider %s  equity kline failure due to %r' % (sid, e))
+            self.missed['equity'].add(sid)
+        else:
+            self.missed['equity'].discard(sid)
 
     def request_fund_kline(self, sid):
         # fund 以1或者5开头 --- 5（SH） 1（SZ）
-        with sema:
-            fund_id = '1.' + sid if sid.startswith('5') else '0.' + sid
-            try:
-                self._crawler({'request_sid': fund_id, 'sid': sid}, 'fund_price')
-            except Exception as e:
-                print('spider %s  fund kline failure due to %r' % (sid, e))
-                self.missed['fund'].add(sid)
-            else:
-                self.missed['fund'].discard(sid)
+        fund_id = '1.' + sid if sid.startswith('5') else '0.' + sid
+        try:
+            self._crawler({'request_sid': fund_id, 'sid': sid}, 'fund_price')
+        except Exception as e:
+            print('spider %s  fund kline failure due to %r' % (sid, e))
+            self.missed['fund'].add(sid)
+        else:
+            self.missed['fund'].discard(sid)
 
     def request_convertible_kline(self, sid):
         # 11开头 --- 6 ； 12开头 --- 0或者3
-        with sema:
-            bond_id = '1.' + sid if sid.startswith('11') else '0.' + sid
-            try:
-                self._crawler({'request_sid': bond_id, 'sid': sid}, 'convertible_price')
-            except Exception as e:
-                print('spider %s  convertible kline failure due to %r' % (sid, e))
-                self.missed['convertible'].add(sid)
-            else:
-                self.missed['convertible'].discard(sid)
+        bond_id = '1.' + sid if sid.startswith('11') else '0.' + sid
+        try:
+            self._crawler({'request_sid': bond_id, 'sid': sid}, 'convertible_price')
+        except Exception as e:
+            print('spider %s  convertible kline failure due to %r' % (sid, e))
+            self.missed['convertible'].add(sid)
+        else:
+            self.missed['convertible'].discard(sid)
 
     def _implement(self, method_name, q):
-        method = getattr(self, 'request_{}_kline'.format(method_name))
+
+        # 事件对象（线程之间通信）可以控制线程数量通过event set() clear() wait()
+        # Semaphore(value=1) 代表 release() 方法的调用次数减去 acquire() 的调用次数再加上一个初始值(Value)
+        # threading.BoundedSemaphore(value) 有界信号量通过检查以确保它当前的值不会超过初始值。如果超过了初始值，将会引发 ValueError 异常(上下文）
+        # Semaphore --- return threading instance as contextmanager
+        def semaphore_run(symbol):
+            sema.acquire()
+            method(symbol)
+            sema.release()
+
         threads = []
-        lock = Lock()
+        method = getattr(self, 'request_{}_kline'.format(method_name))
+
         if len(q[method_name]):
             for sid in q[method_name]:
-                try:
-                    print('sid', sid)
-                    # 事件对象（线程之间通信）可以控制线程数量通过event set() clear() wait()
-                    # Semaphore(value=1) 代表 release() 方法的调用次数减去 acquire() 的调用次数再加上一个初始值(Value)
-                    # threading.BoundedSemaphore(value) 有界信号量通过检查以确保它当前的值不会超过初始值。如果超过了初始值，将会引发 ValueError 异常(上下文）
-                    # Semaphore --- return threading instance as contextmanager
-                    # if len(threads) <= MaxThreads:
-                    thread = Thread(target=method, kwargs={'sid': sid}, name=sid)
-                    thread.start()
-                except RuntimeError:
-                    lock.acquire()
-                    for t in threads:
-                        print(t.is_alive())
-                        t.join()
-                    lock.release()
-                    thread.start()
-                    threads = []
-                finally:
-                    threads.append(thread)
-
+                print('sid', sid)
+                # thread = Thread(target=semaphore_run, kwargs={'sid': sid}, name=sid)
+                thread = Thread(target=semaphore_run, args=(sid,), name=sid)
+                threads.append(thread)
+                thread.start()
+            #
             for t in threads:
-                print(t.is_alive())
                 t.join()
-
-    def rerun(self):
-        dct = valmap(lambda x: len(x), self.missed)
-        if sum(dct.values()) != 0:
-            missed = self.missed.copy()
-            # RuntimeError: Set changed size during iteration
-            self._writer_internal(missed)
-            self.rerun()
-        # reset
-        self.missed.clear()
 
     def _writer_internal(self, q):
         _main_func = partial(self._implement, q=q)
@@ -153,5 +135,21 @@ class BundlesWriter(Crawler):
         print('failure bundles asset: %r' % self.missed)
         self.rerun()
 
+    def rerun(self):
+        dct = valmap(lambda x: len(x), self.missed)
+        if sum(dct.values()) != 0:
+            missed = self.missed.copy()
+            # RuntimeError: Set changed size during iteration
+            self._writer_internal(missed)
+            self.rerun()
+        # reset
+        self.missed.clear()
+
 
 __all__ = ['BundlesWriter']
+
+
+if __name__ == '__main__':
+
+    bundle_writer = BundlesWriter(1)
+    bundle_writer.writer()

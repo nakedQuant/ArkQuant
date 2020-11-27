@@ -82,6 +82,7 @@ class DBWriter(object):
                 setattr(self, table_name, metadata.tables[table_name])
 
     def _write_df_to_table(self, conn, tbl, frame, chunksize=SQLITE_MAX_VARIABLE_NUMBER):
+        # conn must be closed
         inspection = inspect(self.engine)
         expected_cols = [item['name'] for item in inspection.get_columns(tbl)]
         if frozenset(frame.columns) != frozenset(expected_cols):
@@ -101,6 +102,7 @@ class DBWriter(object):
             if_exists='append',
             chunksize=chunksize,
         )
+        conn.close()
 
     @staticmethod
     def _writer_direct(conn, tbl, data):
@@ -112,13 +114,12 @@ class DBWriter(object):
         else:
             raise ValueError('must be frame or series')
         conn.execute(ins, formatted)
+        conn.close()
 
     def writer(self, tbl, df, direct=True):
-        # with open('db_schema.py', 'r') as f:
-        #     string_obj = f.read()
-        # exec(string_obj)
         # 每个线程单独 --- cursor conn
         if not df.empty:
+            # session
             with self.engine.begin() as conn:
                 # Create SQL tables if they do not exist.
                 # self.metadata.create_all(bind=engine)
@@ -146,9 +147,6 @@ class DBWriter(object):
     def reset(cls):
         metadata.drop_all()
 
-    def close(self):
-        self.conn.close()
-
     def clear(self, tbl=None):
         if tbl:
             self.engine.execute(metadata.tables[tbl].delete())
@@ -156,8 +154,14 @@ class DBWriter(object):
             for tbl in metadata.tables:
                 self.engine.execute(tbl.delete())
 
+    # def close(self):
+    #     self.conn.close()
+
+    # def __exit__(self, * exc_info):
+    #     self.close()
+
     def __exit__(self, * exc_info):
-        self.close()
+        self.engine.dispose()
 
 
 db = DBWriter(engine_path)
