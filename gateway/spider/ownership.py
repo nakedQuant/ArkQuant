@@ -9,11 +9,10 @@ import pandas as pd
 from gateway.spider import Crawler
 from gateway.spider.url import OWNERSHIP
 from gateway.driver.tools import parse_content_from_header
-from gateway.database.db_writer import db
+from gateway.database.db_writer import init_writer
 from gateway.driver.tools import _parse_url
 
-__all__ = ['OwnershipWriter']
-
+db = init_writer()
 # ownership
 OwnershipFields = {'变动日期': 'ex_date',
                    '公告日期': 'declared_date',
@@ -81,6 +80,8 @@ class OwnershipWriter(Crawler):
         self._writer_internal(equities)
         self.rerun()
 
+
+__all__ = ['OwnershipWriter']
 
 # if __name__ == '__main__':
 #

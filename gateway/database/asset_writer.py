@@ -9,13 +9,13 @@ import sqlalchemy as sa, numpy as np, pandas as pd
 from contextlib import ExitStack
 from sqlalchemy import create_engine
 from gateway.database.db_schema import asset_db_table_names
-from gateway.database.db_writer import db
+from gateway.database.db_writer import init_writer
 from gateway.database import (
     engine,
     metadata,
 )
 
-__all__ = ['AssetWriter']
+db = init_writer()
 
 # 确保过滤还未上市的标的 , 由于退市的股票数据不全只能取关键的上市日字段
 EquityNullFields = ['sid', 'first_traded']
@@ -251,3 +251,6 @@ class AssetWriter(object):
             convertible_frame=convertible_frame,
             fund_frame=fund_frame,
         )
+
+
+__all__ = ['AssetWriter']

@@ -8,11 +8,10 @@ Created on Tue Mar 12 15:37:47 2019
 import json, re, pandas as pd, time, numpy as np
 # from threading import Thread
 from gateway.spider import Crawler
-from gateway.database.db_writer import db
+from gateway.database.db_writer import init_writer
 from gateway.driver.tools import _parse_url
 from gateway.spider.url import ASSET_FUNDAMENTAL_URL
 
-__all__ = ['EventWriter']
 
 EVENTS = frozenset(['margin', 'massive', 'release', 'holder'])
 
@@ -42,6 +41,8 @@ MassiveFields = {'TDATE': 'declared_date',
                  'RCHANGE5DC': '5_pct',
                  'RCHANGE10DC': '10_pct',
                  'RCHANGE20DC': '20_pct'}
+
+db = init_writer()
 
 
 class EventWriter(Crawler):
@@ -204,6 +205,8 @@ class EventWriter(Crawler):
         sdate = sdate if sdate else edate
         self._writer_internal(sdate, edate)
 
+
+__all__ = ['EventWriter']
 
 # if __name__ == '__main__':
 #

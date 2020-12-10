@@ -11,7 +11,6 @@ from gateway.spider.bundle import BundlesWriter
 from gateway.spider.divdend_rights import AdjustmentsWriter
 from gateway.spider.ownership import OwnershipWriter
 from gateway.spider.events import EventWriter
-from gateway.driver._ext_mkt import MarketValue
 
 
 # 初始化各个spider module
@@ -46,12 +45,15 @@ async def main(initialization):
     await kline_spider(initialization)
     await splits_spider()
     await event_spider(initialization)
+    # from gateway.driver._ext_mkt import MarketValue
     # mcap_writer = MarketValue(initialization)
     # mcap_writer.calculate_mcap()
 
 
 if __name__ == '__main__':
 
+    # asyncio.run(main(None))
+    # event_loop 导致cannot start new thread
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main(None))
     loop.close()

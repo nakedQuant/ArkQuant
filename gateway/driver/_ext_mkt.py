@@ -6,7 +6,7 @@ Created on Sun Feb 17 16:39:46 2019
 """
 import pandas as pd, numpy as np, sqlalchemy as sa, datetime
 from gateway.database import engine, metadata
-from gateway.database.db_writer import db
+from gateway.database.db_writer import init_writer
 from gateway.driver.tools import unpack_df_to_component_dict
 
 
@@ -17,6 +17,8 @@ OWNERSHIP_TYPE = {'general': np.double,
 RENAME_COLUMNS = {'general': 'mkv',
                   'float': 'mkv_cap',
                   'strict': 'mkv_strict'}
+
+db = init_writer()
 
 
 class MarketValue:

@@ -7,11 +7,12 @@ Created on Tue Mar 12 15:37:47 2019
 """
 import pandas as pd
 from gateway.spider import Crawler
-from gateway.database.db_writer import db
+from gateway.database.db_writer import init_writer
 from gateway.spider.url import DIVDEND
 from gateway.driver.tools import _parse_url
 
-__all__ = ['AdjustmentsWriter']
+
+db = init_writer()
 
 
 class AdjustmentsWriter(Crawler):
@@ -109,3 +110,5 @@ class AdjustmentsWriter(Crawler):
 #
 #     w = AdjustmentsWriter()
 #     w.writer()
+
+__all__ = ['AdjustmentsWriter']

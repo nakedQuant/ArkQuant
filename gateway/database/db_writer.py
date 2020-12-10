@@ -102,7 +102,6 @@ class DBWriter(object):
             if_exists='append',
             chunksize=chunksize,
         )
-        conn.close()
 
     @staticmethod
     def _writer_direct(conn, tbl, data):
@@ -114,7 +113,6 @@ class DBWriter(object):
         else:
             raise ValueError('must be frame or series')
         conn.execute(ins, formatted)
-        conn.close()
 
     def writer(self, tbl, df, direct=True):
         # 每个线程单独 --- cursor conn
@@ -127,6 +125,7 @@ class DBWriter(object):
                     self._writer_direct(conn, tbl, df)
                 else:
                     self._write_df_to_table(conn, tbl, df)
+            conn.close()
 
     def _update(self):
         with self.engine.connect() as conn:
@@ -164,9 +163,14 @@ class DBWriter(object):
         self.engine.dispose()
 
 
-db = DBWriter(engine_path)
+# db = DBWriter(engine_path)
+
+def init_writer():
+    db = DBWriter(engine_path)
+    return db
 
 
 if __name__ == '__main__':
 
+    db = init_writer()
     db.update()

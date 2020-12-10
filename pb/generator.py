@@ -42,7 +42,7 @@ class Generator(object):
             基于触发器构建 通道 基于策略 卖出 --- 买入
             principle --- 只要发出卖出信号的最大限度的卖出，如果没有完全卖出直接转入下一个交易日继续卖出
             订单 --- priceOrder TickerOrder Intime
-            engine --- xtp or simulate(slippage_factor = self.slippage.calculate_slippage_factor)
+            engine --- xtp_vnpy or simulate(slippage_factor = self.slippage.calculate_slippage_factor)
             dual -- True 双方向
                   -- False 单方向（提交订单）
             eager --- True 最后接近收盘时候集中将为成交的订单成交撮合成交保持最大持仓
