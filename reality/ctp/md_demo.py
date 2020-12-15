@@ -1,17 +1,14 @@
 # -*- coding: utf-8 -*-
-'''
-@author : 景色
-@csdn : https://blog.csdn.net/pjjing
-@QQ群 : 767101469
-@公众号 : QuantRoad2019
-'''
-import thostmduserapi as mdapi
+"""
+    以下为需要订阅行情的合约号，注意选择有效合约；
+    有效连上但没有行情可能是过期合约或者不再交易时间内导致,订阅不需要穿透试
+"""
 import csv
-'''
-以下为需要订阅行情的合约号，注意选择有效合约；
-有效连上但没有行情可能是过期合约或者不再交易时间内导致
-'''
-subID=["au1912","IC1909","i2001","TA001"]
+import thostmduserapi as mdapi
+
+
+subID = ["au1912", "IC1909", "i2001", "TA001"]
+
 
 class CFtdcMdSpi(mdapi.CThostFtdcMdSpi):
 
@@ -118,5 +115,7 @@ def main():
     mduserapi.Init()    
     mduserapi.Join()
 
+
 if __name__ == '__main__':
+
     main()

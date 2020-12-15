@@ -1,30 +1,26 @@
 # -*- coding: utf-8 -*-
+"""
+	穿透式版本认证及报单demo，用于6.3.13及以上版本API
+"""
 from reality.ctp import thosttraderapi as api
-'''
-@author : 景色
-@csdn : https://blog.csdn.net/pjjing
-@QQ群 : 767101469
-@公众号 : QuantRoad2019
 
-穿透式版本认证及报单demo，用于6.3.13及以上版本API
-'''
-#Addr
-FrontAddr="tcp://180.168.146.187:10101"
-#LoginInfo
-BROKERID="9999"
-USERID="070624"
-PASSWORD="070624"
-#OrderInfo
-EXCHANGEID="SHFE"
-INSTRUMENTID="rb1909"
-PRICE=3200
-VOLUME=1
+# Addr
+FrontAddr = "tcp://180.168.146.187:10101"
+# LoginInfo
+BROKERID = "9999"
+USERID = "070624"
+PASSWORD = "070624"
+# OrderInfo
+EXCHANGEID = "SHFE"
+INSTRUMENTID = "rb1909"
+PRICE = 3200
+VOLUME = 1
 DIRECTION=api.THOST_FTDC_D_Sell
-#DIRECTION=api.THOST_FTDC_D_Buy
-#open
+# DIRECTION=api.THOST_FTDC_D_Buy
+# open
 OFFSET="0"
-#close
-#OFFSET="1"
+# close
+# OFFSET="1"
 
 
 def ReqorderfieldInsert(tradeapi):
@@ -42,10 +38,10 @@ def ReqorderfieldInsert(tradeapi):
 	orderfield.ContingentCondition = api.THOST_FTDC_CC_Immediately
 	orderfield.TimeCondition = api.THOST_FTDC_TC_GFD
 	orderfield.VolumeCondition = api.THOST_FTDC_VC_AV
-	orderfield.CombHedgeFlag="1"
-	orderfield.CombOffsetFlag=OFFSET
-	orderfield.GTDDate=""
-	orderfield.orderfieldRef="1"
+	orderfield.CombHedgeFlag = "1"
+	orderfield.CombOffsetFlag = OFFSET
+	orderfield.GTDDate = ""
+	orderfield.orderfieldRef = "1"
 	orderfield.MinVolume = 0
 	orderfield.ForceCloseReason = api.THOST_FTDC_FCC_NotForceClose
 	orderfield.IsAutoSuspend = 0
@@ -54,20 +50,21 @@ def ReqorderfieldInsert(tradeapi):
 	
 
 class CTradeSpi(api.CThostFtdcTraderSpi):
-	tapi=''
+	tapi = ''
+
 	def __init__(self,tapi):
 		api.CThostFtdcTraderSpi.__init__(self)
 		self.tapi=tapi
 		
 	def OnFrontConnected(self) -> "void":
-		print ("OnFrontConnected")
+		print("OnFrontConnected")
 		authfield = api.CThostFtdcReqAuthenticateField();
-		authfield.BrokerID=BROKERID
-		authfield.UserID=USERID
-		authfield.AppID="simnow_client_test"
-		authfield.AuthCode="0000000000000000"
+		authfield.BrokerID = BROKERID
+		authfield.UserID = USERID
+		authfield.AppID = "simnow_client_test"
+		authfield.AuthCode = "0000000000000000"
 		self.tapi.ReqAuthenticate(authfield,0)
-		print ("send ReqAuthenticate ok")
+		print("send ReqAuthenticate ok")
 		
 	def OnRspAuthenticate(self, pRspAuthenticateField: 'CThostFtdcRspAuthenticateField', pRspInfo: 'CThostFtdcRspInfoField', nRequestID: 'int', bIsLast: 'bool') -> "void":	
 		print ("BrokerID=",pRspAuthenticateField.BrokerID)
@@ -130,16 +127,18 @@ class CTradeSpi(api.CThostFtdcTraderSpi):
 		print ("OnRspOrderInsert")
 		print ("ErrorID=",pRspInfo.ErrorID)
 		print ("ErrorMsg=",pRspInfo.ErrorMsg)
-		
+
+
 def main():
-	tradeapi=api.CThostFtdcTraderApi_CreateFtdcTraderApi()
-	tradespi=CTradeSpi(tradeapi)
+	tradeapi = api.CThostFtdcTraderApi_CreateFtdcTraderApi()
+	tradespi = CTradeSpi(tradeapi)
 	tradeapi.RegisterFront(FrontAddr)
 	tradeapi.RegisterSpi(tradespi)
 	tradeapi.SubscribePrivateTopic(api.THOST_TERT_QUICK)
 	tradeapi.SubscribePublicTopic(api.THOST_TERT_QUICK)
 	tradeapi.Init()
 	tradeapi.Join()
-	
+
+
 if __name__ == '__main__':
 	main()
