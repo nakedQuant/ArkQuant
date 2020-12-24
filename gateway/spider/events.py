@@ -50,13 +50,15 @@ class EventWriter(Crawler):
     def _arbitrary_parser(self, url, encoding='gbk', direct=True):
         try:
             text = _parse_url(url, encoding=encoding, bs=False)
+            raw = json.loads(text) if direct else text
+            return raw
         except Exception as e:
             print('error %r' % e)
             time.sleep(np.random.randint(5, 10))
             self._arbitrary_parser(url, encoding=encoding, direct=direct)
-        else:
-            raw = json.loads(text) if direct else text
-            return raw
+        # else:
+        #     raw = json.loads(text) if direct else text
+        #     return raw
 
     def _writer_margin(self, *args):
         """获取市场全量融资融券"""

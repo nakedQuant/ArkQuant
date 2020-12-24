@@ -66,7 +66,7 @@ class MainEngine:
 
     def add_engine(self, engine_class: Any) -> "BaseEngine":
         """
-        Add function engine.
+        Add function engine --- BaseEngine
         """
         engine = engine_class(self, self.event_engine)
         self.engines[engine.engine_name] = engine
@@ -317,7 +317,10 @@ class LogEngine(BaseEngine):
         self.logger.addHandler(file_handler)
 
     def register_event(self) -> None:
-        """"""
+        """
+            add method into handler
+        :return:
+        """
         self.event_engine.register(EVENT_LOG, self.process_log_event)
 
     def process_log_event(self, event: Event) -> None:

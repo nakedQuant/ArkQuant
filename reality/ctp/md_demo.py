@@ -14,9 +14,9 @@ class CFtdcMdSpi(mdapi.CThostFtdcMdSpi):
 
     def __init__(self,tapi):
         mdapi.CThostFtdcMdSpi.__init__(self)
-        self.tapi=tapi
-        self.csvfiles={}
-        self.submap= {}
+        self.tapi = tapi
+        self.csvfiles = {}
+        self.submap = {}
         
     def __openCsv(self):
         csvheader=(["TradingDay",\
@@ -46,30 +46,30 @@ class CFtdcMdSpi(mdapi.CThostFtdcMdSpi):
         "AveragePrice",\
         "ActionDay"])
         for id in subID:
-            csvname=f"{id}.csv"
-            csvfile=open(csvname,'w',newline='')
-            csvfile_w=csv.writer(csvfile)
+            csvname = f"{id}.csv"
+            csvfile = open(csvname, 'w', newline='')
+            csvfile_w = csv.writer(csvfile)
             csvfile_w.writerow(csvheader)
-            self.csvfiles[id]=csvfile
-            self.submap[id]=csvfile_w
+            self.csvfiles[id] = csvfile
+            self.submap[id] = csvfile_w
             
     def OnFrontConnected(self) -> "void":
-        print ("OnFrontConnected")
+        print("OnFrontConnected")
         loginfield = mdapi.CThostFtdcReqUserLoginField()
-        loginfield.BrokerID="8000"
-        loginfield.UserID="000005"
-        loginfield.Password="123456"
-        loginfield.UserProductInfo="python dll"
+        loginfield.BrokerID = "8000"
+        loginfield.UserID = "000005"
+        loginfield.Password = "123456"
+        loginfield.UserProductInfo = "python dll"
         self.tapi.ReqUserLogin(loginfield,0)
         self.__openCsv()
         
     def OnRspUserLogin(self, pRspUserLogin: 'CThostFtdcRspUserLoginField', pRspInfo: 'CThostFtdcRspInfoField', nRequestID: 'int', bIsLast: 'bool') -> "void":
-        print (f"OnRspUserLogin, SessionID={pRspUserLogin.SessionID},ErrorID={pRspInfo.ErrorID},ErrorMsg={pRspInfo.ErrorMsg}")
-        ret=self.tapi.SubscribeMarketData([id.encode('utf-8') for id in subID],len(subID))
+        print(f"OnRspUserLogin, SessionID={pRspUserLogin.SessionID},ErrorID={pRspInfo.ErrorID},ErrorMsg={pRspInfo.ErrorMsg}")
+        ret = self.tapi.SubscribeMarketData([id.encode('utf-8') for id in subID], len(subID))
 
     def OnRtnDepthMarketData(self, pDepthMarketData: 'CThostFtdcDepthMarketDataField') -> "void":
-        print ("OnRtnDepthMarketData")        
-        mdlist=([pDepthMarketData.TradingDay,\
+        print("OnRtnDepthMarketData")
+        mdlist = ([pDepthMarketData.TradingDay,\
         pDepthMarketData.InstrumentID,\
         pDepthMarketData.LastPrice,\
         pDepthMarketData.PreSettlementPrice,\
@@ -95,19 +95,20 @@ class CFtdcMdSpi(mdapi.CThostFtdcMdSpi):
         pDepthMarketData.AskVolume1,\
         pDepthMarketData.AveragePrice,\
         pDepthMarketData.ActionDay])
-        print (mdlist)
+        print(mdlist)
         self.submap[pDepthMarketData.InstrumentID].writerow(mdlist)
         self.csvfiles[pDepthMarketData.InstrumentID].flush()
 
     def OnRspSubMarketData(self, pSpecificInstrument: 'CThostFtdcSpecificInstrumentField', pRspInfo: 'CThostFtdcRspInfoField', nRequestID: 'int', bIsLast: 'bool') -> "void":
         print ("OnRspSubMarketData")
-        print ("InstrumentID=",pSpecificInstrument.InstrumentID)
-        print ("ErrorID=",pRspInfo.ErrorID)
-        print ("ErrorMsg=",pRspInfo.ErrorMsg)
+        print ("InstrumentID=", pSpecificInstrument.InstrumentID)
+        print ("ErrorID=", pRspInfo.ErrorID)
+        print ("ErrorMsg=", pRspInfo.ErrorMsg)
+
 
 def main():
-    mduserapi=mdapi.CThostFtdcMdApi_CreateFtdcMdApi()
-    mduserspi=CFtdcMdSpi(mduserapi)
+    mduserapi = mdapi.CThostFtdcMdApi_CreateFtdcMdApi()
+    mduserspi = CFtdcMdSpi(mduserapi)
     #mduserapi.RegisterFront("tcp://101.230.209.178:53313")
     '''以下是7*24小时环境'''
     mduserapi.RegisterFront("tcp://180.168.146.187:10131")

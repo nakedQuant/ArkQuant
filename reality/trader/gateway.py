@@ -67,9 +67,6 @@ class BaseGateway(ABC):
         the object should not be modified after passing to on_xxxx.
     So if you use a cache to store reference of data, use copy.copy to create a new object
     before passing that data into on_xxxx
-
-
-
     """
 
     # Fields required in setting dict for connect function.

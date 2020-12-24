@@ -214,7 +214,7 @@ class AssetRouterWriter(Crawler):
         return data
 
     def rerun(self):
-        print('missing equity', self.missing)
+        # print('missing equity', self.missing)
         if len(self.missing['equity']):
             missed = self.missing.copy()
             # RuntimeError: Set changed size during iteration
@@ -223,7 +223,8 @@ class AssetRouterWriter(Crawler):
             AssetData.equities = equity_frames
             self._writer.write(AssetData)
             self.rerun()
-        self.missing['equity'] = set()
+        print('rerun module finish')
+        # self.missing['equity'] = set()
 
     def _writer_internal(self):
         asset_data = self.load_data()
