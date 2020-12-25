@@ -175,6 +175,8 @@ QuickStart:
     1.cython 改写
     2.xtp ctp 接口已经打通
     3.对接实盘
+    4.应用机器学习里面的特征工程优化算法
+    5.qlib框架 --- AI qs
     
 
 卡方科技
