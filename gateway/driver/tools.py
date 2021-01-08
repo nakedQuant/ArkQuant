@@ -14,7 +14,7 @@ from gateway.spider.xml import UserAgent, ProxyIp
 
 def _parse_url(url, encoding='gbk', bs=True):
     """
-    :param url: url_path
+    :param url: url_path和你
     :param encoding: utf-8 or gbk
     :param bs: bool
     :param proxy: proxies = {"http": "http://10.10.1.10:3128", "https": "http://10.10.1.10:1080"} ,list

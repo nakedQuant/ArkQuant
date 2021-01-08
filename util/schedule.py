@@ -5,6 +5,10 @@ Created on Tue Mar 12 15:37:47 2019
 
 @author: python
 """
+from atexit import register
+
+# 解释器正常终止时执行
+# @register --- func() . atexit.register(func, *args, **kwargs)
 
 
 def schedule_function(self,

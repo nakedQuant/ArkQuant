@@ -74,6 +74,10 @@ def main():
     print()
     print("Updated documentation branch in directory %s" % ZIPLINE_ROOT)
     print("If you are happy with these changes, commit and push to gh-pages.")
+    # # subprocess replace os.system(),os.spawnv(),os , popen2,command
+    # subprocess -- run call check_call check_output
+    # subprocess.run(['ls'])
+    # call("pip install --upgrade h5py",shell=True)
 
 
 if __name__ == '__main__':

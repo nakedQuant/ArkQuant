@@ -6,7 +6,7 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 from collections import OrderedDict
-import numpy as np, pandas as pd
+
 
 _MINUTE_TO_SESSION_OHCLV_HOW = OrderedDict((
     ('open', 'first'),

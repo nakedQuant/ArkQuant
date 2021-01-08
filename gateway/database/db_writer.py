@@ -58,6 +58,14 @@ class DBWriter(object):
     def _init_db(self, engine):
         """Connect to database and create tables.
 
+        with ExitStack() as stack:
+            由于已注册的回调是按注册的相反顺序调用的，因此最终行为就好像with 已将多个嵌套语句与已注册的一组回调一起使用。
+            这甚至扩展到异常处理-如果内部回调抑制或替换异常，则外部回调将基于该更新状态传递自变量。
+            enter_context  输入一个新的上下文管理器，并将其__exit__()方法添加到回调堆栈中。返回值是上下文管理器自己的__enter__()方法的结果。
+            callback（回调，* args，** kwds ）接受任意的回调函数和参数，并将其添加到回调堆栈中。
+            stack.callback(on_exit())
+            stack.enter_context(ZiplineAPI(self.algo))
+
         Parameters
         ----------
         txn : sa.engine.Connection, optional
@@ -68,7 +76,10 @@ class DBWriter(object):
         -------
         metadata : sa.MetaData
             The metadata that describes the new asset db.
+
+
         """
+
         with ExitStack() as stack:
             # if txn is None:
             txn = stack.enter_context(engine.connect())
