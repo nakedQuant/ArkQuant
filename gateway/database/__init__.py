@@ -24,7 +24,7 @@ config = {
     "password": 'macpython',
     "host": 'localhost',
     "port": '3306',
-    'database': 'naked'
+    'database': 'ark'
 }
 
 # engine_path = 'mysql+pymysql://root:macpython@localhost:3306/test01'
@@ -33,6 +33,26 @@ engine_path = 'mysql+pymysql://{user}:{password}@{host}:{port}/{database}'.forma
                                                                                   host=config['host'],
                                                                                   port=config['port'],
                                                                                   database=config['database'],)
+# READ COMMITTED
+# READ UNCOMMITTED
+# REPEATABLE READ
+# SERIALIZABLE
+# AUTOCOMMIT
+# """
+# engine = create_engine('mysql+pymysql://root:macpython@localhost:3306/c_test',
+#                         pool_size=50, max_overflow=100, pool_timeout=-1，
+#                         isolation_level="READ UNCOMMITTED")
+# engine.execution_options(isolation_level="READ COMMITTED")
+# print(engine.get_execution_options())
+# #代理
+# from sqlalchemy import inspect
+# insp = inspect(engine)
+# print(insp.get_table_names())
+# print(insp.get_columns('asharePrice'))
+# print(insp.get_schema_names())
+# # get_pk_constraint get_primary_keys get_foreign_keys get_indexes
+# sa.CheckConstraint('id <= 1')
+# ins = ins.order_by(table.c.trade_dt)
 
 engine = sa.create_engine(engine_path, pool_size=PoolSize, max_overflow=OVerFlow)
 

@@ -24,8 +24,8 @@ async def router_spider():
     router_writer.writer()
 
 
-async def kline_spider(initialization):
-    bundle_writer = BundlesWriter(None if initialization else 1)
+async def kline_spider(flag):
+    bundle_writer = BundlesWriter(None if flag else 1)
     bundle_writer.writer()
 
 
@@ -33,13 +33,13 @@ async def splits_spider():
     adjust_writer.writer()
 
 
-async def event_spider(initialization):
-    date = '2000-01-01' if initialization else None
+async def event_spider(flag):
+    date = '2000-01-01' if flag else None
     await asyncio.sleep(10)
     event_writer.writer(date)
 
 
-async def main(initialization):
+async def main(initialization=True):
 
     await router_spider()
     await kline_spider(initialization)
@@ -55,5 +55,5 @@ if __name__ == '__main__':
     # asyncio.run(main(None))
     # event_loop 导致cannot start new thread
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(main(None))
+    loop.run_until_complete(main(False))
     loop.close()

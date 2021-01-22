@@ -16,7 +16,9 @@ asset_router = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        autoincrement=True
+        primary_key=True,
+        autoincrement=True,
+        index=True
     ),
     sa.Column(
         'sid',
@@ -24,7 +26,6 @@ asset_router = sa.Table(
         unique=True,
         nullable=False,
         primary_key=True,
-        index=True
     ),
     # asset_name --- 公司名称
     sa.Column(
@@ -74,14 +75,16 @@ equity_status = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        autoincrement=True
+        primary_key=True,
+        autoincrement=True,
+        index=True
     ),
     sa.Column(
         'sid',
         sa.String(10),
+        sa.ForeignKey(asset_router.c.sid),
         nullable=True,
-        primary_key=True
-
+        primary_key=True,
     ),
     sa.Column(
         'name',
@@ -108,16 +111,18 @@ equity_basics = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        autoincrement=True
+        primary_key=True,
+        autoincrement=True,
+        index=True
     ),
     sa.Column(
         'sid',
         sa.String(10),
         # 一对一 或者一对多， 索引一种
         sa.ForeignKey(asset_router.c.sid),
-        index=True,
         nullable=False,
-        primary_key=True
+        primary_key=True,
+        index=True
     ),
     sa.Column(
         'dual_sid',
@@ -158,7 +163,9 @@ convertible_basics = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        autoincrement=True
+        primary_key=True,
+        autoincrement=True,
+        index=True,
     ),
     sa.Column(
         'sid',
@@ -228,11 +235,14 @@ equity_price = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        autoincrement=True
+        primary_key=True,
+        autoincrement=True,
+        index=True
     ),
     sa.Column(
         'sid',
         sa.String(10),
+        sa.ForeignKey(asset_router.c.sid),
         nullable=False,
         primary_key=True,
     ),
@@ -260,11 +270,14 @@ convertible_price = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        autoincrement=True
+        primary_key=True,
+        autoincrement=True,
+        index=True
     ),
     sa.Column(
         'sid',
         sa.String(10),
+        sa.ForeignKey(asset_router.c.sid),
         nullable=False,
         primary_key=True,
     ),
@@ -290,7 +303,9 @@ fund_price = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        autoincrement=True
+        primary_key=True,
+        autoincrement=True,
+        index=True
     ),
     sa.Column('sid',
               sa.String(10),
@@ -323,11 +338,14 @@ equity_splits = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        autoincrement=True
+        primary_key=True,
+        autoincrement=True,
+        index=True
     ),
     sa.Column(
         'sid',
         sa.String(10),
+        sa.ForeignKey(asset_router.c.sid),
         nullable=False,
         primary_key=True,
     ),
@@ -356,11 +374,14 @@ equity_rights = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        autoincrement=True
+        primary_key=True,
+        autoincrement=True,
+        index=True
     ),
     sa.Column(
         'sid',
         sa.String(10),
+        sa.ForeignKey(asset_router.c.sid),
         nullable=False,
         primary_key=True,
 
@@ -390,11 +411,14 @@ ownership = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        autoincrement=True
+        primary_key=True,
+        autoincrement=True,
+        index=True
     ),
     sa.Column(
         'sid',
         sa.String(10),
+        sa.ForeignKey(asset_router.c.sid),
         nullable=False,
         primary_key=True,
     ),
@@ -425,7 +449,7 @@ ownership = sa.Table(
     extend_existing=True
 )
 
-# 流通市值
+# # 流通市值
 m_cap = sa.Table(
     'm_cap',
     metadata,
@@ -433,11 +457,14 @@ m_cap = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        autoincrement=True
+        primary_key=True,
+        autoincrement=True,
+        index=True
     ),
     sa.Column(
         'sid',
-        sa.Integer,
+        sa.String(10),
+        sa.ForeignKey(asset_router.c.sid),
         nullable=False,
         primary_key=True,
     ),
@@ -472,12 +499,15 @@ holder = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        autoincrement=True
+        primary_key=True,
+        autoincrement=True,
+        index=True
     ),
     # 同一天股票可以多次减持
     sa.Column(
         'sid',
         sa.String(10),
+        sa.ForeignKey(asset_router.c.sid),
         nullable=False,
         # primary_key=True,
     ),
@@ -504,11 +534,14 @@ massive = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        autoincrement=True
+        primary_key=True,
+        autoincrement=True,
+        index=True
     ),
     sa.Column(
         'sid',
         sa.String(10),
+        sa.ForeignKey(asset_router.c.sid),
         nullable=False,
         # primary_key=True,
 
@@ -538,11 +571,14 @@ unfreeze = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        autoincrement=True
+        primary_key=True,
+        autoincrement=True,
+        index=True
     ),
     sa.Column(
         'sid',
         sa.String(10),
+        sa.ForeignKey(asset_router.c.sid),
         nullable=False,
         primary_key=True,
     ),
@@ -567,7 +603,9 @@ margin = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        autoincrement=True
+        primary_key=True,
+        autoincrement=True,
+        index=True
     ),
     sa.Column(
         'declared_date',
@@ -593,7 +631,9 @@ version_info = sa.Table(
         'id',
         sa.Integer,
         default=0,
-        autoincrement=True
+        primary_key=True,
+        autoincrement=True,
+        index=True
     ),
     sa.Column(
         'version',
@@ -633,4 +673,3 @@ __all__ = [
            'convertible_price',
            'asset_db_table_names'
 ]
-

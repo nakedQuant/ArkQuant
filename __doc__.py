@@ -521,6 +521,7 @@ eager --- True 最后接近收盘时候集中将为成交的订单成交撮合�
 获取当天实时的ticer实点的数据，并且增加一些滑加，+ /-0.01
 卖出标的 --- 对应买入标的 ，闲于的资金
 
+https://pypi.tuna.tsinghua.edu.cn/simple
 
 '''
 
