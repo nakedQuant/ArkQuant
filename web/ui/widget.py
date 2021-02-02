@@ -435,7 +435,7 @@ class OrderMonitor(BaseMonitor):
 
     def init_ui(self):
         """
-        Connect strat.
+        Connect factory.
         """
         super(OrderMonitor, self).init_ui()
 

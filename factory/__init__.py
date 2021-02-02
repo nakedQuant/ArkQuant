@@ -11,7 +11,7 @@ from toolz import valfilter
 
 class Signal(ABC):
     """
-        strategy composed of strat via pipe framework
+        strategy composed of factory via pipe framework
     """
     def __init__(self, params):
         self.params = params
@@ -23,7 +23,7 @@ class Signal(ABC):
 
     @abstractmethod
     def _run_signal(self, feed):
-        raise NotImplementedError('implement logic of strat')
+        raise NotImplementedError('implement logic of factory')
 
     def long_signal(self, metadata, mask) -> bool:
         """

@@ -5,8 +5,8 @@ Created on Sat Feb 16 14:00:14 2019
 
 @author: python
 """
-from indicator import MA
-from strat import Signal
+from factory.indicator import MA
+from factory import Signal
 
 
 class Cross(Signal):

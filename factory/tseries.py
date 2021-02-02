@@ -7,7 +7,7 @@ Created on Sat Feb 16 14:00:14 2019
 """
 from statsmodels.tsa.stattools import adfuller, coint, pacf, acf
 import numpy as np, pandas as pd
-from indicator import BaseFeature
+from factory.indicator import BaseFeature
 
 
 class ADF(BaseFeature):

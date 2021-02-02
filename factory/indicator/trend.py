@@ -7,7 +7,7 @@ Created on Sat Feb 16 14:00:14 2019
 """
 import pandas as pd, numpy as np
 from functools import partial
-from indicator import (
+from factory.indicator import (
     BaseFeature,
     EMA
 )
@@ -75,7 +75,7 @@ class GaussianFilter(BaseFeature):
     """ 高斯滤波器
         低通滤波器，高斯平滑比简单平滑要好
         M为元素个数 ；std为高斯分布的标准差
-        guassian = scipy.strat.guassian(M=11, std=2)
+        guassian = scipy.factory.guassian(M=11, std=2)
         guassian / = sum(guassian)
         gaussian_process module:
             Squared exponential correlation model (Radial Basis Function).

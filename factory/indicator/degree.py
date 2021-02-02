@@ -6,7 +6,7 @@ Created on Sat Feb 16 14:00:14 2019
 @author: python
 """
 import numpy as np, pandas as pd
-from indicator import (
+from factory.indicator import (
     BaseFeature,
     EMA,
     MA

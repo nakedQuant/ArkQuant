@@ -33,4 +33,7 @@
         param : _n_field --- all needed field ,_max_window --- upper window along the window args
         core_part : _domain --- logically combine all features
 
+# 核心思想 --- 细微的异常预测短期走向 ； 接力行为
+
+
 """

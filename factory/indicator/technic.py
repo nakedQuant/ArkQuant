@@ -5,7 +5,7 @@ Created on Tue Mar 12 15:37:47 2019
 @author: python
 """
 import pandas as pd, numpy as np
-from indicator import (
+from factory.indicator import (
      BaseFeature,
      MA,
      SMA,
@@ -700,15 +700,15 @@ class KVO(BaseFeature):
     """
     @staticmethod
     def _calc(frame):
-        frame.loc[:, 'strat'] = -1
+        frame.loc[:, 'factory'] = -1
         print('frame', frame)
         dm = frame['high'] - frame['low']
         cm = dm.cumsum()
         print('cm', cm)
         avg = frame.loc[:, ['high', 'low', 'close']].mean(axis=1)
-        frame.loc[avg > avg.shift(1), 'strat'] = 1
-        print('frame - strat', frame)
-        vo = frame['volume'] * abs(2 * dm / cm - 1) * frame['strat'] * 100
+        frame.loc[avg > avg.shift(1), 'factory'] = 1
+        print('frame - factory', frame)
+        vo = frame['volume'] * abs(2 * dm / cm - 1) * frame['factory'] * 100
         print('vo', vo)
         return vo
 
@@ -745,7 +745,7 @@ class Macd(BaseFeature):
     slow_period : int > 0, > fast_period, optional
         The window length for the "slow" EWMA. Default is 26.
     signal_period : int > 0, < fast_period, optional
-        The window length for the strat line. Default is 9.
+        The window length for the factory line. Default is 9.
 
     DIF : MACD称为指数平滑异动移动平均线，是从双指数移动平均线发展而来的，由快的加权移动均线（EMA12）减去慢的加权移动均线（EMA26）
     DEA : DIF - (快线 - 慢线的9日加权移动均线DEA（时间远的赋予小权重，进的赋予大权重））得到MACD柱

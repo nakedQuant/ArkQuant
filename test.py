@@ -4735,12 +4735,12 @@ import logging
 # print('now directory', p_dir)
 # c_test = os.path.split(os.getcwd())
 # print('c_test', c_test)
-# target = os.path.join(os.path.split(os.getcwd())[0], 'strat')
+# target = os.path.join(os.path.split(os.getcwd())[0], 'factory')
 # print('target', target)
 # files = os.path.join(target, '*')
 # p = glob.glob(target + os.sep + 'cross.py')
 # print('p', p)
-# files = glob.glob('strat/*')
+# files = glob.glob('factory/*')
 # print('files', files)
 
 #
