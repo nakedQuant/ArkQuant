@@ -1,4 +1,1072 @@
 
+# # class Results(object):
+# #     """Results from the profiler."""
+# #     def __init__(self, eventsDict, lookBack, lookForward):
+# #         assert(lookBack > 0)
+# #         assert(lookForward > 0)
+# #         self.__lookBack = lookBack
+# #         self.__lookForward = lookForward
+# #         self.__values = [[] for i in xrange(lookBack+lookForward+1)]
+# #         self.__eventCount = 0
+# #
+# #         # Process events.
+# #         for instrument, events in eventsDict.items():
+# #             for event in events:
+# #                 # Skip events which are on the boundary or for some reason are not complete.
+# #                 if event.isComplete():
+# #                     self.__eventCount += 1
+# #                     # Compute cumulative returns: (1 + R1)*(1 + R2)*...*(1 + Rn)
+# #                     values = np.cumprod(event.getValues() + 1)
+# #                     # Normalize everything to the time of the event
+# #                     values = values / values[event.getLookBack()]
+# #                     for t in range(event.getLookBack()*-1, event.getLookForward()+1):
+# #                         self.setValue(t, values[t+event.getLookBack()])
+# #
+# #     def __mapPos(self, t):
+# #         assert(t >= -1*self.__lookBack and t <= self.__lookForward)
+# #         return t + self.__lookBack
+# #
+# #     def setValue(self, t, value):
+# #         if value is None:
+# #             raise Exception("Invalid value at time %d" % (t))
+# #         pos = self.__mapPos(t)
+# #         self.__values[pos].append(value)
+# #
+# #     def getValues(self, t):
+# #         pos = self.__mapPos(t)
+# #         return self.__values[pos]
+# #
+# #     def getLookBack(self):
+# #         return self.__lookBack
+# #
+# #     def getLookForward(self):
+# #         return self.__lookForward
+# #
+# #     def getEventCount(self):
+# #         """Returns the number of events occurred. Events that are on the boundary are skipped."""
+# #         return self.__eventCount
+# #
+# #
+# # class Predicate(object):
+# #     """Base class for event identification. You should subclass this to implement
+# #     the event identification logic."""
+# #
+# #     def eventOccurred(self, instrument, bards):
+# #         """Override (**mandatory**) to determine if an event took place in the last bar (bards[-1]).
+# #
+# #         :param instrument: Instrument identifier.
+# #         :type instrument: string.
+# #         :param bards: The BarDataSeries for the given instrument.
+# #         :type bards: :class:`pyalgotrade.dataseries.bards.BarDataSeries`.
+# #         :rtype: boolean.
+# #         """
+# #         raise NotImplementedError()
+# #
+# #
+# # class Event(object):
+# #     def __init__(self, lookBack, lookForward):
+# #         assert(lookBack > 0)
+# #         assert(lookForward > 0)
+# #         self.__lookBack = lookBack
+# #         self.__lookForward = lookForward
+# #         self.__values = np.empty((lookBack + lookForward + 1))
+# #         self.__values[:] = np.NAN
+# #
+# #     def __mapPos(self, t):
+# #         assert(t >= -1*self.__lookBack and t <= self.__lookForward)
+# #         return t + self.__lookBack
+# #
+# #     def isComplete(self):
+# #         return not any(np.isnan(self.__values))
+# #
+# #     def getLookBack(self):
+# #         return self.__lookBack
+# #
+# #     def getLookForward(self):
+# #         return self.__lookForward
+# #
+# #     def setValue(self, t, value):
+# #         if value is not None:
+# #             pos = self.__mapPos(t)
+# #             self.__values[pos] = value
+# #
+# #     def getValue(self, t):
+# #         pos = self.__mapPos(t)
+# #         return self.__values[pos]
+# #
+# #     def getValues(self):
+# #         return self.__values
+# #
+# #
+# # class Profiler(object):
+# #     """This class is responsible for scanning over historical data and analyzing returns before
+# #     and after the events.
+# #
+# #     :param predicate: A :class:`Predicate` subclass responsible for identifying events.
+# #     :type predicate: :class:`Predicate`.
+# #     :param lookBack: The number of bars before the event to analyze. Must be > 0.
+# #     :type lookBack: int.
+# #     :param lookForward: The number of bars after the event to analyze. Must be > 0.
+# #     :type lookForward: int.
+# #     """
+# #
+# #     def __init__(self, predicate, lookBack, lookForward):
+# #         assert(lookBack > 0)
+# #         assert(lookForward > 0)
+# #         self.__predicate = predicate
+# #         self.__lookBack = lookBack
+# #         self.__lookForward = lookForward
+# #         self.__feed = None
+# #         self.__rets = {}
+# #         self.__futureRets = {}
+# #         self.__events = {}
+# #
+# #     def __addPastReturns(self, instrument, event):
+# #         begin = (event.getLookBack() + 1) * -1
+# #         for t in xrange(begin, 0):
+# #             try:
+# #                 ret = self.__rets[instrument][t]
+# #                 if ret is not None:
+# #                     event.setValue(t+1, ret)
+# #             except IndexError:
+# #                 pass
+# #
+# #     def __addCurrentReturns(self, instrument):
+# #         nextTs = []
+# #         for event, t in self.__futureRets[instrument]:
+# #             event.setValue(t, self.__rets[instrument][-1])
+# #             if t < event.getLookForward():
+# #                 t += 1
+# #                 nextTs.append((event, t))
+# #         self.__futureRets[instrument] = nextTs
+# #
+# #     def __onBars(self, dateTime, bars):
+# #         for instrument in bars.getInstruments():
+# #             self.__addCurrentReturns(instrument)
+# #             eventOccurred = self.__predicate.eventOccurred(instrument, self.__feed[instrument])
+# #             if eventOccurred:
+# #                 event = Event(self.__lookBack, self.__lookForward)
+# #                 self.__events[instrument].append(event)
+# #                 self.__addPastReturns(instrument, event)
+# #                 # Add next return for this instrument at t=1.
+# #                 self.__futureRets[instrument].append((event, 1))
+# #
+# #     def getResults(self):
+# #         """Returns the results of the analysis.
+# #
+# #         :rtype: :class:`Results`.
+# #         """
+# #         return Results(self.__events, self.__lookBack, self.__lookForward)
+# #
+# #     def run(self, feed, useAdjustedCloseForReturns=True):
+# #         """Runs the analysis using the bars supplied by the feed.
+# #
+# #         :param barFeed: The bar feed to use to run the analysis.
+# #         :type barFeed: :class:`pyalgotrade.barfeed.BarFeed`.
+# #         :param useAdjustedCloseForReturns: True if adjusted close values should be used to calculate returns.
+# #         :type useAdjustedCloseForReturns: boolean.
+# #         """
+# #
+# #         if useAdjustedCloseForReturns:
+# #             assert feed.barsHaveAdjClose(), "Feed doesn't have adjusted close values"
+# #
+# #         try:
+# #             self.__feed = feed
+# #             self.__rets = {}
+# #             self.__futureRets = {}
+# #             for instrument in feed.getRegisteredInstruments():
+# #                 self.__events.setdefault(instrument, [])
+# #                 self.__futureRets[instrument] = []
+# #                 if useAdjustedCloseForReturns:
+# #                     ds = feed[instrument].getAdjCloseDataSeries()
+# #                 else:
+# #                     ds = feed[instrument].getCloseDataSeries()
+# #                 self.__rets[instrument] = roc.RateOfChange(ds, 1)
+# #
+# #             feed.getNewValuesEvent().subscribe(self.__onBars)
+# #                              = dispatcher.Dispatcher()
+# #             disp.addSubject(feed)
+# #             disp.run()
+# #         finally:
+# #             feed.getNewValuesEvent().unsubscribe(self.__onBars)
+#
+
+# # @six.add_metaclass(abc.ABCMeta)
+# # class Bar(object):
+# #
+# #     """A Bar is a summary of the trading activity for a security in a given period.
+# #
+# #     .. note::
+# #         This is a base class and should not be used directly.
+# #     """
+# #
+# #     @abc.abstractmethod
+# #     def setUseAdjustedValue(self, useAdjusted):
+# #         raise NotImplementedError()
+# #
+# #     @abc.abstractmethod
+# #     def getUseAdjValue(self):
+# #         raise NotImplementedError()
+# #
+# #     @abc.abstractmethod
+# #     def getDateTime(self):
+# #         """Returns the :class:`datetime.datetime`."""
+# #         raise NotImplementedError()
+# #
+# #     @abc.abstractmethod
+# #     def getOpen(self, adjusted=False):
+# #         """Returns the opening price."""
+# #         raise NotImplementedError()
+# #
+# #     @abc.abstractmethod
+# #     def getHigh(self, adjusted=False):
+# #         """Returns the highest price."""
+# #         raise NotImplementedError()
+# #
+# #     @abc.abstractmethod
+# #     def getLow(self, adjusted=False):
+# #         """Returns the lowest price."""
+# #         raise NotImplementedError()
+# #
+# #     @abc.abstractmethod
+# #     def getClose(self, adjusted=False):
+# #         """Returns the closing price."""
+# #         raise NotImplementedError()
+# #
+# #     @abc.abstractmethod
+# #     def getVolume(self):
+# #         """Returns the volume."""
+# #         raise NotImplementedError()
+# #
+# #     @abc.abstractmethod
+# #     def getAdjClose(self):
+# #         """Returns the adjusted closing price."""
+# #         raise NotImplementedError()
+# #
+# #     @abc.abstractmethod
+# #     def getFrequency(self):
+# #         """The bar's period."""
+# #         raise NotImplementedError()
+# #
+# #     def getTypicalPrice(self):
+# #         """Returns the typical price."""
+# #         return (self.getHigh() + self.getLow() + self.getClose()) / 3.0
+# #
+# #     @abc.abstractmethod
+# #     def getPrice(self):
+# #         """Returns the closing or adjusted closing price."""
+# #         raise NotImplementedError()
+# #
+# #     def getExtraColumns(self):
+# #         return {}
+
+
+# # class Bars(object):
+# #
+# #     """A group of :class:`Bar` objects.
+# #
+# #     :param barDict: A map of instrument to :class:`Bar` objects.
+# #     :type barDict: map.
+# #
+# #     .. note::
+# #         All bars must have the same datetime.
+# #     """
+# #
+# #     def __init__(self, barDict):
+# #         if len(barDict) == 0:
+# #             raise Exception("No bars supplied")
+# #
+# #         # Check that bar datetimes are in sync
+# #         firstDateTime = None
+# #         firstInstrument = None
+# #         for instrument, currentBar in six.iteritems(barDict):
+# #             if firstDateTime is None:
+# #                 firstDateTime = currentBar.getDateTime()
+# #                 firstInstrument = instrument
+# #             elif currentBar.getDateTime() != firstDateTime:
+# #                 raise Exception("Bar data times are not in sync. %s %s != %s %s" % (
+# #                     instrument,
+# #                     currentBar.getDateTime(),
+# #                     firstInstrument,
+# #                     firstDateTime
+# #                 ))
+# #
+# #         self.__barDict = barDict
+# #         self.__dateTime = firstDateTime
+# #
+# #     def __getitem__(self, instrument):
+# #         """Returns the :class:`pyalgotrade.bar.Bar` for the given instrument.
+# #         If the instrument is not found an exception is raised."""
+# #         return self.__barDict[instrument]
+# #
+# #     def __contains__(self, instrument):
+# #         """Returns True if a :class:`pyalgotrade.bar.Bar` for the given instrument is available."""
+# #         return instrument in self.__barDict
+# #
+# #     def items(self):
+# #         return list(self.__barDict.items())
+# #
+# #     def keys(self):
+# #         return list(self.__barDict.keys())
+# #
+# #     def getInstruments(self):
+# #         """Returns the instrument symbols."""
+# #         return list(self.__barDict.keys())
+# #
+# #     def getDateTime(self):
+# #         """Returns the :class:`datetime.datetime` for this set of bars."""
+# #         return self.__dateTime
+# #
+# #     def getBar(self, instrument):
+# #         """Returns the :class:`pyalgotrade.bar.Bar` for the given instrument or None if the instrument is not found."""
+# #         return self.__barDict.get(instrument, None)
+#
+
+# #
+# #
+# # class BasicBar(Bar):
+# #     # Optimization to reduce memory footprint.
+# #     __slots__ = (
+# #         '__dateTime',
+# #         '__open',
+# #         '__close',
+# #         '__high',
+# #         '__low',
+# #         '__volume',
+# #         '__adjClose',
+# #         '__frequency',
+# #         '__useAdjustedValue',
+# #         '__extra',
+# #     )
+# #
+# #     def __init__(self, dateTime, open_, high, low, close, volume, adjClose, frequency, extra={}):
+# #         if high < low:
+# #             raise Exception("high < low on %s" % (dateTime))
+# #         elif high < open_:
+# #             raise Exception("high < open on %s" % (dateTime))
+# #         elif high < close:
+# #             raise Exception("high < close on %s" % (dateTime))
+# #         elif low > open_:
+# #             raise Exception("low > open on %s" % (dateTime))
+# #         elif low > close:
+# #             raise Exception("low > close on %s" % (dateTime))
+# #
+# #         self.__dateTime = dateTime
+# #         self.__open = open_
+# #         self.__close = close
+# #         self.__high = high
+# #         self.__low = low
+# #         self.__volume = volume
+# #         self.__adjClose = adjClose
+# #         self.__frequency = frequency
+# #         self.__useAdjustedValue = False
+# #         self.__extra = extra
+# #
+# #     def __setstate__(self, state):
+# #         (self.__dateTime,
+# #             self.__open,
+# #             self.__close,
+# #             self.__high,
+# #             self.__low,
+# #             self.__volume,
+# #             self.__adjClose,
+# #             self.__frequency,
+# #             self.__useAdjustedValue,
+# #             self.__extra) = state
+# #
+# #     def __getstate__(self):
+# #         return (
+# #             self.__dateTime,
+# #             self.__open,
+# #             self.__close,
+# #             self.__high,
+# #             self.__low,
+# #             self.__volume,
+# #             self.__adjClose,
+# #             self.__frequency,
+# #             self.__useAdjustedValue,
+# #             self.__extra
+# #         )
+# #
+# #     def setUseAdjustedValue(self, useAdjusted):
+# #         if useAdjusted and self.__adjClose is None:
+# #             raise Exception("Adjusted close is not available")
+# #         self.__useAdjustedValue = useAdjusted
+# #
+# #     def getUseAdjValue(self):
+# #         return self.__useAdjustedValue
+# #
+# #     def getDateTime(self):
+# #         return self.__dateTime
+# #
+# #     def getOpen(self, adjusted=False):
+# #         if adjusted:
+# #             if self.__adjClose is None:
+# #                 raise Exception("Adjusted close is missing")
+# #             return self.__adjClose * self.__open / float(self.__close)
+# #         else:
+# #             return self.__open
+# #
+# #     def getHigh(self, adjusted=False):
+# #         if adjusted:
+# #             if self.__adjClose is None:
+# #                 raise Exception("Adjusted close is missing")
+# #             return self.__adjClose * self.__high / float(self.__close)
+# #         else:
+# #             return self.__high
+# #
+# #     def getLow(self, adjusted=False):
+# #         if adjusted:
+# #             if self.__adjClose is None:
+# #                 raise Exception("Adjusted close is missing")
+# #             return self.__adjClose * self.__low / float(self.__close)
+# #         else:
+# #             return self.__low
+# #
+# #     def getClose(self, adjusted=False):
+# #         if adjusted:
+# #             if self.__adjClose is None:
+# #                 raise Exception("Adjusted close is missing")
+# #             return self.__adjClose
+# #         else:
+# #             return self.__close
+# #
+# #     def getVolume(self):
+# #         return self.__volume
+# #
+# #     def getAdjClose(self):
+# #         return self.__adjClose
+# #
+# #     def getFrequency(self):
+# #         return self.__frequency
+# #
+# #     def getPrice(self):
+# #         if self.__useAdjustedValue:
+# #             return self.__adjClose
+# #         else:
+# #             return self.__close
+# #
+# #     def getExtraColumns(self):
+# #         return self.__extra
+# #
+# # @six.add_metaclass(abc.ABCMeta)
+# # class Subject(object):
+# #
+# #     def __init__(self):
+# #         self.__dispatchPrio = dispatchprio.LAST
+# #
+# #     # This may raise.
+# #     @abc.abstractmethod
+# #     def start(self):
+# #         pass
+# #
+# #     # This should not raise.
+# #     @abc.abstractmethod
+# #     def stop(self):
+# #         raise NotImplementedError()
+# #
+# #     # This should not raise.
+# #     @abc.abstractmethod
+# #     def join(self):
+# #         raise NotImplementedError()
+# #
+# #     # Return True if there are not more events to dispatch.
+# #     @abc.abstractmethod
+# #     def eof(self):
+# #         raise NotImplementedError()
+# #
+# #     # Dispatch events. If True is returned, it means that at least one event was dispatched.
+# #     @abc.abstractmethod
+# #     def dispatch(self):
+# #         raise NotImplementedError()
+# #
+# #     @abc.abstractmethod
+# #     def peekDateTime(self):
+# #         # Return the datetime for the next event.
+# #         # This is needed to properly synchronize non-realtime subjects.
+# #         # Return None since this is a realtime subject.
+# #         raise NotImplementedError()
+# #
+# #     def getDispatchPriority(self):
+# #         # Returns a priority used to sort subjects within the dispatch queue.
+# #         # The return value should never change once this subject is added to the dispatcher.
+# #         return self.__dispatchPrio
+# #
+# #     def setDispatchPriority(self, dispatchPrio):
+# #         self.__dispatchPrio = dispatchPrio
+# #
+# #     def onDispatcherRegistered(self, dispatcher):
+# #         # Called when the subject is registered with a dispatcher.
+# #         pass
+# #
+# #
+
+# unpickle
+#     def __setstate__(self, state):
+#         (self.__dateTime,
+#             self.__open,
+#             self.__close,
+#             self.__high,
+#             self.__low,
+#             self.__volume,
+#             self.__adjClose,
+#             self.__frequency,
+#             self.__useAdjustedValue,
+#             self.__extra) = state
+#
+# pickle
+#     def __getstate__(self):
+#         return (
+#             self.__dateTime,
+#             self.__open,
+#             self.__close,
+#             self.__high,
+#             self.__low,
+#             self.__volume,
+#             self.__adjClose,
+#             self.__frequency,
+#             self.__useAdjustedValue,
+#             self.__extra
+#         )
+
+# #numpy memmap
+# #判断是否有非法字符
+# # def check_validate(List):
+# #     if len(List) == 0:
+# #         raise ValueError('the output of Pipeline must be not null')
+# #     pattern = re.compile('^(6|0|3)(\d){5}.(SZ|SH)$')
+# #     for idx,item in enumerate(List):
+# #         match = pattern.match(item.upper())
+# #         if not match :
+# #             raise ValueError('invalid stockCode : %s in prediction'%match.group())
+# #
+
+
+# # print(obj)
+# # import pymysql
+# # from DBUtils.PooledDB import PooledDB
+# #
+# # class Ora():
+# #     """
+# #         分为 simplepooleddb steadydb persistentdb pooleddb
+# #         from DBUtils.PersistentDB import PersistentDB
+# #         @property @staticmethod @classmethod(cls,)
+# #         db_oracle={'user':'factor_factory','password':'htfactor123','host':,'port':,'sid':}
+# #         pool_name: 连接池的名称，多种连接参数对应多个不同的连接池对象，多单例模式；
+# #         host: 数据库地址
+# #         user: 数据库服务器用户名
+# #         password: 用户密码
+# #         database: 默认选择的数据库
+# #         port: 数据库服务器的端口
+# #         charset: 字符集，默认为 ‘utf8'
+# #         use_dict_cursor: 使用字典格式或者元组返回数据；
+# #         max_pool_size: 连接池优先最大连接数；
+# #         step_size: 连接池动态增加连接数大小；
+# #         enable_auto_resize: 是否动态扩展连接池，即当超过 max_pool_size 时，自动扩展 max_pool_size；
+# #         pool_resize_boundary: 该配置为连接池最终可以增加的上上限大小，即时扩展也不可超过该值；
+# #         auto_resize_scale: 自动扩展 max_pool_size 的增益，默认为 1.5 倍扩展；
+# #         wait_timeout: 在排队等候连接对象时，最多等待多久，当超时时连接池尝试自动扩展当前连接数；
+# #         kwargs: 其他配置参数将会在创建连接对象时传递给
+# #
+# #         frame.to_sql(tablename,conn,if_exists='append',chunksize=50000)
+# #
+# #         result = pd.read_sql('select * from "{}"'.format(table_name),conn,index_col='index',**kwargs).rename_axis(None)
+#
+#
+# # 该软件包中的功能要求子项可以导入 __main__ 模块。这包含在 编程指导，
+# # 例如 multiprocessing.pool.Pool 示例在交互式解释器中不起作用
+# #!/usr/bin/env python3
+# # -*- coding: utf-8 -*-
+# # """
+# # Created on Sat Feb 16 13:56:19 2019
+# #
+# # @author: python
+# # """
+# #
+# #
+# # class RpcGateway(BaseGateway):
+# #     """
+# #     VN Trader Gateway for RPC service.
+# #     """
+# #
+# #     default_setting = {
+# #         "主动请求地址": "tcp://127.0.0.1:2014",
+# #         "推送订阅地址": "tcp://127.0.0.1:4102"
+# #     }
+# #
+# #
+# #     def __init__(self, event_engine):
+# #         """Constructor"""
+# #         super().__init__(event_engine, "RPC")
+# #
+# #         self.symbol_gateway_map = {}
+# #
+# #         self.client = RpcClient()
+# #         self.client.callback = self.client_callback
+# #
+# #     def connect(self, setting: dict):
+# #         """"""
+# #         req_address = setting["主动请求地址"]
+# #         pub_address = setting["推送订阅地址"]
+# #
+# #         self.client.subscribe_topic("")
+# #         self.client.start(req_address, pub_address)
+# #
+# #         self.write_log("服务器连接成功，开始初始化查询")
+# #
+# #         self.query_all()
+# #
+# #     def subscribe(self, req: SubscribeRequest):
+# #         """"""
+# #         gateway_name = self.symbol_gateway_map.get(req.vt_symbol, "")
+# #         self.client.subscribe(req, gateway_name)
+# #
+# #     def send_order(self, req: OrderRequest):
+# #         """"""
+# #         gateway_name = self.symbol_gateway_map.get(req.vt_symbol, "")
+# #         self.client.send_order(req, gateway_name)
+# #
+# #     def cancel_order(self, req: CancelRequest):
+# #         """"""
+# #         gateway_name = self.symbol_gateway_map.get(req.vt_symbol, "")
+# #         self.client.cancel_order(req, gateway_name)
+# #
+# #     def query_account(self):
+# #         """"""
+# #         pass
+# #
+# #     def query_position(self):
+# #         """"""
+# #         pass
+# #
+# #     def query_all(self):
+# #         """"""
+# #         contracts = self.client.get_all_contracts()
+# #         for contract in contracts:
+# #             self.symbol_gateway_map[contract.vt_symbol] = contract.gateway_name
+# #             contract.gateway_name = self.gateway_name
+# #             self.on_contract(contract)
+# #         self.write_log("合约信息查询成功")
+# #
+# #         accounts = self.client.get_all_accounts()
+# #         for account in accounts:
+# #             account.gateway_name = self.gateway_name
+# #             self.on_account(account)
+# #         self.write_log("资金信息查询成功")
+# #
+# #         positions = self.client.get_all_positions()
+# #         for position in positions:
+# #             position.gateway_name = self.gateway_name
+# #             self.on_position(position)
+# #         self.write_log("持仓信息查询成功")
+# #
+# #         orders = self.client.get_all_orders()
+# #         for order in orders:
+# #             order.gateway_name = self.gateway_name
+# #             self.on_order(order)
+# #         self.write_log("委托信息查询成功")
+# #
+# #         trades = self.client.get_all_trades()
+# #         for trade in trades:
+# #             trade.gateway_name = self.gateway_name
+# #             self.on_trade(trade)
+# #         self.write_log("成交信息查询成功")
+# #
+# #     def close(self):
+# #         """"""
+# #         self.client.stop()
+# #
+# #     def client_callback(self, topic: str, event: Event):
+# #         """"""
+# #         if event is None:
+# #             print("none event", topic, event)
+# #             return
+# #
+# #         data = event.data
+# #
+# #         if hasattr(data, "gateway_name"):
+# #             data.gateway_name = self.gateway_name
+# #
+# #         self.event_engine.put(event)
+#
+
+
+# from dateutil.relativedelta import relativedelta as timedelta
+# from datetime import timedelta
+# from glob import glob
+# from textwrap import dedent
+# from collections import namedtuple
+# from numpy import full, nan, int64, zeros
+# from inspect import signature, Parameter
+# import csv,re
+#
+# # with open(filepath, 'w', newline='') as csvfile:
+# #     spamwriter = csv.writer(csvfile, delimiter=' ',
+# #                             quotechar='|', quoting=csv.QUOTE_MINIMAL)
+# #     for r in kline.values.tolist():
+# #         print(r)
+# #         spamwriter.writerow(r)
+# #         spamwriter.writerow('\n')
+#
+# # c_test = '{page:c_test,data:["c_test":3]}'
+# # import re
+# # match = re.search('\[(.*.)\]',c_test)
+# # print(match.group())
+# # https://pypi.tuna.tsinghua.edu.cn/simple
+
+# #apply --- dataframe -行或者一列
+# #applymap --- dataframe 每一个元素
+# #map --- series
+#
+# # class A(object):
+# #
+# #     def __init__(self,a):
+# #         self.a = a
+# #
+# #     def trans(self):
+# #         b = self.a
+# #         if b >0 :
+# #             b = 2
+# #         else:
+# #             b = 3
+# #         print('b',b)
+# #         print('------',self.a)
+# #
+# # print('------',A.__name__)
+#
+# # b = A(4)
+# # # b.trans()
+# # # print(b.a)
+#
+# # from numpy import (
+# #     array,
+# #     full,
+# #     recarray,
+# #     vstack,
+# # )
+# # from abc import ABC
+# # from bisect import insort
+# # from collections import Mapping
+# # from pandas import NaT as pd_NaT
+# # from numpy import array,dtype as dtype_class , ndarray,searchsorted
+# # import datetime
+# # from textwrap import dedent
+#
+# # from functools import reduce
+# #
+# # inputs = {'a':[1,2,3,5],'b':[2,3,4,5,6,7],'c':[4,5,6,7,8]}
+# #
+# # term_input = reduce(lambda x, y: set(x) & set(y), inputs.values())
+# #
+# # print(term_input)
+# # idx = trading_days.searchsorted(dt)
+# # start_ix, end_ix = sessions.slice_locs(start_date, end_date)
+# # return (
+# #     (r[0], r[-1]) for r in partition_all(
+# #     chunksize, sessions[start_ix:end_ix]
+# # )
+# # )
+# # def categorical_df_concat(df_list, inplace=False):
+# #     """
+# #     Prepare list of pandas DataFrames to be used as input to pd.concat.
+# #     Ensure any columns of type 'category' have the same categories across each
+# #     dataframe.
+# #
+# #     Parameters
+# #     ----------
+# #     df_list : list
+# #         List of dataframes with same columns.
+# #     inplace : bool
+# #         True if input list can be modified. Default is False.
+# #
+# #     Returns
+# #     -------
+# #     concatenated : df
+# #         Dataframe of concatenated list.
+# #     """
+# #
+# #     if not inplace:
+# #         df_list = copy.deepcopy(df_list)
+# #
+# #     # Assert each dataframe has the same columns/dtypes
+# #     df = df_list[0]
+# #     if not all([(df.dtypes.equals(df_i.dtypes)) for df_i in df_list[1:]]):
+# #         raise ValueError("Input DataFrames must have the same columns/dtypes.")
+# #
+# #     categorical_columns = df.columns[df.dtypes == 'category']
+# #
+# #     for col in categorical_columns:
+# #         new_categories = sorted(
+# #             set().union(
+# #                 *(frame[col].cat.categories for frame in df_list)
+# #             )
+# #         )
+# #
+# #         with ignore_pandas_nan_categorical_warning():
+# #             for df in df_list:
+# #                 df[col].cat.set_categories(new_categories, inplace=True)
+# #
+# #     return pd.concat(df_list)
+
+# # tolerant_equals
+# # from abc import ABC
+# # from collections import deque, namedtuple
+# # from numbers import Integral
+# # from operator import itemgetter, attrgetter
+# # # import numpy as np
+# # import pandas as pd
+# # from pandas import isnull
+# # from six import with_metaclass, string_types, viewkeys, iteritems
+# # from toolz import (
+# #     compose,
+# #     concat,
+# #     # vertical itertools.chain
+# #     concatv,
+# #     curry,
+# #     groupby,
+# #     merge,
+# #     partition_all,
+# #     sliding_window,
+# #     valmap,
+# # )
+#
+# # self.conn.execute(
+# #     "CREATE INDEX IF NOT EXISTS stock_dividends_payouts_ex_date "
+# #     "ON stock_dividend_payouts(ex_date)"
+# # frame['effective_date'] = frame['effective_date'].values.astype(
+# #     'datetime64[s]',
+# # ).astype('int64')
+# # actual_dtypes = frame.dtypes
+# # for colname, expected in six.iteritems(expected_dtypes):
+# #     actual = actual_dtypes[colname]
+# #     if not np.issubdtype(actual, expected):
+# #         raise TypeError(
+# #             "Expected data of type {expected} for column"
+# #             " '{colname}', but got '{actual}'.".format(
+# #                 expected=expected,
+# #                 colname=colname,
+# #                 actual=actual,
+# #             ),
+# #         )
+# # from sqlalchemy import join
+# #
+# # j = user_table.join(address_table,
+# #                 user_table.c.id == address_table.c.user_id)
+# # stmt = select([user_table]).select_from(j)
+# # """
+# # READ COMMITTED
+# # READ UNCOMMITTED
+# # REPEATABLE READ
+# # SERIALIZABLE
+# # AUTOCOMMIT
+# # """
+# # engine = create_engine('mysql+pymysql://root:macpython@localhost:3306/c_test',
+# #                        isolation_level="READ UNCOMMITTED")
+# # engine = create_engine('mysql+pymysql://root:macpython@localhost:3306/c_test',
+# #                        pool_size=50, max_overflow=100, pool_timeout=-1)
+# # db = 'db'
+# # with engine.connect() as conn:
+# #     conn.execute('create database %s'%db)
+# #
+# # metadata.create_all(bind = engine)
+# #
+# # # engine.execution_options()
+# # print(metadata.clear())
+# # tbls = engine.table_names()
+# # print(tbls)
+# # conn = engine.connect()
+# # res = conn.execution_options(isolation_level="READ COMMITTED")
+# # print(res.get_execution_options())
+# # # engine.execution_options(isolation_level="READ COMMITTED")
+# # # print(engine.get_execution_options())
+
+
+# # #代理
+# # from sqlalchemy import inspect
+# # insp = inspect(engine)
+# # print(insp.get_table_names())
+# # print(insp.get_columns('asharePrice'))
+# # print(insp.get_schema_names())
+# # # get_pk_constraint get_primary_keys get_foreign_keys get_indexes
+# # sa.CheckConstraint('id <= 1')
+# # ins = ins.order_by(table.c.trade_dt)
+# # def canonicalize_datetime(dt):
+# #     # Strip out any HHMMSS or timezone info in the user's datetime, so that
+# #     # all the datetimes we return will be 00:00:00 UTC.
+# #     return datetime(dt.year, dt.month, dt.day, tzinfo=pytz.utc)
+# # pd.date_range(start=start.date(),end=end.date(),freq=trading_day).tz_localize('UTC')
+# # end = end_base + pd.Timedelta(days=365)
+
+
+# # if __name__ == '__main__':
+# #
+# #     # start = pd.Timestamp('1990-01-01', tz='UTC')
+# #     # end_base = pd.Timestamp('today', tz='UTC')
+# #     tz = pytz.timezone('Asia/Shanghai')
+# #     start = pd.Timestamp('19900101',tz = tz)
+# #     end_base = pd.Timestamp('today',tz = tz)
+# #     end = end_base + pd.Timedelta(days=365)
+# #
+# #     new_year = rrule.rrule(
+# #         rrule.YEARLY,
+# #         byyearday=1,
+# #         cache=True,
+# #         dtstart=start,
+# #         until=end
+# #     )
+# #
+# #     print(list(new_year))
+# #
+# #     qing_ming = rrule.rrule(
+# #         rrule.YEARLY,
+# #         bymonth=4,
+# #         bymonthday=4,
+# #         cache=True,
+# #         dtstart=start,
+# #         until=end
+# #     )
+# #
+# #     # print(list(qing_ming))
+# #
+# #     labour_day = rrule.rrule(
+# #         rrule.YEARLY,
+# #         bymonth=5,
+# #         bymonthday=1,
+# #         cache=True,
+# #         dtstart=start,
+# #         until=end
+# #     )
+# #
+# #     # print(list(labour_day))
+# #
+# #     national_day = rrule.rrule(
+# #         rrule.YEARLY,
+# #         bymonth=10,
+# #         bymonthday=1,
+# #         cache=True,
+# #         dtstart=start,
+# #         until=end
+# #     )
+# # from operator import methodcaller
+# # import sys
+
+# # class classproperty(object):
+# #     """Class property
+# #     """
+# #     def __init__(self, fget):
+# #         self.fget = fget
+# #
+# #     def __get__(self, instance, owner):
+# #         return self.fget(owner)
+# #
+# # class DummyMapping(object):
+# #     """
+# #     Dummy object used to provide a mapping interface for singular values.
+# #     """
+# #     def __init__(self, value):
+# #         self._value = value
+# #
+# #     def __getitem__(self, key):
+# #         return self._value
+# #
+# # class IDBox(object):
+# #     """A wrapper that hashs to the id of the underlying object and compares
+# #     equality on the id of the underlying.
+# #
+# #     Parameters
+# #     ----------
+# #     ob : any
+# #         The object to wrap.
+# #
+# #     Attributes
+# #     ----------
+# #     ob : any
+# #         The object being wrapped.
+# #
+# #     Notes
+# #     -----
+# #     This is useful for storing non-hashable values in a set or dict.
+# #     """
+# #     def __init__(self, ob):
+# #         self.ob = ob
+# #
+# #     def __hash__(self):
+# #         return id(self)
+# #
+# #     def __eq__(self, other):
+# #         if not isinstance(other, IDBox):
+# #             return NotImplemented
+# #
+# #         return id(self.ob) == id(other.ob)
+# #
+# #
+# # class NamedExplodingObject(object):
+# #     """An object which has no attributes but produces a more informative
+# #     error message when accessed.
+# #
+# #     Parameters
+# #     ----------
+# #     name : str
+# #         The name of the object. This will appear in the error messages.
+# #
+# #     Notes
+# #     -----
+# #     One common use for this object is so ensure that an attribute always exists
+# #     even if sometimes it should not be used.
+# #     """
+# #     def __init__(self, name, extra_message=None):
+# #         self._name = name
+# #         self._extra_message = extra_message
+# #
+# #     def __getattr__(self, attr):
+# #         extra_message = self._extra_message
+# #         raise AttributeError(
+# #             'attempted to access attribute %r of ExplodingObject %r%s' % (
+# #                 attr,
+# #                 self._name,
+# #             ),
+# #             ' ' + extra_message if extra_message is not None else '',
+# #         )
+# #
+# #     def __repr__(self):
+# #         return '%s(%r%s)' % (
+# #             type(self).__name__,
+# #             self._name,
+# #             # show that there is an extra message but truncate it to be
+# #             # more readable when debugging
+# #             ', extra_message=...' if self._extra_message is not None else '',
+# #         )
+# #
+# # try:
+# #     # fast versions
+# #     import bottleneck as bn
+# #     nanmean = bn.nanmean
+# #     nanstd = bn.nanstd
+# #     nansum = bn.nansum
+# #     nanmax = bn.nanmax
+# #     nanmin = bn.nanmin
+# #     nanargmax = bn.nanargmax
+# #     nanargmin = bn.nanargmin
+# # except ImportError:
+# #     # slower numpy
+# #     import numpy as np
+# #     nanmean = np.nanmean
+# #     nanstd = np.nanstd
+# #     nansum = np.nansum
+# #     nanmax = np.nanmax
+# #     nanmin = np.nanmin
+# #     nanargmax = np.nanargmax
+# #     nanargmin = np.nanargmin
+# # # numpy.flatnonzero --- 非0的indice
+# # n = self.start
+# # stop = self.stop
+# # step = self.step
+# # cmp_ = op.lt if step > 0 else op.gt
+# # while cmp_(n, stop):
+# #     yield n
+# #     n += step
+# #
+# #
 # # from io import StringIO
 # #
 # # output = StringIO()
@@ -49,7 +1117,9 @@
 # #     )
 # #     return item in self.current_securities(self.current_date())
 # #
-
+# #
+# # def __new__(cls):
+# #     raise TypeError('cannot create %r instances' % name)
 
 # # import inspect ,uuid
 # # from functools import wraps
@@ -823,6 +1893,7 @@
 #         )
 #
 #     return dtype, missing_value
+#
 
 
 #
@@ -860,7 +1931,27 @@
 #         raise ValueError('cannot copy unvalidated AdjustedArray')
 #
 #     return type(self)()
+#
 
+
+from numbers import Integral
+from operator import itemgetter, attrgetter
+
+from pandas import isnull
+from six import with_metaclass, string_types, viewkeys, iteritems
+from toolz import (
+    compose,
+    concat,
+    # vertical itertools.chain
+    concatv,
+    curry,
+    groupby,
+    merge,
+    partition_all,
+    sliding_window,
+    #valmap --- apply function to the values of dictionary
+    valmap,
+)
 
 import array,binascii,struct , numpy as np,sqlalchemy as sa
 
@@ -4585,6 +5676,15 @@ import logging
 #
 #     return wrapper
 
+# def compute(self, today, assets, out, data):
+#     drawdowns = fmax.accumulate(data, axis=0) - data
+#     drawdowns[isnan(drawdowns)] = NINF
+#     drawdown_ends = nanargmax(drawdowns, axis=0)
+#
+#     # TODO: Accelerate this loop in Cython or Numba.
+#     for i, end in enumerate(drawdown_ends):
+#         peak = nanmax(data[:end + 1, i])
+#         out[i] = (peak - data[end, i]) / data[end, i]
 
 # def function_application(func):
 #     """
@@ -4621,6 +5721,82 @@ import logging
 #             )
 #     return mathfunc
 
+# with_missing = pd.Series(
+#     data=pd.Categorical(
+#         result.values,
+#         result.values.categories.union([self.missing_value]),
+#     ),
+#     index=result.index,
+# )
+
+
+# def _compute(self, arrays, dates, assets, mask):
+#     data = arrays[0]
+#     bins = self.params['bins']
+#     to_bin = where(mask, data, nan)
+#     result = quantiles(to_bin, bins)
+#     # Write self.missing_value into nan locations, whether they were
+#     # generated by our input mask or not.
+#     result[isnan(result)] = self.missing_value
+#     return result.astype(int64_dtype)
+#
+#
+# class PeerCount(SingleInputMixin, CustomFactor):
+#     """
+#     Peer Count of distinct categories in a given classifier.  This factor
+#     is returned by the classifier instance method peer_count()
+#
+#     **Default Inputs:** None
+#
+#     **Default Window Length:** 1
+#     """
+#     window_length = 1
+#
+#     def _validate(self):
+#         super(PeerCount, self)._validate()
+#         if self.window_length != 1:
+#             raise ValueError(
+#                 "'PeerCount' expected a window length of 1, but was given"
+#                 "{window_length}.".format(window_length=self.window_length)
+#             )
+#
+#     def compute(self, today, assets, out, classifier_values):
+#         # Convert classifier array to group label int array
+#         group_labels, null_label = self.inputs[0]._to_integral(
+#             classifier_values[0]
+#         )
+#         _, inverse, counts = unique(  # Get counts, idx of unique groups
+#             group_labels,
+#             return_counts=True,
+#             return_inverse=True,
+#         )
+#         # Copies values from one array to another, broadcasting as necessary.
+#         copyto(out, counts[inverse], where=(group_labels != null_label))
+
+
+# uint8_dtype = dtype('uint8')
+
+# uint32_dtype = dtype('uint32')
+# uint64_dtype = dtype('uint64')
+# int64_dtype = dtype('int64')
+#
+# float32_dtype = dtype('float32')
+# float64_dtype = dtype('float64')
+#
+# complex128_dtype = dtype('complex128')
+#
+# datetime64D_dtype = dtype('datetime64[D]')
+# datetime64ns_dtype = dtype('datetime64[ns]')
+#
+# object_dtype = dtype('O')
+# # We use object arrays for strings.
+# categorical_dtype = object_dtype
+#
+# make_datetime64ns = flip(datetime64, 'ns')
+# make_datetime64D = flip(datetime64, 'D')
+
+# CLASSIFIER_DTYPES = frozenset({object_dtype, int64_dtype})
+# FACTOR_DTYPES = frozenset({datetime64ns_dtype, float64_dtype, int64_dtype})
 
 # @singleton
 # class Ignore(object):
@@ -4629,7 +5805,20 @@ import logging
 #     __repr__ = __str__
 #
 #
-
+# class Expired(Exception):
+#     """Marks that a :class:`CachedObject` has expired.
+#     """
+# >>> from scipy.stats import rankdata
+# >>> rankdata([0, 2, 3, 2])
+# array([ 1. ,  2.5,  4. ,  2.5])
+# >>> rankdata([0, 2, 3, 2], method='min')
+# array([ 1,  2,  4,  2])
+# >>> rankdata([0, 2, 3, 2], method='max')
+# array([ 1,  3,  4,  3])
+# >>> rankdata([0, 2, 3, 2], method='dense')
+# array([ 1,  2,  3,  2])
+# >>> rankdata([0, 2, 3, 2], method='ordinal')
+# array([ 1,  2,  4,  3])
 
 # if g_is_ipython and not g_is_py3:
 #     """ipython在python2的一些版本需要reload logging模块，否则不显示log信息"""
@@ -4678,6 +5867,26 @@ import logging
 #     def to_series(self, index=None):
 #         return pd.Series(self.__dict__, index=index)
 
+# # shape: (N, M)
+# ind_residual = independent - nanmean(independent, axis=0)
+#
+# # shape: (M,)
+# covariances = nanmean(ind_residual * dependents, axis=0)
+#
+# # We end up with different variances in each column here because each
+# # column may have a different subset of the data dropped due to missing
+# # data in the corresponding dependent column.
+# # shape: (M,)
+# independent_variances = nanmean(ind_residual ** 2, axis=0)
+#
+# # shape: (M,)
+# np.divide(covariances, independent_variances, out=out)
+#
+# # Write nans back to locations where we have more then allowed number of
+# # missing entries.
+# nanlocs = isnan(independent).sum(axis=0) > allowed_missing
+# out[nanlocs] = nan
+
 
 # def __hash__(self):
 #     return id(self)
@@ -4722,6 +5931,70 @@ import logging
 # print(h.pipe().decode('utf-8'))
 
 
+# from functools import reduce
+# int64_dtype = dtype('int64')
+#
+# bool_dtype = dtype('bool')
+#
+# bool_dtype = dtype('bool')
+#
+# FILTER_DTYPES = frozenset({bool_dtype})
+#
+#
+# def make_kind_check(python_types, numpy_kind):
+#     """
+#     Make a function that checks whether a scalar or array is of a given kind
+#     (e.g. float, int, datetime, timedelta).
+#     """
+#     def check(value):
+#         if hasattr(value, 'dtype'):
+#             return value.dtype.kind == numpy_kind
+#         return isinstance(value, python_types)
+#     return check
+#
+#
+# is_float = make_kind_check(float, 'f')
+# is_int = make_kind_check(int, 'i')
+# is_datetime = make_kind_check(datetime, 'M')
+# is_object = make_kind_check(object, 'O')
+#
+#
+# def isnat(obj):
+#     """
+#     Check if a value is np.NaT.
+#     """
+#     if obj.dtype.kind not in ('m', 'M'):
+#         raise ValueError("%s is not a numpy datetime or timedelta")
+#     return obj.view(int64_dtype) == iNaT
+#
+# def is_missing(data, missing_value):
+#     """
+#     Generic is_missing function that handles NaN and NaT.
+#     """
+#     if is_float(data) and isnan(missing_value):
+#         return isnan(data)
+#     elif is_datetime(data) and isnat(missing_value):
+#         return isnat(data)
+#     return data == missing_value
+
+# def _downsampled_type(self, *args, **kwargs):
+#     """
+#     The expression type to return from self.downsample().
+#     """
+#     raise NotImplementedError(
+#         "downsampling is not yet implemented "
+#         "for instances of %s." % type(self).__name__
+#     )
+#
+# def downsample(self, frequency):
+#     """
+#     Make a term that computes from ``self`` at lower-than-daily frequency.
+#
+#     Parameters
+#     ----------
+#     {frequency}
+#     """
+#     return self._downsampled_type(term=self, frequency=frequency)
 
 # import os, glob
 #
@@ -4735,12 +6008,12 @@ import logging
 # print('now directory', p_dir)
 # c_test = os.path.split(os.getcwd())
 # print('c_test', c_test)
-# target = os.path.join(os.path.split(os.getcwd())[0], 'factory')
+# target = os.path.join(os.path.split(os.getcwd())[0], 'strat')
 # print('target', target)
 # files = os.path.join(target, '*')
 # p = glob.glob(target + os.sep + 'cross.py')
 # print('p', p)
-# files = glob.glob('factory/*')
+# files = glob.glob('strat/*')
 # print('files', files)
 
 #
@@ -4775,3 +6048,8 @@ import logging
 #     signal.signal(signal.SIGINT, myHandler)
 #     signal.pause()
 #     print('End of Signal Demo')
+
+
+# lock = Locker()
+# for num in range(10):
+#     Process(target=f, args=(lock, num)).start()

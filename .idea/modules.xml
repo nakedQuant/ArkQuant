@@ -2,9 +2,9 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/Arkquant.iml" filepath="$PROJECT_DIR$/.idea/Arkquant.iml" />
       <module fileurl="file://$PROJECT_DIR$/../PyAlgoTrade-0.20/.idea/PyAlgoTrade-0.20.iml" filepath="$PROJECT_DIR$/../PyAlgoTrade-0.20/.idea/PyAlgoTrade-0.20.iml" />
       <module fileurl="file://$PROJECT_DIR$/../backtrader-master/.idea/backtrader-master.iml" filepath="$PROJECT_DIR$/../backtrader-master/.idea/backtrader-master.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/nkquant.iml" filepath="$PROJECT_DIR$/.idea/nkquant.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/pxtrade.iml" filepath="$PROJECT_DIR$/.idea/pxtrade.iml" />
       <module fileurl="file://$PROJECT_DIR$/../zipline-master/.idea/zipline-master.iml" filepath="$PROJECT_DIR$/../zipline-master/.idea/zipline-master.iml" />
     </modules>
